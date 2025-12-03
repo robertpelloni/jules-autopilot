@@ -1,10 +1,8 @@
 export interface Source {
   id: string;
   name: string;
-  repository: string;
   type: 'github';
-  createdAt: string;
-  updatedAt: string;
+  metadata?: Record<string, unknown>;
 }
 
 export interface Session {

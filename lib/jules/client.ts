@@ -57,6 +57,12 @@ export class JulesClient {
         }
 
         if (response.status === 404) {
+          // For activities endpoint, 404 just means no activities yet (new session)
+          // Return empty array instead of throwing error
+          if (endpoint.includes('/activities')) {
+            return { activities: [] } as T;
+          }
+
           throw new JulesAPIError(
             'Resource not found. The requested endpoint may not exist.',
             response.status,
@@ -97,8 +103,25 @@ export class JulesClient {
 
   // Sources
   async listSources(): Promise<Source[]> {
-    const response = await this.request<{ sources: Source[] }>('/sources');
-    return response.sources || [];
+    const response = await this.request<{ sources: any[] }>('/sources');
+
+    // Transform API response to extract repository info
+    const sources = (response.sources || []).map((source: any) => {
+      // Extract repo name from source field (e.g., "sources/github/owner/repo")
+      const sourcePath = source.source || source.name || '';
+      const match = sourcePath.match(/sources\/github\/(.+)/);
+      const repoPath = match ? match[1] : sourcePath;
+
+      return {
+        id: sourcePath,  // Keep full path for API calls
+        name: repoPath,  // Use short name for display
+        type: 'github' as const,
+        metadata: source
+      };
+    });
+
+    console.log('[Jules Client] Loaded sources:', sources.length, sources);
+    return sources;
   }
 
   async getSource(id: string): Promise<Source> {
@@ -139,15 +162,37 @@ export class JulesClient {
   }
 
   async createSession(data: CreateSessionRequest): Promise<Session> {
+    // Jules API requires specific structure per https://developers.google.com/jules/api
+    const requestBody = {
+      prompt: data.prompt,
+      sourceContext: {
+        source: data.sourceId,
+        githubRepoContext: {
+          startingBranch: 'main' // Default to main branch
+        }
+      },
+      title: data.title || 'Untitled Session',
+      requirePlanApproval: false // Auto-approve plans by default
+    };
+
+    console.log('[Jules Client] Creating session with:', requestBody);
+
     return this.request<Session>('/sessions', {
       method: 'POST',
-      body: JSON.stringify(data),
+      body: JSON.stringify(requestBody),
     });
   }
 
   async deleteSession(id: string): Promise<void> {
     await this.request<void>(`/sessions/${id}`, {
       method: 'DELETE',
+    });
+  }
+
+  async approvePlan(sessionId: string): Promise<void> {
+    await this.request<void>(`/sessions/${sessionId}:approvePlan`, {
+      method: 'POST',
+      body: JSON.stringify({}),
     });
   }
 
@@ -213,12 +258,65 @@ export class JulesClient {
     });
   }
 
+  async getActivity(sessionId: string, activityId: string): Promise<Activity> {
+    const response = await this.request<any>(`/sessions/${sessionId}/activities/${activityId}`);
+
+    // Transform similar to listActivities
+    const id = response.name?.split('/').pop() || activityId;
+    let type: Activity['type'] = 'message';
+    let content = '';
+
+    if (response.planGenerated) {
+      type = 'plan';
+      const plan = response.planGenerated.plan || response.planGenerated;
+      content = plan.description || plan.summary || plan.title || JSON.stringify(plan.steps || plan, null, 2);
+    } else if (response.progressUpdated) {
+      type = 'progress';
+      content = response.progressUpdated.progressDescription ||
+                response.progressUpdated.description ||
+                response.progressUpdated.message ||
+                JSON.stringify(response.progressUpdated, null, 2);
+    } else if (response.sessionCompleted) {
+      type = 'result';
+      const result = response.sessionCompleted;
+      content = result.summary || result.message || 'Session completed';
+    } else if (response.userMessage) {
+      type = 'message';
+      content = response.userMessage.message || response.userMessage.content || '';
+    }
+
+    if (!content) {
+      content = response.message || response.content || response.text || response.description || '';
+    }
+
+    return {
+      id,
+      sessionId,
+      type,
+      role: (response.originator === 'agent' ? 'agent' : 'user') as Activity['role'],
+      content,
+      createdAt: response.createTime,
+      metadata: response
+    };
+  }
+
   async createActivity(data: CreateActivityRequest): Promise<Activity> {
     // Jules API uses :sendMessage endpoint for sending messages
-    return this.request<Activity>(`/sessions/${data.sessionId}:sendMessage`, {
+    // Response is empty - agent response will appear in next activity
+    await this.request(`/sessions/${data.sessionId}:sendMessage`, {
       method: 'POST',
-      body: JSON.stringify({ message: data.content }),
+      body: JSON.stringify({ prompt: data.content }),
     });
+
+    // Return a placeholder activity since response is empty
+    return {
+      id: 'pending',
+      sessionId: data.sessionId,
+      type: 'message',
+      role: 'user',
+      content: data.content,
+      createdAt: new Date().toISOString(),
+    };
   }
 }
 

@@ -48,6 +48,12 @@ export async function POST(request: NextRequest) {
     const url = `${JULES_API_BASE}${path}`;
     const body = await request.text();
 
+    console.log('[Jules API Proxy] POST request:', {
+      url,
+      path,
+      body: JSON.parse(body || '{}'),
+    });
+
     const response = await fetch(url, {
       method: 'POST',
       headers: {
@@ -58,6 +64,14 @@ export async function POST(request: NextRequest) {
     });
 
     const data = await response.json().catch(() => ({}));
+
+    if (!response.ok) {
+      console.error('[Jules API Proxy] POST error:', {
+        status: response.status,
+        data,
+      });
+    }
+
     return NextResponse.json(data, { status: response.status });
   } catch (error) {
     return NextResponse.json(

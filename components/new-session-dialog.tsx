@@ -15,13 +15,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select';
+import { Combobox, ComboboxOption } from '@/components/ui/combobox';
 import { Plus } from 'lucide-react';
 
 interface NewSessionDialogProps {
@@ -98,41 +92,37 @@ export function NewSessionDialog({ onSessionCreated }: NewSessionDialogProps) {
   return (
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>
-        <Button className="w-full sm:w-auto">
-          <Plus className="h-4 w-4 mr-2" />
+        <Button className="w-full sm:w-auto h-8 text-xs">
+          <Plus className="h-3.5 w-3.5 mr-1.5" />
           New Session
         </Button>
       </DialogTrigger>
-      <DialogContent className="sm:max-w-[500px]">
+      <DialogContent className="sm:max-w-[480px]">
         <DialogHeader>
-          <DialogTitle>Create New Session</DialogTitle>
-          <DialogDescription>
+          <DialogTitle className="text-base">Create New Session</DialogTitle>
+          <DialogDescription className="text-xs">
             Start a new Jules session by selecting a source and providing instructions.
           </DialogDescription>
         </DialogHeader>
-        <form onSubmit={handleSubmit} className="space-y-4">
-          <div className="space-y-2">
-            <Label htmlFor="source">Source Repository</Label>
-            <Select
+        <form onSubmit={handleSubmit} className="space-y-3">
+          <div className="space-y-1.5">
+            <Label htmlFor="source" className="text-xs font-semibold">Source Repository</Label>
+            <Combobox
+              options={sources.map((source) => ({
+                value: source.id,
+                label: source.name,
+              }))}
               value={formData.sourceId}
               onValueChange={(value) =>
                 setFormData((prev) => ({ ...prev, sourceId: value }))
               }
-              disabled={sources.length === 0}
-            >
-              <SelectTrigger id="source">
-                <SelectValue placeholder={sources.length === 0 ? "No repositories available" : "Select a repository"} />
-              </SelectTrigger>
-              <SelectContent>
-                {sources.map((source) => (
-                  <SelectItem key={source.id} value={source.id}>
-                    {source.name}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+              placeholder={sources.length === 0 ? "No repositories available" : "Select a repository"}
+              searchPlaceholder="Search repositories..."
+              emptyMessage="No repositories found."
+              className={`text-xs ${sources.length === 0 ? "opacity-50 cursor-not-allowed" : ""}`}
+            />
             {sources.length === 0 && !error && (
-              <p className="text-xs text-muted-foreground">
+              <p className="text-[10px] text-muted-foreground leading-relaxed">
                 Connect a repository at{' '}
                 <a
                   href="https://jules.google.com"
@@ -146,8 +136,8 @@ export function NewSessionDialog({ onSessionCreated }: NewSessionDialogProps) {
             )}
           </div>
 
-          <div className="space-y-2">
-            <Label htmlFor="title">Session Title (Optional)</Label>
+          <div className="space-y-1.5">
+            <Label htmlFor="title" className="text-xs font-semibold">Session Title (Optional)</Label>
             <Input
               id="title"
               placeholder="e.g., Fix authentication bug"
@@ -155,11 +145,12 @@ export function NewSessionDialog({ onSessionCreated }: NewSessionDialogProps) {
               onChange={(e) =>
                 setFormData((prev) => ({ ...prev, title: e.target.value }))
               }
+              className="h-9 text-xs"
             />
           </div>
 
-          <div className="space-y-2">
-            <Label htmlFor="prompt">Instructions</Label>
+          <div className="space-y-1.5">
+            <Label htmlFor="prompt" className="text-xs font-semibold">Instructions</Label>
             <Textarea
               id="prompt"
               placeholder="Describe what you want Jules to do..."
@@ -167,22 +158,22 @@ export function NewSessionDialog({ onSessionCreated }: NewSessionDialogProps) {
               onChange={(e) =>
                 setFormData((prev) => ({ ...prev, prompt: e.target.value }))
               }
-              className="min-h-[120px]"
+              className="min-h-[100px] text-xs"
               required
             />
           </div>
 
           {error && (
-            <div className="rounded-md bg-destructive/10 p-3">
-              <p className="text-sm text-destructive">{error}</p>
+            <div className="rounded bg-destructive/10 p-2.5">
+              <p className="text-xs text-destructive">{error}</p>
             </div>
           )}
 
-          <div className="flex gap-2 justify-end">
-            <Button type="button" variant="outline" onClick={() => setOpen(false)}>
+          <div className="flex gap-2 justify-end pt-2">
+            <Button type="button" variant="outline" onClick={() => setOpen(false)} className="h-8 text-xs">
               Cancel
             </Button>
-            <Button type="submit" disabled={loading || !formData.sourceId || !formData.prompt}>
+            <Button type="submit" disabled={loading || !formData.sourceId || !formData.prompt} className="h-8 text-xs">
               {loading ? 'Creating...' : 'Create Session'}
             </Button>
           </div>

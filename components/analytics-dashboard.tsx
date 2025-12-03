@@ -7,19 +7,11 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Button } from '@/components/ui/button';
 import {
-  BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer,
-  PieChart, Pie, Cell, LineChart, Line
+  BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
+  AreaChart, Area
 } from 'recharts';
 import { format, subDays, isAfter, parseISO, differenceInMinutes, startOfDay } from 'date-fns';
-import { Loader2, RefreshCw, BarChart3, Clock, CheckCircle2, XCircle } from 'lucide-react';
-
-const COLORS = ['#0088FE', '#00C49F', '#FFBB28', '#FF8042', '#8884d8', '#82ca9d'];
-const STATUS_COLORS = {
-  active: '#22c55e', // green-500
-  completed: '#3b82f6', // blue-500
-  failed: '#ef4444', // red-500
-  paused: '#eab308', // yellow-500
-};
+import { Loader2, RefreshCw, BarChart3, Clock, CheckCircle2 } from 'lucide-react';
 
 export function AnalyticsDashboard() {
   const { client } = useJules();
@@ -111,13 +103,6 @@ export function AnalyticsDashboard() {
       ? Math.round(durations.reduce((a, b) => a + b, 0) / durations.length)
       : 0;
 
-    // Status distribution
-    const statusData = [
-      { name: 'Active', value: activeSessions, color: STATUS_COLORS.active },
-      { name: 'Completed', value: completedSessions, color: STATUS_COLORS.completed },
-      { name: 'Failed', value: failedSessions, color: STATUS_COLORS.failed },
-    ].filter(d => d.value > 0);
-
     // Activity breakdown
     const activityTypes = currentActivities.reduce((acc, curr) => {
       acc[curr.type] = (acc[curr.type] || 0) + 1;
@@ -131,8 +116,13 @@ export function AnalyticsDashboard() {
 
     // Repository usage
     const repoCounts = currentSessions.reduce((acc, curr) => {
-      const source = sources.find(s => s.id === curr.sourceId);
-      const name = source ? source.repository : 'Unknown';
+      // Try to match by comparing the end of the source ID (since sessions use "owner/repo" and sources use "sources/github/owner/repo")
+      const source = sources.find(s =>
+        s.id === curr.sourceId ||
+        s.id.endsWith(curr.sourceId) ||
+        s.name === curr.sourceId
+      );
+      const name = source ? source.name : (curr.sourceId || 'Unknown');
       acc[name] = (acc[name] || 0) + 1;
       return acc;
     }, {} as Record<string, number>);
@@ -179,7 +169,6 @@ export function AnalyticsDashboard() {
       completedSessions,
       successRate,
       avgDuration,
-      statusData,
       activityData,
       repoData,
       timelineData: timelineDataSorted
@@ -189,198 +178,221 @@ export function AnalyticsDashboard() {
   if (loading) {
     return (
       <div className="flex h-full items-center justify-center">
-        <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+        <div className="flex flex-col items-center gap-2">
+          <Loader2 className="h-8 w-8 animate-spin text-primary" />
+          <p className="text-xs text-muted-foreground">Loading analytics...</p>
+        </div>
       </div>
     );
   }
 
   return (
-    <div className="h-full overflow-y-auto p-6 space-y-6">
-      <div className="flex items-center justify-between">
-        <h2 className="text-3xl font-bold tracking-tight">Dashboard</h2>
-        <div className="flex items-center gap-4">
+    <div className="h-full overflow-y-auto p-4 space-y-4">
+      <div className="flex items-center justify-between pb-3 border-b">
+        <div>
+          <h2 className="text-lg font-semibold tracking-tight">
+            Dashboard
+          </h2>
+          <p className="text-[10px] text-muted-foreground mt-0.5">
+            Overview of your Jules sessions and activity
+          </p>
+        </div>
+        <div className="flex items-center gap-2">
           <Select value={dateRange} onValueChange={setDateRange}>
-            <SelectTrigger className="w-[180px]">
+            <SelectTrigger className="w-[140px] h-8 text-xs">
               <SelectValue placeholder="Select period" />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="7">Last 7 days</SelectItem>
-              <SelectItem value="14">Last 14 days</SelectItem>
-              <SelectItem value="30">Last 30 days</SelectItem>
-              <SelectItem value="90">Last 3 months</SelectItem>
+              <SelectItem value="7" className="text-xs">Last 7 days</SelectItem>
+              <SelectItem value="14" className="text-xs">Last 14 days</SelectItem>
+              <SelectItem value="30" className="text-xs">Last 30 days</SelectItem>
+              <SelectItem value="90" className="text-xs">Last 3 months</SelectItem>
             </SelectContent>
           </Select>
-          <Button variant="outline" size="icon" onClick={handleRefresh} disabled={refreshing}>
-            <RefreshCw className={`h-4 w-4 ${refreshing ? 'animate-spin' : ''}`} />
+          <Button variant="outline" size="icon" onClick={handleRefresh} disabled={refreshing} className="h-8 w-8 hover:bg-primary/10 hover:border-primary/50 transition-colors">
+            <RefreshCw className={`h-3.5 w-3.5 ${refreshing ? 'animate-spin text-primary' : ''}`} />
           </Button>
         </div>
       </div>
 
       {/* Summary Cards */}
-      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Total Sessions</CardTitle>
-            <BarChart3 className="h-4 w-4 text-muted-foreground" />
+      <div className="grid gap-3 md:grid-cols-2 lg:grid-cols-5">
+        <Card className="border-l-2 border-l-primary hover:shadow-sm transition-shadow">
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-1.5 pt-3">
+            <CardTitle className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider">Total Sessions</CardTitle>
+            <div className="h-6 w-6 rounded bg-primary/10 flex items-center justify-center">
+              <BarChart3 className="h-3 w-3 text-primary" />
+            </div>
           </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{stats.totalSessions}</div>
-            <p className="text-xs text-muted-foreground">
-              {stats.activeSessions} active
+          <CardContent className="pb-3">
+            <div className="text-2xl font-bold tracking-tight">{stats.totalSessions}</div>
+            <p className="text-[10px] text-muted-foreground mt-0.5">
+              in selected period
             </p>
           </CardContent>
         </Card>
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Success Rate</CardTitle>
-            <CheckCircle2 className="h-4 w-4 text-muted-foreground" />
+        <Card className="border-l-2 border-l-blue-500 hover:shadow-sm transition-shadow">
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-1.5 pt-3">
+            <CardTitle className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider">Active Sessions</CardTitle>
+            <div className="h-6 w-6 rounded bg-blue-500/10 flex items-center justify-center">
+              <BarChart3 className="h-3 w-3 text-blue-500" />
+            </div>
           </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{stats.successRate}%</div>
-            <p className="text-xs text-muted-foreground">
-              Based on completed sessions
+          <CardContent className="pb-3">
+            <div className="text-2xl font-bold tracking-tight">{stats.activeSessions}</div>
+            <p className="text-[10px] text-muted-foreground mt-0.5">
+              currently running
             </p>
           </CardContent>
         </Card>
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Avg Duration</CardTitle>
-            <Clock className="h-4 w-4 text-muted-foreground" />
+        <Card className="border-l-2 border-l-green-500 hover:shadow-sm transition-shadow">
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-1.5 pt-3">
+            <CardTitle className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider">Success Rate</CardTitle>
+            <div className="h-6 w-6 rounded bg-green-500/10 flex items-center justify-center">
+              <CheckCircle2 className="h-3 w-3 text-green-500" />
+            </div>
           </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{stats.avgDuration}m</div>
-            <p className="text-xs text-muted-foreground">
-              Per session
+          <CardContent className="pb-3">
+            <div className="text-2xl font-bold tracking-tight">{stats.successRate}%</div>
+            <p className="text-[10px] text-muted-foreground mt-0.5">
+              {stats.completedSessions} completed
             </p>
           </CardContent>
         </Card>
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Repositories</CardTitle>
-            <BarChart3 className="h-4 w-4 text-muted-foreground" />
+        <Card className="border-l-2 border-l-yellow-500 hover:shadow-sm transition-shadow">
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-1.5 pt-3">
+            <CardTitle className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider">Avg Duration</CardTitle>
+            <div className="h-6 w-6 rounded bg-yellow-500/10 flex items-center justify-center">
+              <Clock className="h-3 w-3 text-yellow-600" />
+            </div>
           </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{stats.repoData.length}</div>
-            <p className="text-xs text-muted-foreground">
-              Active sources
+          <CardContent className="pb-3">
+            <div className="text-2xl font-bold tracking-tight">{stats.avgDuration}m</div>
+            <p className="text-[10px] text-muted-foreground mt-0.5">
+              per session
+            </p>
+          </CardContent>
+        </Card>
+        <Card className="border-l-2 border-l-orange-500 hover:shadow-sm transition-shadow">
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-1.5 pt-3">
+            <CardTitle className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider">Repositories</CardTitle>
+            <div className="h-6 w-6 rounded bg-orange-500/10 flex items-center justify-center">
+              <BarChart3 className="h-3 w-3 text-orange-500" />
+            </div>
+          </CardHeader>
+          <CardContent className="pb-3">
+            <div className="text-2xl font-bold tracking-tight">{stats.repoData.length}</div>
+            <p className="text-[10px] text-muted-foreground mt-0.5">
+              active sources
             </p>
           </CardContent>
         </Card>
       </div>
 
-      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-7">
-        {/* Main Chart: Sessions over time */}
-        <Card className="col-span-4">
-          <CardHeader>
-            <CardTitle>Sessions Overview</CardTitle>
-            <CardDescription>
-              New sessions created over time
-            </CardDescription>
-          </CardHeader>
-          <CardContent className="pl-2">
-            <ResponsiveContainer width="100%" height={350}>
-              <LineChart data={stats.timelineData}>
-                <XAxis
-                  dataKey="date"
-                  stroke="#888888"
-                  fontSize={12}
-                  tickLine={false}
-                  axisLine={false}
-                />
-                <YAxis
-                  stroke="#888888"
-                  fontSize={12}
-                  tickLine={false}
-                  axisLine={false}
-                  tickFormatter={(value) => `${value}`}
-                />
-                <Tooltip
-                  contentStyle={{ backgroundColor: 'var(--background)', borderRadius: '8px', border: '1px solid var(--border)' }}
-                />
-                <Line type="monotone" dataKey="count" stroke="#8884d8" strokeWidth={2} activeDot={{ r: 8 }} />
-              </LineChart>
-            </ResponsiveContainer>
-          </CardContent>
-        </Card>
+      {/* Main Chart: Sessions over time */}
+      <Card className="hover:shadow-sm transition-shadow">
+        <CardHeader className="pb-3">
+          <CardTitle className="text-sm font-semibold">Sessions Overview</CardTitle>
+          <CardDescription className="text-[10px]">
+            New sessions created over time
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="pl-1 pb-3">
+          <ResponsiveContainer width="100%" height={280}>
+            <AreaChart data={stats.timelineData}>
+              <defs>
+                <linearGradient id="colorSessions" x1="0" y1="0" x2="0" y2="1">
+                  <stop offset="5%" stopColor="#8b5cf6" stopOpacity={0.2}/>
+                  <stop offset="95%" stopColor="#8b5cf6" stopOpacity={0}/>
+                </linearGradient>
+              </defs>
+              <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" opacity={0.3} />
+              <XAxis
+                dataKey="date"
+                stroke="#888888"
+                fontSize={10}
+                tickLine={false}
+                axisLine={false}
+              />
+              <YAxis
+                stroke="#888888"
+                fontSize={10}
+                tickLine={false}
+                axisLine={false}
+                tickFormatter={(value) => `${value}`}
+              />
+              <Tooltip
+                contentStyle={{ backgroundColor: 'var(--background)', borderRadius: '8px', border: '1px solid var(--border)', color: 'var(--foreground)' }}
+              />
+              <Area
+                type="monotone"
+                dataKey="count"
+                stroke="#8b5cf6"
+                strokeWidth={2}
+                fill="url(#colorSessions)"
+                activeDot={{ r: 6, strokeWidth: 2 }}
+              />
+            </AreaChart>
+          </ResponsiveContainer>
+        </CardContent>
+      </Card>
 
-        {/* Status Distribution */}
-        <Card className="col-span-3">
-          <CardHeader>
-            <CardTitle>Session Status</CardTitle>
-            <CardDescription>
-              Distribution of session statuses
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            <ResponsiveContainer width="100%" height={350}>
-              <PieChart>
-                <Pie
-                  data={stats.statusData}
-                  cx="50%"
-                  cy="50%"
-                  innerRadius={60}
-                  outerRadius={100}
-                  paddingAngle={5}
-                  dataKey="value"
-                >
-                  {stats.statusData.map((entry, index) => (
-                    <Cell key={`cell-${index}`} fill={entry.color} />
-                  ))}
-                </Pie>
-                <Tooltip
-                   contentStyle={{ backgroundColor: 'var(--background)', borderRadius: '8px', border: '1px solid var(--border)' }}
-                />
-                <Legend />
-              </PieChart>
-            </ResponsiveContainer>
-          </CardContent>
-        </Card>
-      </div>
-
-      <div className="grid gap-4 md:grid-cols-2">
+      <div className="grid gap-3 md:grid-cols-2">
         {/* Most Used Repositories */}
-        <Card className="col-span-1">
-          <CardHeader>
-            <CardTitle>Top Repositories</CardTitle>
-            <CardDescription>
+        <Card className="col-span-1 hover:shadow-sm transition-shadow">
+          <CardHeader className="pb-3">
+            <CardTitle className="text-sm font-semibold">Top Repositories</CardTitle>
+            <CardDescription className="text-[10px]">
               Most active repositories by session count
             </CardDescription>
           </CardHeader>
-          <CardContent>
-             <ResponsiveContainer width="100%" height={300}>
+          <CardContent className="pb-3">
+             <ResponsiveContainer width="100%" height={240}>
               <BarChart data={stats.repoData} layout="vertical" margin={{ top: 5, right: 30, left: 20, bottom: 5 }}>
-                <CartesianGrid strokeDasharray="3 3" horizontal={true} vertical={false} />
+                <defs>
+                  <linearGradient id="colorRepo" x1="0" y1="0" x2="1" y2="0">
+                    <stop offset="5%" stopColor="#a855f7" stopOpacity={0.3}/>
+                    <stop offset="95%" stopColor="#8b5cf6" stopOpacity={0.15}/>
+                  </linearGradient>
+                </defs>
+                <CartesianGrid strokeDasharray="3 3" horizontal={true} vertical={false} stroke="var(--border)" opacity={0.3} />
                 <XAxis type="number" hide />
-                <YAxis dataKey="name" type="category" width={100} tick={{fontSize: 12}} />
+                <YAxis dataKey="name" type="category" width={100} tick={{fontSize: 10}} stroke="#888888" />
                 <Tooltip
                    cursor={{fill: 'transparent'}}
-                   contentStyle={{ backgroundColor: 'var(--background)', borderRadius: '8px', border: '1px solid var(--border)' }}
+                   contentStyle={{ backgroundColor: 'var(--background)', borderRadius: '8px', border: '1px solid var(--border)', color: 'var(--foreground)' }}
                 />
-                <Bar dataKey="value" fill="#8884d8" radius={[0, 4, 4, 0]} />
+                <Bar dataKey="value" fill="url(#colorRepo)" stroke="#8b5cf6" strokeWidth={1.5} radius={[0, 6, 6, 0]} />
               </BarChart>
             </ResponsiveContainer>
           </CardContent>
         </Card>
 
         {/* Activity Breakdown */}
-        <Card className="col-span-1">
-          <CardHeader>
-            <CardTitle>Activity Breakdown</CardTitle>
-            <CardDescription>
+        <Card className="col-span-1 hover:shadow-sm transition-shadow">
+          <CardHeader className="pb-3">
+            <CardTitle className="text-sm font-semibold">Activity Breakdown</CardTitle>
+            <CardDescription className="text-[10px]">
               Types of activities (based on recent sessions)
             </CardDescription>
           </CardHeader>
-          <CardContent>
-            <ResponsiveContainer width="100%" height={300}>
+          <CardContent className="pb-3">
+            <ResponsiveContainer width="100%" height={240}>
               <BarChart data={stats.activityData}>
-                <CartesianGrid strokeDasharray="3 3" vertical={false} />
-                <XAxis dataKey="name" fontSize={12} tickLine={false} axisLine={false} />
-                <YAxis fontSize={12} tickLine={false} axisLine={false} />
+                <defs>
+                  <linearGradient id="colorActivity" x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="5%" stopColor="#a855f7" stopOpacity={0.3}/>
+                    <stop offset="95%" stopColor="#8b5cf6" stopOpacity={0.1}/>
+                  </linearGradient>
+                </defs>
+                <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="var(--border)" opacity={0.3} />
+                <XAxis dataKey="name" fontSize={10} tickLine={false} axisLine={false} stroke="#888888" />
+                <YAxis fontSize={10} tickLine={false} axisLine={false} stroke="#888888" />
                 <Tooltip
                    cursor={{fill: 'transparent'}}
-                   contentStyle={{ backgroundColor: 'var(--background)', borderRadius: '8px', border: '1px solid var(--border)' }}
+                   contentStyle={{ backgroundColor: 'var(--background)', borderRadius: '8px', border: '1px solid var(--border)', color: 'var(--foreground)' }}
                 />
-                <Bar dataKey="value" fill="#82ca9d" radius={[4, 4, 0, 0]} />
+                <Bar dataKey="value" fill="url(#colorActivity)" stroke="#8b5cf6" strokeWidth={1.5} radius={[6, 6, 0, 0]} />
               </BarChart>
             </ResponsiveContainer>
           </CardContent>

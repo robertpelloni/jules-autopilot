@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useRef } from 'react';
 import { useJules } from '@/lib/jules/provider';
 import type { Activity, Session } from '@/types/jules';
 import { Card, CardContent } from '@/components/ui/card';
@@ -10,19 +10,26 @@ import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { Textarea } from '@/components/ui/textarea';
 import { Button } from '@/components/ui/button';
 import { formatDistanceToNow, isValid, parseISO } from 'date-fns';
-import { Send } from 'lucide-react';
+import { Send, Archive } from 'lucide-react';
+import { archiveSession, isSessionArchived } from '@/lib/archive';
+import ReactMarkdown from 'react-markdown';
+import remarkGfm from 'remark-gfm';
 
 interface ActivityFeedProps {
   session: Session;
+  onArchive?: () => void;
 }
 
-export function ActivityFeed({ session }: ActivityFeedProps) {
+export function ActivityFeed({ session, onArchive }: ActivityFeedProps) {
   const { client } = useJules();
   const [activities, setActivities] = useState<Activity[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [message, setMessage] = useState('');
   const [sending, setSending] = useState(false);
+  const [approvingPlan, setApprovingPlan] = useState(false);
+  const [newActivityIds, setNewActivityIds] = useState<Set<string>>(new Set());
+  const scrollRef = useRef<HTMLDivElement>(null);
 
   const formatDate = (dateString: string) => {
     if (!dateString) return 'Unknown date';
@@ -46,10 +53,10 @@ export function ActivityFeed({ session }: ActivityFeedProps) {
         return (
           <div className="space-y-2">
             {parsed.map((item: any, index: number) => (
-              <div key={index} className="pl-4 border-l-2 border-muted">
-                {item.title && <div className="font-medium">{item.title}</div>}
-                {item.description && <div className="text-muted-foreground text-xs mt-1">{item.description}</div>}
-                {!item.title && !item.description && <div>{typeof item === 'string' ? item : JSON.stringify(item)}</div>}
+              <div key={index} className="pl-3 border-l-2 border-primary/30">
+                {item.title && <div className="font-medium text-xs">{item.title}</div>}
+                {item.description && <div className="text-muted-foreground text-[11px] mt-0.5 leading-relaxed">{item.description}</div>}
+                {!item.title && !item.description && <div className="text-xs">{typeof item === 'string' ? item : JSON.stringify(item)}</div>}
               </div>
             ))}
           </div>
@@ -60,11 +67,11 @@ export function ActivityFeed({ session }: ActivityFeedProps) {
       if (parsed.steps && Array.isArray(parsed.steps)) {
         return (
           <div className="space-y-2">
-            {parsed.description && <div className="mb-3">{parsed.description}</div>}
+            {parsed.description && <div className="mb-2 text-xs">{parsed.description}</div>}
             {parsed.steps.map((step: any, index: number) => (
-              <div key={index} className="pl-4 border-l-2 border-muted">
-                <div className="font-medium">Step {index + 1}: {step.title || step}</div>
-                {step.description && <div className="text-muted-foreground text-xs mt-1">{step.description}</div>}
+              <div key={index} className="pl-3 border-l-2 border-primary/30">
+                <div className="font-medium text-xs">Step {index + 1}: {step.title || step}</div>
+                {step.description && <div className="text-muted-foreground text-[11px] mt-0.5 leading-relaxed">{step.description}</div>}
               </div>
             ))}
           </div>
@@ -72,28 +79,70 @@ export function ActivityFeed({ session }: ActivityFeedProps) {
       }
 
       // Otherwise return formatted JSON
-      return <pre className="text-xs overflow-x-auto">{JSON.stringify(parsed, null, 2)}</pre>;
+      return <pre className="text-[11px] overflow-x-auto font-mono bg-muted/50 p-2 rounded">{JSON.stringify(parsed, null, 2)}</pre>;
     } catch {
-      // Not JSON, return as plain text
-      return <p className="text-sm whitespace-pre-wrap break-words">{content}</p>;
+      // Not JSON, render as markdown
+      return (
+        <div className="prose prose-sm dark:prose-invert max-w-none prose-p:text-xs prose-p:leading-relaxed prose-headings:text-xs prose-headings:font-semibold prose-headings:mb-1 prose-headings:mt-2 prose-ul:text-xs prose-ol:text-xs prose-li:text-xs prose-li:my-0.5 prose-code:text-[11px] prose-code:bg-muted prose-code:px-1 prose-code:py-0.5 prose-code:rounded prose-pre:text-[11px] prose-pre:bg-muted prose-pre:p-2 prose-blockquote:text-xs prose-blockquote:border-l-primary prose-strong:font-semibold">
+          <ReactMarkdown remarkPlugins={[remarkGfm]}>
+            {content}
+          </ReactMarkdown>
+        </div>
+      );
     }
   };
 
   useEffect(() => {
-    loadActivities();
-  }, [session.id, client]);
+    loadActivities(true);
 
-  const loadActivities = async () => {
+    // Auto-poll for new activities every 5 seconds for active sessions
+    if (session.status === 'active') {
+      const interval = setInterval(() => {
+        loadActivities(false); // Don't show loading spinner for polls
+      }, 5000);
+
+      return () => clearInterval(interval);
+    }
+  }, [session.id, session.status, client]);
+
+  const loadActivities = async (isInitialLoad = true) => {
     if (!client) {
       setLoading(false);
       return;
     }
 
     try {
-      setLoading(true);
+      // Only show loading spinner on initial load
+      if (isInitialLoad) {
+        setLoading(true);
+      }
       setError(null);
       const data = await client.listActivities(session.id);
-      setActivities(data);
+
+      // Only update if activities have changed (to prevent unnecessary re-renders)
+      setActivities(prevActivities => {
+        // If no previous activities or this is initial load, just set them
+        if (prevActivities.length === 0 || isInitialLoad) {
+          return data;
+        }
+
+        // Check if we have new activities
+        const newActivities = data.filter(
+          newAct => !prevActivities.some(prevAct => prevAct.id === newAct.id)
+        );
+
+        // Only update if there are new activities
+        if (newActivities.length > 0) {
+          // Track new activity IDs for animation
+          setNewActivityIds(new Set(newActivities.map(a => a.id)));
+          // Clear the animation state after animation completes
+          setTimeout(() => setNewActivityIds(new Set()), 500);
+
+          return [...prevActivities, ...newActivities];
+        }
+
+        return prevActivities;
+      });
     } catch (err) {
       console.error('Failed to load activities:', err);
       // For 404, just show empty state instead of error (session may not have activities yet)
@@ -103,10 +152,39 @@ export function ActivityFeed({ session }: ActivityFeedProps) {
       } else {
         const errorMessage = err instanceof Error ? err.message : 'Failed to load activities';
         setError(errorMessage);
-        setActivities([]);
+        if (isInitialLoad) {
+          setActivities([]);
+        }
       }
     } finally {
-      setLoading(false);
+      if (isInitialLoad) {
+        setLoading(false);
+      }
+    }
+  };
+
+  const handleApprovePlan = async () => {
+    if (!client || approvingPlan) return;
+
+    try {
+      setApprovingPlan(true);
+      setError(null);
+      await client.approvePlan(session.id);
+
+      // Reload activities after approving
+      setTimeout(async () => {
+        try {
+          await loadActivities(false);
+        } catch (err) {
+          console.error('Failed to load activities after approval:', err);
+        }
+      }, 1000);
+    } catch (err) {
+      console.error('Failed to approve plan:', err);
+      const errorMessage = err instanceof Error ? err.message : 'Failed to approve plan';
+      setError(errorMessage);
+    } finally {
+      setApprovingPlan(false);
     }
   };
 
@@ -117,12 +195,25 @@ export function ActivityFeed({ session }: ActivityFeedProps) {
     try {
       setSending(true);
       setError(null);
-      const newActivity = await client.createActivity({
+
+      // Send message (API returns empty response)
+      const userMessage = await client.createActivity({
         sessionId: session.id,
         content: message.trim(),
       });
-      setActivities([...activities, newActivity]);
+
+      // Add user message to activities immediately
+      setActivities([...activities, userMessage]);
       setMessage('');
+
+      // Poll for agent's response after a short delay
+      setTimeout(async () => {
+        try {
+          await loadActivities(false);
+        } catch (err) {
+          console.error('Failed to load new activities:', err);
+        }
+      }, 2000);
     } catch (err) {
       console.error('Failed to send message:', err);
       const errorMessage = err instanceof Error ? err.message : 'Failed to send message';
@@ -132,11 +223,16 @@ export function ActivityFeed({ session }: ActivityFeedProps) {
     }
   };
 
+  const handleArchive = () => {
+    archiveSession(session.id);
+    onArchive?.();
+  };
+
   const getActivityIcon = (activity: Activity) => {
     if (activity.role === 'user') {
-      return <AvatarFallback className="bg-primary text-primary-foreground">U</AvatarFallback>;
+      return <AvatarFallback className="bg-primary text-primary-foreground text-[10px] font-semibold">U</AvatarFallback>;
     }
-    return <AvatarFallback className="bg-secondary text-secondary-foreground">J</AvatarFallback>;
+    return <AvatarFallback className="bg-secondary text-secondary-foreground text-[10px] font-semibold">J</AvatarFallback>;
   };
 
   const getActivityTypeColor = (type: Activity['type']) => {
@@ -159,25 +255,147 @@ export function ActivityFeed({ session }: ActivityFeedProps) {
   if (loading) {
     return (
       <div className="flex items-center justify-center h-full">
-        <p className="text-muted-foreground">Loading activities...</p>
+        <p className="text-xs text-muted-foreground">Loading activities...</p>
       </div>
     );
   }
 
+  // Filter activities the same way as we do for display
+  const filteredActivities = activities.filter((activity) => {
+    const content = activity.content?.trim();
+    if (!content) return false;
+    if (content === '{}') return false;
+    if (content === '[]') return false;
+    // Filter out fallback messages like [agentMessaged], [userMessaged], etc.
+    if (/^\[[\w,\s]+\]$/.test(content)) return false;
+    // Also check for common placeholder patterns
+    if (content === '[agentMessaged]' || content === '[userMessaged]') return false;
+    try {
+      const parsed = JSON.parse(content);
+      if (typeof parsed === 'object' && Object.keys(parsed).length === 0) return false;
+      if (Array.isArray(parsed) && parsed.length === 0) return false;
+    } catch {
+      // Not JSON, keep it
+    }
+    return true;
+  });
+
+  const latestActivity = filteredActivities.length > 0 ? filteredActivities[filteredActivities.length - 1] : null;
+  const sessionDuration = session.createdAt ?
+    Math.floor((new Date().getTime() - new Date(session.createdAt).getTime()) / 1000 / 60) : 0;
+
+  const getStatusInfo = () => {
+    if (session.status === 'active') {
+      return {
+        color: 'text-green-500',
+        bgColor: 'bg-green-500/10',
+        label: 'Active',
+        icon: '●'
+      };
+    } else if (session.status === 'completed') {
+      return {
+        color: 'text-blue-500',
+        bgColor: 'bg-blue-500/10',
+        label: 'Completed',
+        icon: '✓'
+      };
+    } else if (session.status === 'failed') {
+      return {
+        color: 'text-red-500',
+        bgColor: 'bg-red-500/10',
+        label: 'Failed',
+        icon: '✕'
+      };
+    } else if (session.status === 'paused') {
+      return {
+        color: 'text-yellow-500',
+        bgColor: 'bg-yellow-500/10',
+        label: 'Paused',
+        icon: '⏸'
+      };
+    }
+    return {
+      color: 'text-gray-500',
+      bgColor: 'bg-gray-500/10',
+      label: session.status,
+      icon: '○'
+    };
+  };
+
+  const statusInfo = getStatusInfo();
+
   return (
     <div className="flex flex-col h-full">
-      <div className="border-b p-4">
-        <h2 className="font-semibold truncate">{session.title}</h2>
-        <p className="text-xs text-muted-foreground mt-1">
-          {formatDate(session.createdAt)}
-        </p>
+      <div className="border-b bg-card/30 px-4 py-3">
+        <div className="flex items-start justify-between gap-4">
+          <div className="flex-1 min-w-0">
+            <div className="flex items-center gap-2 mb-1">
+              <h2 className="text-sm font-semibold truncate">{session.title}</h2>
+              <div className={`flex items-center gap-1 px-2 py-0.5 rounded text-[10px] font-medium ${statusInfo.bgColor} ${statusInfo.color}`}>
+                <span>{statusInfo.icon}</span>
+                <span>{statusInfo.label}</span>
+              </div>
+            </div>
+            <div className="flex items-center gap-3 text-[10px] text-muted-foreground">
+              <span>Started {formatDate(session.createdAt)}</span>
+              {session.status === 'active' && (
+                <>
+                  <span>•</span>
+                  <span>Running for {sessionDuration}m</span>
+                </>
+              )}
+            </div>
+            {session.status === 'active' && (
+              <div className="mt-2 pt-2 border-t border-border/50">
+                <div className="flex items-center gap-2 mb-1">
+                  <div className="text-[10px] font-semibold text-primary">Latest Activity:</div>
+                  {latestActivity && (
+                    <div className="text-[9px] text-muted-foreground">
+                      {formatDate(latestActivity.createdAt)}
+                    </div>
+                  )}
+                </div>
+                <div className="text-xs text-foreground/90 line-clamp-2 leading-relaxed">
+                  {latestActivity ? (
+                    (() => {
+                      try {
+                        const parsed = JSON.parse(latestActivity.content);
+                        if (typeof parsed === 'string') {
+                          return parsed.length > 150 ? parsed.substring(0, 150) + '...' : parsed;
+                        }
+                        return latestActivity.content.length > 150
+                          ? latestActivity.content.substring(0, 150) + '...'
+                          : latestActivity.content;
+                      } catch {
+                        return latestActivity.content.length > 150
+                          ? latestActivity.content.substring(0, 150) + '...'
+                          : latestActivity.content;
+                      }
+                    })()
+                  ) : (
+                    <span className="text-muted-foreground italic">Waiting for activity updates...</span>
+                  )}
+                </div>
+              </div>
+            )}
+          </div>
+          <Button
+            variant="ghost"
+            size="icon"
+            onClick={handleArchive}
+            title="Archive session"
+            className="shrink-0 h-7 w-7"
+          >
+            <Archive className="h-3.5 w-3.5" />
+          </Button>
+        </div>
       </div>
 
       {error && (
-        <div className="border-b bg-destructive/10 p-4">
+        <div className="border-b bg-destructive/10 px-4 py-3">
           <div className="flex items-center justify-between gap-2">
-            <p className="text-sm text-destructive">{error}</p>
-            <Button variant="outline" size="sm" onClick={loadActivities}>
+            <p className="text-xs text-destructive">{error}</p>
+            <Button variant="outline" size="sm" onClick={() => loadActivities(true)} className="h-7 text-xs">
               Retry
             </Button>
           </div>
@@ -186,10 +404,10 @@ export function ActivityFeed({ session }: ActivityFeedProps) {
 
       <div className="flex-1 overflow-hidden">
         <ScrollArea className="h-full">
-          <div className="p-4 space-y-4">
+          <div className="p-3 space-y-2.5">
             {activities.length === 0 && !loading && !error && (
               <div className="flex items-center justify-center min-h-[200px]">
-                <p className="text-muted-foreground text-center">
+                <p className="text-xs text-muted-foreground text-center leading-relaxed">
                   No activities yet.
                   {session.status !== 'completed' && session.status !== 'failed' &&
                     <span className="block mt-1">This session may be queued or in progress.</span>
@@ -197,69 +415,158 @@ export function ActivityFeed({ session }: ActivityFeedProps) {
                 </p>
               </div>
             )}
-            {activities.filter((activity) => {
-              // Filter out activities with empty or meaningless content
-              const content = activity.content?.trim();
-              if (!content) return false;
-              if (content === '{}') return false;
-              if (content === '[]') return false;
-              // Filter out fallback messages like [agentMessaged], [userMessaged], etc.
-              if (/^\[[\w,\s]+\]$/.test(content)) return false;
-              try {
-                const parsed = JSON.parse(content);
-                // Hide empty objects or arrays
-                if (typeof parsed === 'object' && Object.keys(parsed).length === 0) return false;
-                if (Array.isArray(parsed) && parsed.length === 0) return false;
-              } catch {
-                // Not JSON, keep it
-              }
-              return true;
-            }).map((activity) => (
-              <div
-                key={activity.id}
-                className={`flex gap-3 ${activity.role === 'user' ? 'flex-row-reverse' : ''}`}
-              >
-                <Avatar className="h-8 w-8 shrink-0">
-                  {getActivityIcon(activity)}
-                </Avatar>
-                <Card className={`flex-1 ${activity.role === 'user' ? 'bg-primary/5' : ''}`}>
-                  <CardContent className="p-3">
-                    <div className="flex items-center gap-2 mb-2">
-                      <Badge variant="outline" className={`text-xs ${getActivityTypeColor(activity.type)}`}>
-                        {activity.type}
-                      </Badge>
-                      <span className="text-xs text-muted-foreground">
-                        {formatDate(activity.createdAt)}
-                      </span>
+            {(() => {
+              // Filter activities first
+              const filtered = activities.filter((activity) => {
+                const content = activity.content?.trim();
+                if (!content) return false;
+                if (content === '{}') return false;
+                if (content === '[]') return false;
+                if (/^\[[\w,\s]+\]$/.test(content)) return false;
+                try {
+                  const parsed = JSON.parse(content);
+                  if (typeof parsed === 'object' && Object.keys(parsed).length === 0) return false;
+                  if (Array.isArray(parsed) && parsed.length === 0) return false;
+                } catch {
+                  // Not JSON, keep it
+                }
+                return true;
+              });
+
+              // Group consecutive progress activities from the same role
+              const grouped: Array<Activity | Activity[]> = [];
+              let currentGroup: Activity[] | null = null;
+
+              filtered.forEach((activity, index) => {
+                const shouldGroup = activity.type === 'progress' && activity.role === 'agent';
+                const prevActivity = index > 0 ? filtered[index - 1] : null;
+                const prevShouldGroup = prevActivity && prevActivity.type === 'progress' && prevActivity.role === 'agent';
+
+                if (shouldGroup) {
+                  if (prevShouldGroup && currentGroup) {
+                    currentGroup.push(activity);
+                  } else {
+                    currentGroup = [activity];
+                    grouped.push(currentGroup);
+                  }
+                } else {
+                  currentGroup = null;
+                  grouped.push(activity);
+                }
+              });
+
+              return grouped.map((item, groupIndex) => {
+                // Handle grouped progress activities
+                if (Array.isArray(item)) {
+                  const firstActivity = item[0];
+                  return (
+                    <div
+                      key={`group-${groupIndex}`}
+                      className="flex gap-2.5"
+                    >
+                      <Avatar className="h-7 w-7 shrink-0 mt-0.5">
+                        {getActivityIcon(firstActivity)}
+                      </Avatar>
+                      <Card className="flex-1 border-border/50 bg-card">
+                        <CardContent className="p-3">
+                          <div className="flex items-center gap-2 mb-2">
+                            <Badge variant="outline" className="text-[10px] h-5 bg-yellow-500 border-transparent text-white">
+                              progress
+                            </Badge>
+                            <span className="text-[10px] text-muted-foreground">
+                              {item.length} update{item.length > 1 ? 's' : ''}
+                            </span>
+                          </div>
+                          <div className="space-y-2">
+                            {item.map((activity, activityIndex) => (
+                              <div key={activity.id} className={activityIndex > 0 ? 'pt-2 border-t border-border/30' : ''}>
+                                <div className="text-[9px] text-muted-foreground mb-1">
+                                  {formatDate(activity.createdAt)}
+                                </div>
+                                <div className="text-xs leading-relaxed">{formatContent(activity.content)}</div>
+                              </div>
+                            ))}
+                          </div>
+                        </CardContent>
+                      </Card>
                     </div>
-                    <div className="text-sm">{formatContent(activity.content)}</div>
-                  </CardContent>
-                </Card>
-              </div>
-            ))}
+                  );
+                }
+
+                // Handle single activity
+                const activity = item;
+                return (
+                  <div
+                    key={activity.id}
+                    className={`flex gap-2.5 ${activity.role === 'user' ? 'flex-row-reverse' : ''} ${
+                      newActivityIds.has(activity.id) ? 'animate-in fade-in slide-in-from-bottom-2 duration-500' : ''
+                    }`}
+                  >
+                    <Avatar className="h-7 w-7 shrink-0 mt-0.5">
+                      {getActivityIcon(activity)}
+                    </Avatar>
+                    <Card className={`flex-1 border-border/50 ${activity.role === 'user' ? 'bg-primary/5 border-primary/20' : 'bg-card'}`}>
+                      <CardContent className="p-3">
+                        <div className="flex items-center gap-2 mb-2">
+                          <Badge variant="outline" className={`text-[10px] h-5 ${getActivityTypeColor(activity.type)} border-transparent text-white`}>
+                            {activity.type}
+                          </Badge>
+                          <span className="text-[10px] text-muted-foreground">
+                            {formatDate(activity.createdAt)}
+                          </span>
+                        </div>
+                        <div className="text-xs leading-relaxed">{formatContent(activity.content)}</div>
+                        {activity.type === 'plan' &&
+                          activity.metadata?.planGenerated &&
+                          !(activity.metadata?.planGenerated as any)?.approved ? (
+                            <div className="mt-3 pt-3 border-t border-border/50">
+                              <Button
+                                onClick={handleApprovePlan}
+                                disabled={approvingPlan}
+                                size="sm"
+                                className="w-full h-8 text-xs"
+                              >
+                                {approvingPlan ? 'Approving...' : 'Approve Plan'}
+                              </Button>
+                            </div>
+                          ) : null}
+                      </CardContent>
+                    </Card>
+                  </div>
+                );
+              });
+            })()}
           </div>
         </ScrollArea>
       </div>
 
-      <form onSubmit={handleSendMessage} className="border-t p-4">
-        <div className="flex gap-2">
-          <Textarea
-            value={message}
-            onChange={(e) => setMessage(e.target.value)}
-            placeholder="Type a message..."
-            className="min-h-[60px] resize-none"
-            onKeyDown={(e) => {
-              if (e.key === 'Enter' && !e.shiftKey) {
-                e.preventDefault();
-                handleSendMessage(e);
-              }
-            }}
-          />
-          <Button type="submit" size="icon" disabled={!message.trim() || sending}>
-            <Send className="h-4 w-4" />
-          </Button>
+      {session.status !== 'completed' && session.status !== 'failed' && (
+        <form onSubmit={handleSendMessage} className="border-t bg-card/30 p-3">
+          <div className="flex gap-2">
+            <Textarea
+              value={message}
+              onChange={(e) => setMessage(e.target.value)}
+              placeholder="Send a message to Jules..."
+              className="min-h-[56px] resize-none text-xs"
+              onKeyDown={(e) => {
+                if (e.key === 'Enter' && !e.shiftKey) {
+                  e.preventDefault();
+                  handleSendMessage(e);
+                }
+              }}
+              disabled={sending}
+            />
+            <Button type="submit" size="icon" disabled={!message.trim() || sending} className="h-9 w-9">
+              <Send className="h-3.5 w-3.5" />
+            </Button>
+          </div>
+        </form>
+      )}
+      {(session.status === 'completed' || session.status === 'failed') && (
+        <div className="border-t bg-card/30 p-3 text-center text-xs text-muted-foreground">
+          This session is {session.status}. You cannot send new messages.
         </div>
-      </form>
+      )}
     </div>
   );
 }
