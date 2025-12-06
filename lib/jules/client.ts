@@ -226,11 +226,15 @@ export class JulesClient {
                   activity.progressUpdated.message ||
                   JSON.stringify(activity.progressUpdated, null, 2);
 
-        // Extract diff from progress artifacts if available
+        // Extract artifacts from progress if available
         if (activity.progressUpdated.artifacts?.length > 0) {
-          const artifact = activity.progressUpdated.artifacts[0];
-          if (artifact.changeSet?.gitPatch?.unidiffPatch) {
-            activity.diff = artifact.changeSet.gitPatch.unidiffPatch;
+          for (const artifact of activity.progressUpdated.artifacts) {
+            if (artifact.changeSet?.gitPatch?.unidiffPatch) {
+              activity.diff = artifact.changeSet.gitPatch.unidiffPatch;
+            }
+            if (artifact.bashOutput?.output) {
+              activity.bashOutput = artifact.bashOutput.output;
+            }
           }
         }
       } else if (activity.sessionCompleted) {
@@ -238,12 +242,15 @@ export class JulesClient {
         const result = activity.sessionCompleted;
         content = result.summary || result.message || 'Session completed';
 
-        // Extract diff from artifacts if available
+        // Extract artifacts if available
         if (result.artifacts?.length > 0) {
-          const artifact = result.artifacts[0];
-          if (artifact.changeSet?.gitPatch?.unidiffPatch) {
-            // Store the diff in metadata for rendering
-            activity.diff = artifact.changeSet.gitPatch.unidiffPatch;
+          for (const artifact of result.artifacts) {
+            if (artifact.changeSet?.gitPatch?.unidiffPatch) {
+              activity.diff = artifact.changeSet.gitPatch.unidiffPatch;
+            }
+            if (artifact.bashOutput?.output) {
+              activity.bashOutput = artifact.bashOutput.output;
+            }
           }
         }
       } else if (activity.agentMessaged) {
@@ -276,6 +283,7 @@ export class JulesClient {
         role: (activity.originator === 'agent' ? 'agent' : 'user') as Activity['role'],
         content,
         diff: activity.diff, // Include extracted diff if available
+        bashOutput: activity.bashOutput, // Include extracted bash output if available
         createdAt: activity.createTime,
         metadata: activity
       };
@@ -304,11 +312,15 @@ export class JulesClient {
                 response.progressUpdated.message ||
                 JSON.stringify(response.progressUpdated, null, 2);
 
-      // Extract diff from progress artifacts if available
+      // Extract artifacts from progress if available
       if (response.progressUpdated.artifacts?.length > 0) {
-        const artifact = response.progressUpdated.artifacts[0];
-        if (artifact.changeSet?.gitPatch?.unidiffPatch) {
-          response.diff = artifact.changeSet.gitPatch.unidiffPatch;
+        for (const artifact of response.progressUpdated.artifacts) {
+          if (artifact.changeSet?.gitPatch?.unidiffPatch) {
+            response.diff = artifact.changeSet.gitPatch.unidiffPatch;
+          }
+          if (artifact.bashOutput?.output) {
+            response.bashOutput = artifact.bashOutput.output;
+          }
         }
       }
     } else if (response.sessionCompleted) {
@@ -316,11 +328,15 @@ export class JulesClient {
       const result = response.sessionCompleted;
       content = result.summary || result.message || 'Session completed';
 
-      // Extract diff from artifacts if available
+      // Extract artifacts if available
       if (result.artifacts?.length > 0) {
-        const artifact = result.artifacts[0];
-        if (artifact.changeSet?.gitPatch?.unidiffPatch) {
-          response.diff = artifact.changeSet.gitPatch.unidiffPatch;
+        for (const artifact of result.artifacts) {
+          if (artifact.changeSet?.gitPatch?.unidiffPatch) {
+            response.diff = artifact.changeSet.gitPatch.unidiffPatch;
+          }
+          if (artifact.bashOutput?.output) {
+            response.bashOutput = artifact.bashOutput.output;
+          }
         }
       }
     } else if (response.agentMessaged) {
@@ -342,6 +358,7 @@ export class JulesClient {
       role: (response.originator === 'agent' ? 'agent' : 'user') as Activity['role'],
       content,
       diff: response.diff,
+      bashOutput: response.bashOutput,
       createdAt: response.createTime,
       metadata: response
     };

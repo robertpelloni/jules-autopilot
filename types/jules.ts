@@ -22,6 +22,7 @@ export interface Activity {
   role: 'user' | 'agent';
   content: string;
   diff?: string; // Unified diff patch from artifacts
+  bashOutput?: string; // Bash command output from artifacts
   metadata?: Record<string, unknown>;
   createdAt: string;
 }

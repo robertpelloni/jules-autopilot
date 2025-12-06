@@ -15,6 +15,7 @@ import { archiveSession, isSessionArchived } from '@/lib/archive';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import { DiffViewer } from '@/components/ui/diff-viewer';
+import { BashOutput } from '@/components/ui/bash-output';
 
 interface ActivityFeedProps {
   session: Session;
@@ -521,6 +522,11 @@ export function ActivityFeed({ session, onArchive }: ActivityFeedProps) {
                           </span>
                         </div>
                         <div className="text-[11px] leading-relaxed text-white/90">{formatContent(activity.content)}</div>
+                        {activity.bashOutput && (
+                          <div className="mt-3">
+                            <BashOutput output={activity.bashOutput} />
+                          </div>
+                        )}
                         {activity.diff && (
                           <div className="mt-3">
                             <DiffViewer diff={activity.diff} />
