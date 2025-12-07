@@ -1,5 +1,45 @@
 import type { Source, Session, Activity, CreateSessionRequest, CreateActivityRequest } from '@/types/jules';
 
+interface ApiSource {
+  source?: string;
+  name?: string;
+  [key: string]: unknown;
+}
+
+interface ApiSession {
+  id: string;
+  sourceContext?: {
+    source?: string;
+  };
+  title?: string;
+  state?: string;
+  createTime: string;
+  updateTime: string;
+  lastActivityAt?: string;
+  [key: string]: unknown;
+}
+
+interface ApiActivity {
+  name?: string;
+  id?: string;
+  createTime: string;
+  originator?: string;
+  planGenerated?: { plan?: unknown; [key: string]: unknown };
+  planApproved?: boolean;
+  progressUpdated?: { progressDescription?: string; description?: string; message?: string; [key: string]: unknown };
+  sessionCompleted?: { summary?: string; message?: string; [key: string]: unknown };
+  agentMessaged?: { agentMessage?: string; message?: string; [key: string]: unknown };
+  userMessage?: { message?: string; content?: string; [key: string]: unknown };
+  artifacts?: unknown[];
+  message?: string;
+  content?: string;
+  text?: string;
+  description?: string;
+  diff?: string;
+  bashOutput?: string;
+  [key: string]: unknown;
+}
+
 export class JulesAPIError extends Error {
   constructor(
     message: string,
@@ -103,10 +143,10 @@ export class JulesClient {
 
   // Sources
   async listSources(): Promise<Source[]> {
-    const response = await this.request<{ sources: any[] }>('/sources');
+    const response = await this.request<{ sources: ApiSource[] }>('/sources');
 
     // Transform API response to extract repository info
-    const sources = (response.sources || []).map((source: any) => {
+    const sources = (response.sources || []).map((source: ApiSource) => {
       // Extract repo name from source field (e.g., "sources/github/owner/repo")
       const sourcePath = source.source || source.name || '';
       const match = sourcePath.match(/sources\/github\/(.+)/);
@@ -116,7 +156,7 @@ export class JulesClient {
         id: sourcePath,  // Keep full path for API calls
         name: repoPath,  // Use short name for display
         type: 'github' as const,
-        metadata: source
+        metadata: source as Record<string, unknown>
       };
     });
 
@@ -131,14 +171,14 @@ export class JulesClient {
   // Sessions
   async listSessions(sourceId?: string): Promise<Session[]> {
     const params = sourceId ? `?sourceId=${sourceId}` : '';
-    const response = await this.request<{ sessions: any[] }>(`/sessions${params}`);
+    const response = await this.request<{ sessions: ApiSession[] }>(`/sessions${params}`);
 
     // Transform API response to match our Session type
-    return (response.sessions || []).map((session: any) => ({
+    return (response.sessions || []).map((session: ApiSession) => ({
       id: session.id,
       sourceId: session.sourceContext?.source?.replace('sources/github/', '') || '',
-      title: session.title,
-      status: this.mapState(session.state),
+      title: session.title || '',
+      status: this.mapState(session.state || ''),
       createdAt: session.createTime,
       updatedAt: session.updateTime,
       lastActivityAt: session.lastActivityAt
@@ -198,12 +238,12 @@ export class JulesClient {
 
   // Activities
   async listActivities(sessionId: string): Promise<Activity[]> {
-    const response = await this.request<{ activities: any[] }>(
+    const response = await this.request<{ activities: ApiActivity[] }>(
       `/sessions/${sessionId}/activities`
     );
 
     // Transform API response to match our Activity type
-    return (response.activities || []).map((activity: any) => {
+    return (response.activities || []).map((activity: ApiActivity) => {
       // Extract ID from name field (e.g., "sessions/ID/activities/ACTIVITY_ID")
       const id = activity.name?.split('/').pop() || activity.id || '';
 
@@ -232,7 +272,7 @@ export class JulesClient {
       }
 
       // Extract artifacts from top-level artifacts array (applies to all activity types)
-      if (activity.artifacts?.length > 0) {
+      if (activity.artifacts && activity.artifacts.length > 0) {
         for (const artifact of activity.artifacts) {
           // Handle both gitPatch.unidiffPatch and direct unidiffPatch formats
           if (artifact.changeSet?.gitPatch?.unidiffPatch) {
@@ -276,13 +316,13 @@ export class JulesClient {
         diff: activity.diff, // Include extracted diff if available
         bashOutput: activity.bashOutput, // Include extracted bash output if available
         createdAt: activity.createTime,
-        metadata: activity
+        metadata: activity as Record<string, unknown>
       };
     });
   }
 
   async getActivity(sessionId: string, activityId: string): Promise<Activity> {
-    const response = await this.request<any>(`/sessions/${sessionId}/activities/${activityId}`);
+    const response = await this.request<ApiActivity>(`/sessions/${sessionId}/activities/${activityId}`);
 
     // Transform similar to listActivities
     const id = response.name?.split('/').pop() || activityId;
@@ -309,7 +349,7 @@ export class JulesClient {
     }
 
     // Extract artifacts from top-level artifacts array (applies to all activity types)
-    if (response.artifacts?.length > 0) {
+    if (response.artifacts && response.artifacts.length > 0) {
       for (const artifact of response.artifacts) {
         // Handle both gitPatch.unidiffPatch and direct unidiffPatch formats
         if (artifact.changeSet?.gitPatch?.unidiffPatch) {
@@ -342,7 +382,7 @@ export class JulesClient {
       diff: response.diff,
       bashOutput: response.bashOutput,
       createdAt: response.createTime,
-      metadata: response
+      metadata: response as Record<string, unknown>
     };
   }
 

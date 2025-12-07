@@ -5,11 +5,6 @@ import { Check, Copy, ChevronDown, ChevronRight } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { cn } from '@/lib/utils';
 
-interface DiffFile {
-  filename: string;
-  diff: string;
-}
-
 interface DiffViewerProps {
   diff: string;
   className?: string;

@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useJules } from '@/lib/jules/provider';
 import type { Source } from '@/types/jules';
 import {
@@ -15,7 +15,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
-import { Combobox, ComboboxOption } from '@/components/ui/combobox';
+import { Combobox } from '@/components/ui/combobox';
 import { Plus } from 'lucide-react';
 
 interface NewSessionDialogProps {
@@ -34,13 +34,7 @@ export function NewSessionDialog({ onSessionCreated }: NewSessionDialogProps) {
     prompt: '',
   });
 
-  useEffect(() => {
-    if (open && client) {
-      loadSources();
-    }
-  }, [open, client]);
-
-  const loadSources = async () => {
+  const loadSources = useCallback(async () => {
     if (!client) return;
 
     try {
@@ -62,7 +56,13 @@ export function NewSessionDialog({ onSessionCreated }: NewSessionDialogProps) {
         setError(errorMessage);
       }
     }
-  };
+  }, [client]);
+
+  useEffect(() => {
+    if (open && client) {
+      loadSources();
+    }
+  }, [open, client, loadSources]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();

@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useCallback } from 'react';
 import { useJules } from '@/lib/jules/provider';
 import type { Session } from '@/types/jules';
 import { Badge } from '@/components/ui/badge';
@@ -48,11 +48,7 @@ export function SessionList({ onSelectSession, selectedSessionId }: SessionListP
     }
   };
 
-  useEffect(() => {
-    loadSessions();
-  }, [client]);
-
-  const loadSessions = async () => {
+  const loadSessions = useCallback(async () => {
     if (!client) {
       setLoading(false);
       return;
@@ -83,7 +79,11 @@ export function SessionList({ onSelectSession, selectedSessionId }: SessionListP
     } finally {
       setLoading(false);
     }
-  };
+  }, [client]);
+
+  useEffect(() => {
+    loadSessions();
+  }, [loadSessions]);
 
   const getStatusColor = (status: Session['status']) => {
     switch (status) {

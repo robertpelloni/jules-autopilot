@@ -2,6 +2,20 @@ import { NextResponse, NextRequest } from 'next/server';
 
 const JULES_API_BASE = 'https://jules.googleapis.com/v1alpha';
 
+interface Activity {
+  name?: string;
+  createTime?: string;
+  originator?: string;
+  id?: string;
+  progressUpdated?: {
+    artifacts?: unknown[];
+  };
+  sessionCompleted?: {
+    artifacts?: unknown[];
+  };
+  [key: string]: unknown;
+}
+
 export async function GET(request: NextRequest) {
   try {
     const apiKey = request.headers.get('x-jules-api-key');
@@ -25,21 +39,24 @@ export async function GET(request: NextRequest) {
     // Temporarily log activities for debugging
     if (path.includes('/activities') && data.activities && data.activities.length > 0) {
       // Log activity types
-      const activityTypes = data.activities.map((a: any) => {
+      const activityTypes = data.activities.map((a: Activity) => {
         const type = Object.keys(a).find(k => k !== 'name' && k !== 'createTime' && k !== 'originator' && k !== 'id');
         return type;
       });
       console.log('[Jules API Proxy] Activity types:', activityTypes);
 
-      // Look for activities with artifacts (artifacts are at top level of activity object)
-      const activitiesWithArtifacts = data.activities.filter((a: any) => {
-        return a.artifacts?.length > 0;
+      // Look for activities with artifacts
+      const activitiesWithArtifacts = data.activities.filter((a: Activity) => {
+        return (a.progressUpdated?.artifacts && a.progressUpdated.artifacts.length > 0) || 
+               (a.sessionCompleted?.artifacts && a.sessionCompleted.artifacts.length > 0) ||
+               (a.artifacts && a.artifacts.length > 0); // Include top-level artifacts check
       });
 
       if (activitiesWithArtifacts.length > 0) {
         console.log('[Jules API Proxy] Found', activitiesWithArtifacts.length, 'activities with artifacts');
-        activitiesWithArtifacts.forEach((a: any, idx: number) => {
-          const artifacts = a.artifacts || [];
+        activitiesWithArtifacts.forEach((a: Activity, idx: number) => {
+          // Explicitly cast to any[] for detailed logging to allow flexible access
+          const artifacts = (a.progressUpdated?.artifacts || a.sessionCompleted?.artifacts || a.artifacts || []) as any[]; 
           console.log(`[Jules API Proxy] Activity ${idx} has ${artifacts.length} artifacts`);
           artifacts.forEach((artifact: any, artifactIdx: number) => {
             console.log(`[Jules API Proxy]   Artifact ${artifactIdx}:`, Object.keys(artifact));
@@ -66,7 +83,7 @@ export async function GET(request: NextRequest) {
       }
 
       // Look for sessionCompleted activities
-      const completedActivity = data.activities.find((a: any) => a.sessionCompleted);
+      const completedActivity = data.activities.find((a: Activity) => a.sessionCompleted);
       if (completedActivity) {
         console.log('[Jules API Proxy] Found sessionCompleted activity:', JSON.stringify(completedActivity, null, 2));
       }

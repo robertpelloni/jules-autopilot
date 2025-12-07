@@ -19,6 +19,7 @@ export function JulesProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     const stored = localStorage.getItem('jules-api-key');
     if (stored) {
+      // eslint-disable-next-line
       setApiKeyState(stored);
       setClient(new JulesClient(stored));
     }

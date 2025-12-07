@@ -1,12 +1,11 @@
 'use client';
 
-import { useEffect, useState, useMemo } from 'react';
+import { useEffect, useState, useMemo, useCallback } from 'react';
 import { useJules } from '@/lib/jules/provider';
 import type { Session, Source, Activity } from '@/types/jules';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Button } from '@/components/ui/button';
-import { GridBackground } from '@/components/ui/grid-background';
 import { BackgroundBeams } from '@/components/ui/background-beams';
 import { BorderGlow } from '@/components/ui/border-glow';
 import {
@@ -25,7 +24,7 @@ export function AnalyticsDashboard() {
   const [refreshing, setRefreshing] = useState(false);
   const [dateRange, setDateRange] = useState('30');
 
-  const fetchData = async () => {
+  const fetchData = useCallback(async () => {
     if (!client) return;
 
     try {
@@ -57,11 +56,11 @@ export function AnalyticsDashboard() {
       setLoading(false);
       setRefreshing(false);
     }
-  };
+  }, [client]);
 
   useEffect(() => {
     fetchData();
-  }, [client]);
+  }, [fetchData]);
 
   const handleRefresh = () => {
     setRefreshing(true);
@@ -134,23 +133,6 @@ export function AnalyticsDashboard() {
       .map(([name, value]) => ({ name, value }))
       .sort((a, b) => b.value - a.value)
       .slice(0, 5); // Top 5
-
-    // Sessions over time
-    const sessionsByDate = currentSessions.reduce((acc, curr) => {
-      const date = format(parseISO(curr.createdAt), 'MMM dd');
-      acc[date] = (acc[date] || 0) + 1;
-      return acc;
-    }, {} as Record<string, number>);
-
-    // Ensure chronologically sorted
-    const timelineData = Object.entries(sessionsByDate)
-      .map(([date, count]) => ({ date, count }))
-      .sort((a, b) => {
-         // This simple sort might fail across years or if format changes,
-         // but for 'MMM dd' within last 30 days it works if we map back to date objects.
-         // Better way: use the actual date object as key then format later
-         return 0;
-      });
 
     // Re-doing timeline properly
     const timelineMap = new Map<string, number>();

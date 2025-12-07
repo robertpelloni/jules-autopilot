@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState, useRef } from 'react';
+import { useEffect, useState, useCallback } from 'react';
 import { useJules } from '@/lib/jules/provider';
 import type { Activity, Session } from '@/types/jules';
 import { Card, CardContent } from '@/components/ui/card';
@@ -11,7 +11,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { Button } from '@/components/ui/button';
 import { formatDistanceToNow, isValid, parseISO } from 'date-fns';
 import { Send, Archive, Code, Terminal, ChevronDown, ChevronRight } from 'lucide-react';
-import { archiveSession, isSessionArchived } from '@/lib/archive';
+import { archiveSession } from '@/lib/archive';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import { BashOutput } from '@/components/ui/bash-output';
@@ -24,6 +24,12 @@ interface ActivityFeedProps {
   onActivitiesChange: (activities: Activity[]) => void;
 }
 
+interface PlanStep {
+  title?: string;
+  description?: string;
+  [key: string]: unknown;
+}
+
 export function ActivityFeed({ session, onArchive, showCodeDiffs, onToggleCodeDiffs, onActivitiesChange }: ActivityFeedProps) {
   const { client } = useJules();
   const [activities, setActivities] = useState<Activity[]>([]);
@@ -33,7 +39,6 @@ export function ActivityFeed({ session, onArchive, showCodeDiffs, onToggleCodeDi
   const [sending, setSending] = useState(false);
   const [approvingPlan, setApprovingPlan] = useState(false);
   const [newActivityIds, setNewActivityIds] = useState<Set<string>>(new Set());
-  const scrollRef = useRef<HTMLDivElement>(null);
 
   const formatDate = (dateString: string) => {
     if (!dateString) return 'Unknown date';
@@ -56,7 +61,7 @@ export function ActivityFeed({ session, onArchive, showCodeDiffs, onToggleCodeDi
       if (Array.isArray(parsed)) {
         return (
           <div className="space-y-2">
-            {parsed.map((item: any, index: number) => (
+            {parsed.map((item: PlanStep, index: number) => (
               <div key={index} className="pl-3 border-l-2 border-primary/30">
                 {item.title && <div className="font-medium text-xs">{item.title}</div>}
                 {item.description && <div className="text-muted-foreground text-[11px] mt-0.5 leading-relaxed">{item.description}</div>}
@@ -72,7 +77,7 @@ export function ActivityFeed({ session, onArchive, showCodeDiffs, onToggleCodeDi
         return (
           <div className="space-y-2">
             {parsed.description && <div className="mb-2 text-xs">{parsed.description}</div>}
-            {parsed.steps.map((step: any, index: number) => (
+            {parsed.steps.map((step: PlanStep, index: number) => (
               <div key={index} className="pl-3 border-l-2 border-primary/30">
                 <div className="font-medium text-xs">Step {index + 1}: {step.title || step}</div>
                 {step.description && <div className="text-muted-foreground text-[11px] mt-0.5 leading-relaxed">{step.description}</div>}
@@ -107,7 +112,7 @@ export function ActivityFeed({ session, onArchive, showCodeDiffs, onToggleCodeDi
 
       return () => clearInterval(interval);
     }
-  }, [session.id, session.status, client]);
+  }, [session.id, session.status, client, loadActivities]);
 
   // Notify parent when activities change
   useEffect(() => {
@@ -608,7 +613,7 @@ export function ActivityFeed({ session, onArchive, showCodeDiffs, onToggleCodeDi
                         )}
                         {activity.type === 'plan' &&
                           activity.metadata?.planGenerated &&
-                          !(activity.metadata?.planGenerated as any)?.approved ? (
+                          !(activity.metadata?.planGenerated as { approved?: boolean })?.approved ? (
                             <div className="mt-3 pt-3 border-t border-white/[0.08]">
                               <Button
                                 onClick={handleApprovePlan}
