@@ -1,8 +1,8 @@
 # Jules UI
 
-The modern, developer-first interface for **Google's Jules AI agent**.
+An open-source, developer-focused interface for **Google's Jules AI agent**.
 
-Jules UI upgrades your experience with a beautiful dark-mode dashboard, offering powerful features missing from the standard interface:
+Jules UI provides a specialized dashboard tailored for engineering workflows, featuring:
 - **Live Code Diffs**: Visualize git patches and code changes instantly.
 - **Interactive Terminal**: Inspect bash outputs and command execution in real-time.
 - **Analytics**: Track session success rates, duration, and activity volume.
