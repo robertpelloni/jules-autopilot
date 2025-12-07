@@ -155,8 +155,8 @@ export function SessionList({ onSelectSession, selectedSessionId }: SessionListP
 
   return (
     <TooltipProvider>
-      <div className="h-full flex flex-col bg-zinc-950">
-        <div className="px-3 py-2 border-b border-white/[0.08]">
+      <div className="h-full flex flex-col bg-zinc-950 overflow-hidden">
+        <div className="px-3 py-2 border-b border-white/[0.08] shrink-0">
           <div className="relative">
             <Search className="absolute left-2 top-1/2 h-3 w-3 -translate-y-1/2 text-muted-foreground" />
             <Input
@@ -167,7 +167,7 @@ export function SessionList({ onSelectSession, selectedSessionId }: SessionListP
             />
           </div>
         </div>
-        <ScrollArea className="flex-1">
+        <ScrollArea className="flex-1 min-h-0">
           <div className="p-2 space-y-1">
             {visibleSessions.map((session) => (
               <CardSpotlight
@@ -220,7 +220,7 @@ export function SessionList({ onSelectSession, selectedSessionId }: SessionListP
         </ScrollArea>
 
         {/* Session Limit Indicator */}
-        <div className="border-t border-white/[0.08] px-3 py-2.5 bg-black/50">
+        <div className="border-t border-white/[0.08] px-3 py-2.5 bg-black/50 shrink-0">
           <div className="flex items-center justify-between mb-1.5">
             <span className="text-[9px] font-bold text-white/30 uppercase tracking-widest">
               DAILY
