@@ -12,7 +12,7 @@ import { Button } from '@/components/ui/button';
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from '@/components/ui/sheet';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 import { Menu, LogOut, Settings, BarChart3, MessageSquare, ChevronLeft, ChevronRight } from 'lucide-react';
-import { ThemeToggle } from './theme-toggle';
+
 
 export function AppLayout() {
   const { clearApiKey } = useJules();
@@ -102,12 +102,7 @@ export function AppLayout() {
                 </Button>
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end" className="w-40 bg-zinc-950 border-white/[0.08]">
-                <DropdownMenuItem asChild className="hover:bg-white/5 text-white/80 cursor-pointer">
-                  <div className="flex items-center justify-between w-full">
-                    <span className="text-xs uppercase tracking-wide">Theme</span>
-                    <ThemeToggle />
-                  </div>
-                </DropdownMenuItem>
+
                 <DropdownMenuItem onClick={handleLogout} className="hover:bg-white/5 text-white/80">
                   <LogOut className="mr-2 h-3.5 w-3.5" />
                   <span className="text-xs uppercase tracking-wide">Logout</span>
