@@ -10,8 +10,11 @@ A modern, mobile-friendly web application for managing multiple Jules AI agent t
 
 - **Mobile-First Design** - Fully responsive interface optimized for all devices
 - **Real-Time Updates** - Live activity feed for each Jules session
-- **Session Management** - Create, view, and manage multiple Jules sessions
-- **Beautiful UI** - Modern interface built with shadcn/ui components
+- **Code Diff Viewer** - View detailed code changes and git patches directly in the UI
+- **Interactive Terminal** - Inspect bash command outputs with collapsible views
+- **Session Management** - Create, view, search, and manage multiple Jules sessions
+- **Analytics Dashboard** - Visualize session usage and activity trends
+- **Beautiful UI** - Modern interface built with shadcn/ui components (Dark Mode)
 - **Type-Safe** - Full TypeScript support throughout the application
 - **Secure** - API key stored locally in browser localStorage
 
@@ -51,15 +54,19 @@ Open [http://localhost:3000](http://localhost:3000) (or the port shown in termin
 ```
 jules-app/
 ├── app/
-│   ├── layout.tsx          # Root layout with providers
+│   ├── layout.tsx           # Root layout with providers
 │   ├── page.tsx             # Main page component
 │   └── globals.css          # Global styles
 ├── components/
 │   ├── ui/                  # shadcn/ui components
 │   ├── api-key-setup.tsx    # API key input component
 │   ├── app-layout.tsx       # Main app layout with navigation
-│   ├── session-list.tsx     # Session list sidebar
+│   ├── session-list.tsx     # Session list sidebar with search
 │   ├── activity-feed.tsx    # Activity feed for sessions
+│   ├── code-diff-sidebar.tsx # Sidebar for viewing code changes
+│   ├── diff-viewer.tsx      # Component to render git diffs
+│   ├── bash-output.tsx      # Component to display terminal output
+│   ├── analytics-dashboard.tsx # Usage and stats visualization
 │   └── new-session-dialog.tsx # Create new session dialog
 ├── lib/
 │   └── jules/
