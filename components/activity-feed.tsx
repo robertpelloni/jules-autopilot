@@ -10,11 +10,12 @@ import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { Textarea } from '@/components/ui/textarea';
 import { Button } from '@/components/ui/button';
 import { formatDistanceToNow, isValid, parseISO } from 'date-fns';
-import { Send, Archive, Code, Terminal, ChevronDown, ChevronRight, Play, GitBranch } from 'lucide-react';
+import { Send, Archive, Code, Terminal, ChevronDown, ChevronRight, Play, GitBranch, GitPullRequest } from 'lucide-react';
 import { archiveSession } from '@/lib/archive';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import { BashOutput } from '@/components/ui/bash-output';
+import { NewSessionDialog } from './new-session-dialog';
 
 interface ActivityFeedProps {
   session: Session;
@@ -285,6 +286,23 @@ export function ActivityFeed({ session, onArchive, showCodeDiffs, onToggleCodeDi
   const finalDiff = activities.filter(activity => activity.diff).slice(-1);
   const hasDiffs = finalDiff.length > 0;
 
+  // Try to find output branch from agent messages
+  const outputBranch = (() => {
+    // Look at last few agent activities
+    const agentActivities = activities
+      .filter(a => a.role === 'agent' && (a.type === 'message' || a.type === 'result'))
+      .reverse()
+      .slice(0, 5); // check last 5
+
+    for (const activity of agentActivities) {
+      const content = activity.content || '';
+      // Look for patterns like "created branch 'feature/foo'" or "on branch `fix-bug`"
+      const match = content.match(/(?:created|pushed|on) branch ['"`]?([\w-./]+)['"`]?/i);
+      if (match) return match[1];
+    }
+    return null;
+  })();
+
   // State for expanded bash outputs (inline)
   const [expandedBashOutputs, setExpandedBashOutputs] = useState<Set<string>>(new Set());
 
@@ -471,6 +489,26 @@ export function ActivityFeed({ session, onArchive, showCodeDiffs, onToggleCodeDi
               >
                 <Play className="h-3.5 w-3.5" />
               </Button>
+            )}
+            {session.status === 'completed' && hasDiffs && (
+              <NewSessionDialog
+                trigger={
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    title="Review & Create PR"
+                    className="h-7 w-7 hover:bg-white/5 text-white/60 hover:text-blue-400"
+                  >
+                    <GitPullRequest className="h-3.5 w-3.5" />
+                  </Button>
+                }
+                initialValues={{
+                  sourceId: session.sourceId ? `sources/github/${session.sourceId}` : undefined,
+                  title: outputBranch ? `Review: ${outputBranch}` : 'PR Review',
+                  prompt: 'Review the changes in this branch. Verify they meet the requirements, check for bugs, and draft a Pull Request description.',
+                  startingBranch: outputBranch || undefined
+                }}
+              />
             )}
             {hasDiffs && (
               <Button

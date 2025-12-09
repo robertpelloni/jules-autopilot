@@ -20,9 +20,16 @@ import { Plus } from 'lucide-react';
 
 interface NewSessionDialogProps {
   onSessionCreated?: () => void;
+  initialValues?: {
+    sourceId?: string;
+    title?: string;
+    prompt?: string;
+    startingBranch?: string;
+  };
+  trigger?: React.ReactNode;
 }
 
-export function NewSessionDialog({ onSessionCreated }: NewSessionDialogProps) {
+export function NewSessionDialog({ onSessionCreated, initialValues, trigger }: NewSessionDialogProps) {
   const { client } = useJules();
   const [open, setOpen] = useState(false);
   const [sources, setSources] = useState<Source[]>([]);
@@ -43,7 +50,8 @@ export function NewSessionDialog({ onSessionCreated }: NewSessionDialogProps) {
       const data = await client.listSources();
       setSources(data);
       if (data.length > 0) {
-        setFormData((prev) => ({ ...prev, sourceId: data[0].id }));
+        // Only set default source if not already set (e.g. from initialValues)
+        setFormData((prev) => ({ ...prev, sourceId: prev.sourceId || data[0].id }));
       } else if (data.length === 0) {
         setError('No repositories found. Please connect a GitHub repository in the Jules web app first.');
       }
@@ -60,10 +68,23 @@ export function NewSessionDialog({ onSessionCreated }: NewSessionDialogProps) {
   }, [client]);
 
   useEffect(() => {
-    if (open && client) {
-      loadSources();
+    if (open) {
+      // Apply initial values when dialog opens
+      if (initialValues) {
+        setFormData(prev => ({
+          ...prev,
+          sourceId: initialValues.sourceId || prev.sourceId,
+          title: initialValues.title || prev.title,
+          prompt: initialValues.prompt || prev.prompt,
+          startingBranch: initialValues.startingBranch || prev.startingBranch,
+        }));
+      }
+      
+      if (client) {
+        loadSources();
+      }
     }
-  }, [open, client, loadSources]);
+  }, [open, client, loadSources, initialValues]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -94,10 +115,14 @@ export function NewSessionDialog({ onSessionCreated }: NewSessionDialogProps) {
   return (
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>
-        <Button className="w-full sm:w-auto h-8 text-[10px] font-mono uppercase tracking-widest bg-purple-600 hover:bg-purple-500 text-white border-0">
-          <Plus className="h-3.5 w-3.5 mr-1.5" />
-          New Session
-        </Button>
+        {trigger ? (
+          trigger
+        ) : (
+          <Button className="w-full sm:w-auto h-8 text-[10px] font-mono uppercase tracking-widest bg-purple-600 hover:bg-purple-500 text-white border-0">
+            <Plus className="h-3.5 w-3.5 mr-1.5" />
+            New Session
+          </Button>
+        )}
       </DialogTrigger>
       <DialogContent className="sm:max-w-[480px] border-purple-500/20 shadow-[0_0_15px_rgba(168,85,247,0.15)]">
         <DialogHeader>
