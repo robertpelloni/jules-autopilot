@@ -241,7 +241,10 @@ export function AppLayout() {
               </div>
               <div className="flex-1 overflow-hidden">
                 {!codeDiffSidebarCollapsed && (
-                  <CodeDiffSidebar activities={currentActivities} />
+                  <CodeDiffSidebar 
+                    activities={currentActivities} 
+                    repoUrl={selectedSession ? `https://github.com/${selectedSession.sourceId}` : undefined}
+                  />
                 )}
               </div>
             </aside>

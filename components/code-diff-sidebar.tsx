@@ -6,9 +6,10 @@ import type { Activity } from '@/types/jules';
 
 interface CodeDiffSidebarProps {
   activities: Activity[];
+  repoUrl?: string;
 }
 
-export function CodeDiffSidebar({ activities }: CodeDiffSidebarProps) {
+export function CodeDiffSidebar({ activities, repoUrl }: CodeDiffSidebarProps) {
   // Get only the final diff (last activity with a diff)
   const finalDiff = activities.filter(activity => activity.diff).slice(-1);
 
@@ -29,7 +30,7 @@ export function CodeDiffSidebar({ activities }: CodeDiffSidebarProps) {
           <DiffViewer 
             key={activity.id} 
             diff={activity.diff!} 
-            repoUrl="https://github.com/sbhavani/jules-app"
+            repoUrl={repoUrl}
             branch="main"
           />
         ))}
