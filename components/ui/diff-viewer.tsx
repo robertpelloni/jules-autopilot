@@ -186,8 +186,8 @@ function FileDiff({ file }: { file: ParsedDiffFile }) {
             transition={{ duration: 0.2 }}
             className="overflow-hidden"
           >
-            <div className="overflow-x-auto">
-              <pre className="text-xs font-mono leading-relaxed m-0 w-fit min-w-full">
+            <div className="overflow-x-auto pb-1">
+              <pre className="text-xs font-mono leading-relaxed m-0 min-w-max min-w-full">
                 {file.lines.map((line, idx) => (
                   <div
                     key={idx}
