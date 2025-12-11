@@ -10,7 +10,7 @@ import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { Textarea } from '@/components/ui/textarea';
 import { Button } from '@/components/ui/button';
 import { formatDistanceToNow, isValid, parseISO } from 'date-fns';
-import { Send, Archive, Code, Terminal, ChevronDown, ChevronRight, Play, GitBranch, GitPullRequest, MoreVertical, CloudUpload } from 'lucide-react';
+import { Send, Archive, Code, Terminal, ChevronDown, ChevronRight, Play, GitBranch, GitPullRequest, MoreVertical } from 'lucide-react';
 import { archiveSession } from '@/lib/archive';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
@@ -244,14 +244,6 @@ export function ActivityFeed({ session, onArchive, showCodeDiffs, onToggleCodeDi
 
   const handleQuickReview = async () => {
     await sendAgentCommand('Please perform a comprehensive code review of the repository. Look for bugs, security issues, and opportunities for refactoring. Provide a detailed summary of your findings.');
-  };
-
-  const handlePublishBranch = async () => {
-    await sendAgentCommand('Please push the current branch to the remote repository.');
-  };
-
-  const handleCreatePR = async () => {
-    await sendAgentCommand('Please create a pull request for the current branch.');
   };
 
   const handleSendMessage = async (e: React.FormEvent) => {
@@ -527,24 +519,17 @@ export function ActivityFeed({ session, onArchive, showCodeDiffs, onToggleCodeDi
                 </Button>
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end" className="w-48 bg-zinc-950 border-white/10 text-white/80">
-                <DropdownMenuItem onClick={handleQuickReview} disabled={sending} className="focus:bg-white/10 focus:text-white text-xs cursor-pointer">
-                  <Play className="mr-2 h-3.5 w-3.5" />
-                  <span>Start Code Review</span>
-                </DropdownMenuItem>
-                <DropdownMenuItem onClick={handlePublishBranch} disabled={sending} className="focus:bg-white/10 focus:text-white text-xs cursor-pointer">
-                  <CloudUpload className="mr-2 h-3.5 w-3.5" />
-                  <span>Publish Branch</span>
-                </DropdownMenuItem>
-                <DropdownMenuItem onClick={handleCreatePR} disabled={sending} className="focus:bg-white/10 focus:text-white text-xs cursor-pointer">
-                  <GitPullRequest className="mr-2 h-3.5 w-3.5" />
-                  <span>Create PR</span>
-                </DropdownMenuItem>
-                
+                {session.status === 'active' && (
+                  <DropdownMenuItem onClick={handleQuickReview} disabled={sending} className="focus:bg-white/10 focus:text-white text-xs cursor-pointer">
+                    <Play className="mr-2 h-3.5 w-3.5" />
+                    <span>Start Code Review</span>
+                  </DropdownMenuItem>
+                )}
                 {session.status === 'completed' && hasDiffs && (
                   <NewSessionDialog
                     trigger={
                       <DropdownMenuItem onSelect={(e) => e.preventDefault()} className="focus:bg-white/10 focus:text-white text-xs cursor-pointer">
-                        <Play className="mr-2 h-3.5 w-3.5" />
+                        <GitPullRequest className="mr-2 h-3.5 w-3.5" />
                         <span>Review & Create PR</span>
                       </DropdownMenuItem>
                     }
