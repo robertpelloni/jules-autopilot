@@ -33,6 +33,7 @@ export interface CreateSessionRequest {
   prompt: string;
   title?: string;
   startingBranch?: string;
+  autoCreatePr?: boolean;
 }
 
 export interface CreateActivityRequest {

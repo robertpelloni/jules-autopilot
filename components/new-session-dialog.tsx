@@ -40,6 +40,7 @@ export function NewSessionDialog({ onSessionCreated, initialValues, trigger }: N
     title: '',
     prompt: '',
     startingBranch: '',
+    autoCreatePr: false,
   });
 
   const loadSources = useCallback(async () => {
@@ -98,9 +99,10 @@ export function NewSessionDialog({ onSessionCreated, initialValues, trigger }: N
         prompt: formData.prompt,
         title: formData.title || undefined,
         startingBranch: formData.startingBranch || undefined,
+        autoCreatePr: formData.autoCreatePr,
       });
       setOpen(false);
-      setFormData({ sourceId: '', title: '', prompt: '', startingBranch: '' });
+      setFormData({ sourceId: '', title: '', prompt: '', startingBranch: '', autoCreatePr: false });
       setError(null);
       onSessionCreated?.();
     } catch (err) {
@@ -201,6 +203,24 @@ export function NewSessionDialog({ onSessionCreated, initialValues, trigger }: N
               className="min-h-[100px] text-xs"
               required
             />
+          </div>
+
+          <div className="flex items-center space-x-2 pt-1">
+            <input
+              type="checkbox"
+              id="autoCreatePr"
+              className="h-3.5 w-3.5 rounded border-gray-300 text-purple-600 focus:ring-purple-500 bg-black/20 border-white/20"
+              checked={formData.autoCreatePr}
+              onChange={(e) =>
+                setFormData((prev) => ({ ...prev, autoCreatePr: e.target.checked }))
+              }
+            />
+            <label
+              htmlFor="autoCreatePr"
+              className="text-xs font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70 text-white/80"
+            >
+              Automatically create Pull Request when ready
+            </label>
           </div>
 
           {error && (

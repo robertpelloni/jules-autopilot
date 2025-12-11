@@ -242,8 +242,13 @@ export class JulesClient {
 
   async createSession(data: CreateSessionRequest): Promise<Session> {
     // Jules API requires specific structure per https://developers.google.com/jules/api
+    let prompt = data.prompt;
+    if (data.autoCreatePr) {
+      prompt += '\n\nIMPORTANT: Automatically create a pull request when code changes are ready.';
+    }
+
     const requestBody = {
-      prompt: data.prompt,
+      prompt: prompt,
       sourceContext: {
         source: data.sourceId,
         githubRepoContext: {
