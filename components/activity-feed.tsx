@@ -292,21 +292,35 @@ export function ActivityFeed({ session, onArchive, showCodeDiffs, onToggleCodeDi
   const finalDiff = activities.filter(activity => activity.diff).slice(-1);
   const hasDiffs = finalDiff.length > 0;
 
-  // Try to find output branch from agent messages
+  // Try to find output branch from agent messages or bash output
   const outputBranch = (() => {
-    // Look at last few agent activities
-    const agentActivities = activities
-      .filter(a => a.role === 'agent' && (a.type === 'message' || a.type === 'result'))
-      .reverse()
-      .slice(0, 5); // check last 5
+    // Look at all activities in reverse order
+    const reversedActivities = [...activities].reverse();
 
-    for (const activity of agentActivities) {
-      const content = activity.content || '';
-      // Look for patterns like "created branch 'feature/foo'" or "on branch `fix-bug`"
-      const match = content.match(/(?:created|pushed|on) branch ['"`]?([\w-./]+)['"`]?/i);
-      if (match) return match[1];
+    for (const activity of reversedActivities) {
+      // 1. Check Bash Output for explicit git commands
+      if (activity.bashOutput) {
+        // git checkout -b feature-branch
+        const checkoutMatch = activity.bashOutput.match(/git checkout -b\s+([\w-./]+)/);
+        if (checkoutMatch) return checkoutMatch[1];
+
+        // git push origin feature-branch
+        const pushMatch = activity.bashOutput.match(/git push\s+(?:-u\s+)?(?:origin\s+)?([\w-./]+)/);
+        if (pushMatch) return pushMatch[1];
+      }
+
+      // 2. Check content for natural language patterns
+      if (activity.role === 'agent' && (activity.type === 'message' || activity.type === 'result')) {
+        const content = activity.content || '';
+        
+        // "created branch 'feature/foo'", "on branch `fix-bug`", "switched to branch 'dev'"
+        const match = content.match(/(?:created|pushed|on|switched to) branch ['"`]?([\w-./]+)['"`]?/i);
+        if (match) return match[1];
+      }
     }
-    return null;
+    
+    // Fallback to session branch if no specific output branch is found
+    return session.branch || 'main';
   })();
 
   // State for expanded bash outputs (inline)
