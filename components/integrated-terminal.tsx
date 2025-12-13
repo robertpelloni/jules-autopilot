@@ -33,6 +33,7 @@ export function IntegratedTerminal({
     let terminal: Terminal
     let fitAddon: FitAddon
     let socket: Socket
+    let resizeObserver: ResizeObserver
 
     // Dynamic imports for browser-only libraries
     const initTerminal = async () => {
@@ -127,18 +128,38 @@ export function IntegratedTerminal({
       }
 
       window.addEventListener('resize', handleResize)
+
+      // Also add a resize observer to detect parent container size changes
+      resizeObserver = new ResizeObserver(() => {
+        // Small delay to ensure DOM is updated
+        setTimeout(() => {
+          fitAddon.fit()
+          socket.emit('terminal.resize', {
+            cols: terminal.cols,
+            rows: terminal.rows
+          })
+        }, 0)
+      })
+
+      if (terminalRef.current) {
+        resizeObserver.observe(terminalRef.current)
+      }
     }
 
     initTerminal()
 
     // Cleanup
     return () => {
+      if (resizeObserver && terminalRef.current) {
+        resizeObserver.disconnect()
+      }
       if (socketRef.current) {
         socketRef.current.disconnect()
       }
       if (xtermRef.current) {
         xtermRef.current.dispose()
       }
+      // Note: window event listener cleanup is handled inside initTerminal
     }
   }, [sessionId, workingDir, isMounted])
 
@@ -151,7 +172,7 @@ export function IntegratedTerminal({
   }
 
   return (
-    <div className={`relative ${className}`}>
+    <div className={`relative ${className} bg-[#1e1e1e]`}>
       <div className="absolute top-2 right-2 z-10">
         <div
           className={`w-2 h-2 rounded-full ${isConnected ? 'bg-green-500' : 'bg-red-500'}`}
