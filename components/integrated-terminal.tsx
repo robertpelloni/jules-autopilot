@@ -55,7 +55,7 @@ export function IntegratedTerminal({
           foreground: '#e5e5e5',
           cursor: '#ffffff',
           cursorAccent: '#0a0a0f',
-          selection: 'rgba(255, 255, 255, 0.2)',
+          selectionBackground: 'rgba(255, 255, 255, 0.2)',
 
           // Ubuntu ANSI color palette (official colors)
           black: '#2e3436',
