@@ -53,11 +53,12 @@ Run both the Next.js app AND the terminal server together:
 git clone <your-repo-url>
 cd jules-ui
 
-# Configure your repository path
-echo "REPO_PATH=/path/to/your/repo" > .env.local
+# Configure your repository path (optional)
+cp deploy/.env.local.example .env.local
+# Edit .env.local and set REPO_PATH=/path/to/your/repo
 
 # Start all services (frontend + terminal server)
-docker-compose up
+docker-compose -f deploy/docker-compose.yml up
 ```
 
 Open [http://localhost:3002](http://localhost:3002) - the Terminal will connect automatically.

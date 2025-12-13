@@ -44,3 +44,13 @@ next-env.d.ts
 /terminal-server/node_modules
 /workspace
 *.log
+
+# claude code artifacts
+/.claude
+
+# git worktrees
+/.worktrees
+
+# temporary files
+*.png
+!public/**/*.png

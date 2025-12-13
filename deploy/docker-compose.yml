@@ -4,15 +4,15 @@ services:
   # Jules Frontend (Next.js)
   jules-ui:
     build:
-      context: .
-      dockerfile: Dockerfile
+      context: ..
+      dockerfile: deploy/Dockerfile
     ports:
       - "3002:3000"
     environment:
       - NODE_ENV=development
       - NEXT_PUBLIC_TERMINAL_WS_URL=ws://localhost:8080
     volumes:
-      - .:/app
+      - ..:/app
       - /app/node_modules
       - /app/.next
     depends_on:
@@ -23,7 +23,7 @@ services:
   # Terminal Server (Node.js + node-pty + Socket.io)
   terminal-server:
     build:
-      context: ./terminal-server
+      context: ../terminal-server
       dockerfile: Dockerfile
     ports:
       - "8080:8080"
@@ -32,7 +32,7 @@ services:
       - ALLOWED_ORIGINS=http://localhost:3002
     volumes:
       # Mount user's repository into container
-      - ${REPO_PATH:-./workspace}:/workspace:rw
+      - ${REPO_PATH:-../workspace}:/workspace:rw
       # Preserve command history
       - terminal-history:/root/.bash_history
       # Mount git config for git commands (conditional, comment out if not needed)
