@@ -60,10 +60,10 @@ A powerful, self-hosted web application for managing Jules AI agent sessions wit
   - ✅ Manual toggle option
   - ✅ Persistent user preference
 
-- **UI-003**: Loading States ([#11](https://github.com/sbhavani/jules-app/issues/11)) 🟡 _In Progress_
+- **UI-003**: Loading States ([#11](https://github.com/sbhavani/jules-app/issues/11)) ✅ _Closed_
   - ✅ Loading indicators for activities
   - ✅ Optimistic UI updates
-  - ⏳ Skeleton loaders for session list
+  - ✅ Global loading state for auth
 
 - **SEARCH-001**: Session Search ([#12](https://github.com/sbhavani/jules-app/issues/12)) 🟡 _In Progress_
   - ✅ Search sessions by title
@@ -81,6 +81,22 @@ A powerful, self-hosted web application for managing Jules AI agent sessions wit
   - ✅ Activity volume over time
   - ✅ Success rate metrics
   - ✅ Average session duration
+
+#### AI Orchestration (P2 - Future)
+- **ORCH-001**: "The Architect" - Pre-implementation Plan Review _(New)_
+  - Leverage a high-reasoning model (e.g., Gemini 1.5 Pro) to critique proposed plans.
+  - Checks against architectural constraints and best practices before code generation.
+  - Reduces wasted iterations by catching structural flaws early.
+
+- **ORCH-002**: "The Auditor" - Automated Security & Logic Analysis _(New)_
+  - specific post-generation analysis workflow using security-focused prompts.
+  - Scans generated diffs for common vulnerabilities (OWASP) and edge cases.
+  - Auto-comments on PRs with security warnings.
+
+- **ORCH-003**: "The Librarian" - Dynamic Context & Auto-Documentation _(New)_
+  - Use large-context models to dynamically select the most relevant files (Smart RAG).
+  - Automatically generates and updates `README.md`, API docs, and inline comments based on changes.
+  - Semantic commit message generation.
 
 #### Advanced Features (P2)
 - **ACTIVITY-003**: Rich Message Formatting ([#15](https://github.com/sbhavani/jules-app/issues/15)) 🟡 _In Progress_
@@ -425,7 +441,7 @@ All features are tracked as GitHub issues. Use this table for quick reference:
 | [#8](https://github.com/sbhavani/jules-app/issues/8) | ACTIVITY-002 | Activity Type Indicators | ✅ Closed | P1 Important |
 | [#9](https://github.com/sbhavani/jules-app/issues/9) | SOURCE-001 | Repository Management | ✅ Closed | P1 Important |
 | [#10](https://github.com/sbhavani/jules-app/issues/10) | UI-002 | Dark Mode Support | ✅ Closed | P1 Important |
-| [#11](https://github.com/sbhavani/jules-app/issues/11) | UI-003 | Loading States & Skeleton Loaders | 🟡 Open | P1 Important |
+| [#11](https://github.com/sbhavani/jules-app/issues/11) | UI-003 | Loading States & Skeleton Loaders | ✅ Closed | P1 Important |
 | [#12](https://github.com/sbhavani/jules-app/issues/12) | SEARCH-001 | Session Search & Filtering | 🟡 Open | P1 Important |
 | [#13](https://github.com/sbhavani/jules-app/issues/13) | NOTIF-001 | Error Notifications & Toast System | 🟡 Open | P1 Important |
 | [#14](https://github.com/sbhavani/jules-app/issues/14) | SESSION-006 | Session Templates | 🟡 Open | P2 Nice to Have |
@@ -436,14 +452,17 @@ All features are tracked as GitHub issues. Use this table for quick reference:
 | [#22](https://github.com/sbhavani/jules-app/issues/22) | SESSION-007 | Plan Approval Configuration | 🟡 Open | Feature |
 | [#23](https://github.com/sbhavani/jules-app/issues/23) | NOTIF-002 | Native Browser Notifications | 🟡 Open | Feature |
 | [#24](https://github.com/sbhavani/jules-app/issues/24) | SESSION-008 | Post-Session PR Review Workflow | 🟡 Open | Feature |
+| _New_ | ORCH-001 | "The Architect" Plan Review | 🟡 Open | Feature |
+| _New_ | ORCH-002 | "The Auditor" Security Analysis | 🟡 Open | Feature |
+| _New_ | ORCH-003 | "The Librarian" Auto-Docs | 🟡 Open | Feature |
 
 **Summary Statistics:**
-- ✅ Closed: 8 issues (33%)
-- 🟡 Open: 16 issues (67%)
+- ✅ Closed: 9 issues (33%)
+- 🟡 Open: 18 issues (67%)
 - P0 Critical: 6 issues (4 closed, 2 open)
-- P1 Important: 6 issues (3 closed, 3 open)
+- P1 Important: 6 issues (4 closed, 2 open)
 - P2 Nice to Have: 4 issues (1 closed, 3 open)
-- Feature requests: 4 issues (0 closed, 4 open)
+- Feature requests: 7 issues (0 closed, 7 open)
 
 ### Technology Evaluations
 
