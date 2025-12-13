@@ -137,8 +137,9 @@ function SessionView({ session }) {
 
 #### Frontend (.env.local)
 ```bash
-# WebSocket URL for terminal server
-NEXT_PUBLIC_TERMINAL_WS_URL=ws://localhost:8080
+# WebSocket URL for terminal server (Optional)
+# Defaults to ws://<hostname>:8080
+# NEXT_PUBLIC_TERMINAL_WS_URL=ws://localhost:8080
 
 # Repository path to mount
 REPO_PATH=./workspace
@@ -148,7 +149,7 @@ REPO_PATH=./workspace
 ```yaml
 environment:
   - NODE_ENV=development
-  - ALLOWED_ORIGINS=http://localhost:3000
+  # ALLOWED_ORIGINS defaults to allow-all in development
 ```
 
 ### Docker Compose Configuration

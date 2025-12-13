@@ -53,7 +53,7 @@ npm start
 | Variable | Default | Description |
 |----------|---------|-------------|
 | `PORT` | `8080` | WebSocket server port |
-| `ALLOWED_ORIGINS` | `http://localhost:3000` | CORS allowed origins |
+| `ALLOWED_ORIGINS` | `true` (all) | CORS allowed origins |
 | `SHELL` | `/bin/bash` | Default shell to spawn |
 | `NODE_ENV` | - | Node environment |
 
