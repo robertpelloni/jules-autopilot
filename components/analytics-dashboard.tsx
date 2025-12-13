@@ -176,7 +176,7 @@ export function AnalyticsDashboard() {
       <div className="h-full overflow-y-auto overflow-x-hidden p-4 space-y-4">
         <div className="flex items-center justify-between pb-3 border-b">
           <div>
-            <h2 className="text-lg font-semibold tracking-tight">
+            <h2 className="text-lg font-semibold tracking-tight text-foreground">
               Dashboard
             </h2>
             <p className="text-[10px] text-muted-foreground mt-0.5">
@@ -185,7 +185,7 @@ export function AnalyticsDashboard() {
           </div>
         <div className="flex items-center gap-2">
           <Select value={dateRange} onValueChange={setDateRange}>
-            <SelectTrigger className="w-[140px] h-8 text-xs">
+            <SelectTrigger className="w-[140px] h-8 text-xs text-foreground">
               <SelectValue placeholder="Select period" />
             </SelectTrigger>
             <SelectContent>
