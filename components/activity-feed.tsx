@@ -10,7 +10,7 @@ import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { Textarea } from '@/components/ui/textarea';
 import { Button } from '@/components/ui/button';
 import { formatDistanceToNow, isValid, parseISO } from 'date-fns';
-import { Send, Archive, Code, Terminal, ChevronDown, ChevronRight, Play, GitBranch, GitPullRequest, MoreVertical } from 'lucide-react';
+import { Send, Archive, Code, Terminal, ChevronDown, ChevronRight, Play, GitBranch, GitPullRequest, MoreVertical, Book } from 'lucide-react';
 import { archiveSession } from '@/lib/archive';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
@@ -453,6 +453,11 @@ export function ActivityFeed({ session, onArchive, showCodeDiffs, onToggleCodeDi
             </div>
             <div className="flex items-center gap-3 text-[9px] font-mono text-white/40 uppercase tracking-wide">
               <span>Started {formatDate(session.createdAt)}</span>
+              <span>•</span>
+              <div className="flex items-center gap-1 text-white/60">
+                <Book className="h-3 w-3" />
+                <span>{session.sourceId}</span>
+              </div>
               <span>•</span>
               <div className="flex items-center gap-1">
                 <GitBranch className="h-3 w-3" />
