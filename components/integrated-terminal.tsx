@@ -20,6 +20,7 @@ export function IntegratedTerminal({
   const xtermRef = useRef<Terminal | null>(null)
   const socketRef = useRef<Socket | null>(null)
   const fitAddonRef = useRef<FitAddon | null>(null)
+  const errorShownRef = useRef(false)
   const [isConnected, setIsConnected] = useState(false)
   const [isMounted, setIsMounted] = useState(false)
 
@@ -98,7 +99,11 @@ export function IntegratedTerminal({
       console.log('Connecting to terminal server:', wsUrl)
 
       socket = io(wsUrl, {
-        query: { sessionId, workingDir }
+        query: { sessionId, workingDir },
+        transports: ['websocket'], // Force WebSocket to avoid HTTP polling errors
+        reconnectionAttempts: 10,  // Stop trying after 10 attempts
+        reconnectionDelay: 2000,   // Wait 2s between attempts
+        reconnection: true
       })
 
       socketRef.current = socket
@@ -106,18 +111,23 @@ export function IntegratedTerminal({
       socket.on('connect', () => {
         console.log('Connected to terminal server')
         setIsConnected(true)
+        errorShownRef.current = false
         terminal.write('\r\n\x1b[32m*** Connected to terminal ***\x1b[0m\r\n\r\n')
       })
 
       socket.on('connect_error', (error) => {
         console.log('Failed to connect to terminal server:', error.message)
         setIsConnected(false)
-        terminal.write('\r\n\x1b[33m*** Terminal Server Not Available ***\x1b[0m\r\n')
-        terminal.write('\x1b[90mTo enable terminal:\x1b[0m\r\n')
-        terminal.write('\x1b[90m  1. Docker Compose: docker-compose up\x1b[0m\r\n')
-        terminal.write('\x1b[90m  2. Standalone: cd terminal-server && npm start\x1b[0m\r\n')
-        terminal.write('\x1b[90m\x1b[0m\r\n')
-        terminal.write('\x1b[90mSee README.md for details.\x1b[0m\r\n')
+        
+        if (!errorShownRef.current) {
+          errorShownRef.current = true
+          terminal.write('\r\n\x1b[33m*** Terminal Server Not Available ***\x1b[0m\r\n')
+          terminal.write('\x1b[90mTo enable terminal:\x1b[0m\r\n')
+          terminal.write('\x1b[90m  1. Docker Compose: docker-compose up\x1b[0m\r\n')
+          terminal.write('\x1b[90m  2. Standalone: cd terminal-server && npm start\x1b[0m\r\n')
+          terminal.write('\x1b[90m\x1b[0m\r\n')
+          terminal.write('\x1b[90mSee README.md for details.\x1b[0m\r\n')
+        }
       })
 
       socket.on('disconnect', () => {
