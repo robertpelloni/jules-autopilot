@@ -283,7 +283,7 @@ export function AppLayout() {
       {selectedSession && (
         <TerminalPanel
           sessionId={selectedSession.id}
-          repositoryPath={selectedSession.sourceId}
+          repositoryPath=""
           isOpen={terminalOpen}
           onToggle={handleToggleTerminal}
         />

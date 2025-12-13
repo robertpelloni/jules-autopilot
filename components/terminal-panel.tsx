@@ -113,7 +113,7 @@ export function TerminalPanel({
             Terminal
           </h3>
           <span className="text-[9px] text-white/30 font-mono">
-            {repositoryPath || 'workspace'}
+            ~/workspace
           </span>
         </div>
 
