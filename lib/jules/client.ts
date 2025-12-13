@@ -169,10 +169,29 @@ export class JulesClient {
 
   // Sources
   async listSources(): Promise<Source[]> {
-    const response = await this.request<{ sources: ApiSource[] }>('/sources');
+    // Fetch all sources with pagination support
+    let allSources: ApiSource[] = [];
+    let pageToken: string | undefined;
+
+    do {
+      const params = new URLSearchParams();
+      params.set('pageSize', '100'); // Request max page size
+      if (pageToken) {
+        params.set('pageToken', pageToken);
+      }
+
+      const endpoint = `/sources?${params.toString()}`;
+      const response = await this.request<{ sources?: ApiSource[]; nextPageToken?: string }>(endpoint);
+
+      if (response.sources) {
+        allSources = allSources.concat(response.sources);
+      }
+
+      pageToken = response.nextPageToken;
+    } while (pageToken);
 
     // Transform API response to extract repository info
-    const sources = (response.sources || []).map((source: ApiSource) => {
+    const sources = allSources.map((source: ApiSource) => {
       // Extract repo name from source field (e.g., "sources/github/owner/repo")
       const sourcePath = source.source || source.name || '';
       const match = sourcePath.match(/sources\/github\/(.+)/);
@@ -198,7 +217,42 @@ export class JulesClient {
       });
     }
 
-    console.log('[Jules Client] Loaded sources:', sources.length, sources);
+    // Fetch all sessions to determine latest activity per source
+    try {
+      const allSessions = await this.listSessions();
+
+      // Create a map of sourceId to the most recent activity timestamp
+      const latestActivityMap = new Map<string, string>();
+
+      for (const session of allSessions) {
+        const sourceId = `sources/github/${session.sourceId}`;
+        const activityTime = session.lastActivityAt || session.updatedAt || session.createdAt;
+
+        if (!latestActivityMap.has(sourceId) ||
+            (activityTime && activityTime > latestActivityMap.get(sourceId)!)) {
+          latestActivityMap.set(sourceId, activityTime);
+        }
+      }
+
+      // Sort sources by latest activity (most recent first)
+      sources.sort((a, b) => {
+        const aTime = latestActivityMap.get(a.id) || '';
+        const bTime = latestActivityMap.get(b.id) || '';
+
+        // Sources with activity come before those without
+        if (aTime && !bTime) return -1;
+        if (!aTime && bTime) return 1;
+
+        // Compare timestamps (descending - most recent first)
+        return bTime.localeCompare(aTime);
+      });
+
+      console.log('[Jules Client] Loaded sources (sorted by activity):', sources.length, sources);
+    } catch (error) {
+      console.error('[Jules Client] Failed to sort sources by activity:', error);
+      // Continue with unsorted sources if session fetch fails
+    }
+
     return sources;
   }
 
