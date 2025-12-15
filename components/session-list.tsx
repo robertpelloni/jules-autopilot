@@ -141,7 +141,9 @@ export function SessionList({ onSelectSession, selectedSessionId }: SessionListP
     return (
       <div className="flex items-center justify-center p-6">
         <p className="text-xs text-muted-foreground text-center leading-relaxed">
-          {sessions.length === 0
+          {searchQuery
+            ? 'No sessions match your search.'
+            : sessions.length === 0
             ? 'No sessions yet. Create one to get started!'
             : 'All sessions are archived.'}
         </p>
@@ -161,6 +163,7 @@ export function SessionList({ onSelectSession, selectedSessionId }: SessionListP
             <Search className="absolute left-2 top-1/2 h-3 w-3 -translate-y-1/2 text-muted-foreground" />
             <Input
               placeholder="Search for repo or sessions"
+              aria-label="Search sessions"
               className="h-7 w-full bg-black/50 pl-7 text-[10px] border-white/10 focus-visible:ring-purple-500/50 placeholder:text-muted-foreground/50"
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
@@ -181,6 +184,7 @@ export function SessionList({ onSelectSession, selectedSessionId }: SessionListP
                 <div
                   role="button"
                   tabIndex={0}
+                  aria-label={`Select session ${session.title || 'Untitled'}`}
                   className="w-full flex items-start gap-2.5 px-3 py-2.5 text-left relative z-10 cursor-pointer outline-none focus-visible:ring-1 focus-visible:ring-purple-500/50"
                   onClick={() => onSelectSession(session)}
                   onKeyDown={(e) => {
