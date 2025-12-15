@@ -281,7 +281,7 @@ export function NewSessionDialog({ onSessionCreated, initialValues, trigger, ope
                 onChange={(e) =>
                   setFormData((prev) => ({ ...prev, prompt: e.target.value }))
                 }
-                className="min-h-[100px] text-xs"
+                className="min-h-[100px] max-h-[200px] overflow-y-auto text-xs"
                 required
               />
             </div>
