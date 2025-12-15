@@ -41,3 +41,13 @@ export interface CreateActivityRequest {
   content: string;
   type?: 'message';
 }
+
+export interface SessionTemplate {
+  id: string;
+  name: string;
+  description: string;
+  prompt: string;
+  title?: string;
+  createdAt: string;
+  updatedAt: string;
+}

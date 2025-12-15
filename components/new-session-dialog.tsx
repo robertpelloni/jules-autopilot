@@ -16,7 +16,9 @@ import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
 import { Combobox } from '@/components/ui/combobox';
-import { Plus, Loader2 } from 'lucide-react';
+import { Plus, Loader2, LayoutTemplate, Save } from 'lucide-react';
+import { TemplatesDialog } from '@/components/templates-dialog';
+import type { SessionTemplate } from '@/types/jules';
 
 interface NewSessionDialogProps {
   onSessionCreated?: () => void;
@@ -32,6 +34,8 @@ interface NewSessionDialogProps {
 export function NewSessionDialog({ onSessionCreated, initialValues, trigger }: NewSessionDialogProps) {
   const { client } = useJules();
   const [open, setOpen] = useState(false);
+  const [templatesOpen, setTemplatesOpen] = useState(false);
+  const [templateCreateValues, setTemplateCreateValues] = useState<Partial<SessionTemplate> | undefined>(undefined);
   const [sources, setSources] = useState<Source[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -114,28 +118,69 @@ export function NewSessionDialog({ onSessionCreated, initialValues, trigger }: N
     }
   };
 
+  const handleTemplateSelect = (template: SessionTemplate) => {
+    setFormData(prev => ({
+      ...prev,
+      title: template.title || prev.title,
+      prompt: template.prompt
+    }));
+  };
+
+  const openSaveTemplate = () => {
+    setTemplateCreateValues({
+      prompt: formData.prompt,
+      title: formData.title
+    });
+    setTemplatesOpen(true);
+  };
+
+  const openLoadTemplate = () => {
+    setTemplateCreateValues(undefined);
+    setTemplatesOpen(true);
+  };
+
   return (
-    <Dialog open={open} onOpenChange={setOpen}>
-      <DialogTrigger asChild>
-        {trigger ? (
-          trigger
-        ) : (
-          <Button className="w-full sm:w-auto h-8 text-[10px] font-mono uppercase tracking-widest bg-purple-600 hover:bg-purple-500 text-white border-0">
-            <Plus className="h-3.5 w-3.5 mr-1.5" />
-            New Session
-          </Button>
-        )}
-      </DialogTrigger>
-      <DialogContent className="sm:max-w-[480px] border-purple-500/20 shadow-[0_0_15px_rgba(168,85,247,0.15)]">
-        <DialogHeader>
-          <DialogTitle className="text-base">Create New Session</DialogTitle>
-          <DialogDescription className="text-xs">
-            Start a new Jules session by selecting a source and providing instructions.
-          </DialogDescription>
-        </DialogHeader>
-        <form onSubmit={handleSubmit} className="space-y-3">
-          <div className="space-y-1.5">
-            <Label htmlFor="source" className="text-xs font-semibold">Source Repository</Label>
+    <>
+      <TemplatesDialog 
+        open={templatesOpen} 
+        onOpenChange={setTemplatesOpen}
+        onSelect={handleTemplateSelect}
+        initialCreateValues={templateCreateValues}
+      />
+      <Dialog open={open} onOpenChange={setOpen}>
+        <DialogTrigger asChild>
+          {trigger ? (
+            trigger
+          ) : (
+            <Button className="w-full sm:w-auto h-8 text-[10px] font-mono uppercase tracking-widest bg-purple-600 hover:bg-purple-500 text-white border-0">
+              <Plus className="h-3.5 w-3.5 mr-1.5" />
+              New Session
+            </Button>
+          )}
+        </DialogTrigger>
+        <DialogContent className="sm:max-w-[480px] border-purple-500/20 shadow-[0_0_15px_rgba(168,85,247,0.15)]">
+          <DialogHeader>
+            <DialogTitle className="text-base">Create New Session</DialogTitle>
+            <DialogDescription className="text-xs">
+              Start a new Jules session by selecting a source and providing instructions.
+            </DialogDescription>
+          </DialogHeader>
+          <form onSubmit={handleSubmit} className="space-y-3">
+            <div className="flex justify-end">
+              <Button 
+                type="button" 
+                variant="outline" 
+                size="sm" 
+                className="h-7 text-xs gap-1.5"
+                onClick={openLoadTemplate}
+              >
+                <LayoutTemplate className="h-3.5 w-3.5" />
+                Load Template
+              </Button>
+            </div>
+
+            <div className="space-y-1.5">
+              <Label htmlFor="source" className="text-xs font-semibold">Source Repository</Label>
             <Combobox
               id="source"
               options={sources.map((source) => ({
@@ -193,7 +238,21 @@ export function NewSessionDialog({ onSessionCreated, initialValues, trigger }: N
           </div>
 
           <div className="space-y-1.5">
-            <Label htmlFor="prompt" className="text-xs font-semibold">Instructions</Label>
+            <div className="flex justify-between items-center">
+              <Label htmlFor="prompt" className="text-xs font-semibold">Instructions</Label>
+              {formData.prompt && (
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="sm"
+                  className="h-5 px-2 text-[10px] text-muted-foreground hover:text-white"
+                  onClick={openSaveTemplate}
+                >
+                  <Save className="h-3 w-3 mr-1" />
+                  Save as Template
+                </Button>
+              )}
+            </div>
             <Textarea
               id="prompt"
               placeholder="Describe what you want Jules to do..."
@@ -248,5 +307,6 @@ export function NewSessionDialog({ onSessionCreated, initialValues, trigger }: N
         </form>
       </DialogContent>
     </Dialog>
+    </>
   );
 }
