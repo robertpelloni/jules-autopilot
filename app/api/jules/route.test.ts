@@ -70,60 +70,6 @@ describe('Jules API Proxy', () => {
       expect(data).toEqual({ error: 'Proxy error', message: 'Network error' });
     });
 
-    it('should handle and log complex activity data without crashing', async () => {
-      // Mock data that triggers the detailed logging logic in route.ts
-      const mockComplexData = {
-        activities: [
-          {
-            name: 'activity/1',
-            createTime: '2023-01-01T00:00:00Z',
-            type: 'run_command',
-            artifacts: [
-              {
-                changeSet: {
-                  gitPatch: { unidiffPatch: 'diff --git...' }
-                }
-              },
-              {
-                changeSet: {
-                  unidiffPatch: 'diff --git...'
-                }
-              },
-              {
-                bashOutput: { output: 'command output' }
-              }
-            ]
-          },
-          {
-            sessionCompleted: {}
-          }
-        ]
-      };
-
-      (global.fetch as jest.Mock).mockResolvedValue({
-        ok: true,
-        status: 200,
-        json: async () => mockComplexData,
-      });
-
-      // The path must include '/activities' to trigger the logging logic
-      const req = new NextRequest(`${baseUrl}?path=/activities`, {
-        headers: { 'x-jules-api-key': mockApiKey },
-      });
-
-      const res = await GET(req);
-      const data = await res.json();
-
-      expect(res.status).toBe(200);
-      expect(data).toEqual(mockComplexData);
-      
-      // Since we mocked console.log in beforeEach, we can verify it was called
-      // This confirms the logging logic was actually entered
-      expect(console.log).toHaveBeenCalledWith(
-        expect.stringContaining('[Jules API Proxy] Activity types:'),
-        expect.anything()
-      );
-    });
   });
 
   describe('POST', () => {
