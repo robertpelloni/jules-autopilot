@@ -2,16 +2,17 @@
 
 import { useState, useCallback, useEffect } from 'react';
 import { useJules } from '@/lib/jules/provider';
-import type { Session, Activity } from '@/types/jules';
+import type { Session, Activity, SessionTemplate } from '@/types/jules';
 import { SessionList } from './session-list';
 import { ActivityFeed } from './activity-feed';
 import { CodeDiffSidebar } from './code-diff-sidebar';
 import { AnalyticsDashboard } from './analytics-dashboard';
 import { NewSessionDialog } from './new-session-dialog';
+import { TemplatesPage } from './templates-page';
 import { Button } from '@/components/ui/button';
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from '@/components/ui/sheet';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
-import { Menu, LogOut, Settings, BarChart3, MessageSquare, ChevronLeft, ChevronRight, Terminal as TerminalIcon } from 'lucide-react';
+import { Menu, LogOut, Settings, BarChart3, MessageSquare, ChevronLeft, ChevronRight, Terminal as TerminalIcon, LayoutTemplate, Plus } from 'lucide-react';
 import { TerminalPanel } from './terminal-panel';
 import { useTerminalAvailable } from '@/hooks/use-terminal-available';
 
@@ -20,7 +21,7 @@ export function AppLayout() {
   const { clearApiKey } = useJules();
   const { isAvailable: terminalAvailable } = useTerminalAvailable();
   const [selectedSession, setSelectedSession] = useState<Session | null>(null);
-  const [view, setView] = useState<'sessions' | 'analytics'>('sessions');
+  const [view, setView] = useState<'sessions' | 'analytics' | 'templates'>('sessions');
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [refreshKey, setRefreshKey] = useState(0);
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
@@ -35,6 +36,15 @@ export function AppLayout() {
     }
     return false;
   });
+
+  // State for New Session Dialog (Controlled)
+  const [isNewSessionOpen, setIsNewSessionOpen] = useState(false);
+  const [newSessionInitialValues, setNewSessionInitialValues] = useState<{
+    sourceId?: string;
+    title?: string;
+    prompt?: string;
+    startingBranch?: string;
+  } | undefined>(undefined);
 
   const startResizing = useCallback(() => {
     setIsResizing(true);
@@ -73,6 +83,7 @@ export function AppLayout() {
 
   const handleSessionCreated = () => {
     setRefreshKey((prev) => prev + 1);
+    setIsNewSessionOpen(false);
   };
 
   const handleSessionArchived = () => {
@@ -93,6 +104,19 @@ export function AppLayout() {
       return newValue;
     });
   }, []);
+
+  const handleStartSessionFromTemplate = (template: SessionTemplate) => {
+    setNewSessionInitialValues({
+      prompt: template.prompt,
+      title: template.title
+    });
+    setIsNewSessionOpen(true);
+  };
+
+  const handleOpenNewSession = () => {
+    setNewSessionInitialValues(undefined);
+    setIsNewSessionOpen(true);
+  };
 
   return (
     <div className="flex h-screen flex-col bg-black">
@@ -121,32 +145,41 @@ export function AppLayout() {
           </div>
 
           <div className="flex items-center gap-1">
-            {view === 'analytics' ? (
-              <Button
-                variant="ghost"
-                size="sm"
-                className="h-8 px-3 hover:bg-white/5 text-white/80"
-                onClick={() => setView('sessions')}
-              >
-                <MessageSquare className="h-3.5 w-3.5 mr-1.5" />
-                <span className="text-[10px] font-mono uppercase tracking-wider">Sessions</span>
-              </Button>
-            ) : (
-              <Button
-                variant="ghost"
-                size="sm"
-                className="h-8 px-3 hover:bg-white/5 text-white/80"
-                onClick={() => setView('analytics')}
-              >
-                <BarChart3 className="h-3.5 w-3.5 mr-1.5" />
-                <span className="text-[10px] font-mono uppercase tracking-wider">Analytics</span>
-              </Button>
-            )}
+            <Button
+              variant="ghost"
+              size="sm"
+              className={`h-8 px-3 hover:bg-white/5 ${view === 'sessions' ? 'text-white' : 'text-white/60'}`}
+              onClick={() => setView('sessions')}
+            >
+              <MessageSquare className="h-3.5 w-3.5 mr-1.5" />
+              <span className="text-[10px] font-mono uppercase tracking-wider">Sessions</span>
+            </Button>
+
+            <Button
+              variant="ghost"
+              size="sm"
+              className={`h-8 px-3 hover:bg-white/5 ${view === 'templates' ? 'text-white' : 'text-white/60'}`}
+              onClick={() => setView('templates')}
+            >
+              <LayoutTemplate className="h-3.5 w-3.5 mr-1.5" />
+              <span className="text-[10px] font-mono uppercase tracking-wider">Templates</span>
+            </Button>
+
+            <Button
+              variant="ghost"
+              size="sm"
+              className={`h-8 px-3 hover:bg-white/5 ${view === 'analytics' ? 'text-white' : 'text-white/60'}`}
+              onClick={() => setView('analytics')}
+            >
+              <BarChart3 className="h-3.5 w-3.5 mr-1.5" />
+              <span className="text-[10px] font-mono uppercase tracking-wider">Analytics</span>
+            </Button>
+
             {terminalAvailable && (
               <Button
                 variant="ghost"
                 size="sm"
-                className={`h-8 px-3 hover:bg-white/5 ${terminalOpen ? 'text-green-500' : 'text-white/80'}`}
+                className={`h-8 px-3 hover:bg-white/5 ${terminalOpen ? 'text-green-500' : 'text-white/60'}`}
                 onClick={handleToggleTerminal}
                 title="Toggle Terminal (Ctrl+`)"
               >
@@ -154,7 +187,23 @@ export function AppLayout() {
                 <span className="text-[10px] font-mono uppercase tracking-wider">Terminal</span>
               </Button>
             )}
-            <NewSessionDialog onSessionCreated={handleSessionCreated} />
+            
+            <NewSessionDialog 
+              onSessionCreated={handleSessionCreated} 
+              open={isNewSessionOpen}
+              onOpenChange={setIsNewSessionOpen}
+              initialValues={newSessionInitialValues}
+              trigger={
+                <Button 
+                  className="w-full sm:w-auto h-8 text-[10px] font-mono uppercase tracking-widest bg-purple-600 hover:bg-purple-500 text-white border-0"
+                  onClick={handleOpenNewSession}
+                >
+                  <Plus className="h-3.5 w-3.5 mr-1.5" />
+                  New Session
+                </Button>
+              }
+            />
+
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
                 <Button variant="ghost" size="icon" className="h-8 w-8 hover:bg-white/5 text-white/60">
@@ -208,9 +257,11 @@ export function AppLayout() {
         </aside>
 
         {/* Main Panel */}
-        <main className="flex-1 overflow-hidden bg-black">
+        <main className="flex-1 overflow-hidden bg-black flex flex-col">
           {view === 'analytics' ? (
             <AnalyticsDashboard />
+          ) : view === 'templates' ? (
+            <TemplatesPage onStartSession={handleStartSessionFromTemplate} />
           ) : selectedSession ? (
             <ActivityFeed
               session={selectedSession}
@@ -229,7 +280,13 @@ export function AppLayout() {
                   Select session or create new
                 </p>
                 <div className="pt-2">
-                  <NewSessionDialog onSessionCreated={handleSessionCreated} />
+                  <Button 
+                    className="w-full sm:w-auto h-8 text-[10px] font-mono uppercase tracking-widest bg-purple-600 hover:bg-purple-500 text-white border-0"
+                    onClick={handleOpenNewSession}
+                  >
+                    <Plus className="h-3.5 w-3.5 mr-1.5" />
+                    New Session
+                  </Button>
                 </div>
               </div>
             </div>
@@ -237,7 +294,7 @@ export function AppLayout() {
         </main>
 
         {/* Code Diff Sidebar */}
-        {selectedSession && showCodeDiffs && (
+        {selectedSession && showCodeDiffs && view === 'sessions' && (
           <>
             {!codeDiffSidebarCollapsed && (
               <div

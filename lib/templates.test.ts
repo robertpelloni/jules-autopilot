@@ -68,9 +68,10 @@ describe('Templates Utility', () => {
   });
 
   describe('getTemplates', () => {
-    it('should return empty array when localStorage is empty', () => {
+    it('should return prebuilt templates when localStorage is empty', () => {
       const templates = getTemplates();
-      expect(templates).toEqual([]);
+      expect(templates.length).toBeGreaterThan(0);
+      expect(templates.some(t => t.id === 'bolt-performance-agent')).toBe(true);
     });
 
     it('should return parsed templates sorted by updatedAt desc', () => {
@@ -87,7 +88,7 @@ describe('Templates Utility', () => {
   });
 
   describe('saveTemplate', () => {
-    it('should create new template', () => {
+    it('should create new template and preserve prebuilt ones', () => {
       const input = {
         name: 'New Template',
         description: 'Desc',
@@ -103,8 +104,12 @@ describe('Templates Utility', () => {
       expect(result.updatedAt).toBeDefined();
 
       const stored = JSON.parse(localStorageMock.getItem(TEMPLATES_KEY)!);
-      expect(stored).toHaveLength(1);
-      expect(stored[0]).toMatchObject(result);
+      // Should have at least 2: Bolt + New
+      expect(stored.length).toBeGreaterThan(1);
+      expect(stored).toEqual(expect.arrayContaining([
+        expect.objectContaining({ id: 'test-uuid' }),
+        expect.objectContaining({ id: 'bolt-performance-agent' })
+      ]));
     });
 
     it('should update existing template', () => {
