@@ -3,7 +3,7 @@
 import { useState, useEffect, useRef } from 'react';
 import { useRouter, usePathname } from 'next/navigation';
 import { useJules } from '@/lib/jules/provider';
-import { Settings, RotateCw, Brain, Sparkles } from 'lucide-react';
+import { Settings, RotateCw, Brain, Sparkles, Trash2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import {
   Sheet,
@@ -41,6 +41,16 @@ export interface SessionKeeperConfig {
   contextMessageCount: number;
 }
 
+// Persistent Supervisor State
+interface SupervisorState {
+  [sessionId: string]: {
+    lastProcessedActivityTimestamp: string;
+    history: { role: string; content: string }[];
+    openaiThreadId?: string;
+    openaiAssistantId?: string;
+  };
+}
+
 // Default configuration
 const DEFAULT_CONFIG: SessionKeeperConfig = {
   isEnabled: false,
@@ -60,7 +70,7 @@ const DEFAULT_CONFIG: SessionKeeperConfig = {
   supervisorProvider: 'openai',
   supervisorApiKey: '',
   supervisorModel: '', // Will default based on provider
-  contextMessageCount: 10,
+  contextMessageCount: 20, // Default window size
 };
 
 export function SessionKeeper() {
@@ -127,6 +137,11 @@ export function SessionKeeper() {
         const now = new Date();
         const archived = getArchivedSessions();
 
+        // Load Supervisor State
+        const savedState = localStorage.getItem('jules_supervisor_state');
+        const supervisorState: SupervisorState = savedState ? JSON.parse(savedState) : {};
+        let stateChanged = false;
+
         for (const session of currentSessions) {
           if (archived.has(session.id)) continue;
 
@@ -183,23 +198,74 @@ export function SessionKeeper() {
               try {
                 addLog(`Asking Supervisor (${config.supervisorProvider}) for guidance...`, 'info');
 
-                // Fetch recent activities for context
-                const activities = await client.listActivities(session.id);
-                // Filter and sort
-                const history = activities
-                  .sort((a, b) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime())
-                  .slice(-config.contextMessageCount) // Last N messages
-                  .map(a => ({ role: a.role, content: a.content }));
+                // Get or Initialize State
+                if (!supervisorState[session.id]) {
+                  supervisorState[session.id] = { lastProcessedActivityTimestamp: '', history: [] };
+                }
+                const sessionState = supervisorState[session.id];
 
-                // Call our Proxy API
+                // Fetch ALL activities
+                const activities = await client.listActivities(session.id);
+                const sortedActivities = activities.sort((a, b) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime());
+
+                // Identify NEW activities
+                let newActivities = sortedActivities;
+                if (sessionState.lastProcessedActivityTimestamp) {
+                  newActivities = sortedActivities.filter(a => new Date(a.createdAt).getTime() > new Date(sessionState.lastProcessedActivityTimestamp).getTime());
+                }
+
+                // Construct Prompt/History Update
+                // For OpenAI Assistants (stateful), we only send the NEWEST user update.
+                // For others (stateless), we construct the full history.
+
+                const isStateful = config.supervisorProvider === 'openai';
+
+                let messagesToSend: { role: string, content: string }[] = [];
+
+                if (newActivities.length > 0) {
+                  if (sessionState.history.length === 0 && !sessionState.openaiThreadId) {
+                    // INITIAL RUN
+                    const fullSummary = newActivities.map(a => `${a.role.toUpperCase()}: ${a.content}`).join('\n\n');
+                    messagesToSend.push({
+                      role: 'user',
+                      content: `Here is the full conversation history so far. Please analyze the state and provide the next instruction:\n\n${fullSummary}`
+                    });
+                  } else {
+                    // UPDATE RUN
+                    const updates = newActivities.map(a => `${a.role.toUpperCase()}: ${a.content}`).join('\n\n');
+                    messagesToSend.push({
+                      role: 'user',
+                      content: `Here are the latest updates since your last instruction:\n\n${updates}`
+                    });
+                  }
+
+                  // Update timestamp immediately
+                  sessionState.lastProcessedActivityTimestamp = newActivities[newActivities.length - 1].createdAt;
+                } else if (sessionState.history.length > 0 || sessionState.openaiThreadId) {
+                   // No new activity, but timeout triggered
+                   messagesToSend.push({ role: 'user', content: "The agent has been inactive for a while. Please provide a nudge or follow-up instruction." });
+                }
+
+                if (!isStateful) {
+                  // If stateless, prepend the stored history
+                  messagesToSend = [...sessionState.history, ...messagesToSend];
+                  // Truncate
+                  if (messagesToSend.length > config.contextMessageCount) {
+                     messagesToSend = messagesToSend.slice(-config.contextMessageCount);
+                  }
+                }
+
+                // Call API
                 const response = await fetch('/api/supervisor', {
                   method: 'POST',
                   headers: { 'Content-Type': 'application/json' },
                   body: JSON.stringify({
-                    messages: history,
+                    messages: messagesToSend,
                     provider: config.supervisorProvider,
                     apiKey: config.supervisorApiKey,
-                    model: config.supervisorModel
+                    model: config.supervisorModel,
+                    threadId: sessionState.openaiThreadId,
+                    assistantId: sessionState.openaiAssistantId
                   })
                 });
 
@@ -208,9 +274,24 @@ export function SessionKeeper() {
                   if (data.content) {
                     messageToSend = data.content;
                     addLog(`Supervisor says: "${messageToSend.substring(0, 30)}..."`, 'action');
+
+                    // Update State
+                    if (isStateful) {
+                      // Store Thread IDs
+                      sessionState.openaiThreadId = data.threadId;
+                      sessionState.openaiAssistantId = data.assistantId;
+                      // For local display history, just push the last interaction
+                      sessionState.history.push(...messagesToSend); // User part
+                      sessionState.history.push({ role: 'assistant', content: messageToSend }); // AI Part
+                    } else {
+                      // Stateless: Replace history with what we sent + response
+                      sessionState.history = [...messagesToSend, { role: 'assistant', content: messageToSend }];
+                    }
+
+                    stateChanged = true;
                   }
                 } else {
-                  addLog('Supervisor failed, falling back to static messages.', 'error');
+                  addLog('Supervisor failed, falling back.', 'error');
                 }
               } catch (err) {
                 console.error('Supervisor Error:', err);
@@ -241,6 +322,12 @@ export function SessionKeeper() {
             addLog(`Nudge sent`, 'action');
           }
         }
+
+        // Save State if changed
+        if (stateChanged) {
+          localStorage.setItem('jules_supervisor_state', JSON.stringify(supervisorState));
+        }
+
       } catch (error) {
         console.error('Session Keeper Error:', error);
         addLog(`Error: ${error instanceof Error ? error.message : 'Unknown error'}`, 'error');
@@ -279,6 +366,18 @@ export function SessionKeeper() {
           [sessionId]: newMessages
         }
       });
+    }
+  };
+
+  const clearSupervisorMemory = (sessionId: string) => {
+    const savedState = localStorage.getItem('jules_supervisor_state');
+    if (savedState) {
+      const state = JSON.parse(savedState);
+      if (state[sessionId]) {
+        delete state[sessionId];
+        localStorage.setItem('jules_supervisor_state', JSON.stringify(state));
+        addLog(`Cleared Supervisor memory for ${sessionId.substring(0,8)}`, 'action');
+      }
     }
   };
 
@@ -408,6 +507,36 @@ export function SessionKeeper() {
                     onChange={(e) => setConfig({ ...config, contextMessageCount: parseInt(e.target.value) || 10 })}
                   />
                 </div>
+
+                <div className="pt-2">
+                   <Label className="mb-2 block">Supervisor Memory Management</Label>
+                   <div className="flex items-center gap-2">
+                      <Select value={selectedSessionId} onValueChange={setSelectedSessionId}>
+                        <SelectTrigger className="w-[180px] h-8 text-xs">
+                          <SelectValue placeholder="Select context" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="global">Global Defaults</SelectItem>
+                          {sessions.map(s => (
+                            <SelectItem key={s.id} value={s.id}>{s.title.substring(0, 20)}...</SelectItem>
+                          ))}
+                        </SelectContent>
+                     </Select>
+                     <Button
+                       variant="destructive"
+                       size="sm"
+                       className="h-8 text-xs"
+                       disabled={selectedSessionId === 'global'}
+                       onClick={() => clearSupervisorMemory(selectedSessionId)}
+                     >
+                       <Trash2 className="h-3 w-3 mr-1" />
+                       Clear Memory
+                     </Button>
+                   </div>
+                   <p className="text-[10px] text-muted-foreground mt-1">
+                     Resetting memory forces the Supervisor to re-read the full session history next time.
+                   </p>
+                </div>
               </div>
             )}
           </div>
@@ -460,17 +589,19 @@ export function SessionKeeper() {
                <Label>
                  {config.smartPilotEnabled ? 'Fallback Messages' : 'Encouragement Messages'}
                </Label>
-               <Select value={selectedSessionId} onValueChange={setSelectedSessionId}>
-                  <SelectTrigger className="w-[180px] h-8 text-xs">
-                    <SelectValue placeholder="Select context" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="global">Global Defaults</SelectItem>
-                    {sessions.map(s => (
-                      <SelectItem key={s.id} value={s.id}>{s.title.substring(0, 20)}...</SelectItem>
-                    ))}
-                  </SelectContent>
-               </Select>
+               {!config.smartPilotEnabled && (
+                 <Select value={selectedSessionId} onValueChange={setSelectedSessionId}>
+                    <SelectTrigger className="w-[180px] h-8 text-xs">
+                      <SelectValue placeholder="Select context" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="global">Global Defaults</SelectItem>
+                      {sessions.map(s => (
+                        <SelectItem key={s.id} value={s.id}>{s.title.substring(0, 20)}...</SelectItem>
+                      ))}
+                    </SelectContent>
+                 </Select>
+               )}
              </div>
 
              <Textarea
