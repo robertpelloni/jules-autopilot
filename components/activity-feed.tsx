@@ -60,23 +60,48 @@ export function ActivityFeed({ session, onArchive, showCodeDiffs, onToggleCodeDi
     }
   };
 
-  const formatContent = (content: string) => {
-    if (content === '[userMessaged]') return <span className="text-white/50 italic">Message sent</span>;
-    if (content === '[agentMessaged]') return <span className="text-white/50 italic">Agent working...</span>;
+  const formatContent = (content: string, metadata?: Record<string, any>) => {
+    // 1. Handle Placeholders
+    if (content === '[userMessaged]' || content === '[agentMessaged]') {
+        // Try to recover content from metadata if available
+        const realContent = metadata?.original_content || metadata?.message || metadata?.text;
+        if (realContent && typeof realContent === 'string') {
+             // If we found real content, recursively format it
+             return formatContent(realContent, undefined);
+        }
 
-    try {
-      const parsed = JSON.parse(content);
-      if (Array.isArray(parsed) || (parsed.steps && Array.isArray(parsed.steps))) {
-        return <PlanContent content={parsed} />;
-      }
-      return <pre className="text-[11px] overflow-x-auto font-mono bg-muted/50 p-2 rounded">{JSON.stringify(parsed, null, 2)}</pre>;
-    } catch {
-      return (
+        if (content === '[userMessaged]') return <span className="text-white/50 italic">Message sent</span>;
+        if (content === '[agentMessaged]') return <span className="text-white/50 italic">Agent working...</span>;
+    }
+
+    // 2. Try JSON Parsing
+    if (content.startsWith('{') || content.startsWith('[')) {
+        try {
+          const parsed = JSON.parse(content);
+
+          // Handle Empty JSON
+          if (typeof parsed === 'object' && parsed !== null) {
+             if (Array.isArray(parsed) && parsed.length === 0) return null;
+             if (!Array.isArray(parsed) && Object.keys(parsed).length === 0) return null;
+          }
+
+          // Handle Plan Content
+          if (Array.isArray(parsed) || (parsed.steps && Array.isArray(parsed.steps))) {
+            return <PlanContent content={parsed} />;
+          }
+
+          return <pre className="text-[11px] overflow-x-auto font-mono bg-muted/50 p-2 rounded">{JSON.stringify(parsed, null, 2)}</pre>;
+        } catch {
+          // Fall through to markdown
+        }
+    }
+
+    // 3. Render as Markdown
+    return (
         <div className="prose prose-sm dark:prose-invert max-w-none break-words prose-p:text-xs prose-p:leading-relaxed prose-p:break-words prose-headings:text-xs prose-headings:font-semibold prose-headings:mb-1 prose-headings:mt-2 prose-ul:text-xs prose-ol:text-xs prose-li:text-xs prose-li:my-0.5 prose-code:text-[11px] prose-code:bg-muted prose-code:px-1 prose-code:py-0.5 prose-code:rounded prose-code:break-all prose-pre:text-[11px] prose-pre:bg-muted prose-pre:p-2 prose-pre:overflow-x-auto prose-blockquote:text-xs prose-blockquote:border-l-primary prose-strong:font-semibold">
           <ReactMarkdown remarkPlugins={[remarkGfm]}>{content}</ReactMarkdown>
         </div>
-      );
-    }
+    );
   };
 
   const loadActivities = useCallback(async (isInitialLoad = true) => {
@@ -432,6 +457,10 @@ export function ActivityFeed({ session, onArchive, showCodeDiffs, onToggleCodeDi
               return grouped.map((item, groupIndex) => {
                 if (Array.isArray(item)) {
                   const firstActivity = item[0];
+                  // Filter nulls (empty JSONs that slipped)
+                  const validItems = item.filter(a => formatContent(a.content, a.metadata) !== null);
+                  if (validItems.length === 0) return null;
+
                   return (
                     <div key={`group-${groupIndex}`} className="flex gap-2.5">
                       <Avatar className="h-6 w-6 shrink-0 mt-0.5 bg-zinc-900 border border-white/10">{getActivityIcon(firstActivity)}</Avatar>
@@ -439,12 +468,12 @@ export function ActivityFeed({ session, onArchive, showCodeDiffs, onToggleCodeDi
                         <CardContent className="p-3">
                           <div className="flex items-center gap-2 mb-2">
                             <Badge variant="outline" className="text-[9px] h-4 px-1.5 font-mono uppercase tracking-wider bg-yellow-500/90 border-transparent text-black font-bold">progress</Badge>
-                            <span className="text-[9px] font-mono text-white/40 tracking-wide">{item.length} updates</span>
+                            <span className="text-[9px] font-mono text-white/40 tracking-wide">{validItems.length} updates</span>
                           </div>
                           <div className="space-y-2">
-                            {item.map((activity, idx) => (
+                            {validItems.map((activity, idx) => (
                               <div key={activity.id} className={idx > 0 ? 'pt-2 border-t border-white/[0.08]' : ''}>
-                                <div className="text-[11px] leading-relaxed text-white/90 break-words">{formatContent(activity.content)}</div>
+                                <div className="text-[11px] leading-relaxed text-white/90 break-words">{formatContent(activity.content, activity.metadata)}</div>
                               </div>
                             ))}
                           </div>
@@ -455,6 +484,9 @@ export function ActivityFeed({ session, onArchive, showCodeDiffs, onToggleCodeDi
                 }
 
                 const activity = item;
+                const contentNode = formatContent(activity.content, activity.metadata);
+                if (contentNode === null) return null;
+
                 // Only show approve button if session is waiting for approval AND this is the latest plan
                 const showApprove = activity.type === 'plan' && session.status === 'awaiting_approval';
 
@@ -475,7 +507,7 @@ export function ActivityFeed({ session, onArchive, showCodeDiffs, onToggleCodeDi
                             {copiedId === activity.id ? <Check className="h-3 w-3 text-green-500" /> : <Copy className="h-3 w-3 text-white/40" />}
                           </Button>
                         </div>
-                        <div className="text-[11px] leading-relaxed text-white/90 break-words">{formatContent(activity.content)}</div>
+                        <div className="text-[11px] leading-relaxed text-white/90 break-words">{contentNode}</div>
                         {activity.bashOutput && (
                           <div className="mt-3 pt-3 border-t border-white/[0.08]">
                             <button onClick={() => toggleBashOutput(activity.id)} className="flex items-center gap-2 text-[10px] font-mono uppercase tracking-wider text-green-400 hover:text-green-300 transition-colors mb-2">

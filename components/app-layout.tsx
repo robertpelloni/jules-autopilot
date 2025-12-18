@@ -398,7 +398,7 @@ export function AppLayout() {
           {!keeperSidebarCollapsed && (
             <>
               <ResizableHandle withHandle />
-              <ResizablePanel defaultSize={50} minSize={20} maxSize={80}>
+              <ResizablePanel defaultSize={40} minSize={30} maxSize={80}>
                  <SessionKeeper isSidebar={true} onClose={() => setKeeperSidebarCollapsed(true)} />
               </ResizablePanel>
             </>

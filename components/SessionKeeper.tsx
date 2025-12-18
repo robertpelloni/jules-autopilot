@@ -404,7 +404,7 @@ export function SessionKeeper({ onClose }: { isSidebar?: boolean, onClose?: () =
             </div>
           </div>
         </div>
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2 shrink-0">
            <SessionKeeperSettings
              config={config}
              onConfigChange={setConfig}
