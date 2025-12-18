@@ -158,8 +158,8 @@ export function AppLayout() {
           <div className="flex items-center gap-3">
             <Sheet open={mobileMenuOpen} onOpenChange={setMobileMenuOpen}>
               <SheetTrigger asChild>
-                <Button variant="ghost" size="icon" className="md:hidden h-8 w-8">
-                  <Menu className="h-4 w-4" />
+                <Button variant="ghost" size="icon" className="md:hidden h-11 w-11">
+                  <Menu className="h-5 w-5" />
                 </Button>
               </SheetTrigger>
               <SheetContent side="left" className="w-[280px] p-0 bg-zinc-950 border-white/[0.08]">
