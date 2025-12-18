@@ -150,10 +150,8 @@ export function SessionKeeper({ onClose }: { isSidebar?: boolean, onClose?: () =
             const cleanId = targetId.replace('sessions/', '');
             const targetPath = `/?sessionId=${cleanId}`;
             if (config.autoSwitch && !hasSwitchedRef.current) {
-              // We can't easily check current query param inside this loop without parsing window.location or similar
-              // But router.push is safe if we don't spam it. hasSwitchedRef protects us.
-              router.push(targetPath);
-              hasSwitchedRef.current = true;
+               router.push(targetPath);
+               hasSwitchedRef.current = true;
             }
           };
 
@@ -296,9 +294,8 @@ export function SessionKeeper({ onClose }: { isSidebar?: boolean, onClose?: () =
                       // Store Thread IDs
                       sessionState.openaiThreadId = data.threadId;
                       sessionState.openaiAssistantId = data.assistantId;
-                      // For local display history, just push the last interaction
-                      sessionState.history.push(...messagesToSend); 
-                      sessionState.history.push({ role: 'assistant', content: messageToSend }); 
+                      sessionState.history.push(...messagesToSend);
+                      sessionState.history.push({ role: 'assistant', content: messageToSend });
                     } else {
                       // Stateless
                       sessionState.history = [...messagesToSend, { role: 'assistant', content: messageToSend }];
