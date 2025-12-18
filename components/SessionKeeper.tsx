@@ -3,43 +3,13 @@
 import { useState, useEffect, useRef } from 'react';
 import { useRouter, usePathname } from 'next/navigation';
 import { useJules } from '@/lib/jules/provider';
-import { Settings, RotateCw, Brain, Sparkles, Trash2 } from 'lucide-react';
+import { RotateCw, Brain, X, Check, Activity, Users } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import {
-  Sheet,
-  SheetContent,
-  SheetDescription,
-  SheetHeader,
-  SheetTitle,
-  SheetTrigger,
-} from '@/components/ui/sheet';
-import { Label } from '@/components/ui/label';
-import { Input } from '@/components/ui/input';
-import { Switch } from '@/components/ui/switch';
-import { Textarea } from '@/components/ui/textarea';
 import { Card } from '@/components/ui/card';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import { Separator } from '@/components/ui/separator';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { getArchivedSessions } from '@/lib/archive';
-
-// Types for configuration
-export interface SessionKeeperConfig {
-  isEnabled: boolean;
-  autoSwitch: boolean;
-  checkIntervalSeconds: number;
-  inactivityThresholdMinutes: number;
-  activeWorkThresholdMinutes: number;
-  messages: string[]; // Fallback messages
-  customMessages: Record<string, string[]>;
-
-  // Smart Auto-Pilot Settings
-  smartPilotEnabled: boolean;
-  supervisorProvider: 'openai' | 'anthropic' | 'gemini';
-  supervisorApiKey: string;
-  supervisorModel: string;
-  contextMessageCount: number;
-}
+import { SessionKeeperSettings } from './session-keeper-settings';
+import { SessionKeeperConfig } from '@/types/jules';
 
 // Persistent Supervisor State
 interface SupervisorState {
@@ -67,25 +37,30 @@ const DEFAULT_CONFIG: SessionKeeperConfig = {
   ],
   customMessages: {},
   smartPilotEnabled: false,
-  supervisorProvider: 'openai',
+  supervisorProvider: 'openai', // Default to stateless Chat Completions
   supervisorApiKey: '',
-  supervisorModel: '', // Will default based on provider
-  contextMessageCount: 20, // Default window size
+  supervisorModel: '',
+  contextMessageCount: 20,
 };
 
-export function SessionKeeper() {
+export function SessionKeeper({ onClose }: { isSidebar?: boolean, onClose?: () => void }) {
   const { client, apiKey } = useJules();
   const router = useRouter();
   const pathname = usePathname();
   const [config, setConfig] = useState<SessionKeeperConfig>(DEFAULT_CONFIG);
   const [logs, setLogs] = useState<{ time: string; message: string; type: 'info' | 'action' | 'error' | 'skip' }[]>([]);
   const [sessions, setSessions] = useState<{ id: string; title: string }[]>([]);
-  const [selectedSessionId, setSelectedSessionId] = useState<string>('global');
+  const [statusSummary, setStatusSummary] = useState({
+    monitoringCount: 0,
+    lastAction: 'None',
+    nextCheckIn: 0
+  });
 
   // Refs for interval and preventing race conditions
   const intervalRef = useRef<NodeJS.Timeout | null>(null);
   const processingRef = useRef(false);
   const hasSwitchedRef = useRef(false);
+  const nextCheckRef = useRef<number>(0);
 
   // Load config from local storage on mount
   useEffect(() => {
@@ -93,7 +68,6 @@ export function SessionKeeper() {
     if (savedConfig) {
       try {
         const parsed = JSON.parse(savedConfig);
-        // Merge to ensure new fields exist
         setConfig({ ...DEFAULT_CONFIG, ...parsed });
       } catch (e) {
         console.error('Failed to parse session keeper config', e);
@@ -123,6 +97,7 @@ export function SessionKeeper() {
     }
 
     if (!config.isEnabled || !client || !apiKey) {
+      setStatusSummary(prev => ({ ...prev, monitoringCount: 0 }));
       return;
     }
 
@@ -131,27 +106,41 @@ export function SessionKeeper() {
       processingRef.current = true;
       hasSwitchedRef.current = false;
 
+      const nextCheck = Date.now() + (config.checkIntervalSeconds * 1000);
+      nextCheckRef.current = nextCheck;
+      setStatusSummary(prev => ({ ...prev, nextCheckIn: nextCheck }));
+
       try {
         addLog('Checking sessions...', 'info');
         const currentSessions = await client.listSessions();
-        const now = new Date();
         const archived = getArchivedSessions();
+        const activeSessions = currentSessions.filter(s => !archived.has(s.id));
+
+        setStatusSummary(prev => ({ ...prev, monitoringCount: activeSessions.length }));
+
+        // Debug Log
+        console.log('[SessionKeeper] Checking sessions:', activeSessions.map(s => ({
+          id: s.id,
+          status: s.status,
+          rawState: s.rawState,
+          lastActivityAt: s.lastActivityAt
+        })));
+
+        const now = new Date();
 
         // Load Supervisor State
         const savedState = localStorage.getItem('jules_supervisor_state');
         const supervisorState: SupervisorState = savedState ? JSON.parse(savedState) : {};
         let stateChanged = false;
 
-        for (const session of currentSessions) {
-          if (archived.has(session.id)) continue;
-
+        for (const session of activeSessions) {
           // Helper to switch session safely
           const safeSwitch = (targetId: string) => {
             const cleanId = targetId.replace('sessions/', '');
-            const targetPath = `/sessions/${cleanId}`;
-            if (config.autoSwitch && !hasSwitchedRef.current && pathname !== targetPath) {
-              router.push(targetPath);
-              hasSwitchedRef.current = true;
+            const targetPath = `/?sessionId=${cleanId}`;
+            if (config.autoSwitch && !hasSwitchedRef.current) {
+               router.push(targetPath);
+               hasSwitchedRef.current = true;
             }
           };
 
@@ -161,6 +150,7 @@ export function SessionKeeper() {
              safeSwitch(session.id);
              await client.resumeSession(session.id);
              addLog(`Resumed ${session.id.substring(0, 8)}`, 'action');
+             setStatusSummary(prev => ({ ...prev, lastAction: `Resumed ${session.id.substring(0,8)}` }));
              continue;
           }
 
@@ -170,6 +160,7 @@ export function SessionKeeper() {
             safeSwitch(session.id);
             await client.approvePlan(session.id);
             addLog(`Plan approved for ${session.id.substring(0, 8)}`, 'action');
+            setStatusSummary(prev => ({ ...prev, lastAction: `Approved Plan ${session.id.substring(0,8)}` }));
             continue;
           }
 
@@ -193,109 +184,129 @@ export function SessionKeeper() {
             safeSwitch(session.id);
             let messageToSend = '';
 
-            // SMART AUTO-PILOT LOGIC
-            if (config.smartPilotEnabled && config.supervisorApiKey) {
+            // DEBATE MODE OR SMART PILOT
+            if ((config.debateEnabled && config.debateParticipants && config.debateParticipants.length > 0) || (config.smartPilotEnabled && config.supervisorApiKey)) {
               try {
-                addLog(`Asking Supervisor (${config.supervisorProvider}) for guidance...`, 'info');
-
-                // Get or Initialize State
-                if (!supervisorState[session.id]) {
-                  supervisorState[session.id] = { lastProcessedActivityTimestamp: '', history: [] };
-                }
-                const sessionState = supervisorState[session.id];
-
                 // Fetch ALL activities
                 const activities = await client.listActivities(session.id);
+                if (session.prompt && !activities.some(a => a.content === session.prompt)) {
+                    activities.unshift({
+                        id: 'initial-prompt',
+                        sessionId: session.id,
+                        type: 'message',
+                        role: 'user',
+                        content: session.prompt,
+                        createdAt: session.createdAt
+                    });
+                }
                 const sortedActivities = activities.sort((a, b) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime());
 
-                // Identify NEW activities
-                let newActivities = sortedActivities;
-                if (sessionState.lastProcessedActivityTimestamp) {
-                  newActivities = sortedActivities.filter(a => new Date(a.createdAt).getTime() > new Date(sessionState.lastProcessedActivityTimestamp).getTime());
-                }
+                // Debate Logic
+                if (config.debateEnabled && config.debateParticipants && config.debateParticipants.length > 0) {
+                    addLog(`Convening Council (${config.debateParticipants.length} members)...`, 'info');
 
-                // Construct Prompt/History Update
-                // For OpenAI Assistants (stateful), we only send the NEWEST user update.
-                // For others (stateless), we construct the full history.
+                    // Prepare simple history for debate (stateless usually)
+                    const history = sortedActivities.map(a => ({
+                        role: a.role === 'agent' ? 'assistant' : 'user',
+                        content: a.content
+                    })).slice(-config.contextMessageCount);
 
-                const isStateful = config.supervisorProvider === 'openai';
-
-                let messagesToSend: { role: string, content: string }[] = [];
-
-                if (newActivities.length > 0) {
-                  if (sessionState.history.length === 0 && !sessionState.openaiThreadId) {
-                    // INITIAL RUN
-                    const fullSummary = newActivities.map(a => `${a.role.toUpperCase()}: ${a.content}`).join('\n\n');
-                    messagesToSend.push({
-                      role: 'user',
-                      content: `Here is the full conversation history so far. Please analyze the state and provide the next instruction:\n\n${fullSummary}`
+                    const response = await fetch('/api/supervisor', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({
+                            action: 'debate',
+                            messages: history,
+                            participants: config.debateParticipants
+                        })
                     });
-                  } else {
-                    // UPDATE RUN
-                    const updates = newActivities.map(a => `${a.role.toUpperCase()}: ${a.content}`).join('\n\n');
-                    messagesToSend.push({
-                      role: 'user',
-                      content: `Here are the latest updates since your last instruction:\n\n${updates}`
-                    });
-                  }
 
-                  // Update timestamp immediately
-                  sessionState.lastProcessedActivityTimestamp = newActivities[newActivities.length - 1].createdAt;
-                } else if (sessionState.history.length > 0 || sessionState.openaiThreadId) {
-                   // No new activity, but timeout triggered
-                   messagesToSend.push({ role: 'user', content: "The agent has been inactive for a while. Please provide a nudge or follow-up instruction." });
-                }
-
-                if (!isStateful) {
-                  // If stateless, prepend the stored history
-                  messagesToSend = [...sessionState.history, ...messagesToSend];
-                  // Truncate
-                  if (messagesToSend.length > config.contextMessageCount) {
-                     messagesToSend = messagesToSend.slice(-config.contextMessageCount);
-                  }
-                }
-
-                // Call API
-                const response = await fetch('/api/supervisor', {
-                  method: 'POST',
-                  headers: { 'Content-Type': 'application/json' },
-                  body: JSON.stringify({
-                    messages: messagesToSend,
-                    provider: config.supervisorProvider,
-                    apiKey: config.supervisorApiKey,
-                    model: config.supervisorModel,
-                    threadId: sessionState.openaiThreadId,
-                    assistantId: sessionState.openaiAssistantId
-                  })
-                });
-
-                if (response.ok) {
-                  const data = await response.json();
-                  if (data.content) {
-                    messageToSend = data.content;
-                    addLog(`Supervisor says: "${messageToSend.substring(0, 30)}..."`, 'action');
-
-                    // Update State
-                    if (isStateful) {
-                      // Store Thread IDs
-                      sessionState.openaiThreadId = data.threadId;
-                      sessionState.openaiAssistantId = data.assistantId;
-                      // For local display history, just push the last interaction
-                      sessionState.history.push(...messagesToSend); // User part
-                      sessionState.history.push({ role: 'assistant', content: messageToSend }); // AI Part
+                    if (response.ok) {
+                        const data = await response.json();
+                        messageToSend = data.content;
+                        if (data.opinions) {
+                            data.opinions.forEach((op: any) => {
+                                addLog(`Council Member (${op.participant.provider}): ${op.content.substring(0, 30)}...`, 'info');
+                            });
+                        }
+                        addLog(`Council Verdict: "${messageToSend.substring(0, 30)}..."`, 'action');
                     } else {
-                      // Stateless: Replace history with what we sent + response
-                      sessionState.history = [...messagesToSend, { role: 'assistant', content: messageToSend }];
+                        const err = await response.json().catch(() => ({}));
+                        throw new Error(`Debate failed: ${err.error || 'Unknown'}`);
                     }
 
-                    stateChanged = true;
-                  }
-                } else {
-                  addLog('Supervisor failed, falling back.', 'error');
+                }
+                // Single Supervisor Logic
+                else if (config.smartPilotEnabled) {
+                    addLog(`Asking Supervisor (${config.supervisorProvider})...`, 'info');
+
+                    // State Management
+                    if (!supervisorState[session.id]) {
+                      supervisorState[session.id] = { lastProcessedActivityTimestamp: '', history: [] };
+                    }
+                    const sessionState = supervisorState[session.id];
+
+                    // Identify NEW activities
+                    let newActivities = sortedActivities;
+                    if (sessionState.lastProcessedActivityTimestamp) {
+                      newActivities = sortedActivities.filter(a => new Date(a.createdAt).getTime() > new Date(sessionState.lastProcessedActivityTimestamp).getTime());
+                    }
+
+                    const isStateful = config.supervisorProvider === 'openai-assistants';
+                    let messagesToSend: { role: string, content: string }[] = [];
+
+                    if (newActivities.length > 0) {
+                      if (sessionState.history.length === 0 && !sessionState.openaiThreadId) {
+                        const fullSummary = newActivities.map(a => `${a.role.toUpperCase()}: ${a.content}`).join('\n\n');
+                        messagesToSend.push({ role: 'user', content: `Here is the full conversation history so far. Please analyze the state and provide the next instruction:\n\n${fullSummary}` });
+                      } else {
+                        const updates = newActivities.map(a => `${a.role.toUpperCase()}: ${a.content}`).join('\n\n');
+                        messagesToSend.push({ role: 'user', content: `Here are the latest updates since your last instruction:\n\n${updates}` });
+                      }
+                      sessionState.lastProcessedActivityTimestamp = newActivities[newActivities.length - 1].createdAt;
+                    } else if (sessionState.history.length > 0 || sessionState.openaiThreadId) {
+                       messagesToSend.push({ role: 'user', content: "The agent has been inactive for a while. Please provide a nudge or follow-up instruction." });
+                    }
+
+                    if (!isStateful) {
+                      messagesToSend = [...sessionState.history, ...messagesToSend].slice(-config.contextMessageCount);
+                    }
+
+                    const response = await fetch('/api/supervisor', {
+                      method: 'POST',
+                      headers: { 'Content-Type': 'application/json' },
+                      body: JSON.stringify({
+                        messages: messagesToSend,
+                        provider: config.supervisorProvider,
+                        apiKey: config.supervisorApiKey,
+                        model: config.supervisorModel,
+                        threadId: sessionState.openaiThreadId,
+                        assistantId: sessionState.openaiAssistantId
+                      })
+                    });
+
+                    if (response.ok) {
+                      const data = await response.json();
+                      if (data.content) {
+                        messageToSend = data.content;
+                        addLog(`Supervisor says: "${messageToSend.substring(0, 30)}..."`, 'action');
+                        if (isStateful) {
+                          sessionState.openaiThreadId = data.threadId;
+                          sessionState.openaiAssistantId = data.assistantId;
+                          sessionState.history.push(...messagesToSend);
+                          sessionState.history.push({ role: 'assistant', content: messageToSend });
+                        } else {
+                          sessionState.history = [...messagesToSend, { role: 'assistant', content: messageToSend }];
+                        }
+                        stateChanged = true;
+                      }
+                    } else {
+                       throw new Error('Supervisor API failed');
+                    }
                 }
               } catch (err) {
-                console.error('Supervisor Error:', err);
-                addLog('Supervisor error, using fallback.', 'error');
+                console.error('Supervisor/Debate Error:', err);
+                addLog(`Auto-Pilot error: ${err instanceof Error ? err.message : 'Unknown'}`, 'error');
               }
             }
 
@@ -320,6 +331,7 @@ export function SessionKeeper() {
               type: 'message'
             });
             addLog(`Nudge sent`, 'action');
+            setStatusSummary(prev => ({ ...prev, lastAction: `Nudged ${session.id.substring(0,8)}` }));
           }
         }
 
@@ -352,21 +364,7 @@ export function SessionKeeper() {
       time: new Date().toLocaleTimeString(),
       message,
       type
-    }, ...prev].slice(0, 50));
-  };
-
-  const updateMessages = (sessionId: string, newMessages: string[]) => {
-    if (sessionId === 'global') {
-      setConfig({ ...config, messages: newMessages });
-    } else {
-      setConfig({
-        ...config,
-        customMessages: {
-          ...config.customMessages,
-          [sessionId]: newMessages
-        }
-      });
-    }
+    }, ...prev].slice(0, 100)); // Keep last 100
   };
 
   const clearSupervisorMemory = (sessionId: string) => {
@@ -381,268 +379,100 @@ export function SessionKeeper() {
     }
   };
 
-  const currentMessages = selectedSessionId === 'global'
-    ? config.messages
-    : (config.customMessages?.[selectedSessionId] || []);
-
   if (!apiKey) return null;
 
   return (
-    <Sheet>
-      <SheetTrigger asChild>
-        <Button
-          variant="outline"
-          size="icon"
-          className={`fixed bottom-4 right-4 z-50 rounded-full shadow-lg h-12 w-12 border-2 ${config.isEnabled ? 'bg-green-100 dark:bg-green-900 border-green-500 animate-pulse' : 'bg-background'}`}
-          title="Session Keeper Auto-Pilot"
-        >
-          {config.smartPilotEnabled && config.isEnabled ? <Brain className="h-6 w-6 animate-pulse text-purple-500" /> :
-           config.isEnabled ? <RotateCw className="h-6 w-6 animate-spin-slow" /> : <Settings className="h-6 w-6" />}
-        </Button>
-      </SheetTrigger>
-      <SheetContent side="right" className="w-[400px] sm:w-[600px] overflow-y-auto">
-        <SheetHeader>
-          <SheetTitle className="flex items-center gap-2">
-            {config.smartPilotEnabled ? <Brain className="h-5 w-5 text-purple-500" /> : <RotateCw className={`h-5 w-5 ${config.isEnabled ? 'animate-spin' : ''}`} />}
-            Session Keeper Auto-Pilot
-          </SheetTitle>
-          <SheetDescription>
-            Automatically monitors sessions, resumes work, and provides guidance.
-          </SheetDescription>
-        </SheetHeader>
-
-        <div className="grid gap-6 py-6">
-          {/* Main Controls */}
-          <div className="flex flex-col gap-4 border p-4 rounded-lg bg-muted/20">
-            <div className="flex items-center justify-between">
-              <Label htmlFor="keeper-enabled" className="flex flex-col">
-                <span className="font-semibold text-base">Enable Auto-Pilot</span>
-                <span className="font-normal text-xs text-muted-foreground">
-                  Continuously monitor active sessions
-                </span>
-              </Label>
-              <Switch
-                id="keeper-enabled"
-                checked={config.isEnabled}
-                onCheckedChange={(c) => setConfig({ ...config, isEnabled: c })}
-              />
+    <div className="h-full flex flex-col bg-zinc-950 border-l border-white/5">
+      {/* Header */}
+      <div className="flex items-center justify-between p-4 border-b border-white/10 bg-zinc-950/50">
+        <div className="flex items-center gap-3">
+          {config.smartPilotEnabled ? (
+            <div className="relative">
+               <Brain className="h-5 w-5 text-purple-500" />
+               <Sparkles className="h-2 w-2 text-yellow-400 absolute -top-1 -right-1 animate-pulse" />
             </div>
-            <Separator />
-            <div className="flex items-center justify-between">
-              <Label htmlFor="auto-switch" className="flex flex-col">
-                <span className="font-medium">Auto-Switch Session</span>
-                <span className="font-normal text-xs text-muted-foreground">
-                  Navigate to the session being acted upon
-                </span>
-              </Label>
-              <Switch
-                id="auto-switch"
-                checked={config.autoSwitch}
-                onCheckedChange={(c) => setConfig({ ...config, autoSwitch: c })}
-              />
+          ) : (
+            <RotateCw className={`h-5 w-5 ${config.isEnabled ? 'text-green-500 animate-spin-slow' : 'text-white/40'}`} />
+          )}
+          <div>
+            <h2 className="text-sm font-bold tracking-wide uppercase text-white">Auto-Pilot</h2>
+            <div className="flex items-center gap-2">
+              <span className={`h-1.5 w-1.5 rounded-full ${config.isEnabled ? 'bg-green-500' : 'bg-red-500'}`} />
+              <p className="text-[10px] text-white/50 font-mono uppercase">
+                {config.isEnabled ? 'Active' : 'Disabled'}
+              </p>
             </div>
           </div>
+        </div>
+        <div className="flex items-center gap-2">
+           <SessionKeeperSettings
+             config={config}
+             onConfigChange={setConfig}
+             sessions={sessions}
+             onClearMemory={clearSupervisorMemory}
+           />
+           {onClose && (
+            <Button variant="ghost" size="icon" className="h-8 w-8 text-white/40 hover:text-white" onClick={onClose}>
+              <X className="h-4 w-4" />
+            </Button>
+           )}
+        </div>
+      </div>
 
-          {/* Smart Supervisor Settings */}
-          <div className="flex flex-col gap-4 border p-4 rounded-lg border-purple-500/20 bg-purple-500/5">
-            <div className="flex items-center justify-between">
-              <Label htmlFor="smart-pilot" className="flex flex-col">
-                <span className="font-semibold text-base flex items-center gap-2">
-                  <Sparkles className="h-4 w-4 text-purple-500" />
-                  Smart Supervisor
-                </span>
-                <span className="font-normal text-xs text-muted-foreground">
-                  Use AI to generate context-aware guidance
-                </span>
-              </Label>
-              <Switch
-                id="smart-pilot"
-                checked={config.smartPilotEnabled}
-                onCheckedChange={(c) => setConfig({ ...config, smartPilotEnabled: c })}
-              />
-            </div>
-
-            {config.smartPilotEnabled && (
-              <div className="grid gap-4 pt-2">
-                <div className="grid grid-cols-2 gap-4">
-                  <div className="space-y-2">
-                    <Label>Provider</Label>
-                    <Select
-                      value={config.supervisorProvider}
-                      onValueChange={(v: 'openai' | 'anthropic' | 'gemini') => setConfig({ ...config, supervisorProvider: v })}
-                    >
-                      <SelectTrigger><SelectValue /></SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="openai">OpenAI (GPT-4)</SelectItem>
-                        <SelectItem value="anthropic">Anthropic (Claude)</SelectItem>
-                        <SelectItem value="gemini">Google (Gemini)</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </div>
-                  <div className="space-y-2">
-                    <Label>Model (Optional)</Label>
-                    <Input
-                      placeholder="e.g. gpt-4o"
-                      value={config.supervisorModel}
-                      onChange={(e) => setConfig({ ...config, supervisorModel: e.target.value })}
-                    />
-                  </div>
-                </div>
-                <div className="space-y-2">
-                  <Label>API Key</Label>
-                  <Input
-                    type="password"
-                    placeholder={`Enter ${config.supervisorProvider} API Key`}
-                    value={config.supervisorApiKey}
-                    onChange={(e) => setConfig({ ...config, supervisorApiKey: e.target.value })}
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label>Context History (Messages)</Label>
-                  <Input
-                    type="number"
-                    min={1}
-                    max={50}
-                    value={config.contextMessageCount}
-                    onChange={(e) => setConfig({ ...config, contextMessageCount: parseInt(e.target.value) || 10 })}
-                  />
-                </div>
-
-                <div className="pt-2">
-                   <Label className="mb-2 block">Supervisor Memory Management</Label>
-                   <div className="flex items-center gap-2">
-                      <Select value={selectedSessionId} onValueChange={setSelectedSessionId}>
-                        <SelectTrigger className="w-[180px] h-8 text-xs">
-                          <SelectValue placeholder="Select context" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="global">Global Defaults</SelectItem>
-                          {sessions.map(s => (
-                            <SelectItem key={s.id} value={s.id}>{s.title.substring(0, 20)}...</SelectItem>
-                          ))}
-                        </SelectContent>
-                     </Select>
-                     <Button
-                       variant="destructive"
-                       size="sm"
-                       className="h-8 text-xs"
-                       disabled={selectedSessionId === 'global'}
-                       onClick={() => clearSupervisorMemory(selectedSessionId)}
-                     >
-                       <Trash2 className="h-3 w-3 mr-1" />
-                       Clear Memory
-                     </Button>
-                   </div>
-                   <p className="text-[10px] text-muted-foreground mt-1">
-                     Resetting memory forces the Supervisor to re-read the full session history next time.
-                   </p>
-                </div>
+      <div className="flex-1 overflow-hidden flex flex-col p-4 gap-4">
+        {/* Status Cards */}
+        <div className="grid grid-cols-2 gap-3">
+           <Card className="bg-white/5 border-white/10 p-3 flex flex-col justify-between">
+              <span className="text-[10px] uppercase text-white/40 font-bold tracking-wider">Monitored</span>
+              <div className="text-2xl font-mono text-white">{statusSummary.monitoringCount}</div>
+           </Card>
+           <Card className="bg-white/5 border-white/10 p-3 flex flex-col justify-between">
+              <span className="text-[10px] uppercase text-white/40 font-bold tracking-wider">Next Check</span>
+              <div className="text-xs font-mono text-white/80 mt-1">
+                 {config.isEnabled ? `${config.checkIntervalSeconds}s` : 'Paused'}
               </div>
-            )}
+           </Card>
+        </div>
+
+        {/* Last Action */}
+        <Card className="bg-purple-500/10 border-purple-500/20 p-3">
+           <div className="flex items-center gap-2 mb-1">
+              <Activity className="h-3 w-3 text-purple-400" />
+              <span className="text-[10px] uppercase text-purple-300 font-bold tracking-wider">Last Action</span>
+           </div>
+           <p className="text-xs text-purple-100 font-mono truncate">
+              {statusSummary.lastAction}
+           </p>
+        </Card>
+
+        {/* Live Logs */}
+        <div className="flex-1 flex flex-col min-h-0 border border-white/10 rounded-lg bg-black/50 overflow-hidden">
+          <div className="flex items-center justify-between px-3 py-2 border-b border-white/10 bg-white/5">
+            <span className="text-[10px] uppercase text-white/40 font-bold tracking-wider">Activity Log</span>
+            <Button variant="ghost" size="sm" className="h-5 text-[9px] hover:bg-white/5 text-white/40" onClick={() => setLogs([])}>
+              CLEAR
+            </Button>
           </div>
-
-          {/* Timings */}
-          <div className="grid grid-cols-2 gap-4">
-            <div className="space-y-2">
-              <Label htmlFor="interval">Check Frequency (s)</Label>
-              <Input
-                id="interval"
-                type="number"
-                min={10}
-                value={config.checkIntervalSeconds}
-                onChange={(e) => setConfig({ ...config, checkIntervalSeconds: parseInt(e.target.value) || 30 })}
-              />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="threshold">Inactivity Threshold (m)</Label>
-              <Input
-                id="threshold"
-                type="number"
-                min={0.5}
-                step={0.5}
-                value={config.inactivityThresholdMinutes}
-                onChange={(e) => setConfig({ ...config, inactivityThresholdMinutes: parseFloat(e.target.value) || 1 })}
-              />
-            </div>
-          </div>
-
-          {/* Working Threshold */}
-          <div className="space-y-2 border p-4 rounded-lg bg-muted/20">
-            <div className="flex justify-between items-center">
-              <Label>Working Session Threshold (m)</Label>
-              <Input
-                className="w-20 h-8"
-                type="number"
-                min={1}
-                value={config.activeWorkThresholdMinutes}
-                onChange={(e) => setConfig({ ...config, activeWorkThresholdMinutes: parseFloat(e.target.value) || 30 })}
-              />
-            </div>
-            <p className="text-[10px] text-muted-foreground">
-              Wait time for sessions marked &quot;In Progress&quot; before interrupting.
-            </p>
-          </div>
-
-          {/* Fallback Messages */}
-          <div className="space-y-4">
-             <div className="flex justify-between items-center">
-               <Label>
-                 {config.smartPilotEnabled ? 'Fallback Messages' : 'Encouragement Messages'}
-               </Label>
-               {!config.smartPilotEnabled && (
-                 <Select value={selectedSessionId} onValueChange={setSelectedSessionId}>
-                    <SelectTrigger className="w-[180px] h-8 text-xs">
-                      <SelectValue placeholder="Select context" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="global">Global Defaults</SelectItem>
-                      {sessions.map(s => (
-                        <SelectItem key={s.id} value={s.id}>{s.title.substring(0, 20)}...</SelectItem>
-                      ))}
-                    </SelectContent>
-                 </Select>
-               )}
-             </div>
-
-             <Textarea
-              className="min-h-[100px] font-mono text-xs"
-              value={currentMessages.join('\n')}
-              onChange={(e) => updateMessages(selectedSessionId, e.target.value.split('\n').filter(line => line.trim() !== ''))}
-              placeholder={selectedSessionId === 'global' ? "Enter one message per line..." : "Enter custom messages..."}
-            />
-          </div>
-
-          {/* Logs */}
-          <div className="space-y-2">
-            <div className="flex items-center justify-between">
-              <Label>Live Activity Log</Label>
-              <Button variant="ghost" size="sm" className="h-6 text-xs" onClick={() => setLogs([])}>Clear</Button>
-            </div>
-            <Card className="h-[200px] bg-black/90 text-green-400 font-mono text-xs border-green-900/50">
-              <ScrollArea className="h-full p-3">
-                <div className="space-y-1.5">
-                  {logs.length === 0 && <div className="text-muted-foreground italic opacity-50">Waiting for activity...</div>}
-                  {logs.map((log, i) => (
-                    <div key={i} className={`flex gap-2 border-b border-white/5 pb-1 last:border-0 ${
-                      log.type === 'error' ? 'text-red-400' :
-                      log.type === 'action' ? 'text-green-400 font-bold' :
-                      log.type === 'skip' ? 'text-yellow-500/70' :
-                      'text-muted-foreground'
-                    }`}>
-                      <span className="opacity-50 shrink-0">[{log.time}]</span>
-                      <span className="break-words">{log.message}</span>
-                    </div>
-                  ))}
+          <ScrollArea className="flex-1 p-0">
+            <div className="flex flex-col font-mono text-[10px]">
+              {logs.length === 0 && (
+                <div className="p-4 text-center text-white/20 italic">No activity recorded...</div>
+              )}
+              {logs.map((log, i) => (
+                <div key={i} className={`flex gap-3 px-3 py-1.5 border-b border-white/5 last:border-0 hover:bg-white/[0.02] transition-colors ${
+                  log.type === 'error' ? 'text-red-400 bg-red-950/10' :
+                  log.type === 'action' ? 'text-green-400 bg-green-950/10' :
+                  log.type === 'skip' ? 'text-yellow-500/50' :
+                  'text-white/40'
+                }`}>
+                  <span className="opacity-40 shrink-0 w-14">{log.time}</span>
+                  <span className="break-all">{log.message}</span>
                 </div>
-              </ScrollArea>
-            </Card>
-          </div>
+              ))}
+            </div>
+          </ScrollArea>
         </div>
-
-        <div className="flex justify-end gap-2 pb-6">
-          <Button variant="secondary" onClick={() => setConfig(DEFAULT_CONFIG)}>Reset Defaults</Button>
-        </div>
-      </SheetContent>
-    </Sheet>
+      </div>
+    </div>
   );
 }
