@@ -2,7 +2,6 @@
 
 import { useState, useEffect } from 'react';
 import { SessionKeeperConfig } from '@/types/jules';
-import { useJules } from '@/lib/jules/provider';
 import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
 import { Input } from '@/components/ui/input';
@@ -24,7 +23,7 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { Separator } from '@/components/ui/separator';
-import { Brain, Sparkles, Trash2, Settings, Loader2, Download, Users, Plus, Check } from 'lucide-react';
+import { Brain, Sparkles, Trash2, Settings, Loader2, Download, Users, Plus } from 'lucide-react';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Badge } from '@/components/ui/badge';
 
@@ -65,7 +64,6 @@ export function SessionKeeperSettings({
   sessions: propSessions,
   onClearMemory: propOnClearMemory
 }: Partial<SessionKeeperSettingsProps>) {
-  const { apiKey } = useJules();
   const [isOpen, setIsOpen] = useState(false);
   const [localConfig, setLocalConfig] = useState<SessionKeeperConfig>(DEFAULT_CONFIG);
   const [selectedSessionId, setSelectedSessionId] = useState<string>('global');
@@ -205,17 +203,6 @@ export function SessionKeeperSettings({
 
         <ScrollArea className="flex-1 px-6 py-4">
           <div className="space-y-6">
-            {/* System Status */}
-            <div className="flex items-center justify-between px-4 py-2 border border-white/10 rounded-lg bg-black/40">
-                <div className="flex flex-col">
-                    <span className="text-[10px] font-bold uppercase tracking-wider text-white/40">Jules API Status</span>
-                    <span className={`text-xs ${apiKey ? 'text-green-400' : 'text-red-400'}`}>
-                        {apiKey ? 'Connected' : 'Not Configured'}
-                    </span>
-                </div>
-                {apiKey && <Check className="h-4 w-4 text-green-500" />}
-            </div>
-
             {/* Main Controls */}
             <div className="flex flex-col gap-4 border border-white/10 p-4 rounded-lg bg-white/5">
               <div className="flex items-center justify-between">

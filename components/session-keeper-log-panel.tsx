@@ -10,11 +10,6 @@ interface SessionKeeperLogPanelProps {
 
 export function SessionKeeperLogPanel({ onClose }: SessionKeeperLogPanelProps) {
   const { logs, clearLogs } = useSessionKeeperStore();
-  const scrollRef = useRef<HTMLDivElement>(null);
-
-  // Auto-scroll to bottom when new logs arrive (if we were already at the bottom?
-  // actually usually logs are prepended in the store as per current implementation:
-  // `[{...}, ...state.logs]`. So the top is the newest.
 
   return (
     <div className="flex flex-col h-full bg-background border-t">
