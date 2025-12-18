@@ -228,12 +228,12 @@ export function ActivityFeed({ session, onArchive, showCodeDiffs, onToggleCodeDi
   };
 
   const scrollToTop = () => {
-    const scrollContainer = document.querySelector('[data-radix-scroll-area-viewport]');
+    const scrollContainer = document.querySelector('#activity-feed-scroll-area [data-radix-scroll-area-viewport]');
     if (scrollContainer) scrollContainer.scrollTop = 0;
   };
 
   const scrollToBottom = () => {
-    const scrollContainer = document.querySelector('[data-radix-scroll-area-viewport]');
+    const scrollContainer = document.querySelector('#activity-feed-scroll-area [data-radix-scroll-area-viewport]');
     if (scrollContainer) scrollContainer.scrollTop = scrollContainer.scrollHeight;
   };
 
@@ -281,9 +281,24 @@ export function ActivityFeed({ session, onArchive, showCodeDiffs, onToggleCodeDi
     if (activity.bashOutput || activity.diff) return true;
     const content = activity.content?.trim();
     if (!content) return false;
-    if (content === '{}' || content === '[]') return false;
-    if (/^\[[\w,\s]+\]$/.test(content)) return false;
+
+    // Filter specific system messages
     if (content === '[agentMessaged]' || content === '[userMessaged]') return false;
+    if (content === '{}' || content === '[]') return false;
+
+    // Filter empty JSON objects/arrays that might have slipped through
+    if (content.startsWith('{') || content.startsWith('[')) {
+      try {
+        const parsed = JSON.parse(content);
+        if (typeof parsed === 'object' && parsed !== null) {
+          if (Array.isArray(parsed) && parsed.length === 0) return false;
+          if (!Array.isArray(parsed) && Object.keys(parsed).length === 0) return false;
+        }
+      } catch {
+        // Not valid JSON, process as text
+      }
+    }
+
     return true;
   });
 
@@ -381,7 +396,7 @@ export function ActivityFeed({ session, onArchive, showCodeDiffs, onToggleCodeDi
       )}
 
       <div className="flex-1 overflow-hidden relative group">
-        <ScrollArea className="h-full" ref={scrollAreaRef}>
+        <ScrollArea className="h-full" ref={scrollAreaRef} id="activity-feed-scroll-area">
           <div className="p-3 space-y-2.5">
             {filteredActivities.length === 0 && !loading && !error && (
               <div className="flex items-center justify-center min-h-[200px]">

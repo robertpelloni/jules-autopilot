@@ -3,7 +3,7 @@
 import { useState, useEffect, useRef } from 'react';
 import { useRouter, usePathname } from 'next/navigation';
 import { useJules } from '@/lib/jules/provider';
-import { RotateCw, Brain, Sparkles, Trash2, X } from 'lucide-react';
+import { RotateCw, Brain, X, Check, Activity } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
 import { Input } from '@/components/ui/input';
@@ -11,9 +11,9 @@ import { Switch } from '@/components/ui/switch';
 import { Textarea } from '@/components/ui/textarea';
 import { Card } from '@/components/ui/card';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import { Separator } from '@/components/ui/separator';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { getArchivedSessions } from '@/lib/archive';
+import { SessionKeeperSettings } from './session-keeper-settings';
+import { SessionKeeperConfig } from '@/types/jules';
 
 // Types for configuration
 export interface SessionKeeperConfig {
@@ -72,12 +72,17 @@ export function SessionKeeper({ onClose }: { isSidebar?: boolean, onClose?: () =
   const [config, setConfig] = useState<SessionKeeperConfig>(DEFAULT_CONFIG);
   const [logs, setLogs] = useState<{ time: string; message: string; type: 'info' | 'action' | 'error' | 'skip' }[]>([]);
   const [sessions, setSessions] = useState<{ id: string; title: string }[]>([]);
-  const [selectedSessionId, setSelectedSessionId] = useState<string>('global');
+  const [statusSummary, setStatusSummary] = useState({
+    monitoringCount: 0,
+    lastAction: 'None',
+    nextCheckIn: 0
+  });
 
   // Refs for interval and preventing race conditions
   const intervalRef = useRef<NodeJS.Timeout | null>(null);
   const processingRef = useRef(false);
   const hasSwitchedRef = useRef(false);
+  const nextCheckRef = useRef<number>(0);
 
   // Load config from local storage on mount
   useEffect(() => {
@@ -114,6 +119,7 @@ export function SessionKeeper({ onClose }: { isSidebar?: boolean, onClose?: () =
     }
 
     if (!config.isEnabled || !client || !apiKey) {
+      setStatusSummary(prev => ({ ...prev, monitoringCount: 0 }));
       return;
     }
 
@@ -122,12 +128,20 @@ export function SessionKeeper({ onClose }: { isSidebar?: boolean, onClose?: () =
       processingRef.current = true;
       hasSwitchedRef.current = false;
 
+      const nextCheck = Date.now() + (config.checkIntervalSeconds * 1000);
+      nextCheckRef.current = nextCheck;
+      setStatusSummary(prev => ({ ...prev, nextCheckIn: nextCheck }));
+
       try {
         addLog('Checking sessions...', 'info');
         const currentSessions = await client.listSessions();
+        const archived = getArchivedSessions();
+        const activeSessions = currentSessions.filter(s => !archived.has(s.id));
+
+        setStatusSummary(prev => ({ ...prev, monitoringCount: activeSessions.length }));
 
         // Debug Log
-        console.log('[SessionKeeper] Checking sessions:', currentSessions.map(s => ({
+        console.log('[SessionKeeper] Checking sessions:', activeSessions.map(s => ({
           id: s.id,
           status: s.status,
           rawState: s.rawState,
@@ -135,16 +149,13 @@ export function SessionKeeper({ onClose }: { isSidebar?: boolean, onClose?: () =
         })));
 
         const now = new Date();
-        const archived = getArchivedSessions();
 
         // Load Supervisor State
         const savedState = localStorage.getItem('jules_supervisor_state');
         const supervisorState: SupervisorState = savedState ? JSON.parse(savedState) : {};
         let stateChanged = false;
 
-        for (const session of currentSessions) {
-          if (archived.has(session.id)) continue;
-
+        for (const session of activeSessions) {
           // Helper to switch session safely
           const safeSwitch = (targetId: string) => {
             const cleanId = targetId.replace('sessions/', '');
@@ -161,6 +172,7 @@ export function SessionKeeper({ onClose }: { isSidebar?: boolean, onClose?: () =
              safeSwitch(session.id);
              await client.resumeSession(session.id);
              addLog(`Resumed ${session.id.substring(0, 8)}`, 'action');
+             setStatusSummary(prev => ({ ...prev, lastAction: `Resumed ${session.id.substring(0,8)}` }));
              continue;
           }
 
@@ -170,6 +182,7 @@ export function SessionKeeper({ onClose }: { isSidebar?: boolean, onClose?: () =
             safeSwitch(session.id);
             await client.approvePlan(session.id);
             addLog(`Plan approved for ${session.id.substring(0, 8)}`, 'action');
+            setStatusSummary(prev => ({ ...prev, lastAction: `Approved Plan ${session.id.substring(0,8)}` }));
             continue;
           }
 
@@ -334,6 +347,7 @@ export function SessionKeeper({ onClose }: { isSidebar?: boolean, onClose?: () =
               type: 'message'
             });
             addLog(`Nudge sent`, 'action');
+            setStatusSummary(prev => ({ ...prev, lastAction: `Nudged ${session.id.substring(0,8)}` }));
           }
         }
 
@@ -366,21 +380,7 @@ export function SessionKeeper({ onClose }: { isSidebar?: boolean, onClose?: () =
       time: new Date().toLocaleTimeString(),
       message,
       type
-    }, ...prev].slice(0, 50));
-  };
-
-  const updateMessages = (sessionId: string, newMessages: string[]) => {
-    if (sessionId === 'global') {
-      setConfig({ ...config, messages: newMessages });
-    } else {
-      setConfig({
-        ...config,
-        customMessages: {
-          ...config.customMessages,
-          [sessionId]: newMessages
-        }
-      });
-    }
+    }, ...prev].slice(0, 100)); // Keep last 100
   };
 
   const clearSupervisorMemory = (sessionId: string) => {
@@ -395,259 +395,100 @@ export function SessionKeeper({ onClose }: { isSidebar?: boolean, onClose?: () =
     }
   };
 
-  const currentMessages = selectedSessionId === 'global' 
-    ? config.messages 
-    : (config.customMessages?.[selectedSessionId] || []);
-
   if (!apiKey) return null;
 
   return (
-    <div className="h-full flex flex-col">
-      <div className="flex items-center justify-between p-4 border-b border-white/[0.08]">
-        <div className="flex items-center gap-2">
-          {config.smartPilotEnabled ? <Brain className="h-5 w-5 text-purple-500" /> : <RotateCw className={`h-5 w-5 ${config.isEnabled ? 'animate-spin' : ''}`} />}
+    <div className="h-full flex flex-col bg-zinc-950 border-l border-white/5">
+      {/* Header */}
+      <div className="flex items-center justify-between p-4 border-b border-white/10 bg-zinc-950/50">
+        <div className="flex items-center gap-3">
+          {config.smartPilotEnabled ? (
+            <div className="relative">
+               <Brain className="h-5 w-5 text-purple-500" />
+               <Sparkles className="h-2 w-2 text-yellow-400 absolute -top-1 -right-1 animate-pulse" />
+            </div>
+          ) : (
+            <RotateCw className={`h-5 w-5 ${config.isEnabled ? 'text-green-500 animate-spin-slow' : 'text-white/40'}`} />
+          )}
           <div>
-            <h2 className="text-sm font-semibold">Auto-Pilot</h2>
-            <p className="text-[10px] text-muted-foreground">Session Keeper & Supervisor</p>
+            <h2 className="text-sm font-bold tracking-wide uppercase text-white">Auto-Pilot</h2>
+            <div className="flex items-center gap-2">
+              <span className={`h-1.5 w-1.5 rounded-full ${config.isEnabled ? 'bg-green-500' : 'bg-red-500'}`} />
+              <p className="text-[10px] text-white/50 font-mono uppercase">
+                {config.isEnabled ? 'Active' : 'Disabled'}
+              </p>
+            </div>
           </div>
         </div>
-        {onClose && (
-          <Button variant="ghost" size="icon" className="h-8 w-8" onClick={onClose}>
-            <X className="h-4 w-4" />
-          </Button>
-        )}
+        <div className="flex items-center gap-2">
+           <SessionKeeperSettings
+             config={config}
+             onConfigChange={setConfig}
+             sessions={sessions}
+             onClearMemory={clearSupervisorMemory}
+           />
+           {onClose && (
+            <Button variant="ghost" size="icon" className="h-8 w-8 text-white/40 hover:text-white" onClick={onClose}>
+              <X className="h-4 w-4" />
+            </Button>
+           )}
+        </div>
       </div>
 
-      <ScrollArea className="flex-1">
-        <div className="p-4 space-y-6">
-          {/* Main Controls */}
-          <div className="flex flex-col gap-4 border p-4 rounded-lg bg-muted/20">
-            <div className="flex items-center justify-between">
-              <Label htmlFor="keeper-enabled" className="flex flex-col">
-                <span className="font-semibold text-xs">Enable Auto-Pilot</span>
-                <span className="font-normal text-[10px] text-muted-foreground">
-                  Continuously monitor active sessions
-                </span>
-              </Label>
-              <Switch
-                id="keeper-enabled"
-                checked={config.isEnabled}
-                onCheckedChange={(c) => setConfig({ ...config, isEnabled: c })}
-              />
-            </div>
-            <Separator />
-            <div className="flex items-center justify-between">
-              <Label htmlFor="auto-switch" className="flex flex-col">
-                <span className="font-medium text-xs">Auto-Switch Session</span>
-                <span className="font-normal text-[10px] text-muted-foreground">
-                  Navigate to the session being acted upon
-                </span>
-              </Label>
-              <Switch
-                id="auto-switch"
-                checked={config.autoSwitch}
-                onCheckedChange={(c) => setConfig({ ...config, autoSwitch: c })}
-              />
-            </div>
-          </div>
-
-          {/* Smart Supervisor Settings */}
-          <div className="flex flex-col gap-4 border p-4 rounded-lg border-purple-500/20 bg-purple-500/5">
-            <div className="flex items-center justify-between">
-              <Label htmlFor="smart-pilot" className="flex flex-col">
-                <span className="font-semibold text-xs flex items-center gap-2">
-                  <Sparkles className="h-3 w-3 text-purple-500" />
-                  Smart Supervisor
-                </span>
-                <span className="font-normal text-[10px] text-muted-foreground">
-                  Use AI to generate context-aware guidance
-                </span>
-              </Label>
-              <Switch
-                id="smart-pilot"
-                checked={config.smartPilotEnabled}
-                onCheckedChange={(c) => setConfig({ ...config, smartPilotEnabled: c })}
-              />
-            </div>
-
-            {config.smartPilotEnabled && (
-              <div className="grid gap-4 pt-2">
-                <div className="space-y-2">
-                  <Label className="text-xs">Provider</Label>
-                  <Select
-                    value={config.supervisorProvider}
-                    onValueChange={(v: 'openai' | 'openai-assistants' | 'anthropic' | 'gemini') => setConfig({ ...config, supervisorProvider: v })}
-                  >
-                    <SelectTrigger className="h-8 text-xs"><SelectValue /></SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="openai">OpenAI (Chat Completions)</SelectItem>
-                      <SelectItem value="openai-assistants">OpenAI (Assistants API)</SelectItem>
-                      <SelectItem value="anthropic">Anthropic (Claude)</SelectItem>
-                      <SelectItem value="gemini">Google (Gemini)</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-                <div className="space-y-2">
-                  <Label className="text-xs">Model (Optional)</Label>
-                  <Input
-                    className="h-8 text-xs"
-                    placeholder="e.g. gpt-4o"
-                    value={config.supervisorModel}
-                    onChange={(e) => setConfig({ ...config, supervisorModel: e.target.value })}
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label className="text-xs">API Key</Label>
-                  <Input
-                    className="h-8 text-xs"
-                    type="password"
-                    placeholder={`Enter ${config.supervisorProvider} API Key`}
-                    value={config.supervisorApiKey}
-                    onChange={(e) => setConfig({ ...config, supervisorApiKey: e.target.value })}
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label className="text-xs">Context History (Messages)</Label>
-                  <Input
-                    className="h-8 text-xs"
-                    type="number"
-                    min={1}
-                    max={50}
-                    value={config.contextMessageCount}
-                    onChange={(e) => setConfig({ ...config, contextMessageCount: parseInt(e.target.value) || 10 })}
-                  />
-                </div>
-                
-                <div className="pt-2">
-                   <Label className="mb-2 block text-xs">Memory Management</Label>
-                   <div className="flex items-center gap-2">
-                      <Select value={selectedSessionId} onValueChange={setSelectedSessionId}>
-                        <SelectTrigger className="w-[180px] h-8 text-xs">
-                          <SelectValue placeholder="Select context" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="global">Global Defaults</SelectItem>
-                          {sessions.map(s => (
-                            <SelectItem key={s.id} value={s.id}>{s.title.substring(0, 20)}...</SelectItem>
-                          ))}
-                        </SelectContent>
-                     </Select>
-                     <Button 
-                       variant="destructive" 
-                       size="sm" 
-                       className="h-8 text-xs"
-                       disabled={selectedSessionId === 'global'}
-                       onClick={() => clearSupervisorMemory(selectedSessionId)}
-                     >
-                       <Trash2 className="h-3 w-3 mr-1" />
-                       Clear
-                     </Button>
-                   </div>
-                </div>
+      <div className="flex-1 overflow-hidden flex flex-col p-4 gap-4">
+        {/* Status Cards */}
+        <div className="grid grid-cols-2 gap-3">
+           <Card className="bg-white/5 border-white/10 p-3 flex flex-col justify-between">
+              <span className="text-[10px] uppercase text-white/40 font-bold tracking-wider">Monitored</span>
+              <div className="text-2xl font-mono text-white">{statusSummary.monitoringCount}</div>
+           </Card>
+           <Card className="bg-white/5 border-white/10 p-3 flex flex-col justify-between">
+              <span className="text-[10px] uppercase text-white/40 font-bold tracking-wider">Next Check</span>
+              <div className="text-xs font-mono text-white/80 mt-1">
+                 {config.isEnabled ? `${config.checkIntervalSeconds}s` : 'Paused'}
               </div>
-            )}
-          </div>
-
-          {/* Timings */}
-          <div className="grid grid-cols-2 gap-4">
-            <div className="space-y-2">
-              <Label className="text-xs">Check Freq (s)</Label>
-              <Input
-                className="h-8 text-xs"
-                id="interval"
-                type="number"
-                min={10}
-                value={config.checkIntervalSeconds}
-                onChange={(e) => setConfig({ ...config, checkIntervalSeconds: parseInt(e.target.value) || 30 })}
-              />
-            </div>
-            <div className="space-y-2">
-              <Label className="text-xs">Idle Threshold (m)</Label>
-              <Input
-                className="h-8 text-xs"
-                id="threshold"
-                type="number"
-                min={0.5}
-                step={0.5}
-                value={config.inactivityThresholdMinutes}
-                onChange={(e) => setConfig({ ...config, inactivityThresholdMinutes: parseFloat(e.target.value) || 1 })}
-              />
-            </div>
-          </div>
-
-          {/* Working Threshold */}
-          <div className="space-y-2 border p-4 rounded-lg bg-muted/20">
-            <div className="flex justify-between items-center">
-              <Label className="text-xs">Working Threshold (m)</Label>
-              <Input
-                className="w-16 h-8 text-xs"
-                type="number"
-                min={1}
-                value={config.activeWorkThresholdMinutes}
-                onChange={(e) => setConfig({ ...config, activeWorkThresholdMinutes: parseFloat(e.target.value) || 30 })}
-              />
-            </div>
-            <p className="text-[9px] text-muted-foreground">
-              Wait time for sessions marked &quot;In Progress&quot; before interrupting.
-            </p>
-          </div>
-
-          {/* Fallback Messages */}
-          <div className="space-y-4">
-             <div className="flex justify-between items-center">
-               <Label className="text-xs">
-                 {config.smartPilotEnabled ? 'Fallback Messages' : 'Encouragement Messages'}
-               </Label>
-               {!config.smartPilotEnabled && (
-                 <Select value={selectedSessionId} onValueChange={setSelectedSessionId}>
-                    <SelectTrigger className="w-[140px] h-8 text-xs">
-                      <SelectValue placeholder="Select context" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="global">Global Defaults</SelectItem>
-                      {sessions.map(s => (
-                        <SelectItem key={s.id} value={s.id}>{s.title.substring(0, 20)}...</SelectItem>
-                      ))}
-                    </SelectContent>
-                 </Select>
-               )}
-             </div>
-             
-             <Textarea
-              className="min-h-[100px] font-mono text-[10px]"
-              value={currentMessages.join('\n')}
-              onChange={(e) => updateMessages(selectedSessionId, e.target.value.split('\n').filter(line => line.trim() !== ''))}
-              placeholder={selectedSessionId === 'global' ? "Enter one message per line..." : "Enter custom messages..."}
-            />
-          </div>
-
-          {/* Logs */}
-          <div className="space-y-2">
-            <div className="flex items-center justify-between">
-              <Label className="text-xs">Live Activity Log</Label>
-              <Button variant="ghost" size="sm" className="h-6 text-[10px]" onClick={() => setLogs([])}>Clear</Button>
-            </div>
-            <Card className="h-[200px] bg-black/90 text-green-400 font-mono text-[10px] border-green-900/50">
-              <ScrollArea className="h-full p-3">
-                <div className="space-y-1.5">
-                  {logs.length === 0 && <div className="text-muted-foreground italic opacity-50">Waiting for activity...</div>}
-                  {logs.map((log, i) => (
-                    <div key={i} className={`flex gap-2 border-b border-white/5 pb-1 last:border-0 ${
-                      log.type === 'error' ? 'text-red-400' : 
-                      log.type === 'action' ? 'text-green-400 font-bold' : 
-                      log.type === 'skip' ? 'text-yellow-500/70' :
-                      'text-muted-foreground'
-                    }`}>
-                      <span className="opacity-50 shrink-0">[{log.time}]</span>
-                      <span className="break-words">{log.message}</span>
-                    </div>
-                  ))}
-                </div>
-              </ScrollArea>
-            </Card>
-          </div>
+           </Card>
         </div>
-      </ScrollArea>
+
+        {/* Last Action */}
+        <Card className="bg-purple-500/10 border-purple-500/20 p-3">
+           <div className="flex items-center gap-2 mb-1">
+              <Activity className="h-3 w-3 text-purple-400" />
+              <span className="text-[10px] uppercase text-purple-300 font-bold tracking-wider">Last Action</span>
+           </div>
+           <p className="text-xs text-purple-100 font-mono truncate">
+              {statusSummary.lastAction}
+           </p>
+        </Card>
+
+        {/* Live Logs */}
+        <div className="flex-1 flex flex-col min-h-0 border border-white/10 rounded-lg bg-black/50 overflow-hidden">
+          <div className="flex items-center justify-between px-3 py-2 border-b border-white/10 bg-white/5">
+            <span className="text-[10px] uppercase text-white/40 font-bold tracking-wider">Activity Log</span>
+            <Button variant="ghost" size="sm" className="h-5 text-[9px] hover:bg-white/5 text-white/40" onClick={() => setLogs([])}>
+              CLEAR
+            </Button>
+          </div>
+          <ScrollArea className="flex-1 p-0">
+            <div className="flex flex-col font-mono text-[10px]">
+              {logs.length === 0 && (
+                <div className="p-4 text-center text-white/20 italic">No activity recorded...</div>
+              )}
+              {logs.map((log, i) => (
+                <div key={i} className={`flex gap-3 px-3 py-1.5 border-b border-white/5 last:border-0 hover:bg-white/[0.02] transition-colors ${
+                  log.type === 'error' ? 'text-red-400 bg-red-950/10' :
+                  log.type === 'action' ? 'text-green-400 bg-green-950/10' :
+                  log.type === 'skip' ? 'text-yellow-500/50' :
+                  'text-white/40'
+                }`}>
+                  <span className="opacity-40 shrink-0 w-14">{log.time}</span>
+                  <span className="break-all">{log.message}</span>
+                </div>
+              ))}
+            </div>
+          </ScrollArea>
+        </div>
+      </div>
     </div>
   );
 }

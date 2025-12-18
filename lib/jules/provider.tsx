@@ -2,7 +2,6 @@
 
 import { createContext, useContext, useState, useEffect, type ReactNode } from 'react';
 import { JulesClient } from './client';
-import { SessionKeeper } from '@/components/SessionKeeper';
 
 interface JulesContextType {
   client: JulesClient | null;
@@ -10,32 +9,32 @@ interface JulesContextType {
   isLoading: boolean;
   setApiKey: (key: string) => void;
   clearApiKey: () => void;
+  refreshTrigger: number;
+  triggerRefresh: () => void;
 }
 
 const JulesContext = createContext<JulesContextType | undefined>(undefined);
 
 export function JulesProvider({ children }: { children: ReactNode }) {
+  // Use lazy initializer for apiKey to avoid setApiKeyState in useEffect if possible,
+  // but we need to check localStorage which is client-side only.
   const [apiKey, setApiKeyState] = useState<string | null>(null);
   const [client, setClient] = useState<JulesClient | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+  const [refreshTrigger, setRefreshTrigger] = useState(0);
 
   useEffect(() => {
-    // Use a small timeout or state initializer if possible, but for localStorage check in Next.js
-    // ensuring it runs only on client is key.
-    const stored = typeof window !== 'undefined' ? localStorage.getItem('jules-api-key') : null;
+    // This effect runs on mount to load the key.
+    // The linter warning about "synchronous setState" in effect is usually relevant if it triggers loops
+    // but here we want to initialize from storage.
+    // We can suppress the warning or structure it differently.
+    const stored = localStorage.getItem('jules-api-key');
     if (stored) {
-      // Use setTimeout to move state update to next tick, avoiding the sync state update warning
-      // although for this use case the warning is arguably overly aggressive.
-      setTimeout(() => {
-         // eslint-disable-next-line
-        setApiKeyState(stored);
-        setClient(new JulesClient(stored));
-      }, 0);
-      // eslint-disable-next-line
-      //setApiKeyState(stored);
-      //setClient(new JulesClient(stored));
+      setApiKeyState(stored);
+      setClient(new JulesClient(stored));
     }
     setIsLoading(false);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const setApiKey = (key: string) => {
@@ -50,10 +49,21 @@ export function JulesProvider({ children }: { children: ReactNode }) {
     setClient(null);
   };
 
+  const triggerRefresh = () => {
+    setRefreshTrigger(prev => prev + 1);
+  };
+
   return (
-    <JulesContext.Provider value={{ client, apiKey, isLoading, setApiKey, clearApiKey }}>
+    <JulesContext.Provider value={{
+      client,
+      apiKey,
+      isLoading,
+      setApiKey,
+      clearApiKey,
+      refreshTrigger,
+      triggerRefresh
+    }}>
       {children}
-      <SessionKeeper />
     </JulesContext.Provider>
   );
 }

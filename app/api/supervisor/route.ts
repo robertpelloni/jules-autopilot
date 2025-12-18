@@ -3,7 +3,39 @@ import { NextResponse } from 'next/server';
 export async function POST(req: Request) {
   try {
     const body = await req.json();
-    const { messages, provider, apiKey, model, threadId, assistantId } = body;
+    const { messages, provider, apiKey, model, threadId, assistantId, action } = body;
+
+    if (action === 'list_models') {
+       if (!apiKey || !provider) {
+         return NextResponse.json({ error: 'Missing apiKey or provider' }, { status: 400 });
+       }
+
+       try {
+         let models: string[] = [];
+         if (provider.startsWith('openai')) {
+           const resp = await fetch('https://api.openai.com/v1/models', {
+             headers: { 'Authorization': `Bearer ${apiKey}` }
+           });
+           if (!resp.ok) throw new Error('Failed to fetch OpenAI models');
+           const data = await resp.json();
+           models = data.data.map((m: any) => m.id).sort();
+         } else if (provider === 'anthropic') {
+           // Anthropic doesn't have a simple public models endpoint that returns IDs easily without a key,
+           // but let's try if the key is provided.
+           // Actually Anthropic API doesn't have a "list models" endpoint like OpenAI yet.
+           // We'll return a static list of known models for now to avoid errors, or try to fetch if they added it.
+           models = [
+             'claude-3-5-sonnet-20240620',
+             'claude-3-opus-20240229',
+             'claude-3-sonnet-20240229',
+             'claude-3-haiku-20240307'
+           ];
+         }
+         return NextResponse.json({ models });
+       } catch (e) {
+         return NextResponse.json({ error: e instanceof Error ? e.message : 'Failed to list models' }, { status: 500 });
+       }
+    }
 
     if (!messages || !provider || !apiKey) {
       return NextResponse.json(

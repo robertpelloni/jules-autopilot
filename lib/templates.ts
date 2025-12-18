@@ -816,6 +816,99 @@ ECHO AVOIDS (Out of Scope):
 Remember: You are Echo. You do not guess; you replicate. If you cannot reproduce the bug in the standard container, you cannot fix it. Verify, Document, Attribute.`,
     createdAt: new Date().toISOString(),
     updatedAt: new Date().toISOString()
+  },
+  {
+    id: 'refactor-utility',
+    name: 'Refactor 🔧',
+    title: 'Code Refactoring',
+    description: 'General-purpose refactoring template for improving code structure and readability.',
+    prompt: `Refactor the following file(s) to improve structure, readability, and maintainability: {file_path}.
+
+Specific Goal: {goal}
+
+Guidelines:
+- Maintain existing functionality (regression testing recommended).
+- Follow the project's coding standards.
+- Add comments explaining complex logic changes.`,
+    createdAt: new Date().toISOString(),
+    updatedAt: new Date().toISOString()
+  },
+  {
+    id: 'test-suite-generator',
+    name: 'Test Gen 🧪',
+    title: 'Test Suite Generator',
+    description: 'Generates comprehensive test suites for existing code.',
+    prompt: `Generate a comprehensive test suite for the following file(s): {file_path}.
+
+Guidelines:
+- Use the project's existing testing framework (e.g., Jest, Pytest, Go testing).
+- Cover happy paths, edge cases, and error conditions.
+- Mock external dependencies where appropriate.
+- Ensure tests are readable and maintainable.`,
+    createdAt: new Date().toISOString(),
+    updatedAt: new Date().toISOString()
+  },
+  {
+    id: 'bug-fixer',
+    name: 'Bug Fix 🐛',
+    title: 'Bug Diagnosis & Fix',
+    description: 'Diagnose and resolve runtime errors or unexpected behavior.',
+    prompt: `I am encountering the following error/issue:
+{error_message}
+
+In file(s): {file_path}
+
+Please:
+1. Analyze the potential root cause.
+2. Explain why it is happening.
+3. Propose and implement a fix.
+4. Verify the fix if possible.`,
+    createdAt: new Date().toISOString(),
+    updatedAt: new Date().toISOString()
+  },
+  {
+    id: 'tech-debt-analyst',
+    name: 'Tech Debt 🧹',
+    title: 'Tech Debt Analysis',
+    description: 'Analyze code for technical debt, antipatterns, and improvements.',
+    prompt: `Analyze the following file(s) or directory for technical debt, code smells, and antipatterns: {target}.
+
+Please provide:
+1. A summary of the current state.
+2. 3 concrete, prioritized refactoring opportunities.
+3. An estimate of the impact/effort for each.`,
+    createdAt: new Date().toISOString(),
+    updatedAt: new Date().toISOString()
+  },
+  {
+    id: 'doc-writer',
+    name: 'Docs 📝',
+    title: 'Documentation Writer',
+    description: 'Generate documentation, comments, and READMEs.',
+    prompt: `Write comprehensive documentation for the following scope: {target}.
+
+Deliverables:
+- Inline comments for complex logic.
+- Docstrings/JSDoc for public interfaces.
+- A high-level README section explaining usage and architecture.`,
+    createdAt: new Date().toISOString(),
+    updatedAt: new Date().toISOString()
+  },
+  {
+    id: 'ci-setup',
+    name: 'CI Setup 🤖',
+    title: 'Jules CI Action',
+    description: 'Add Jules to your GitHub Actions workflow.',
+    prompt: `Create a .github/workflows/jules.yml file to run Jules on specific events (e.g., push, workflow_dispatch).
+
+Use the official action: google-labs-code/jules-action.
+
+Configuration:
+- Trigger: workflow_dispatch (manual) and/or push to main.
+- Secrets: Read JULES_API_KEY.
+- Steps: Checkout, then run Jules.`,
+    createdAt: new Date().toISOString(),
+    updatedAt: new Date().toISOString()
   }
 ];
 
