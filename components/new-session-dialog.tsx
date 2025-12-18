@@ -17,8 +17,10 @@ import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
 import { Combobox } from '@/components/ui/combobox';
-import { Plus, Loader2, Save } from 'lucide-react';
+import { Plus, Loader2, Save, Sparkles, LayoutTemplate } from 'lucide-react';
 import { TemplateFormDialog } from '@/components/template-form-dialog';
+import { Card, CardContent } from '@/components/ui/card';
+import { ScrollArea, ScrollBar } from '@/components/ui/scroll-area';
 
 interface NewSessionDialogProps {
   onSessionCreated?: () => void;
@@ -182,23 +184,45 @@ export function NewSessionDialog({ onSessionCreated, initialValues, trigger, ope
             </DialogDescription>
           </DialogHeader>
           <form onSubmit={handleSubmit} className="space-y-3">
-            
-            <div className="space-y-1.5">
-              <Label htmlFor="template" className="text-xs font-semibold">Load from Template (Optional)</Label>
-              <Combobox
-                id="template"
-                options={templates.map((t) => ({
-                  value: t.id,
-                  label: t.name,
-                }))}
-                value={selectedTemplateId}
-                onValueChange={handleTemplateSelect}
-                placeholder={templates.length === 0 ? "No templates available" : "Select a template..."}
-                searchPlaceholder="Search templates..."
-                emptyMessage="No templates found."
-                className="text-xs"
-              />
-            </div>
+
+            {templates.length > 0 && (
+              <div className="space-y-1.5">
+                <div className="flex items-center justify-between">
+                  <Label className="text-xs font-semibold flex items-center gap-1.5">
+                    <Sparkles className="h-3 w-3 text-purple-400" />
+                    Start with a Template
+                  </Label>
+                  <span className="text-[10px] text-muted-foreground">{templates.length} available</span>
+                </div>
+                <ScrollArea className="w-full whitespace-nowrap rounded-md border border-white/10 bg-black/20">
+                  <div className="flex w-max space-x-2.5 p-2.5">
+                    {templates.map((template) => (
+                      <Card
+                        key={template.id}
+                        className={`w-[140px] shrink-0 cursor-pointer transition-all hover:bg-white/5 hover:border-purple-500/50 ${selectedTemplateId === template.id ? 'border-purple-500 bg-purple-500/10 ring-1 ring-purple-500/50' : 'border-white/10 bg-zinc-900/50'}`}
+                        onClick={() => handleTemplateSelect(template.id)}
+                      >
+                        <CardContent className="p-2.5 flex flex-col h-full justify-between gap-2">
+                          <div>
+                            <div className="flex items-start justify-between gap-1 mb-1">
+                              <h3 className="text-[10px] font-bold text-white truncate uppercase tracking-wide" title={template.name}>{template.name}</h3>
+                              {template.isFavorite && <Sparkles className="h-2 w-2 text-yellow-400 shrink-0" />}
+                            </div>
+                            <p className="text-[9px] text-white/50 truncate line-clamp-2 whitespace-normal h-[24px] leading-tight font-mono">
+                               {template.description || template.prompt.substring(0, 50)}
+                            </p>
+                          </div>
+                          {selectedTemplateId === template.id && (
+                             <div className="text-[8px] font-mono text-purple-300 bg-purple-500/20 rounded px-1.5 py-0.5 text-center uppercase tracking-widest">Selected</div>
+                          )}
+                        </CardContent>
+                      </Card>
+                    ))}
+                  </div>
+                  <ScrollBar orientation="horizontal" className="h-2.5" />
+                </ScrollArea>
+              </div>
+            )}
 
             <div className="space-y-1.5">
               <Label htmlFor="source" className="text-xs font-semibold">Source Repository</Label>
