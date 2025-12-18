@@ -354,12 +354,25 @@ export class JulesClient {
 
   // Activities
   async listActivities(sessionId: string): Promise<Activity[]> {
-    const response = await this.request<{ activities: ApiActivity[] }>(
-      `/sessions/${sessionId}/activities`
-    );
+    let allActivities: ApiActivity[] = [];
+    let pageToken: string | undefined;
+
+    do {
+      const params = new URLSearchParams();
+      params.set('pageSize', '100');
+      if (pageToken) params.set('pageToken', pageToken);
+
+      const endpoint = `/sessions/${sessionId}/activities?${params.toString()}`;
+      const response = await this.request<{ activities?: ApiActivity[]; nextPageToken?: string }>(endpoint);
+
+      if (response.activities) {
+        allActivities = allActivities.concat(response.activities);
+      }
+      pageToken = response.nextPageToken;
+    } while (pageToken);
 
     // Transform API response to match our Activity type
-    return (response.activities || []).map((activity: ApiActivity) => {
+    return allActivities.map((activity: ApiActivity) => {
       // Extract ID from name field (e.g., "sessions/ID/activities/ACTIVITY_ID")
       const id = activity.name?.split('/').pop() || activity.id || '';
 
@@ -405,7 +418,13 @@ export class JulesClient {
         content = activity.agentMessaged.agentMessage || activity.agentMessaged.message || '';
       } else if (activity.userMessage) {
         type = 'message';
-        content = activity.userMessage.message || activity.userMessage.content || '';
+        // Try more fields including common variations
+        const um = activity.userMessage;
+        content = um.message || um.content || um.text || um.prompt || (typeof um === 'string' ? um : '');
+        // If still empty, try to stringify specific sub-fields to avoid hiding content
+        if (!content && typeof um === 'object') {
+             content = JSON.stringify(um);
+        }
       }
 
       // Fallback: try common content fields
@@ -418,9 +437,17 @@ export class JulesClient {
                   '';
       }
 
-      // Last resort: show activity type
+      // Last resort: show activity type but try to dump meaningful content
       if (!content) {
-        content = `[${Object.keys(activity).filter(k => !['name', 'createTime', 'originator', 'id'].includes(k)).join(', ')}]`;
+        // Exclude internal fields
+        const keys = Object.keys(activity).filter(k => !['name', 'createTime', 'originator', 'id'].includes(k));
+        // If we have a specific known key like 'agentMessaged', try to dump it
+        const relevantKey = keys.find(k => k.includes('Message') || k.includes('Plan') || k.includes('content'));
+        if (relevantKey) {
+            content = JSON.stringify(activity[relevantKey]);
+        } else {
+            content = `[${keys.join(', ')}]`;
+        }
       }
 
       return {
