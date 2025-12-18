@@ -1,0 +1,3 @@
+[submodule "jules-sdk-reference"]
+	path = jules-sdk-reference
+	url = https://github.com/AsyncFuncAI/jules-agent-sdk-python

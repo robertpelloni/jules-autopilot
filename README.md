@@ -1,145 +1,131 @@
-# Jules Task Manager
+# Jules UI
 
-A modern, mobile-friendly web application for managing multiple Jules AI agent tasks and sessions. Built with Next.js, TypeScript, Tailwind CSS, and shadcn/ui - designed to provide a better user experience than the official Jules web interface.
-
+![Build Status](https://github.com/sbhavani/jules-app/actions/workflows/ci.yml/badge.svg)
 ![Next.js](https://img.shields.io/badge/Next.js-16.0-black)
 ![TypeScript](https://img.shields.io/badge/TypeScript-5.0-blue)
 ![Tailwind CSS](https://img.shields.io/badge/Tailwind-4.0-38bdf8)
 
-## Features
+![Session View](public/assets/session-screenshot.png)
 
-- **Mobile-First Design** - Fully responsive interface optimized for all devices
-- **Real-Time Updates** - Live activity feed for each Jules session
-- **Session Management** - Create, view, and manage multiple Jules sessions
-- **Beautiful UI** - Modern interface built with shadcn/ui components
-- **Type-Safe** - Full TypeScript support throughout the application
-- **Secure** - API key stored locally in browser localStorage
+**A powerful, self-hosted workspace for Google's Jules AI agent.** Transform standard agent interactions into an engineering command center with live code diffs, real-time activity monitoring, session analytics, and comprehensive terminal output inspection.
 
-## Prerequisites
+## ✨ Key Features
 
-- Node.js 18+ installed
-- Jules API key (get yours from [https://jules.google.com](https://jules.google.com) settings)
-- At least one GitHub repository connected via the Jules GitHub app
+- 🔄 **Real-Time Updates** - Live activity feed with auto-polling
+- 📊 **Code Diff Viewer** - Visualize git patches and changes instantly
+- 💻 **Integrated Terminal** - Full web-based terminal with local machine access
+- 📈 **Analytics Dashboard** - Track session metrics and trends
+- 🔍 **Smart Search** - Find sessions by repository or title
+- 📱 **Mobile-First** - Fully responsive design
+- 🔒 **Secure** - Container isolation and API keys stored locally
 
-## Getting Started
+## 🚀 Quick Start
 
-### Installation
+**Prerequisites:** Node.js 18+, Jules API key from [jules.google.com](https://jules.google.com), and a connected GitHub repository.
+
+### Option 1: Standalone Mode
+
+Run just the Next.js app without the terminal server:
 
 ```bash
-# Clone the repository
+# Clone and install
 git clone <your-repo-url>
-cd jules-app
-
-# Install dependencies
+cd jules-ui
 npm install
 
-# Start the development server
+# Start development server
 npm run dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) (or the port shown in terminal) with your browser.
+Open [http://localhost:3000](http://localhost:3000) - the Terminal button will be visible but show setup instructions when clicked.
 
-### Configuration
-
-1. When you first open the app, you'll be prompted to enter your Jules API key
-2. Get your API key from the Jules web app settings page
-3. Enter the key and click "Continue"
-4. The key will be securely stored in your browser's localStorage
-
-## Project Structure
-
-```
-jules-app/
-├── app/
-│   ├── layout.tsx          # Root layout with providers
-│   ├── page.tsx             # Main page component
-│   └── globals.css          # Global styles
-├── components/
-│   ├── ui/                  # shadcn/ui components
-│   ├── api-key-setup.tsx    # API key input component
-│   ├── app-layout.tsx       # Main app layout with navigation
-│   ├── session-list.tsx     # Session list sidebar
-│   ├── activity-feed.tsx    # Activity feed for sessions
-│   └── new-session-dialog.tsx # Create new session dialog
-├── lib/
-│   └── jules/
-│       ├── client.ts        # Jules API client
-│       └── provider.tsx     # React context provider
-└── types/
-    └── jules.ts             # TypeScript type definitions
+**To hide the Terminal button completely**, add to `.env.local`:
+```bash
+NEXT_PUBLIC_DISABLE_TERMINAL=true
 ```
 
-## Jules API Integration
+### Option 2: With Docker Compose (Recommended)
 
-This app integrates with the official Jules API with the following endpoints:
-
-- **GET /sources** - List all connected GitHub repositories
-- **GET /sessions** - List all Jules sessions
-- **POST /sessions** - Create a new session
-- **GET /sessions/:id/activities** - Get activities for a session
-- **POST /sessions/:id/activities** - Send a message to a session
-
-## Tech Stack
-
-- **[Next.js 16](https://nextjs.org/)** - React framework with App Router
-- **[TypeScript](https://www.typescriptlang.org/)** - Type safety
-- **[Tailwind CSS](https://tailwindcss.com/)** - Utility-first CSS
-- **[shadcn/ui](https://ui.shadcn.com/)** - Beautiful component library
-- **[Lucide React](https://lucide.dev/)** - Icon library
-- **[date-fns](https://date-fns.org/)** - Date formatting
-
-## Development
+Run both the Next.js app AND the terminal server together:
 
 ```bash
-# Run development server
+# Clone and install
+git clone <your-repo-url>
+cd jules-ui
+
+# Configure your repository path (optional)
+cp deploy/.env.local.example .env.local
+# Edit .env.local and set REPO_PATH=/path/to/your/repo
+
+# (Optional) Configure custom base image for terminal
+# export TERMINAL_BASE_IMAGE=ubuntu:22.04
+
+# Start all services (frontend + terminal server)
+docker-compose -f deploy/docker-compose.yml up
+```
+
+Open [http://localhost:3002](http://localhost:3002) - the Terminal will connect automatically.
+
+**Note:** Uses port 3002 to avoid conflicts with other services (like Dokploy on 3000).
+
+### Option 3: Run Services Independently
+
+Run the terminal server and Next.js app separately (useful for development):
+
+```bash
+# Terminal 1: Start the terminal server
+cd terminal-server
+npm install
+npm start
+
+# Terminal 2: Start the Next.js app
+npm install
 npm run dev
-
-# Build for production
-npm run build
-
-# Start production server
-npm start
-
-# Run linter
-npm run lint
 ```
 
-## Mobile Features
+Open [http://localhost:3000](http://localhost:3000) - the Terminal will connect to the server on port 8080.
 
-- **Responsive Design** - Automatically adapts to screen size
-- **Sheet Navigation** - Mobile-friendly slide-out menu
-- **Touch-Optimized** - All interactions work great on touch devices
-- **Fast Performance** - Optimized for mobile networks
+**Note:** Your Jules API key is stored securely in browser localStorage. See [docs/TERMINAL.md](docs/TERMINAL.md) for detailed terminal setup and usage.
 
-## Deployment
+## 📸 More Screenshots
 
-### Vercel (Recommended)
+![Integrated Terminal](public/assets/jules-terminal.png)
+*Integrated Terminal - Full web-based terminal with real-time command execution and output*
 
-[![Deploy with Vercel](https://vercel.com/button)](https://vercel.com/new)
+![Dashboard View](public/assets/dashboard-screenshot.png)
+*Analytics Dashboard - Track session success rates, duration, and activity volume*
 
-1. Push your code to GitHub
-2. Connect your repository to Vercel
-3. Deploy - it's automatic!
+## 🛠️ Tech Stack
 
-### Other Platforms
+**Frontend:** [Next.js 16](https://nextjs.org/), [TypeScript](https://www.typescriptlang.org/), [Tailwind CSS](https://tailwindcss.com/), [shadcn/ui](https://ui.shadcn.com/), [xterm.js](https://xtermjs.org/)
 
-Build the production app:
+**Terminal Server:** [Node.js](https://nodejs.org/), [Socket.io](https://socket.io/), [node-pty](https://github.com/microsoft/node-pty)
+  - **Base Image:** `nvcr.io/nvidia/pytorch:25.11-py3` (Configurable)
+  - **Pre-installed Tools:** `gemini-cli`, `python3`, `git`, `bash`
+
+**Infrastructure:** [Docker](https://www.docker.com/), [Docker Compose](https://docs.docker.com/compose/)
+
+## 🔧 Development
 
 ```bash
-npm run build
-npm start
+npm run dev      # Start dev server
+npm run build    # Build for production
+npm run lint     # Run linter
+npm test         # Run tests
 ```
 
-## Contributing
+## 📚 API Integration
 
-Contributions are welcome! Please feel free to submit a Pull Request.
+Integrates with Jules API (`https://jules.googleapis.com/v1alpha`) for session management, activity streaming, and real-time updates. See [developers.google.com/jules/api](https://developers.google.com/jules/api) for full documentation.
 
-## License
+## 🤝 Contributing
 
-MIT
+Contributions welcome! Feel free to submit a Pull Request.
 
-## Acknowledgments
+## 📄 License
 
-- Jules API by Google
-- shadcn/ui for the beautiful component library
-- Next.js team for the amazing framework
+MIT License - see LICENSE file for details.
+
+---
+
+Built with ❤️ for the Jules community

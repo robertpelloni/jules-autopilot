@@ -2,10 +2,12 @@
 
 import { createContext, useContext, useState, useEffect, type ReactNode } from 'react';
 import { JulesClient } from './client';
+import { SessionKeeper } from '@/components/SessionKeeper';
 
 interface JulesContextType {
   client: JulesClient | null;
   apiKey: string | null;
+  isLoading: boolean;
   setApiKey: (key: string) => void;
   clearApiKey: () => void;
 }
@@ -15,6 +17,7 @@ const JulesContext = createContext<JulesContextType | undefined>(undefined);
 export function JulesProvider({ children }: { children: ReactNode }) {
   const [apiKey, setApiKeyState] = useState<string | null>(null);
   const [client, setClient] = useState<JulesClient | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
     // Use a small timeout or state initializer if possible, but for localStorage check in Next.js
@@ -24,10 +27,15 @@ export function JulesProvider({ children }: { children: ReactNode }) {
       // Use setTimeout to move state update to next tick, avoiding the sync state update warning
       // although for this use case the warning is arguably overly aggressive.
       setTimeout(() => {
+         // eslint-disable-next-line
         setApiKeyState(stored);
         setClient(new JulesClient(stored));
       }, 0);
+      // eslint-disable-next-line
+      //setApiKeyState(stored);
+      //setClient(new JulesClient(stored));
     }
+    setIsLoading(false);
   }, []);
 
   const setApiKey = (key: string) => {
@@ -43,8 +51,9 @@ export function JulesProvider({ children }: { children: ReactNode }) {
   };
 
   return (
-    <JulesContext.Provider value={{ client, apiKey, setApiKey, clearApiKey }}>
+    <JulesContext.Provider value={{ client, apiKey, isLoading, setApiKey, clearApiKey }}>
       {children}
+      <SessionKeeper />
     </JulesContext.Provider>
   );
 }
