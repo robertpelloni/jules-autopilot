@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { SessionKeeperConfig } from '@/types/jules';
 import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
@@ -27,6 +27,30 @@ import { Brain, Sparkles, Trash2, Settings, Loader2, Download, Users, Plus } fro
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Badge } from '@/components/ui/badge';
 
+// Default configuration (Duplicated to allow standalone usage)
+const DEFAULT_CONFIG: SessionKeeperConfig = {
+  isEnabled: false,
+  autoSwitch: true,
+  checkIntervalSeconds: 30,
+  inactivityThresholdMinutes: 1,
+  activeWorkThresholdMinutes: 30,
+  messages: [
+    "Great! Please keep going as you advise!",
+    "Yes! Please continue to proceed as you recommend!",
+    "This looks correct. Please proceed.",
+    "Excellent plan. Go ahead.",
+    "Looks good to me. Continue.",
+  ],
+  customMessages: {},
+  smartPilotEnabled: false,
+  supervisorProvider: 'openai',
+  supervisorApiKey: '',
+  supervisorModel: '',
+  contextMessageCount: 20,
+  debateEnabled: false,
+  debateParticipants: []
+};
+
 interface SessionKeeperSettingsProps {
   config: SessionKeeperConfig;
   onConfigChange: (config: SessionKeeperConfig) => void;
@@ -34,20 +58,66 @@ interface SessionKeeperSettingsProps {
   onClearMemory: (sessionId: string) => void;
 }
 
-export function SessionKeeperSettings({ config, onConfigChange, sessions, onClearMemory }: SessionKeeperSettingsProps) {
+export function SessionKeeperSettings({
+  config: propConfig,
+  onConfigChange: propOnChange,
+  sessions: propSessions,
+  onClearMemory: propOnClearMemory
+}: Partial<SessionKeeperSettingsProps>) {
   const [isOpen, setIsOpen] = useState(false);
+  const [localConfig, setLocalConfig] = useState<SessionKeeperConfig>(DEFAULT_CONFIG);
   const [selectedSessionId, setSelectedSessionId] = useState<string>('global');
   const [availableModels, setAvailableModels] = useState<string[]>([]);
   const [loadingModels, setLoadingModels] = useState(false);
+
+  // Use props if available (controlled), otherwise local (uncontrolled)
+  const config = propConfig || localConfig;
+  const sessions = propSessions || []; // Fallback to empty if not provided in standalone mode
+
+  // Sync from storage if standalone
+  useEffect(() => {
+      if (!propConfig) {
+          const stored = localStorage.getItem('jules-session-keeper-config');
+          if (stored) {
+              try { setLocalConfig({ ...DEFAULT_CONFIG, ...JSON.parse(stored) }); }
+              catch(e) { console.error(e); }
+          }
+      }
+  }, [propConfig]);
+
+  const handleConfigChange = (newConfig: SessionKeeperConfig) => {
+      if (propOnChange) {
+          propOnChange(newConfig);
+      } else {
+          setLocalConfig(newConfig);
+          localStorage.setItem('jules-session-keeper-config', JSON.stringify(newConfig));
+          window.dispatchEvent(new Event('jules-config-updated'));
+      }
+  };
+
+  const handleClearMemory = (sessionId: string) => {
+      if (propOnClearMemory) {
+          propOnClearMemory(sessionId);
+      } else {
+          const savedState = localStorage.getItem('jules_supervisor_state');
+          if (savedState) {
+              const state = JSON.parse(savedState);
+              if (state[sessionId]) {
+                  delete state[sessionId];
+                  localStorage.setItem('jules_supervisor_state', JSON.stringify(state));
+              }
+          }
+      }
+  };
 
   // New Participant State
   const [newPart, setNewPart] = useState({ provider: 'openai', model: '', apiKey: '', role: 'Advisor' });
 
   const updateMessages = (sessionId: string, newMessages: string[]) => {
     if (sessionId === 'global') {
-      onConfigChange({ ...config, messages: newMessages });
+      handleConfigChange({ ...config, messages: newMessages });
     } else {
-      onConfigChange({
+      handleConfigChange({
         ...config,
         customMessages: {
           ...config.customMessages,
@@ -80,7 +150,7 @@ export function SessionKeeperSettings({ config, onConfigChange, sessions, onClea
           setAvailableModels(data.models);
           if (!provider) { // Main Supervisor
              if (!config.supervisorModel && data.models.length > 0) {
-               onConfigChange({ ...config, supervisorModel: data.models[0] });
+               handleConfigChange({ ...config, supervisorModel: data.models[0] });
              }
           }
         }
@@ -94,7 +164,7 @@ export function SessionKeeperSettings({ config, onConfigChange, sessions, onClea
 
   const addParticipant = () => {
       const participants = config.debateParticipants || [];
-      onConfigChange({
+      handleConfigChange({
           ...config,
           debateParticipants: [
               ...participants,
@@ -106,7 +176,7 @@ export function SessionKeeperSettings({ config, onConfigChange, sessions, onClea
 
   const removeParticipant = (index: number) => {
       const participants = config.debateParticipants || [];
-      onConfigChange({
+      handleConfigChange({
           ...config,
           debateParticipants: participants.filter((_, i) => i !== index)
       });
@@ -119,7 +189,7 @@ export function SessionKeeperSettings({ config, onConfigChange, sessions, onClea
   return (
     <Dialog open={isOpen} onOpenChange={setIsOpen}>
       <DialogTrigger asChild>
-        <Button variant="ghost" size="icon" className="h-8 w-8 text-white/60 hover:text-white hover:bg-white/10">
+        <Button variant="ghost" size="icon" className="h-8 w-8 text-white/60 hover:text-white hover:bg-white/10" title="Auto-Pilot Settings">
           <Settings className="h-4 w-4" />
         </Button>
       </DialogTrigger>
@@ -145,7 +215,7 @@ export function SessionKeeperSettings({ config, onConfigChange, sessions, onClea
                 <Switch
                   id="keeper-enabled"
                   checked={config.isEnabled}
-                  onCheckedChange={(c) => onConfigChange({ ...config, isEnabled: c })}
+                  onCheckedChange={(c) => handleConfigChange({ ...config, isEnabled: c })}
                 />
               </div>
               <Separator className="bg-white/10" />
@@ -159,7 +229,7 @@ export function SessionKeeperSettings({ config, onConfigChange, sessions, onClea
                 <Switch
                   id="auto-switch"
                   checked={config.autoSwitch}
-                  onCheckedChange={(c) => onConfigChange({ ...config, autoSwitch: c })}
+                  onCheckedChange={(c) => handleConfigChange({ ...config, autoSwitch: c })}
                 />
               </div>
             </div>
@@ -179,7 +249,7 @@ export function SessionKeeperSettings({ config, onConfigChange, sessions, onClea
                 <Switch
                   id="smart-pilot"
                   checked={config.smartPilotEnabled}
-                  onCheckedChange={(c) => onConfigChange({ ...config, smartPilotEnabled: c })}
+                  onCheckedChange={(c) => handleConfigChange({ ...config, smartPilotEnabled: c })}
                 />
               </div>
 
@@ -191,7 +261,7 @@ export function SessionKeeperSettings({ config, onConfigChange, sessions, onClea
                       <Select
                         value={config.supervisorProvider}
                         onValueChange={(v: any) => {
-                          onConfigChange({ ...config, supervisorProvider: v, supervisorModel: '' });
+                          handleConfigChange({ ...config, supervisorProvider: v, supervisorModel: '' });
                           setAvailableModels([]);
                         }}
                       >
@@ -211,7 +281,7 @@ export function SessionKeeperSettings({ config, onConfigChange, sessions, onClea
                         type="password"
                         placeholder={`Enter ${config.supervisorProvider} API Key`}
                         value={config.supervisorApiKey}
-                        onChange={(e) => onConfigChange({ ...config, supervisorApiKey: e.target.value })}
+                        onChange={(e) => handleConfigChange({ ...config, supervisorApiKey: e.target.value })}
                       />
                     </div>
                   </div>
@@ -222,7 +292,7 @@ export function SessionKeeperSettings({ config, onConfigChange, sessions, onClea
                       {availableModels.length > 0 ? (
                         <Select
                           value={config.supervisorModel}
-                          onValueChange={(v) => onConfigChange({ ...config, supervisorModel: v })}
+                          onValueChange={(v) => handleConfigChange({ ...config, supervisorModel: v })}
                         >
                           <SelectTrigger className="h-8 text-xs bg-black/50 border-white/10 flex-1"><SelectValue placeholder="Select Model" /></SelectTrigger>
                           <SelectContent className="bg-zinc-900 border-white/10 text-white max-h-[200px]">
@@ -236,7 +306,7 @@ export function SessionKeeperSettings({ config, onConfigChange, sessions, onClea
                           className="h-8 text-xs bg-black/50 border-white/10 flex-1"
                           placeholder="e.g. gpt-4o"
                           value={config.supervisorModel}
-                          onChange={(e) => onConfigChange({ ...config, supervisorModel: e.target.value })}
+                          onChange={(e) => handleConfigChange({ ...config, supervisorModel: e.target.value })}
                         />
                       )}
                       <Button
@@ -260,7 +330,7 @@ export function SessionKeeperSettings({ config, onConfigChange, sessions, onClea
                       min={1}
                       max={50}
                       value={config.contextMessageCount}
-                      onChange={(e) => onConfigChange({ ...config, contextMessageCount: parseInt(e.target.value) || 10 })}
+                      onChange={(e) => handleConfigChange({ ...config, contextMessageCount: parseInt(e.target.value) || 10 })}
                     />
                   </div>
 
@@ -283,7 +353,7 @@ export function SessionKeeperSettings({ config, onConfigChange, sessions, onClea
                          size="sm"
                          className="h-8 text-xs"
                          disabled={selectedSessionId === 'global'}
-                         onClick={() => onClearMemory(selectedSessionId)}
+                         onClick={() => handleClearMemory(selectedSessionId)}
                        >
                          <Trash2 className="h-3 w-3 mr-1" />
                          Clear Memory
@@ -309,7 +379,7 @@ export function SessionKeeperSettings({ config, onConfigChange, sessions, onClea
                 <Switch
                   id="debate-mode"
                   checked={config.debateEnabled}
-                  onCheckedChange={(c) => onConfigChange({ ...config, debateEnabled: c })}
+                  onCheckedChange={(c) => handleConfigChange({ ...config, debateEnabled: c })}
                 />
               </div>
 
@@ -394,7 +464,7 @@ export function SessionKeeperSettings({ config, onConfigChange, sessions, onClea
                   type="number"
                   min={10}
                   value={config.checkIntervalSeconds}
-                  onChange={(e) => onConfigChange({ ...config, checkIntervalSeconds: parseInt(e.target.value) || 30 })}
+                  onChange={(e) => handleConfigChange({ ...config, checkIntervalSeconds: parseInt(e.target.value) || 30 })}
                 />
               </div>
               <div className="space-y-2">
@@ -405,7 +475,7 @@ export function SessionKeeperSettings({ config, onConfigChange, sessions, onClea
                   min={0.5}
                   step={0.5}
                   value={config.inactivityThresholdMinutes}
-                  onChange={(e) => onConfigChange({ ...config, inactivityThresholdMinutes: parseFloat(e.target.value) || 1 })}
+                  onChange={(e) => handleConfigChange({ ...config, inactivityThresholdMinutes: parseFloat(e.target.value) || 1 })}
                 />
               </div>
             </div>
@@ -418,7 +488,7 @@ export function SessionKeeperSettings({ config, onConfigChange, sessions, onClea
                   type="number"
                   min={1}
                   value={config.activeWorkThresholdMinutes}
-                  onChange={(e) => onConfigChange({ ...config, activeWorkThresholdMinutes: parseFloat(e.target.value) || 30 })}
+                  onChange={(e) => handleConfigChange({ ...config, activeWorkThresholdMinutes: parseFloat(e.target.value) || 30 })}
                 />
               </div>
               <p className="text-[9px] text-white/30">

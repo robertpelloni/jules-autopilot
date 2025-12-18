@@ -11,6 +11,7 @@ import { AnalyticsDashboard } from './analytics-dashboard';
 import { NewSessionDialog } from './new-session-dialog';
 import { TemplatesPage } from './templates-page';
 import { SessionKeeper } from './SessionKeeper';
+import { SessionKeeperSettings } from './session-keeper-settings';
 import { Button } from '@/components/ui/button';
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from '@/components/ui/sheet';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger, DropdownMenuSeparator } from '@/components/ui/dropdown-menu';
@@ -239,6 +240,7 @@ export function AppLayout() {
             />
 
             {/* Session Keeper Toggle */}
+            <SessionKeeperSettings />
             <Button
               variant="ghost"
               size="icon"
@@ -398,7 +400,7 @@ export function AppLayout() {
           {!keeperSidebarCollapsed && (
             <>
               <ResizableHandle withHandle />
-              <ResizablePanel defaultSize={40} minSize={30} maxSize={80}>
+              <ResizablePanel defaultSize={40} minSize={30} maxSize={90} className="min-w-[320px]">
                  <SessionKeeper isSidebar={true} onClose={() => setKeeperSidebarCollapsed(true)} />
               </ResizablePanel>
             </>

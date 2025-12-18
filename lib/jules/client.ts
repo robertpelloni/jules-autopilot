@@ -405,7 +405,13 @@ export class JulesClient {
         content = activity.agentMessaged.agentMessage || activity.agentMessaged.message || '';
       } else if (activity.userMessage) {
         type = 'message';
-        content = activity.userMessage.message || activity.userMessage.content || '';
+        // Try more fields including common variations
+        const um = activity.userMessage;
+        content = um.message || um.content || um.text || um.prompt || (typeof um === 'string' ? um : '');
+        // If still empty, try to stringify specific sub-fields to avoid hiding content
+        if (!content && typeof um === 'object') {
+             content = JSON.stringify(um);
+        }
       }
 
       // Fallback: try common content fields
@@ -418,9 +424,17 @@ export class JulesClient {
                   '';
       }
 
-      // Last resort: show activity type
+      // Last resort: show activity type but try to dump meaningful content
       if (!content) {
-        content = `[${Object.keys(activity).filter(k => !['name', 'createTime', 'originator', 'id'].includes(k)).join(', ')}]`;
+        // Exclude internal fields
+        const keys = Object.keys(activity).filter(k => !['name', 'createTime', 'originator', 'id'].includes(k));
+        // If we have a specific known key like 'agentMessaged', try to dump it
+        const relevantKey = keys.find(k => k.includes('Message') || k.includes('Plan') || k.includes('content'));
+        if (relevantKey) {
+            content = JSON.stringify(activity[relevantKey]);
+        } else {
+            content = `[${keys.join(', ')}]`;
+        }
       }
 
       return {

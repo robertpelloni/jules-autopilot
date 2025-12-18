@@ -64,15 +64,22 @@ export function SessionKeeper({ onClose }: { isSidebar?: boolean, onClose?: () =
 
   // Load config from local storage on mount
   useEffect(() => {
-    const savedConfig = localStorage.getItem('jules-session-keeper-config');
-    if (savedConfig) {
-      try {
-        const parsed = JSON.parse(savedConfig);
-        setConfig({ ...DEFAULT_CONFIG, ...parsed });
-      } catch (e) {
-        console.error('Failed to parse session keeper config', e);
-      }
-    }
+    const loadConfig = () => {
+        const savedConfig = localStorage.getItem('jules-session-keeper-config');
+        if (savedConfig) {
+          try {
+            const parsed = JSON.parse(savedConfig);
+            setConfig({ ...DEFAULT_CONFIG, ...parsed });
+          } catch (e) {
+            console.error('Failed to parse session keeper config', e);
+          }
+        }
+    };
+    loadConfig();
+
+    // Listen for updates from header dialog
+    window.addEventListener('jules-config-updated', loadConfig);
+    return () => window.removeEventListener('jules-config-updated', loadConfig);
   }, []);
 
   // Save config to local storage when changed
