@@ -1,3 +1,30 @@
 [submodule "jules-sdk-reference"]
 	path = jules-sdk-reference
 	url = https://github.com/AsyncFuncAI/jules-agent-sdk-python
+[submodule "external/jules-awesome-list"]
+	path = external/jules-awesome-list
+	url = https://github.com/google-labs-code/jules-awesome-list
+[submodule "external/jules-mcp-server"]
+	path = external/jules-mcp-server
+	url = https://github.com/CodeAgentBridge/jules-mcp-server
+[submodule "external/jules_mcp"]
+	path = external/jules_mcp
+	url = https://github.com/GatienBoquet/jules_mcp
+[submodule "external/google-jules-mcp"]
+	path = external/google-jules-mcp
+	url = https://github.com/samihalawa/google-jules-mcp
+[submodule "external/gemini-cli-jules"]
+	path = external/gemini-cli-jules
+	url = https://github.com/gemini-cli-extensions/jules
+[submodule "external/antigravity-jules-orchestration"]
+	path = external/antigravity-jules-orchestration
+	url = https://github.com/Scarmonit/antigravity-jules-orchestration
+[submodule "external/jules-action"]
+	path = external/jules-action
+	url = https://github.com/google-labs-code/jules-action
+[submodule "external/jules-task-queue"]
+	path = external/jules-task-queue
+	url = https://github.com/iHildy/jules-task-queue
+[submodule "external/jules-system-prompt"]
+	path = external/jules-system-prompt
+	url = https://github.com/DiaAviLinden/Jules-system-prompt
