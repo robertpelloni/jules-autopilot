@@ -32,7 +32,7 @@ export interface SessionKeeperConfig {
   activeWorkThresholdMinutes: number;
   messages: string[]; // Fallback messages
   customMessages: Record<string, string[]>;
-
+  
   // Smart Auto-Pilot Settings
   smartPilotEnabled: boolean;
   supervisorProvider: 'openai' | 'openai-assistants' | 'anthropic' | 'gemini';
@@ -69,8 +69,8 @@ const DEFAULT_CONFIG: SessionKeeperConfig = {
   smartPilotEnabled: false,
   supervisorProvider: 'openai', // Default to stateless Chat Completions
   supervisorApiKey: '',
-  supervisorModel: '',
-  contextMessageCount: 20,
+  supervisorModel: '', 
+  contextMessageCount: 20, 
 };
 
 export function SessionKeeper() {
@@ -147,8 +147,10 @@ export function SessionKeeper() {
           // Helper to switch session safely
           const safeSwitch = (targetId: string) => {
             const cleanId = targetId.replace('sessions/', '');
-            const targetPath = `/sessions/${cleanId}`;
-            if (config.autoSwitch && !hasSwitchedRef.current && pathname !== targetPath) {
+            const targetPath = `/?sessionId=${cleanId}`;
+            if (config.autoSwitch && !hasSwitchedRef.current) {
+              // We can't easily check current query param inside this loop without parsing window.location or similar
+              // But router.push is safe if we don't spam it. hasSwitchedRef protects us.
               router.push(targetPath);
               hasSwitchedRef.current = true;
             }
@@ -196,7 +198,7 @@ export function SessionKeeper() {
             if (config.smartPilotEnabled && config.supervisorApiKey) {
               try {
                 addLog(`Asking Supervisor (${config.supervisorProvider}) for guidance...`, 'info');
-
+                
                 // Get or Initialize State
                 if (!supervisorState[session.id]) {
                   supervisorState[session.id] = { lastProcessedActivityTimestamp: '', history: [] };
@@ -215,26 +217,26 @@ export function SessionKeeper() {
 
                 // Logic Selection: Stateful (Assistants API) vs Stateless (Simulated)
                 const isStateful = config.supervisorProvider === 'openai-assistants';
-
+                
                 let messagesToSend: { role: string, content: string }[] = [];
 
                 if (newActivities.length > 0) {
                   if (sessionState.history.length === 0 && !sessionState.openaiThreadId) {
                     // INITIAL RUN
                     const fullSummary = newActivities.map(a => `${a.role.toUpperCase()}: ${a.content}`).join('\n\n');
-                    messagesToSend.push({
-                      role: 'user',
-                      content: `Here is the full conversation history so far. Please analyze the state and provide the next instruction:\n\n${fullSummary}`
+                    messagesToSend.push({ 
+                      role: 'user', 
+                      content: `Here is the full conversation history so far. Please analyze the state and provide the next instruction:\n\n${fullSummary}` 
                     });
                   } else {
                     // UPDATE RUN
                     const updates = newActivities.map(a => `${a.role.toUpperCase()}: ${a.content}`).join('\n\n');
-                    messagesToSend.push({
-                      role: 'user',
-                      content: `Here are the latest updates since your last instruction:\n\n${updates}`
+                    messagesToSend.push({ 
+                      role: 'user', 
+                      content: `Here are the latest updates since your last instruction:\n\n${updates}` 
                     });
                   }
-
+                  
                   // Update timestamp immediately
                   sessionState.lastProcessedActivityTimestamp = newActivities[newActivities.length - 1].createdAt;
                 } else if (sessionState.history.length > 0 || sessionState.openaiThreadId) {
@@ -270,20 +272,20 @@ export function SessionKeeper() {
                   if (data.content) {
                     messageToSend = data.content;
                     addLog(`Supervisor says: "${messageToSend.substring(0, 30)}..."`, 'action');
-
+                    
                     // Update State
                     if (isStateful) {
                       // Store Thread IDs
                       sessionState.openaiThreadId = data.threadId;
                       sessionState.openaiAssistantId = data.assistantId;
                       // For local display history, just push the last interaction
-                      sessionState.history.push(...messagesToSend);
-                      sessionState.history.push({ role: 'assistant', content: messageToSend });
+                      sessionState.history.push(...messagesToSend); 
+                      sessionState.history.push({ role: 'assistant', content: messageToSend }); 
                     } else {
                       // Stateless: Replace history with what we sent + response
                       sessionState.history = [...messagesToSend, { role: 'assistant', content: messageToSend }];
                     }
-
+                    
                     stateChanged = true;
                   }
                 } else {
@@ -301,14 +303,14 @@ export function SessionKeeper() {
               if (config.customMessages && config.customMessages[session.id] && config.customMessages[session.id].length > 0) {
                 messages = config.customMessages[session.id];
               }
-
+              
               if (messages.length === 0) {
                 addLog(`Skipped ${session.id.substring(0, 8)}: No messages configured`, 'skip');
                 continue;
               }
               messageToSend = messages[Math.floor(Math.random() * messages.length)];
             }
-
+            
             addLog(`Sending nudge to ${session.id.substring(0, 8)} (${Math.round(diffMinutes)}m inactive)`, 'action');
             await client.createActivity({
               sessionId: session.id,
@@ -377,8 +379,8 @@ export function SessionKeeper() {
     }
   };
 
-  const currentMessages = selectedSessionId === 'global'
-    ? config.messages
+  const currentMessages = selectedSessionId === 'global' 
+    ? config.messages 
     : (config.customMessages?.[selectedSessionId] || []);
 
   if (!apiKey) return null;
@@ -386,13 +388,13 @@ export function SessionKeeper() {
   return (
     <Sheet>
       <SheetTrigger asChild>
-        <Button
-          variant="outline"
-          size="icon"
+        <Button 
+          variant="outline" 
+          size="icon" 
           className={`fixed bottom-4 right-4 z-50 rounded-full shadow-lg h-12 w-12 border-2 ${config.isEnabled ? 'bg-green-100 dark:bg-green-900 border-green-500 animate-pulse' : 'bg-background'}`}
           title="Session Keeper Auto-Pilot"
         >
-          {config.smartPilotEnabled && config.isEnabled ? <Brain className="h-6 w-6 animate-pulse text-purple-500" /> :
+          {config.smartPilotEnabled && config.isEnabled ? <Brain className="h-6 w-6 animate-pulse text-purple-500" /> : 
            config.isEnabled ? <RotateCw className="h-6 w-6 animate-spin-slow" /> : <Settings className="h-6 w-6" />}
         </Button>
       </SheetTrigger>
@@ -463,8 +465,8 @@ export function SessionKeeper() {
                 <div className="grid grid-cols-2 gap-4">
                   <div className="space-y-2">
                     <Label>Provider</Label>
-                    <Select
-                      value={config.supervisorProvider}
+                    <Select 
+                      value={config.supervisorProvider} 
                       onValueChange={(v: 'openai' | 'openai-assistants' | 'anthropic' | 'gemini') => setConfig({ ...config, supervisorProvider: v })}
                     >
                       <SelectTrigger><SelectValue /></SelectTrigger>
@@ -478,8 +480,8 @@ export function SessionKeeper() {
                   </div>
                   <div className="space-y-2">
                     <Label>Model (Optional)</Label>
-                    <Input
-                      placeholder="e.g. gpt-4o"
+                    <Input 
+                      placeholder="e.g. gpt-4o" 
                       value={config.supervisorModel}
                       onChange={(e) => setConfig({ ...config, supervisorModel: e.target.value })}
                     />
@@ -487,8 +489,8 @@ export function SessionKeeper() {
                 </div>
                 <div className="space-y-2">
                   <Label>API Key</Label>
-                  <Input
-                    type="password"
+                  <Input 
+                    type="password" 
                     placeholder={`Enter ${config.supervisorProvider} API Key`}
                     value={config.supervisorApiKey}
                     onChange={(e) => setConfig({ ...config, supervisorApiKey: e.target.value })}
@@ -496,15 +498,15 @@ export function SessionKeeper() {
                 </div>
                 <div className="space-y-2">
                   <Label>Context History (Messages)</Label>
-                  <Input
-                    type="number"
-                    min={1}
+                  <Input 
+                    type="number" 
+                    min={1} 
                     max={50}
                     value={config.contextMessageCount}
                     onChange={(e) => setConfig({ ...config, contextMessageCount: parseInt(e.target.value) || 10 })}
                   />
                 </div>
-
+                
                 <div className="pt-2">
                    <Label className="mb-2 block">Supervisor Memory Management</Label>
                    <div className="flex items-center gap-2">
@@ -519,9 +521,9 @@ export function SessionKeeper() {
                           ))}
                         </SelectContent>
                      </Select>
-                     <Button
-                       variant="destructive"
-                       size="sm"
+                     <Button 
+                       variant="destructive" 
+                       size="sm" 
                        className="h-8 text-xs"
                        disabled={selectedSessionId === 'global'}
                        onClick={() => clearSupervisorMemory(selectedSessionId)}
@@ -600,7 +602,7 @@ export function SessionKeeper() {
                  </Select>
                )}
              </div>
-
+             
              <Textarea
               className="min-h-[100px] font-mono text-xs"
               value={currentMessages.join('\n')}
@@ -621,8 +623,8 @@ export function SessionKeeper() {
                   {logs.length === 0 && <div className="text-muted-foreground italic opacity-50">Waiting for activity...</div>}
                   {logs.map((log, i) => (
                     <div key={i} className={`flex gap-2 border-b border-white/5 pb-1 last:border-0 ${
-                      log.type === 'error' ? 'text-red-400' :
-                      log.type === 'action' ? 'text-green-400 font-bold' :
+                      log.type === 'error' ? 'text-red-400' : 
+                      log.type === 'action' ? 'text-green-400 font-bold' : 
                       log.type === 'skip' ? 'text-yellow-500/70' :
                       'text-muted-foreground'
                     }`}>
