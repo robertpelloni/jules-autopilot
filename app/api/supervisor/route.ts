@@ -123,10 +123,10 @@ export async function POST(req: Request) {
       const lastMsg = msgData.data.filter((m: { role: string }) => m.role === 'assistant')[0];
       const content = lastMsg?.content?.[0]?.text?.value || '';
 
-      return NextResponse.json({
-        content,
-        threadId: activeThreadId,
-        assistantId: activeAssistantId
+      return NextResponse.json({ 
+        content, 
+        threadId: activeThreadId, 
+        assistantId: activeAssistantId 
       });
     }
 
@@ -194,7 +194,7 @@ export async function POST(req: Request) {
 
     } else if (provider === 'gemini') {
       const url = `https://generativelanguage.googleapis.com/v1beta/models/${model || 'gemini-1.5-flash'}:generateContent?key=${apiKey}`;
-
+      
       const response = await fetch(url, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },

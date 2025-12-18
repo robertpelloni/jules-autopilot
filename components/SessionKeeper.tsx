@@ -24,7 +24,7 @@ export interface SessionKeeperConfig {
   activeWorkThresholdMinutes: number;
   messages: string[]; // Fallback messages
   customMessages: Record<string, string[]>;
-
+  
   // Smart Auto-Pilot Settings
   smartPilotEnabled: boolean;
   supervisorProvider: 'openai' | 'openai-assistants' | 'anthropic' | 'gemini';
@@ -197,7 +197,7 @@ export function SessionKeeper({ onClose }: { isSidebar?: boolean, onClose?: () =
             if (config.smartPilotEnabled && config.supervisorApiKey) {
               try {
                 addLog(`Asking Supervisor (${config.supervisorProvider}) for guidance...`, 'info');
-
+                
                 // Get or Initialize State
                 if (!supervisorState[session.id]) {
                   supervisorState[session.id] = { lastProcessedActivityTimestamp: '', history: [] };
@@ -233,25 +233,26 @@ export function SessionKeeper({ onClose }: { isSidebar?: boolean, onClose?: () =
                 // Logic Selection: Stateful (Assistants API) vs Stateless (Simulated)
                 const isStateful = config.supervisorProvider === 'openai-assistants';
 
+                
                 let messagesToSend: { role: string, content: string }[] = [];
 
                 if (newActivities.length > 0) {
                   if (sessionState.history.length === 0 && !sessionState.openaiThreadId) {
                     // INITIAL RUN
                     const fullSummary = newActivities.map(a => `${a.role.toUpperCase()}: ${a.content}`).join('\n\n');
-                    messagesToSend.push({
-                      role: 'user',
-                      content: `Here is the full conversation history so far. Please analyze the state and provide the next instruction:\n\n${fullSummary}`
+                    messagesToSend.push({ 
+                      role: 'user', 
+                      content: `Here is the full conversation history so far. Please analyze the state and provide the next instruction:\n\n${fullSummary}` 
                     });
                   } else {
                     // UPDATE RUN
                     const updates = newActivities.map(a => `${a.role.toUpperCase()}: ${a.content}`).join('\n\n');
-                    messagesToSend.push({
-                      role: 'user',
-                      content: `Here are the latest updates since your last instruction:\n\n${updates}`
+                    messagesToSend.push({ 
+                      role: 'user', 
+                      content: `Here are the latest updates since your last instruction:\n\n${updates}` 
                     });
                   }
-
+                  
                   // Update timestamp immediately
                   sessionState.lastProcessedActivityTimestamp = newActivities[newActivities.length - 1].createdAt;
                 } else if (sessionState.history.length > 0 || sessionState.openaiThreadId) {
@@ -260,7 +261,7 @@ export function SessionKeeper({ onClose }: { isSidebar?: boolean, onClose?: () =
                 }
 
                 if (!isStateful) {
-                  // If stateless, prepend the stored history
+                  // If stateless (Chat Completions / Anthropic / Gemini), prepend the stored history
                   messagesToSend = [...sessionState.history, ...messagesToSend];
                   // Truncate
                   if (messagesToSend.length > config.contextMessageCount) {
@@ -287,7 +288,7 @@ export function SessionKeeper({ onClose }: { isSidebar?: boolean, onClose?: () =
                   if (data.content) {
                     messageToSend = data.content;
                     addLog(`Supervisor says: "${messageToSend.substring(0, 30)}..."`, 'action');
-
+                    
                     // Update State
                     if (isStateful) {
                       // Store Thread IDs
@@ -299,7 +300,7 @@ export function SessionKeeper({ onClose }: { isSidebar?: boolean, onClose?: () =
                       // Stateless
                       sessionState.history = [...messagesToSend, { role: 'assistant', content: messageToSend }];
                     }
-
+                    
                     stateChanged = true;
                   }
                 } else {
@@ -318,14 +319,14 @@ export function SessionKeeper({ onClose }: { isSidebar?: boolean, onClose?: () =
               if (config.customMessages && config.customMessages[session.id] && config.customMessages[session.id].length > 0) {
                 messages = config.customMessages[session.id];
               }
-
+              
               if (messages.length === 0) {
                 addLog(`Skipped ${session.id.substring(0, 8)}: No messages configured`, 'skip');
                 continue;
               }
               messageToSend = messages[Math.floor(Math.random() * messages.length)];
             }
-
+            
             addLog(`Sending nudge to ${session.id.substring(0, 8)} (${Math.round(diffMinutes)}m inactive)`, 'action');
             await client.createActivity({
               sessionId: session.id,
@@ -394,8 +395,8 @@ export function SessionKeeper({ onClose }: { isSidebar?: boolean, onClose?: () =
     }
   };
 
-  const currentMessages = selectedSessionId === 'global'
-    ? config.messages
+  const currentMessages = selectedSessionId === 'global' 
+    ? config.messages 
     : (config.customMessages?.[selectedSessionId] || []);
 
   if (!apiKey) return null;
@@ -516,7 +517,7 @@ export function SessionKeeper({ onClose }: { isSidebar?: boolean, onClose?: () =
                     onChange={(e) => setConfig({ ...config, contextMessageCount: parseInt(e.target.value) || 10 })}
                   />
                 </div>
-
+                
                 <div className="pt-2">
                    <Label className="mb-2 block text-xs">Memory Management</Label>
                    <div className="flex items-center gap-2">
@@ -531,9 +532,9 @@ export function SessionKeeper({ onClose }: { isSidebar?: boolean, onClose?: () =
                           ))}
                         </SelectContent>
                      </Select>
-                     <Button
-                       variant="destructive"
-                       size="sm"
+                     <Button 
+                       variant="destructive" 
+                       size="sm" 
                        className="h-8 text-xs"
                        disabled={selectedSessionId === 'global'}
                        onClick={() => clearSupervisorMemory(selectedSessionId)}
@@ -611,7 +612,7 @@ export function SessionKeeper({ onClose }: { isSidebar?: boolean, onClose?: () =
                  </Select>
                )}
              </div>
-
+             
              <Textarea
               className="min-h-[100px] font-mono text-[10px]"
               value={currentMessages.join('\n')}
@@ -632,8 +633,8 @@ export function SessionKeeper({ onClose }: { isSidebar?: boolean, onClose?: () =
                   {logs.length === 0 && <div className="text-muted-foreground italic opacity-50">Waiting for activity...</div>}
                   {logs.map((log, i) => (
                     <div key={i} className={`flex gap-2 border-b border-white/5 pb-1 last:border-0 ${
-                      log.type === 'error' ? 'text-red-400' :
-                      log.type === 'action' ? 'text-green-400 font-bold' :
+                      log.type === 'error' ? 'text-red-400' : 
+                      log.type === 'action' ? 'text-green-400 font-bold' : 
                       log.type === 'skip' ? 'text-yellow-500/70' :
                       'text-muted-foreground'
                     }`}>
