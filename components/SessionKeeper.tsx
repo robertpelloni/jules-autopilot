@@ -3,16 +3,8 @@
 import { useState, useEffect, useRef } from 'react';
 import { useRouter, usePathname } from 'next/navigation';
 import { useJules } from '@/lib/jules/provider';
-import { Settings, RotateCw, Brain, Sparkles, Trash2 } from 'lucide-react';
+import { RotateCw, Brain, Sparkles, Trash2, X } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import {
-  Sheet,
-  SheetContent,
-  SheetDescription,
-  SheetHeader,
-  SheetTitle,
-  SheetTrigger,
-} from '@/components/ui/sheet';
 import { Label } from '@/components/ui/label';
 import { Input } from '@/components/ui/input';
 import { Switch } from '@/components/ui/switch';
@@ -69,11 +61,11 @@ const DEFAULT_CONFIG: SessionKeeperConfig = {
   smartPilotEnabled: false,
   supervisorProvider: 'openai', // Default to stateless Chat Completions
   supervisorApiKey: '',
-  supervisorModel: '', 
-  contextMessageCount: 20, 
+  supervisorModel: '',
+  contextMessageCount: 20,
 };
 
-export function SessionKeeper() {
+export function SessionKeeper({ onClose }: { isSidebar?: boolean, onClose?: () => void }) {
   const { client, apiKey } = useJules();
   const router = useRouter();
   const pathname = usePathname();
@@ -214,8 +206,24 @@ export function SessionKeeper() {
                 }
                 const sessionState = supervisorState[session.id];
 
-                // Fetch ALL activities
+                // Fetch ALL activities (TODO: Fix Pagination for full history)
                 const activities = await client.listActivities(session.id);
+
+                // Fix: Prepend First Message (Prompt) if missing
+                if (session.prompt) {
+                   const hasPrompt = activities.some(a => a.content === session.prompt);
+                   if (!hasPrompt) {
+                      activities.unshift({
+                        id: 'initial-prompt',
+                        sessionId: session.id,
+                        type: 'message',
+                        role: 'user',
+                        content: session.prompt,
+                        createdAt: session.createdAt
+                      });
+                   }
+                }
+
                 const sortedActivities = activities.sort((a, b) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime());
 
                 // Identify NEW activities
@@ -226,6 +234,7 @@ export function SessionKeeper() {
 
                 // Logic Selection: Stateful (Assistants API) vs Stateless (Simulated)
                 const isStateful = config.supervisorProvider === 'openai-assistants';
+
                 
                 let messagesToSend: { role: string, content: string }[] = [];
 
@@ -291,18 +300,19 @@ export function SessionKeeper() {
                       sessionState.history.push(...messagesToSend); 
                       sessionState.history.push({ role: 'assistant', content: messageToSend }); 
                     } else {
-                      // Stateless: Replace history with what we sent + response
+                      // Stateless
                       sessionState.history = [...messagesToSend, { role: 'assistant', content: messageToSend }];
                     }
                     
                     stateChanged = true;
                   }
                 } else {
-                  addLog('Supervisor failed, falling back.', 'error');
+                  const errData = await response.json().catch(() => ({}));
+                  addLog(`Supervisor failed: ${errData.error || 'Unknown error'}`, 'error');
                 }
               } catch (err) {
                 console.error('Supervisor Error:', err);
-                addLog('Supervisor error, using fallback.', 'error');
+                addLog(`Supervisor error: ${err instanceof Error ? err.message : 'Unknown'}`, 'error');
               }
             }
 
@@ -395,36 +405,30 @@ export function SessionKeeper() {
   if (!apiKey) return null;
 
   return (
-    <Sheet>
-      <SheetTrigger asChild>
-        <Button 
-          variant="outline" 
-          size="icon" 
-          className={`fixed bottom-4 right-4 z-50 rounded-full shadow-lg h-12 w-12 border-2 ${config.isEnabled ? 'bg-green-100 dark:bg-green-900 border-green-500 animate-pulse' : 'bg-background'}`}
-          title="Session Keeper Auto-Pilot"
-        >
-          {config.smartPilotEnabled && config.isEnabled ? <Brain className="h-6 w-6 animate-pulse text-purple-500" /> : 
-           config.isEnabled ? <RotateCw className="h-6 w-6 animate-spin-slow" /> : <Settings className="h-6 w-6" />}
-        </Button>
-      </SheetTrigger>
-      <SheetContent side="right" className="w-[400px] sm:w-[600px] overflow-y-auto">
-        <SheetHeader>
-          <SheetTitle className="flex items-center gap-2">
-            {config.smartPilotEnabled ? <Brain className="h-5 w-5 text-purple-500" /> : <RotateCw className={`h-5 w-5 ${config.isEnabled ? 'animate-spin' : ''}`} />}
-            Session Keeper Auto-Pilot
-          </SheetTitle>
-          <SheetDescription>
-            Automatically monitors sessions, resumes work, and provides guidance.
-          </SheetDescription>
-        </SheetHeader>
+    <div className="h-full flex flex-col">
+      <div className="flex items-center justify-between p-4 border-b border-white/[0.08]">
+        <div className="flex items-center gap-2">
+          {config.smartPilotEnabled ? <Brain className="h-5 w-5 text-purple-500" /> : <RotateCw className={`h-5 w-5 ${config.isEnabled ? 'animate-spin' : ''}`} />}
+          <div>
+            <h2 className="text-sm font-semibold">Auto-Pilot</h2>
+            <p className="text-[10px] text-muted-foreground">Session Keeper & Supervisor</p>
+          </div>
+        </div>
+        {onClose && (
+          <Button variant="ghost" size="icon" className="h-8 w-8" onClick={onClose}>
+            <X className="h-4 w-4" />
+          </Button>
+        )}
+      </div>
 
-        <div className="grid gap-6 py-6">
+      <ScrollArea className="flex-1">
+        <div className="p-4 space-y-6">
           {/* Main Controls */}
           <div className="flex flex-col gap-4 border p-4 rounded-lg bg-muted/20">
             <div className="flex items-center justify-between">
               <Label htmlFor="keeper-enabled" className="flex flex-col">
-                <span className="font-semibold text-base">Enable Auto-Pilot</span>
-                <span className="font-normal text-xs text-muted-foreground">
+                <span className="font-semibold text-xs">Enable Auto-Pilot</span>
+                <span className="font-normal text-[10px] text-muted-foreground">
                   Continuously monitor active sessions
                 </span>
               </Label>
@@ -437,8 +441,8 @@ export function SessionKeeper() {
             <Separator />
             <div className="flex items-center justify-between">
               <Label htmlFor="auto-switch" className="flex flex-col">
-                <span className="font-medium">Auto-Switch Session</span>
-                <span className="font-normal text-xs text-muted-foreground">
+                <span className="font-medium text-xs">Auto-Switch Session</span>
+                <span className="font-normal text-[10px] text-muted-foreground">
                   Navigate to the session being acted upon
                 </span>
               </Label>
@@ -454,11 +458,11 @@ export function SessionKeeper() {
           <div className="flex flex-col gap-4 border p-4 rounded-lg border-purple-500/20 bg-purple-500/5">
             <div className="flex items-center justify-between">
               <Label htmlFor="smart-pilot" className="flex flex-col">
-                <span className="font-semibold text-base flex items-center gap-2">
-                  <Sparkles className="h-4 w-4 text-purple-500" />
+                <span className="font-semibold text-xs flex items-center gap-2">
+                  <Sparkles className="h-3 w-3 text-purple-500" />
                   Smart Supervisor
                 </span>
-                <span className="font-normal text-xs text-muted-foreground">
+                <span className="font-normal text-[10px] text-muted-foreground">
                   Use AI to generate context-aware guidance
                 </span>
               </Label>
@@ -471,45 +475,46 @@ export function SessionKeeper() {
 
             {config.smartPilotEnabled && (
               <div className="grid gap-4 pt-2">
-                <div className="grid grid-cols-2 gap-4">
-                  <div className="space-y-2">
-                    <Label>Provider</Label>
-                    <Select 
-                      value={config.supervisorProvider} 
-                      onValueChange={(v: 'openai' | 'openai-assistants' | 'anthropic' | 'gemini') => setConfig({ ...config, supervisorProvider: v })}
-                    >
-                      <SelectTrigger><SelectValue /></SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="openai">OpenAI (Chat Completions)</SelectItem>
-                        <SelectItem value="openai-assistants">OpenAI (Assistants API)</SelectItem>
-                        <SelectItem value="anthropic">Anthropic (Claude)</SelectItem>
-                        <SelectItem value="gemini">Google (Gemini)</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </div>
-                  <div className="space-y-2">
-                    <Label>Model (Optional)</Label>
-                    <Input 
-                      placeholder="e.g. gpt-4o" 
-                      value={config.supervisorModel}
-                      onChange={(e) => setConfig({ ...config, supervisorModel: e.target.value })}
-                    />
-                  </div>
+                <div className="space-y-2">
+                  <Label className="text-xs">Provider</Label>
+                  <Select
+                    value={config.supervisorProvider}
+                    onValueChange={(v: 'openai' | 'openai-assistants' | 'anthropic' | 'gemini') => setConfig({ ...config, supervisorProvider: v })}
+                  >
+                    <SelectTrigger className="h-8 text-xs"><SelectValue /></SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="openai">OpenAI (Chat Completions)</SelectItem>
+                      <SelectItem value="openai-assistants">OpenAI (Assistants API)</SelectItem>
+                      <SelectItem value="anthropic">Anthropic (Claude)</SelectItem>
+                      <SelectItem value="gemini">Google (Gemini)</SelectItem>
+                    </SelectContent>
+                  </Select>
                 </div>
                 <div className="space-y-2">
-                  <Label>API Key</Label>
-                  <Input 
-                    type="password" 
+                  <Label className="text-xs">Model (Optional)</Label>
+                  <Input
+                    className="h-8 text-xs"
+                    placeholder="e.g. gpt-4o"
+                    value={config.supervisorModel}
+                    onChange={(e) => setConfig({ ...config, supervisorModel: e.target.value })}
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label className="text-xs">API Key</Label>
+                  <Input
+                    className="h-8 text-xs"
+                    type="password"
                     placeholder={`Enter ${config.supervisorProvider} API Key`}
                     value={config.supervisorApiKey}
                     onChange={(e) => setConfig({ ...config, supervisorApiKey: e.target.value })}
                   />
                 </div>
                 <div className="space-y-2">
-                  <Label>Context History (Messages)</Label>
-                  <Input 
-                    type="number" 
-                    min={1} 
+                  <Label className="text-xs">Context History (Messages)</Label>
+                  <Input
+                    className="h-8 text-xs"
+                    type="number"
+                    min={1}
                     max={50}
                     value={config.contextMessageCount}
                     onChange={(e) => setConfig({ ...config, contextMessageCount: parseInt(e.target.value) || 10 })}
@@ -517,7 +522,7 @@ export function SessionKeeper() {
                 </div>
                 
                 <div className="pt-2">
-                   <Label className="mb-2 block">Supervisor Memory Management</Label>
+                   <Label className="mb-2 block text-xs">Memory Management</Label>
                    <div className="flex items-center gap-2">
                       <Select value={selectedSessionId} onValueChange={setSelectedSessionId}>
                         <SelectTrigger className="w-[180px] h-8 text-xs">
@@ -538,12 +543,9 @@ export function SessionKeeper() {
                        onClick={() => clearSupervisorMemory(selectedSessionId)}
                      >
                        <Trash2 className="h-3 w-3 mr-1" />
-                       Clear Memory
+                       Clear
                      </Button>
                    </div>
-                   <p className="text-[10px] text-muted-foreground mt-1">
-                     Resetting memory forces the Supervisor to re-read the full session history next time.
-                   </p>
                 </div>
               </div>
             )}
@@ -552,8 +554,9 @@ export function SessionKeeper() {
           {/* Timings */}
           <div className="grid grid-cols-2 gap-4">
             <div className="space-y-2">
-              <Label htmlFor="interval">Check Frequency (s)</Label>
+              <Label className="text-xs">Check Freq (s)</Label>
               <Input
+                className="h-8 text-xs"
                 id="interval"
                 type="number"
                 min={10}
@@ -562,8 +565,9 @@ export function SessionKeeper() {
               />
             </div>
             <div className="space-y-2">
-              <Label htmlFor="threshold">Inactivity Threshold (m)</Label>
+              <Label className="text-xs">Idle Threshold (m)</Label>
               <Input
+                className="h-8 text-xs"
                 id="threshold"
                 type="number"
                 min={0.5}
@@ -577,16 +581,16 @@ export function SessionKeeper() {
           {/* Working Threshold */}
           <div className="space-y-2 border p-4 rounded-lg bg-muted/20">
             <div className="flex justify-between items-center">
-              <Label>Working Session Threshold (m)</Label>
+              <Label className="text-xs">Working Threshold (m)</Label>
               <Input
-                className="w-20 h-8"
+                className="w-16 h-8 text-xs"
                 type="number"
                 min={1}
                 value={config.activeWorkThresholdMinutes}
                 onChange={(e) => setConfig({ ...config, activeWorkThresholdMinutes: parseFloat(e.target.value) || 30 })}
               />
             </div>
-            <p className="text-[10px] text-muted-foreground">
+            <p className="text-[9px] text-muted-foreground">
               Wait time for sessions marked &quot;In Progress&quot; before interrupting.
             </p>
           </div>
@@ -594,12 +598,12 @@ export function SessionKeeper() {
           {/* Fallback Messages */}
           <div className="space-y-4">
              <div className="flex justify-between items-center">
-               <Label>
+               <Label className="text-xs">
                  {config.smartPilotEnabled ? 'Fallback Messages' : 'Encouragement Messages'}
                </Label>
                {!config.smartPilotEnabled && (
                  <Select value={selectedSessionId} onValueChange={setSelectedSessionId}>
-                    <SelectTrigger className="w-[180px] h-8 text-xs">
+                    <SelectTrigger className="w-[140px] h-8 text-xs">
                       <SelectValue placeholder="Select context" />
                     </SelectTrigger>
                     <SelectContent>
@@ -613,7 +617,7 @@ export function SessionKeeper() {
              </div>
              
              <Textarea
-              className="min-h-[100px] font-mono text-xs"
+              className="min-h-[100px] font-mono text-[10px]"
               value={currentMessages.join('\n')}
               onChange={(e) => updateMessages(selectedSessionId, e.target.value.split('\n').filter(line => line.trim() !== ''))}
               placeholder={selectedSessionId === 'global' ? "Enter one message per line..." : "Enter custom messages..."}
@@ -623,10 +627,10 @@ export function SessionKeeper() {
           {/* Logs */}
           <div className="space-y-2">
             <div className="flex items-center justify-between">
-              <Label>Live Activity Log</Label>
-              <Button variant="ghost" size="sm" className="h-6 text-xs" onClick={() => setLogs([])}>Clear</Button>
+              <Label className="text-xs">Live Activity Log</Label>
+              <Button variant="ghost" size="sm" className="h-6 text-[10px]" onClick={() => setLogs([])}>Clear</Button>
             </div>
-            <Card className="h-[200px] bg-black/90 text-green-400 font-mono text-xs border-green-900/50">
+            <Card className="h-[200px] bg-black/90 text-green-400 font-mono text-[10px] border-green-900/50">
               <ScrollArea className="h-full p-3">
                 <div className="space-y-1.5">
                   {logs.length === 0 && <div className="text-muted-foreground italic opacity-50">Waiting for activity...</div>}
@@ -646,11 +650,7 @@ export function SessionKeeper() {
             </Card>
           </div>
         </div>
-
-        <div className="flex justify-end gap-2 pb-6">
-          <Button variant="secondary" onClick={() => setConfig(DEFAULT_CONFIG)}>Reset Defaults</Button>
-        </div>
-      </SheetContent>
-    </Sheet>
+      </ScrollArea>
+    </div>
   );
 }

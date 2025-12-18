@@ -10,10 +10,11 @@ import { CodeDiffSidebar } from './code-diff-sidebar';
 import { AnalyticsDashboard } from './analytics-dashboard';
 import { NewSessionDialog } from './new-session-dialog';
 import { TemplatesPage } from './templates-page';
+import { SessionKeeper } from './SessionKeeper';
 import { Button } from '@/components/ui/button';
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from '@/components/ui/sheet';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger, DropdownMenuSeparator } from '@/components/ui/dropdown-menu';
-import { Menu, LogOut, Settings, BarChart3, MessageSquare, ChevronLeft, ChevronRight, Terminal as TerminalIcon, LayoutTemplate, Plus } from 'lucide-react';
+import { Menu, LogOut, Settings, BarChart3, MessageSquare, ChevronLeft, ChevronRight, Terminal as TerminalIcon, LayoutTemplate, Plus, RotateCw } from 'lucide-react';
 import { TerminalPanel } from './terminal-panel';
 import { useTerminalAvailable } from '@/hooks/use-terminal-available';
 
@@ -29,6 +30,7 @@ export function AppLayout() {
   const [refreshKey, setRefreshKey] = useState(0);
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const [codeDiffSidebarCollapsed, setCodeDiffSidebarCollapsed] = useState(false);
+  const [keeperSidebarCollapsed, setKeeperSidebarCollapsed] = useState(true);
   const [showCodeDiffs, setShowCodeDiffs] = useState(false);
   const [currentActivities, setCurrentActivities] = useState<Activity[]>([]);
   const [codeSidebarWidth, setCodeSidebarWidth] = useState(600);
@@ -171,6 +173,18 @@ export function AppLayout() {
               </SheetContent>
             </Sheet>
             <h1 className="text-sm font-bold tracking-tight text-white">JULES</h1>
+
+            {/* GitHub Repo Link */}
+            {selectedSession?.sourceId && (
+              <a
+                href={`https://github.com/${selectedSession.sourceId}`}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="text-xs text-muted-foreground hover:text-white flex items-center gap-1 ml-4"
+              >
+                <span className="opacity-50">Repo:</span> {selectedSession.sourceId}
+              </a>
+            )}
           </div>
 
           <div className="flex items-center gap-1">
@@ -222,6 +236,17 @@ export function AppLayout() {
                 </Button>
               }
             />
+
+            {/* Session Keeper Toggle */}
+            <Button
+              variant="ghost"
+              size="icon"
+              className={`h-8 w-8 hover:bg-white/5 ${!keeperSidebarCollapsed ? 'text-purple-500' : 'text-white/60'}`}
+              onClick={() => setKeeperSidebarCollapsed(!keeperSidebarCollapsed)}
+              title="Toggle Auto-Pilot Panel"
+            >
+              <RotateCw className={`h-4 w-4 ${!keeperSidebarCollapsed ? 'animate-spin-slow' : ''}`} />
+            </Button>
 
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
@@ -289,6 +314,7 @@ export function AppLayout() {
             <TemplatesPage onStartSession={handleStartSessionFromTemplate} />
           ) : selectedSession ? (
             <ActivityFeed
+              key={selectedSession.id}
               session={selectedSession}
               onArchive={handleSessionArchived}
               showCodeDiffs={showCodeDiffs}
@@ -318,7 +344,14 @@ export function AppLayout() {
           )}
         </main>
 
-        {/* Code Diff Sidebar */}
+        {/* Session Keeper Sidebar (New) */}
+        {!keeperSidebarCollapsed && (
+          <aside className="hidden md:flex border-l border-white/[0.08] flex-col bg-zinc-950 w-80 lg:w-96 transition-all duration-200">
+             <SessionKeeper isSidebar={true} onClose={() => setKeeperSidebarCollapsed(true)} />
+          </aside>
+        )}
+
+        {/* Code Diff Sidebar (Existing) */}
         {selectedSession && showCodeDiffs && view === 'sessions' && (
           <>
             {!codeDiffSidebarCollapsed && (
