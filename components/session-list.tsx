@@ -85,18 +85,20 @@ export function SessionList({ onSelectSession, selectedSessionId }: SessionListP
     loadSessions();
   }, [loadSessions]);
 
-  const getStatusColor = (status: Session['status']) => {
+  const getStatusInfo = (status: Session['status']) => {
     switch (status) {
       case 'active':
-        return 'bg-green-500';
+        return { color: 'bg-green-500', text: 'Active' };
       case 'completed':
-        return 'bg-blue-500';
+        return { color: 'bg-blue-500', text: 'Done' };
       case 'failed':
-        return 'bg-red-500';
+        return { color: 'bg-red-500', text: 'Failed' };
       case 'paused':
-        return 'bg-yellow-500';
+        return { color: 'bg-yellow-500', text: 'Paused' };
+      case 'awaiting_approval':
+        return { color: 'bg-purple-500', text: 'Awaiting' };
       default:
-        return 'bg-gray-500';
+        return { color: 'bg-gray-500', text: 'Unknown' };
     }
   };
 
@@ -202,7 +204,15 @@ export function SessionList({ onSelectSession, selectedSessionId }: SessionListP
                     }
                   }}
                 >
-                  <div className={`flex-shrink-0 mt-1 w-2 h-2 rounded-full ${getStatusColor(session.status)}`} />
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <div className={`flex-shrink-0 mt-1 w-2 h-2 rounded-full ${getStatusInfo(session.status).color}`} />
+                    </TooltipTrigger>
+                    <TooltipContent side="right" className="bg-zinc-900 border-white/10 text-white text-[10px]">
+                      <p>Status: {session.status}</p>
+                      {session.lastActivityAt && <p>Last active: {formatDate(session.lastActivityAt)}</p>}
+                    </TooltipContent>
+                  </Tooltip>
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-2 mb-0.5 w-full min-w-0">
                       <Tooltip>
@@ -221,8 +231,12 @@ export function SessionList({ onSelectSession, selectedSessionId }: SessionListP
                         </Badge>
                       )}
                     </div>
-                    <div className="text-[9px] text-white/40 leading-tight font-mono tracking-wide">
-                      {formatDate(session.createdAt)}
+                    <div className="flex items-center gap-2 text-[9px] text-white/40 leading-tight font-mono tracking-wide">
+                      <span className={`${getStatusInfo(session.status).color} bg-opacity-20 text-white/60 px-1 rounded-sm`}>
+                        {getStatusInfo(session.status).text}
+                      </span>
+                      <span>•</span>
+                      <span>{formatDate(session.createdAt)}</span>
                     </div>
                   </div>
                 </div>

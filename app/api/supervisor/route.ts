@@ -3,7 +3,39 @@ import { NextResponse } from 'next/server';
 export async function POST(req: Request) {
   try {
     const body = await req.json();
-    const { messages, provider, apiKey, model, threadId, assistantId } = body;
+    const { messages, provider, apiKey, model, threadId, assistantId, action } = body;
+
+    if (action === 'list_models') {
+       if (!apiKey || !provider) {
+         return NextResponse.json({ error: 'Missing apiKey or provider' }, { status: 400 });
+       }
+
+       try {
+         let models: string[] = [];
+         if (provider.startsWith('openai')) {
+           const resp = await fetch('https://api.openai.com/v1/models', {
+             headers: { 'Authorization': `Bearer ${apiKey}` }
+           });
+           if (!resp.ok) throw new Error('Failed to fetch OpenAI models');
+           const data = await resp.json();
+           models = data.data.map((m: any) => m.id).sort();
+         } else if (provider === 'anthropic') {
+           // Anthropic doesn't have a simple public models endpoint that returns IDs easily without a key,
+           // but let's try if the key is provided.
+           // Actually Anthropic API doesn't have a "list models" endpoint like OpenAI yet.
+           // We'll return a static list of known models for now to avoid errors, or try to fetch if they added it.
+           models = [
+             'claude-3-5-sonnet-20240620',
+             'claude-3-opus-20240229',
+             'claude-3-sonnet-20240229',
+             'claude-3-haiku-20240307'
+           ];
+         }
+         return NextResponse.json({ models });
+       } catch (e) {
+         return NextResponse.json({ error: e instanceof Error ? e.message : 'Failed to list models' }, { status: 500 });
+       }
+    }
 
     if (!messages || !provider || !apiKey) {
       return NextResponse.json(
@@ -12,19 +44,17 @@ export async function POST(req: Request) {
       );
     }
 
-    // OpenAI Assistants API Logic (Stateful)
-    if (provider === 'openai' && messages.length > 0) {
+    // 1. OpenAI Assistants API Logic (Stateful)
+    if (provider === 'openai-assistants' && messages.length > 0) {
       // We expect the *latest* user message to be the last one in the array
-      // The client should send the update, not necessarily the full history if using threads
       const lastMessage = messages[messages.length - 1];
       const userContent = lastMessage.role === 'user' ? lastMessage.content : null;
 
       if (!userContent && !threadId) {
-         // If starting new and no user content, nothing to do
          return NextResponse.json({ content: '' });
       }
 
-      // 1. Create or Retrieve Assistant
+      // Create/Retrieve Assistant
       let activeAssistantId = assistantId;
       if (!activeAssistantId) {
         const assistantResp = await fetch('https://api.openai.com/v1/assistants', {
@@ -45,7 +75,7 @@ export async function POST(req: Request) {
         activeAssistantId = assistantData.id;
       }
 
-      // 2. Create or Retrieve Thread
+      // Create/Retrieve Thread
       let activeThreadId = threadId;
       if (!activeThreadId) {
         const threadResp = await fetch('https://api.openai.com/v1/threads', {
@@ -62,7 +92,7 @@ export async function POST(req: Request) {
         activeThreadId = threadData.id;
       }
 
-      // 3. Add Message to Thread (if there is new content)
+      // Add Message
       if (userContent) {
         await fetch(`https://api.openai.com/v1/threads/${activeThreadId}/messages`, {
           method: 'POST',
@@ -78,7 +108,7 @@ export async function POST(req: Request) {
         });
       }
 
-      // 4. Run Assistant
+      // Run Assistant
       const runResp = await fetch(`https://api.openai.com/v1/threads/${activeThreadId}/runs`, {
         method: 'POST',
         headers: {
@@ -94,7 +124,7 @@ export async function POST(req: Request) {
       const runData = await runResp.json();
       const runId = runData.id;
 
-      // 5. Poll for Completion
+      // Poll
       let runStatus = runData.status;
       let attempts = 0;
       while (runStatus !== 'completed' && runStatus !== 'failed' && attempts < 30) {
@@ -114,7 +144,7 @@ export async function POST(req: Request) {
         throw new Error(`Assistant run failed or timed out: ${runStatus}`);
       }
 
-      // 6. Get Response Message
+      // Get Response
       const msgResp = await fetch(`https://api.openai.com/v1/threads/${activeThreadId}/messages`, {
         headers: {
           'Authorization': `Bearer ${apiKey}`,
@@ -122,7 +152,6 @@ export async function POST(req: Request) {
         }
       });
       const msgData = await msgResp.json();
-      // Get the last message from the assistant
       const lastMsg = msgData.data.filter((m: { role: string }) => m.role === 'assistant')[0];
       const content = lastMsg?.content?.[0]?.text?.value || '';
 
@@ -133,17 +162,42 @@ export async function POST(req: Request) {
       });
     }
 
-    // Standard Stateless Logic (Anthropic / Gemini / OpenAI fallback)
+    // 2. Stateless Logic (Simulated State via Client History)
     let generatedContent = '';
 
     if (provider === 'openai') {
-      // Fallback to chat completions if something goes wrong with stateful logic or explicitly requested?
-      // For now, the above block handles 'openai'.
-      // But if we want to support 'chat/completions' we could have a flag.
-      // We will stick to the above for OpenAI as "Stateful" was requested.
-    }
+      // Standard Chat Completions API
+      const response = await fetch('https://api.openai.com/v1/chat/completions', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${apiKey}`,
+        },
+        body: JSON.stringify({
+          model: model || 'gpt-4o',
+          messages: [
+            {
+              role: 'system',
+              content: 'You are a project supervisor. Your goal is to keep the AI agent "Jules" on track. Read the conversation history provided by the user. Identify if the agent is stuck, off-track, or needs guidance. Provide a concise, direct instruction or feedback to the agent. Do not be conversational. Be directive but polite. Focus on the next task.'
+            },
+            ...messages.map((m: { role: string; content: string }) => ({
+              role: m.role === 'user' ? 'user' : 'assistant', // Map role
+              content: m.content
+            }))
+          ],
+          max_tokens: 150,
+        }),
+      });
 
-    if (provider === 'anthropic') {
+      if (!response.ok) {
+        const error = await response.json();
+        throw new Error(`OpenAI API error: ${error.error?.message || response.statusText}`);
+      }
+
+      const data = await response.json();
+      generatedContent = data.choices[0]?.message?.content || '';
+
+    } else if (provider === 'anthropic') {
       const response = await fetch('https://api.anthropic.com/v1/messages', {
         method: 'POST',
         headers: {
@@ -171,14 +225,11 @@ export async function POST(req: Request) {
       generatedContent = data.content[0]?.text || '';
 
     } else if (provider === 'gemini') {
-      // Gemini API structure (Google AI Studio)
       const url = `https://generativelanguage.googleapis.com/v1beta/models/${model || 'gemini-1.5-flash'}:generateContent?key=${apiKey}`;
 
       const response = await fetch(url, {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           systemInstruction: {
             parts: [{ text: 'You are a project supervisor. Your goal is to keep the AI agent "Jules" on track. Read the conversation history. Identify if the agent is stuck, off-track, or needs guidance. Provide a concise, direct instruction or feedback to the agent. Do not be conversational. Be directive but polite. Focus on the next task.' }]
@@ -187,9 +238,7 @@ export async function POST(req: Request) {
             role: m.role === 'user' ? 'user' : 'model',
             parts: [{ text: m.content }]
           })),
-          generationConfig: {
-            maxOutputTokens: 150,
-          }
+          generationConfig: { maxOutputTokens: 150 }
         }),
       });
 
@@ -200,7 +249,7 @@ export async function POST(req: Request) {
 
       const data = await response.json();
       generatedContent = data.candidates?.[0]?.content?.parts?.[0]?.text || '';
-    } else if (provider !== 'openai') {
+    } else if (provider !== 'openai-assistants') {
       return NextResponse.json({ error: 'Invalid provider' }, { status: 400 });
     }
 

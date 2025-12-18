@@ -9,6 +9,7 @@ export interface Session {
   id: string;
   sourceId: string;
   title: string;
+  prompt?: string;
   status: 'active' | 'completed' | 'failed' | 'paused' | 'awaiting_approval';
   rawState?: string; // Original API state
   createdAt: string;
@@ -53,4 +54,22 @@ export interface SessionTemplate {
   tags?: string[]; // New: for categorization
   createdAt: string;
   updatedAt: string;
+}
+
+// Session Keeper Configuration
+export interface SessionKeeperConfig {
+  isEnabled: boolean;
+  autoSwitch: boolean;
+  checkIntervalSeconds: number;
+  inactivityThresholdMinutes: number;
+  activeWorkThresholdMinutes: number;
+  messages: string[]; // Fallback messages
+  customMessages: Record<string, string[]>;
+
+  // Smart Auto-Pilot Settings
+  smartPilotEnabled: boolean;
+  supervisorProvider: 'openai' | 'openai-assistants' | 'anthropic' | 'gemini';
+  supervisorApiKey: string;
+  supervisorModel: string;
+  contextMessageCount: number;
 }
