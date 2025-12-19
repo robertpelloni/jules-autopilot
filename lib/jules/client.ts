@@ -354,12 +354,28 @@ export class JulesClient {
 
   // Activities
   async listActivities(sessionId: string): Promise<Activity[]> {
-    const response = await this.request<{ activities: ApiActivity[] }>(
-      `/sessions/${sessionId}/activities`
-    );
+    let allActivities: ApiActivity[] = [];
+    let pageToken: string | undefined;
+
+    do {
+      const params = new URLSearchParams();
+      params.set('pageSize', '100');
+      if (pageToken) {
+        params.set('pageToken', pageToken);
+      }
+
+      const endpoint = `/sessions/${sessionId}/activities?${params.toString()}`;
+      const response = await this.request<{ activities: ApiActivity[]; nextPageToken?: string }>(endpoint);
+
+      if (response.activities) {
+        allActivities = allActivities.concat(response.activities);
+      }
+
+      pageToken = response.nextPageToken;
+    } while (pageToken);
 
     // Transform API response to match our Activity type
-    return (response.activities || []).map((activity: ApiActivity) => {
+    return allActivities.map((activity: ApiActivity) => {
       // Extract ID from name field (e.g., "sessions/ID/activities/ACTIVITY_ID")
       const id = activity.name?.split('/').pop() || activity.id || '';
 
