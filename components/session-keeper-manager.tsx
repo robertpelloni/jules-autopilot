@@ -85,30 +85,117 @@ export function SessionKeeperManager() {
                   const contextActivities = activities.slice(0, config.contextMessageCount).reverse();
                   const context = contextActivities.map(a => `${a.role.toUpperCase()}: ${a.content}`).join('\n');
 
-                  // Use the supervisor logic
-                  // Note: Since we are in client side, we'd ideally proxy this.
-                  // But for this feature implementation, assuming direct call is acceptable or key is safe in local storage.
-                  const supervisorMessage = await decideNextAction(
-                    config.supervisorProvider,
-                    config.supervisorApiKey,
-                    config.supervisorModel,
-                    `The user is inactive. The last activity was: ${lastActivity.content}. \n\n Recent Context:\n ${context}`
-                  );
-
-                  if (supervisorMessage) {
-                    message = supervisorMessage;
+            // DEBATE / SUPERVISOR LOGIC
+            if (config.smartPilotEnabled && config.supervisorApiKey) {
+               try {
+                  const activities = await client.listActivities(session.id);
+                  if (session.prompt && !activities.some(a => a.content === session.prompt)) {
+                      activities.unshift({
+                          id: 'initial-prompt',
+                          sessionId: session.id,
+                          type: 'message',
+                          role: 'user',
+                          content: session.prompt,
+                          createdAt: session.createdAt
+                      });
                   }
                 } catch (e) {
                   addLog(`Supervisor failed: ${e}`, 'error');
                 }
              }
 
-             addLog(`Sending nudge to ${session.id} (${inactiveMinutes.toFixed(1)}m > ${threshold}m): "${message}"`, 'action');
-             await client.createActivity({
-               sessionId: session.id,
-               content: message,
-               type: 'message'
-             });
+                  // Single Supervisor Logic
+                  if (config.smartPilotEnabled) {
+                      addLog(`Asking Supervisor (${config.supervisorProvider})...`, 'info');
+
+                      if (!supervisorState[session.id]) {
+                        supervisorState[session.id] = { lastProcessedActivityTimestamp: '', history: [] };
+                      }
+                      const sessionState = supervisorState[session.id];
+
+                      let newActivities = sortedActivities;
+                      if (sessionState.lastProcessedActivityTimestamp) {
+                        newActivities = sortedActivities.filter(a => new Date(a.createdAt).getTime() > new Date(sessionState.lastProcessedActivityTimestamp).getTime());
+                      }
+
+                      const isStateful = config.supervisorProvider === 'openai-assistants';
+                      let messagesToSend: { role: string, content: string }[] = [];
+
+                      if (newActivities.length > 0) {
+                        if (sessionState.history.length === 0 && !sessionState.openaiThreadId) {
+                          const fullSummary = newActivities.map(a => `${a.role.toUpperCase()}: ${a.content}`).join('\n\n');
+                          messagesToSend.push({ role: 'user', content: `Here is the full conversation history so far. Please analyze the state and provide the next instruction:\n\n${fullSummary}` });
+                        } else {
+                          const updates = newActivities.map(a => `${a.role.toUpperCase()}: ${a.content}`).join('\n\n');
+                          messagesToSend.push({ role: 'user', content: `Here are the latest updates since your last instruction:\n\n${updates}` });
+                        }
+                        sessionState.lastProcessedActivityTimestamp = newActivities[newActivities.length - 1].createdAt;
+                      } else if (sessionState.history.length > 0 || sessionState.openaiThreadId) {
+                         messagesToSend.push({ role: 'user', content: "The agent has been inactive for a while. Please provide a nudge or follow-up instruction." });
+                      }
+
+                      if (!isStateful) {
+                        messagesToSend = [...sessionState.history, ...messagesToSend].slice(-config.contextMessageCount);
+                      }
+
+                      const response = await fetch('/api/supervisor', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({
+                          messages: messagesToSend,
+                          provider: config.supervisorProvider,
+                          apiKey: config.supervisorApiKey,
+                          model: config.supervisorModel,
+                          threadId: sessionState.openaiThreadId,
+                          assistantId: sessionState.openaiAssistantId
+                        })
+                      });
+
+                      if (response.ok) {
+                        const data = await response.json();
+                        if (data.content) {
+                          messageToSend = data.content;
+                          addLog(`Supervisor says: "${messageToSend.substring(0, 30)}..."`, 'action');
+                          if (isStateful) {
+                            sessionState.openaiThreadId = data.threadId;
+                            sessionState.openaiAssistantId = data.assistantId;
+                            sessionState.history.push(...messagesToSend);
+                            sessionState.history.push({ role: 'assistant', content: messageToSend });
+                          } else {
+                            sessionState.history = [...messagesToSend, { role: 'assistant', content: messageToSend }];
+                          }
+                          stateChanged = true;
+                        }
+                      } else {
+                         throw new Error('Supervisor API failed');
+                      }
+                  }
+               } catch (err) {
+                  addLog(`Auto-Pilot error: ${err instanceof Error ? err.message : 'Unknown'}`, 'error');
+               }
+            }
+
+            // Fallback
+            if (!messageToSend) {
+              let messages = config.messages;
+              if (config.customMessages && config.customMessages[session.id] && config.customMessages[session.id].length > 0) {
+                messages = config.customMessages[session.id];
+              }
+              
+              if (messages.length === 0) {
+                addLog(`Skipped ${session.id.substring(0, 8)}: No messages configured`, 'skip');
+                continue;
+              }
+              messageToSend = messages[Math.floor(Math.random() * messages.length)];
+            }
+            
+            addLog(`Sending nudge to ${session.id.substring(0, 8)} (${Math.round(diffMinutes)}m inactive)`, 'action');
+            await client.createActivity({
+              sessionId: session.id,
+              content: messageToSend,
+              type: 'message'
+            });
+            setStatusSummary({ lastAction: `Nudged ${session.id.substring(0,8)}` });
           }
         }
 

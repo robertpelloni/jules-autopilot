@@ -27,6 +27,7 @@ import {
   DropdownMenuSubContent,
 } from "@/components/ui/dropdown-menu";
 import { PlanContent } from './plan-content';
+import { ActivityContent } from './activity-content';
 
 interface ActivityFeedProps {
   session: Session;
@@ -47,6 +48,7 @@ export function ActivityFeed({ session, onArchive, showCodeDiffs, onToggleCodeDi
   const [newActivityIds, setNewActivityIds] = useState<Set<string>>(new Set());
   const scrollAreaRef = useRef<HTMLDivElement>(null);
   const [copiedId, setCopiedId] = useState<string | null>(null);
+  const [shouldAutoScroll, setShouldAutoScroll] = useState(true);
 
   const formatDate = (dateString: string) => {
     if (!dateString) return 'Unknown date';
@@ -58,50 +60,6 @@ export function ActivityFeed({ session, onArchive, showCodeDiffs, onToggleCodeDi
     } catch {
       return 'Unknown date';
     }
-  };
-
-  const formatContent = (content: string, metadata?: Record<string, any>) => {
-    // 1. Handle Placeholders
-    if (content === '[userMessaged]' || content === '[agentMessaged]') {
-        // Try to recover content from metadata if available
-        const realContent = metadata?.original_content || metadata?.message || metadata?.text;
-        if (realContent && typeof realContent === 'string') {
-             // If we found real content, recursively format it
-             return formatContent(realContent, undefined);
-        }
-
-        if (content === '[userMessaged]') return <span className="text-white/50 italic">Message sent</span>;
-        if (content === '[agentMessaged]') return <span className="text-white/50 italic">Agent working...</span>;
-    }
-
-    // 2. Try JSON Parsing
-    if (content.startsWith('{') || content.startsWith('[')) {
-        try {
-          const parsed = JSON.parse(content);
-
-          // Handle Empty JSON
-          if (typeof parsed === 'object' && parsed !== null) {
-             if (Array.isArray(parsed) && parsed.length === 0) return null;
-             if (!Array.isArray(parsed) && Object.keys(parsed).length === 0) return null;
-          }
-
-          // Handle Plan Content
-          if (Array.isArray(parsed) || (parsed.steps && Array.isArray(parsed.steps))) {
-            return <PlanContent content={parsed} />;
-          }
-
-          return <pre className="text-[11px] overflow-x-auto font-mono bg-muted/50 p-2 rounded">{JSON.stringify(parsed, null, 2)}</pre>;
-        } catch {
-          // Fall through to markdown
-        }
-    }
-
-    // 3. Render as Markdown
-    return (
-        <div className="prose prose-sm dark:prose-invert max-w-none break-words prose-p:text-xs prose-p:leading-relaxed prose-p:break-words prose-headings:text-xs prose-headings:font-semibold prose-headings:mb-1 prose-headings:mt-2 prose-ul:text-xs prose-ol:text-xs prose-li:text-xs prose-li:my-0.5 prose-code:text-[11px] prose-code:bg-muted prose-code:px-1 prose-code:py-0.5 prose-code:rounded prose-code:break-all prose-pre:text-[11px] prose-pre:bg-muted prose-pre:p-2 prose-pre:overflow-x-auto prose-blockquote:text-xs prose-blockquote:border-l-primary prose-strong:font-semibold overflow-hidden">
-          <ReactMarkdown remarkPlugins={[remarkGfm]}>{content}</ReactMarkdown>
-        </div>
-    );
   };
 
   const loadActivities = useCallback(async (isInitialLoad = true) => {
@@ -283,8 +241,45 @@ export function ActivityFeed({ session, onArchive, showCodeDiffs, onToggleCodeDi
 
   const scrollToBottom = () => {
     const scrollContainer = document.querySelector('#activity-feed-scroll-area [data-radix-scroll-area-viewport]');
-    if (scrollContainer) scrollContainer.scrollTop = scrollContainer.scrollHeight;
+    if (scrollContainer) {
+      scrollContainer.scrollTop = scrollContainer.scrollHeight;
+      setShouldAutoScroll(true);
+    }
   };
+
+  // Auto-scroll effect
+  useEffect(() => {
+    if (shouldAutoScroll && activities.length > 0) {
+      // Small timeout to allow DOM to update
+      const timer = setTimeout(() => {
+        const scrollContainer = document.querySelector('#activity-feed-scroll-area [data-radix-scroll-area-viewport]');
+        if (scrollContainer) {
+          scrollContainer.scrollTop = scrollContainer.scrollHeight;
+        }
+      }, 100);
+      return () => clearTimeout(timer);
+    }
+  }, [activities, shouldAutoScroll]);
+
+  // Detect manual scroll to disable auto-scroll
+  useEffect(() => {
+    const scrollContainer = document.querySelector('#activity-feed-scroll-area [data-radix-scroll-area-viewport]');
+    if (!scrollContainer) return;
+
+    const handleScroll = () => {
+      const { scrollTop, scrollHeight, clientHeight } = scrollContainer;
+      const isAtBottom = Math.abs(scrollHeight - clientHeight - scrollTop) < 50;
+      
+      if (isAtBottom) {
+        setShouldAutoScroll(true);
+      } else {
+        setShouldAutoScroll(false);
+      }
+    };
+
+    scrollContainer.addEventListener('scroll', handleScroll);
+    return () => scrollContainer.removeEventListener('scroll', handleScroll);
+  }, []);
 
   const finalDiff = activities.filter(activity => activity.diff).slice(-1);
   const hasDiffs = finalDiff.length > 0;
@@ -479,13 +474,16 @@ export function ActivityFeed({ session, onArchive, showCodeDiffs, onToggleCodeDi
                 if (Array.isArray(item)) {
                   const firstActivity = item[0];
                   // Filter nulls (empty JSONs that slipped)
-                  const validItems = item.filter(a => formatContent(a.content, a.metadata) !== null);
+                  const validItems = item.filter(a => {
+                    const c = a.content?.trim();
+                    return c && c !== '{}' && c !== '[]';
+                  });
                   if (validItems.length === 0) return null;
 
                   return (
                     <div key={`group-${groupIndex}`} className="flex gap-2.5">
                       <Avatar className="h-6 w-6 shrink-0 mt-0.5 bg-zinc-900 border border-white/10">{getActivityIcon(firstActivity)}</Avatar>
-                      <Card className="flex-1 border-white/[0.08] bg-zinc-950/50">
+                      <Card className="flex-1 border-white/[0.08] bg-zinc-950/50 min-w-0">
                         <CardContent className="p-3">
                           <div className="flex items-center gap-2 mb-2">
                             <Badge variant="outline" className="text-[9px] h-4 px-1.5 font-mono uppercase tracking-wider bg-yellow-500/90 border-transparent text-black font-bold">progress</Badge>
@@ -494,7 +492,9 @@ export function ActivityFeed({ session, onArchive, showCodeDiffs, onToggleCodeDi
                           <div className="space-y-2">
                             {validItems.map((activity, idx) => (
                               <div key={activity.id} className={idx > 0 ? 'pt-2 border-t border-white/[0.08]' : ''}>
-                                <div className="text-[11px] leading-relaxed text-white/90 break-words">{formatContent(activity.content, activity.metadata)}</div>
+                                <div className="text-[11px] leading-relaxed text-white/90 break-words">
+                                  <ActivityContent content={activity.content} metadata={activity.metadata} />
+                                </div>
                               </div>
                             ))}
                           </div>
@@ -505,16 +505,13 @@ export function ActivityFeed({ session, onArchive, showCodeDiffs, onToggleCodeDi
                 }
 
                 const activity = item;
-                const contentNode = formatContent(activity.content, activity.metadata);
-                if (contentNode === null) return null;
-
                 // Only show approve button if session is waiting for approval AND this is the latest plan
                 const showApprove = activity.type === 'plan' && session.status === 'awaiting_approval';
 
                 return (
                   <div key={activity.id} className={`flex gap-2.5 ${activity.role === 'user' ? 'flex-row-reverse' : ''} ${newActivityIds.has(activity.id) ? 'animate-in fade-in slide-in-from-bottom-2 duration-500' : ''}`}>
                     <Avatar className="h-6 w-6 shrink-0 mt-0.5 bg-zinc-900 border border-white/10">{getActivityIcon(activity)}</Avatar>
-                    <Card className={`flex-1 border-white/[0.08] ${activity.role === 'user' ? 'bg-purple-950/20 border-purple-500/20' : 'bg-zinc-950/50'}`}>
+                    <Card className={`flex-1 border-white/[0.08] min-w-0 ${activity.role === 'user' ? 'bg-purple-950/20 border-purple-500/20' : 'bg-zinc-950/50'}`}>
                       <CardContent className="p-3 group/card relative">
                         <div className="flex items-center gap-2 mb-2">
                           <Badge variant="outline" className={`text-[9px] h-4 px-1.5 font-mono uppercase tracking-wider ${getActivityTypeColor(activity.type)} border-transparent text-black font-bold`}>{activity.type}</Badge>
@@ -528,7 +525,9 @@ export function ActivityFeed({ session, onArchive, showCodeDiffs, onToggleCodeDi
                             {copiedId === activity.id ? <Check className="h-3 w-3 text-green-500" /> : <Copy className="h-3 w-3 text-white/40" />}
                           </Button>
                         </div>
-                        <div className="text-[11px] leading-relaxed text-white/90 break-words">{contentNode}</div>
+                        <div className="text-[11px] leading-relaxed text-white/90 break-words">
+                          <ActivityContent content={activity.content} metadata={activity.metadata} />
+                        </div>
                         {activity.bashOutput && (
                           <div className="mt-3 pt-3 border-t border-white/[0.08]">
                             <button onClick={() => toggleBashOutput(activity.id)} className="flex items-center gap-2 text-[10px] font-mono uppercase tracking-wider text-green-400 hover:text-green-300 transition-colors mb-2">
@@ -556,7 +555,7 @@ export function ActivityFeed({ session, onArchive, showCodeDiffs, onToggleCodeDi
         </ScrollArea>
 
         {/* Floating Jump Buttons */}
-        <div className="absolute right-4 bottom-4 flex flex-col gap-2 opacity-0 group-hover:opacity-100 transition-opacity duration-200">
+        <div className="absolute right-4 bottom-4 flex flex-col gap-2 opacity-0 group-hover:opacity-100 transition-opacity duration-200 z-50">
           <Button variant="secondary" size="icon" className="h-8 w-8 rounded-full shadow-lg bg-zinc-900 border border-white/10 hover:bg-zinc-800" onClick={scrollToTop} title="Jump to Top">
             <ArrowUp className="h-4 w-4" />
           </Button>
