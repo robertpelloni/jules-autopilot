@@ -10,13 +10,12 @@ import { CodeDiffSidebar } from './code-diff-sidebar';
 import { AnalyticsDashboard } from './analytics-dashboard';
 import { NewSessionDialog } from './new-session-dialog';
 import { TemplatesPage } from './templates-page';
-import { SessionKeeper } from './SessionKeeper';
 import { SessionKeeperSettings } from './session-keeper-settings';
 import { SessionKeeperLogPanel } from './session-keeper-log-panel';
 import { Button } from '@/components/ui/button';
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from '@/components/ui/sheet';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger, DropdownMenuSeparator } from '@/components/ui/dropdown-menu';
-import { Menu, LogOut, Settings, BarChart3, MessageSquare, ChevronLeft, ChevronRight, Terminal as TerminalIcon, LayoutTemplate, Plus, RotateCw, Activity as ActivityIcon } from 'lucide-react';
+import { Menu, LogOut, Settings, BarChart3, MessageSquare, ChevronLeft, ChevronRight, Terminal as TerminalIcon, LayoutTemplate, Plus, Activity as ActivityIcon } from 'lucide-react';
 import { TerminalPanel } from './terminal-panel';
 import { useTerminalAvailable } from '@/hooks/use-terminal-available';
 import { ResizablePanelGroup, ResizablePanel, ResizableHandle } from '@/components/ui/resizable';
@@ -33,7 +32,7 @@ export function AppLayout() {
   const [refreshKey, setRefreshKey] = useState(0);
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const [codeDiffSidebarCollapsed, setCodeDiffSidebarCollapsed] = useState(false);
-  const [keeperSidebarCollapsed, setKeeperSidebarCollapsed] = useState(true);
+  // Replaced keeperSidebarCollapsed with direct logs toggle state
   const [isLogPanelOpen, setIsLogPanelOpen] = useState(false);
   const [showCodeDiffs, setShowCodeDiffs] = useState(false);
   const [currentActivities, setCurrentActivities] = useState<Activity[]>([]);
@@ -154,7 +153,7 @@ export function AppLayout() {
   };
 
   return (
-    <div className="flex h-screen flex-col bg-black">
+    <div className="flex h-screen flex-col bg-black max-w-full overflow-hidden">
       <SessionKeeperManager />
       {/* Header */}
       <header className="border-b border-white/[0.08] bg-zinc-950/95 backdrop-blur-sm">
@@ -254,6 +253,9 @@ export function AppLayout() {
               }
             />
 
+            {/* Session Keeper Settings (Moved to header, removed Sidebar toggle) */}
+            <SessionKeeperSettings />
+
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
                 <Button variant="ghost" size="icon" className="h-8 w-8 hover:bg-white/5 text-white/60">
@@ -279,7 +281,7 @@ export function AppLayout() {
       </header>
 
       {/* Main Content Area */}
-      <div className="flex flex-1 overflow-hidden">
+      <div className="flex flex-1 overflow-hidden min-h-0">
         {/* Desktop Sidebar (Session List) */}
         <aside className={`hidden md:flex border-r border-white/[0.08] flex-col bg-zinc-950 transition-all duration-200 ${
           sidebarCollapsed ? 'md:w-12' : 'md:w-64'
@@ -313,14 +315,14 @@ export function AppLayout() {
         </aside>
 
         {/* Resizable Panel Group (Vertical: Top = Main, Bottom = Logs) */}
-        <ResizablePanelGroup direction="vertical" className="flex-1">
+        <ResizablePanelGroup direction="vertical" className="flex-1 min-w-0">
 
-          {/* Top Panel: Dashboard + Keeper Sidebar */}
-          <ResizablePanel defaultSize={isLogPanelOpen ? 75 : 100}>
-            <ResizablePanelGroup direction="horizontal" className="flex-1">
-              <ResizablePanel defaultSize={100} minSize={30}>
+          {/* Top Panel: Dashboard */}
+          <ResizablePanel defaultSize={isLogPanelOpen ? 70 : 100} className="min-h-0">
+            <ResizablePanelGroup direction="horizontal" className="flex-1 h-full">
+              <ResizablePanel defaultSize={100} minSize={30} className="min-w-0">
                 {/* Main Panel Content */}
-                <div className="flex h-full w-full flex-row">
+                <div className="flex h-full w-full flex-row min-w-0">
                   <main className="flex-1 overflow-hidden bg-black flex flex-col min-w-0">
                     {view === 'analytics' ? (
                       <AnalyticsDashboard />
@@ -410,7 +412,7 @@ export function AppLayout() {
           {isLogPanelOpen && (
             <>
               <ResizableHandle withHandle />
-              <ResizablePanel defaultSize={25} minSize={10} maxSize={50}>
+              <ResizablePanel defaultSize={30} minSize={10} maxSize={50}>
                 <SessionKeeperLogPanel onClose={() => setIsLogPanelOpen(false)} />
               </ResizablePanel>
             </>

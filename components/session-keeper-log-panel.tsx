@@ -1,42 +1,23 @@
-import React from 'react';
+import React, { useRef, useEffect } from 'react';
 import { useSessionKeeperStore, Log } from '@/lib/stores/session-keeper';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Button } from '@/components/ui/button';
-import { Trash2, X, Power } from 'lucide-react';
-import { SessionKeeperSettings } from './session-keeper-settings';
+import { Trash2, X } from 'lucide-react';
 
 interface SessionKeeperLogPanelProps {
   onClose?: () => void;
 }
 
 export function SessionKeeperLogPanel({ onClose }: SessionKeeperLogPanelProps) {
-  const { logs, clearLogs, config, setConfig } = useSessionKeeperStore();
+  const { logs, clearLogs } = useSessionKeeperStore();
 
   return (
     <div className="flex flex-col h-full bg-background border-t">
       <div className="flex items-center justify-between px-4 py-2 border-b bg-muted/40">
-        <div className="flex items-center gap-3">
-          <h3 className="font-semibold text-sm flex items-center gap-2">
-            Auto-Pilot Logs
-            <span className="text-xs font-normal text-muted-foreground">({logs.length})</span>
-          </h3>
-          <div className="h-4 w-px bg-border" />
-          <div className="flex items-center gap-2">
-             <SessionKeeperSettings 
-                config={config} 
-                onConfigChange={setConfig} 
-             />
-             <Button
-                variant="ghost"
-                size="sm"
-                className={`h-6 px-2 text-[10px] uppercase font-bold tracking-wider ${config.isEnabled ? 'text-green-500 bg-green-500/10' : 'text-muted-foreground'}`}
-                onClick={() => setConfig({ ...config, isEnabled: !config.isEnabled })}
-             >
-                <Power className="h-3 w-3 mr-1.5" />
-                {config.isEnabled ? 'ON' : 'OFF'}
-             </Button>
-          </div>
-        </div>
+        <h3 className="font-semibold text-sm flex items-center gap-2">
+          Session Keeper Activity Log
+          <span className="text-xs font-normal text-muted-foreground">({logs.length} events)</span>
+        </h3>
         <div className="flex items-center gap-2">
           <Button
             variant="ghost"
