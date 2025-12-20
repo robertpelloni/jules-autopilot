@@ -423,7 +423,7 @@ export class JulesClient {
         type = 'message';
         // Try more fields including common variations
         const um = activity.userMessage;
-        content = um.message || um.content || um.text || um.prompt || (typeof um === 'string' ? um : '');
+        content = um.message || um.content || (um.text as string) || (um.prompt as string) || (typeof um === 'string' ? um : '');
 
         // If still empty and it's an object, check specific keys before generic stringify
         if (!content && typeof um === 'object' && um !== null) {

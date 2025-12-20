@@ -313,7 +313,7 @@ export function SessionKeeperSettings({
                         variant="outline"
                         size="sm"
                         className="h-8 border-white/10 hover:bg-white/5 text-white/60"
-                        onClick={handleLoadModels}
+                        onClick={() => handleLoadModels()}
                         disabled={!config.supervisorApiKey || loadingModels}
                         title="Load Models from Provider"
                       >

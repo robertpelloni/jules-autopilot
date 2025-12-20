@@ -322,13 +322,18 @@ export function AppLayout() {
           </div>
         </aside>
 
-        {/* Resizable Panel Group (Horizontal: Left = Main, Right = Logs) */}
-        <ResizablePanelGroup direction="horizontal" className="flex-1">
+        {/* Resizable Panel Group (Vertical: Top = Main, Bottom = Logs) */}
+        <ResizablePanelGroup 
+          direction="vertical" 
+          className="flex-1 flex-col"
+          style={{ flexDirection: 'column' }}
+          data-panel-group-direction="vertical"
+        >
 
-          {/* Main Panel: Dashboard + Keeper Sidebar */}
+          {/* Top Panel: Dashboard + Keeper Sidebar */}
           <ResizablePanel 
-            key={isLogPanelOpen ? 'main-panel-open' : 'main-panel-closed'}
-            defaultSize={isLogPanelOpen ? 70 : 100}
+            key={isLogPanelOpen ? 'top-panel-open' : 'top-panel-closed'}
+            defaultSize={isLogPanelOpen ? 65 : 100}
             minSize={30}
           >
             {/* Main Panel Content */}
@@ -416,14 +421,15 @@ export function AppLayout() {
             </div>
           </ResizablePanel>
 
-          {/* Right Panel: Logs */}
+          {/* Bottom Panel: Logs */}
           {isLogPanelOpen && (
             <>
               <ResizableHandle 
                 withHandle 
-                className="w-px h-full bg-white/10" 
+                className="h-px w-full bg-white/10" 
+                data-panel-group-direction="vertical"
               />
-              <ResizablePanel defaultSize={30} minSize={20}>
+              <ResizablePanel defaultSize={35} minSize={10}>
                 <SessionKeeperLogPanel onClose={() => setIsLogPanelOpen(false)} />
               </ResizablePanel>
             </>
