@@ -408,9 +408,20 @@ export class JulesClient {
         // Try more fields including common variations
         const um = activity.userMessage;
         content = um.message || um.content || um.text || um.prompt || (typeof um === 'string' ? um : '');
-        // If still empty, try to stringify specific sub-fields to avoid hiding content
-        if (!content && typeof um === 'object') {
-             content = JSON.stringify(um);
+
+        // If still empty and it's an object, check specific keys before generic stringify
+        if (!content && typeof um === 'object' && um !== null) {
+             // Avoid stringifying empty objects or internal markers
+             if (Object.keys(um).length > 0) {
+                 // Try to find any string property that looks like content
+                 const stringVal = Object.values(um).find(v => typeof v === 'string' && v.length > 0);
+                 if (stringVal) {
+                    content = stringVal as string;
+                 } else {
+                    // Only stringify if it has meaningful data
+                    content = JSON.stringify(um);
+                 }
+             }
         }
       }
 

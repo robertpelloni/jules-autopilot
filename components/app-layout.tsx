@@ -10,16 +10,16 @@ import { CodeDiffSidebar } from './code-diff-sidebar';
 import { AnalyticsDashboard } from './analytics-dashboard';
 import { NewSessionDialog } from './new-session-dialog';
 import { TemplatesPage } from './templates-page';
-import { SessionKeeper } from './SessionKeeper';
 import { SessionKeeperSettings } from './session-keeper-settings';
+import { SessionKeeperLogPanel } from './session-keeper-log-panel';
 import { Button } from '@/components/ui/button';
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from '@/components/ui/sheet';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger, DropdownMenuSeparator } from '@/components/ui/dropdown-menu';
-import { Menu, LogOut, Settings, BarChart3, MessageSquare, ChevronLeft, ChevronRight, Terminal as TerminalIcon, LayoutTemplate, Plus, RotateCw } from 'lucide-react';
+import { Menu, LogOut, Settings, BarChart3, MessageSquare, ChevronLeft, ChevronRight, Terminal as TerminalIcon, LayoutTemplate, Plus, Activity as ActivityIcon } from 'lucide-react';
 import { TerminalPanel } from './terminal-panel';
 import { useTerminalAvailable } from '@/hooks/use-terminal-available';
 import { ResizablePanelGroup, ResizablePanel, ResizableHandle } from '@/components/ui/resizable';
-
+import { SessionKeeperManager } from './session-keeper-manager';
 
 export function AppLayout() {
   const { client, clearApiKey } = useJules();
@@ -32,7 +32,8 @@ export function AppLayout() {
   const [refreshKey, setRefreshKey] = useState(0);
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const [codeDiffSidebarCollapsed, setCodeDiffSidebarCollapsed] = useState(false);
-  const [keeperSidebarCollapsed, setKeeperSidebarCollapsed] = useState(true);
+  // Replaced keeperSidebarCollapsed with direct logs toggle state
+  const [isLogPanelOpen, setIsLogPanelOpen] = useState(false);
   const [showCodeDiffs, setShowCodeDiffs] = useState(false);
   const [currentActivities, setCurrentActivities] = useState<Activity[]>([]);
   const [codeSidebarWidth, setCodeSidebarWidth] = useState(600);
@@ -152,15 +153,16 @@ export function AppLayout() {
   };
 
   return (
-    <div className="flex h-screen flex-col bg-black">
+    <div className="flex h-screen flex-col bg-black max-w-full overflow-hidden">
+      <SessionKeeperManager />
       {/* Header */}
       <header className="border-b border-white/[0.08] bg-zinc-950/95 backdrop-blur-sm">
         <div className="flex h-14 items-center justify-between px-4">
           <div className="flex items-center gap-3">
             <Sheet open={mobileMenuOpen} onOpenChange={setMobileMenuOpen}>
               <SheetTrigger asChild>
-                <Button variant="ghost" size="icon" className="md:hidden h-11 w-11">
-                  <Menu className="h-5 w-5" />
+                <Button variant="ghost" size="icon" className="md:hidden h-8 w-8">
+                  <Menu className="h-4 w-4" />
                 </Button>
               </SheetTrigger>
               <SheetContent side="left" className="w-[280px] p-0 bg-zinc-950 border-white/[0.08]">
@@ -210,6 +212,18 @@ export function AppLayout() {
               <span className="text-[10px] font-mono uppercase tracking-wider">Analytics</span>
             </Button>
 
+            {/* Logs Toggle */}
+            <Button
+              variant="ghost"
+              size="sm"
+              className={`h-8 px-3 hover:bg-white/5 ${isLogPanelOpen ? 'text-purple-500' : 'text-white/60'}`}
+              onClick={() => setIsLogPanelOpen(!isLogPanelOpen)}
+              title="Toggle Auto-Pilot Logs"
+            >
+              <ActivityIcon className="h-3.5 w-3.5 mr-1.5" />
+              <span className="text-[10px] font-mono uppercase tracking-wider">Logs</span>
+            </Button>
+
             {terminalAvailable && (
               <Button
                 variant="ghost"
@@ -239,17 +253,8 @@ export function AppLayout() {
               }
             />
 
-            {/* Session Keeper Toggle */}
+            {/* Session Keeper Settings (Moved to header, removed Sidebar toggle) */}
             <SessionKeeperSettings />
-            <Button
-              variant="ghost"
-              size="icon"
-              className={`h-8 w-8 hover:bg-white/5 ${!keeperSidebarCollapsed ? 'text-purple-500' : 'text-white/60'}`}
-              onClick={() => setKeeperSidebarCollapsed(!keeperSidebarCollapsed)}
-              title="Toggle Auto-Pilot Panel"
-            >
-              <RotateCw className={`h-4 w-4 ${!keeperSidebarCollapsed ? 'animate-spin-slow' : ''}`} />
-            </Button>
 
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
@@ -275,9 +280,9 @@ export function AppLayout() {
         </div>
       </header>
 
-      {/* Main Content */}
-      <div className="flex flex-1 overflow-hidden">
-        {/* Desktop Sidebar */}
+      {/* Main Content Area */}
+      <div className="flex flex-1 overflow-hidden min-h-0">
+        {/* Desktop Sidebar (Session List) */}
         <aside className={`hidden md:flex border-r border-white/[0.08] flex-col bg-zinc-950 transition-all duration-200 ${
           sidebarCollapsed ? 'md:w-12' : 'md:w-64'
         }`}>
@@ -309,102 +314,110 @@ export function AppLayout() {
           </div>
         </aside>
 
-        {/* Resizable Panel Group for Main Content + Dashboard */}
-        <ResizablePanelGroup direction="horizontal" className="flex-1">
-          <ResizablePanel defaultSize={!keeperSidebarCollapsed ? 50 : 100} minSize={30}>
-            {/* Main Panel Content */}
-            <div className="flex h-full w-full flex-row">
-              <main className="flex-1 overflow-hidden bg-black flex flex-col min-w-0">
-                {view === 'analytics' ? (
-                  <AnalyticsDashboard />
-                ) : view === 'templates' ? (
-                  <TemplatesPage onStartSession={handleStartSessionFromTemplate} />
-                ) : selectedSession ? (
-                  <ActivityFeed
-                    key={selectedSession.id}
-                    session={selectedSession}
-                    onArchive={handleSessionArchived}
-                    showCodeDiffs={showCodeDiffs}
-                    onToggleCodeDiffs={setShowCodeDiffs}
-                    onActivitiesChange={setCurrentActivities}
-                  />
-                ) : (
-                  <div className="flex h-full items-center justify-center p-8">
-                    <div className="text-center space-y-4 max-w-sm">
-                      <h2 className="text-sm font-bold text-white/40 uppercase tracking-widest">
-                        NO SESSION
-                      </h2>
-                      <p className="text-[11px] text-white/30 leading-relaxed uppercase tracking-wide font-mono">
-                        Select session or create new
-                      </p>
-                      <div className="pt-2">
-                        <Button
-                          className="w-full sm:w-auto h-8 text-[10px] font-mono uppercase tracking-widest bg-purple-600 hover:bg-purple-500 text-white border-0"
-                          onClick={handleOpenNewSession}
-                        >
-                          <Plus className="h-3.5 w-3.5 mr-1.5" />
-                          New Session
-                        </Button>
-                      </div>
-                    </div>
-                  </div>
-                )}
-              </main>
+        {/* Resizable Panel Group (Vertical: Top = Main, Bottom = Logs) */}
+        <ResizablePanelGroup direction="vertical" className="flex-1 min-w-0">
 
-              {/* Code Diff Sidebar (Existing) - Kept inside Main Panel */}
-              {selectedSession && showCodeDiffs && view === 'sessions' && (
-                <>
-                  {!codeDiffSidebarCollapsed && (
-                    <div
-                      className="w-1 cursor-col-resize bg-transparent hover:bg-blue-500/50 transition-colors z-50"
-                      onMouseDown={startResizing}
-                    />
-                  )}
-                  <aside
-                    className={`hidden md:flex border-l border-white/[0.08] flex-col bg-zinc-950 ${
-                      isResizing ? 'transition-none' : 'transition-all duration-200'
-                    } ${codeDiffSidebarCollapsed ? 'md:w-12' : ''}`}
-                    style={{ width: codeDiffSidebarCollapsed ? undefined : codeSidebarWidth }}
-                  >
-                    <div className="px-3 py-2 border-b border-white/[0.08] flex items-center justify-between">
+          {/* Top Panel: Dashboard */}
+          <ResizablePanel defaultSize={isLogPanelOpen ? 70 : 100} className="min-h-0">
+            <ResizablePanelGroup direction="horizontal" className="flex-1 h-full">
+              <ResizablePanel defaultSize={100} minSize={30} className="min-w-0">
+                {/* Main Panel Content */}
+                <div className="flex h-full w-full flex-row min-w-0">
+                  <main className="flex-1 overflow-hidden bg-black flex flex-col min-w-0">
+                    {view === 'analytics' ? (
+                      <AnalyticsDashboard />
+                    ) : view === 'templates' ? (
+                      <TemplatesPage onStartSession={handleStartSessionFromTemplate} />
+                    ) : selectedSession ? (
+                      <ActivityFeed
+                        key={selectedSession.id}
+                        session={selectedSession}
+                        onArchive={handleSessionArchived}
+                        showCodeDiffs={showCodeDiffs}
+                        onToggleCodeDiffs={setShowCodeDiffs}
+                        onActivitiesChange={setCurrentActivities}
+                      />
+                    ) : (
+                      <div className="flex h-full items-center justify-center p-8">
+                        <div className="text-center space-y-4 max-w-sm">
+                          <h2 className="text-sm font-bold text-white/40 uppercase tracking-widest">
+                            NO SESSION
+                          </h2>
+                          <p className="text-[11px] text-white/30 leading-relaxed uppercase tracking-wide font-mono">
+                            Select session or create new
+                          </p>
+                          <div className="pt-2">
+                            <Button
+                              className="w-full sm:w-auto h-8 text-[10px] font-mono uppercase tracking-widest bg-purple-600 hover:bg-purple-500 text-white border-0"
+                              onClick={handleOpenNewSession}
+                            >
+                              <Plus className="h-3.5 w-3.5 mr-1.5" />
+                              New Session
+                            </Button>
+                          </div>
+                        </div>
+                      </div>
+                    )}
+                  </main>
+
+                  {/* Code Diff Sidebar (Existing) - Kept inside Main Panel */}
+                  {selectedSession && showCodeDiffs && view === 'sessions' && (
+                    <>
                       {!codeDiffSidebarCollapsed && (
-                        <h2 className="text-[10px] font-bold text-white/40 uppercase tracking-widest">CODE CHANGES</h2>
-                      )}
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        className={`h-6 w-6 hover:bg-white/5 text-white/60 ${codeDiffSidebarCollapsed ? 'mx-auto' : ''}`}
-                        onClick={() => setCodeDiffSidebarCollapsed(!codeDiffSidebarCollapsed)}
-                      >
-                        {codeDiffSidebarCollapsed ? (
-                          <ChevronLeft className="h-3.5 w-3.5" />
-                        ) : (
-                          <ChevronRight className="h-3.5 w-3.5" />
-                        )}
-                      </Button>
-                    </div>
-                    <div className="flex-1 overflow-hidden">
-                      {!codeDiffSidebarCollapsed && (
-                        <CodeDiffSidebar
-                          activities={currentActivities}
-                          repoUrl={selectedSession ? `https://github.com/${selectedSession.sourceId}` : undefined}
+                        <div
+                          className="w-1 cursor-col-resize bg-transparent hover:bg-blue-500/50 transition-colors z-50"
+                          onMouseDown={startResizing}
                         />
                       )}
-                    </div>
-                  </aside>
-                </>
-              )}
-            </div>
+                      <aside
+                        className={`hidden md:flex border-l border-white/[0.08] flex-col bg-zinc-950 ${
+                          isResizing ? 'transition-none' : 'transition-all duration-200'
+                        } ${codeDiffSidebarCollapsed ? 'md:w-12' : ''}`}
+                        style={{ width: codeDiffSidebarCollapsed ? undefined : codeSidebarWidth }}
+                      >
+                        <div className="px-3 py-2 border-b border-white/[0.08] flex items-center justify-between">
+                          {!codeDiffSidebarCollapsed && (
+                            <h2 className="text-[10px] font-bold text-white/40 uppercase tracking-widest">CODE CHANGES</h2>
+                          )}
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className={`h-6 w-6 hover:bg-white/5 text-white/60 ${codeDiffSidebarCollapsed ? 'mx-auto' : ''}`}
+                            onClick={() => setCodeDiffSidebarCollapsed(!codeDiffSidebarCollapsed)}
+                          >
+                            {codeDiffSidebarCollapsed ? (
+                              <ChevronLeft className="h-3.5 w-3.5" />
+                            ) : (
+                              <ChevronRight className="h-3.5 w-3.5" />
+                            )}
+                          </Button>
+                        </div>
+                        <div className="flex-1 overflow-hidden">
+                          {!codeDiffSidebarCollapsed && (
+                            <CodeDiffSidebar
+                              activities={currentActivities}
+                              repoUrl={selectedSession ? `https://github.com/${selectedSession.sourceId}` : undefined}
+                            />
+                          )}
+                        </div>
+                      </aside>
+                    </>
+                  )}
+                </div>
+              </ResizablePanel>
+            </ResizablePanelGroup>
           </ResizablePanel>
 
-          {!keeperSidebarCollapsed && (
+          {/* Bottom Panel: Logs */}
+          {isLogPanelOpen && (
             <>
               <ResizableHandle withHandle />
-              <ResizablePanel defaultSize={40} minSize={30} maxSize={90} className="min-w-[320px]">
-                 <SessionKeeper isSidebar={true} onClose={() => setKeeperSidebarCollapsed(true)} />
+              <ResizablePanel defaultSize={30} minSize={10} maxSize={50}>
+                <SessionKeeperLogPanel onClose={() => setIsLogPanelOpen(false)} />
               </ResizablePanel>
             </>
           )}
+
         </ResizablePanelGroup>
       </div>
 
