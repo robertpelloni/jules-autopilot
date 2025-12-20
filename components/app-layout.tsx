@@ -261,9 +261,6 @@ export function AppLayout() {
               }
             />
 
-            {/* Session Keeper Settings (Moved to header, removed Sidebar toggle) */}
-            <SessionKeeperSettings />
-
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
                 <Button variant="ghost" size="icon" className="h-8 w-8 hover:bg-white/5 text-white/60">
@@ -429,7 +426,7 @@ export function AppLayout() {
                 className="h-px w-full bg-white/10" 
                 data-panel-group-direction="vertical"
               />
-              <ResizablePanel defaultSize={35} minSize={10}>
+              <ResizablePanel defaultSize={30} minSize={10} maxSize={40}>
                 <SessionKeeperLogPanel onClose={() => setIsLogPanelOpen(false)} />
               </ResizablePanel>
             </>
