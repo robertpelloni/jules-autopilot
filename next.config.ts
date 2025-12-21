@@ -2,7 +2,7 @@ import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
   /* config options here */
-  // @ts-ignore - eslint property is missing in NextConfig type but valid
+  // @ts-expect-error - eslint property is missing in NextConfig type but valid
   eslint: {
     // Warning: This allows production builds to successfully complete even if
     // your project has ESLint errors.
