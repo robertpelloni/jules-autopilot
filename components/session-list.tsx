@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, useCallback } from "react";
+import { useEffect, useState, useCallback, useMemo } from "react";
 import { useJules } from "@/lib/jules/provider";
 import type { Session } from "@/types/jules";
 import { Badge } from "@/components/ui/badge";
@@ -38,6 +38,11 @@ export function SessionList({
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState("");
+  const [archivedSessionIds, setArchivedSessionIds] = useState<Set<string>>(new Set());
+
+  useEffect(() => {
+    setArchivedSessionIds(getArchivedSessions());
+  }, []);
 
   const formatDate = (dateString: string) => {
     if (!dateString) return "Unknown date";
@@ -109,6 +114,19 @@ export function SessionList({
     return parts[parts.length - 1] || sourceId;
   };
 
+  // Filter out archived sessions and apply search
+  const visibleSessions = useMemo(() => {
+    return sessions
+      .filter((session) => !archivedSessionIds.has(session.id))
+      .filter((session) => {
+        if (!searchQuery) return true;
+        const query = searchQuery.toLowerCase();
+        const title = (session.title || "").toLowerCase();
+        const repo = (session.sourceId || "").toLowerCase();
+        return title.includes(query) || repo.includes(query);
+      });
+  }, [sessions, archivedSessionIds, searchQuery]);
+
   if (loading) {
     return (
       <div className="flex items-center justify-center p-6">
@@ -133,17 +151,7 @@ export function SessionList({
     );
   }
 
-  // Filter out archived sessions and apply search
-  const archivedSessions = getArchivedSessions();
-  const visibleSessions = sessions
-    .filter((session) => !archivedSessions.has(session.id))
-    .filter((session) => {
-      if (!searchQuery) return true;
-      const query = searchQuery.toLowerCase();
-      const title = (session.title || "").toLowerCase();
-      const repo = (session.sourceId || "").toLowerCase();
-      return title.includes(query) || repo.includes(query);
-    });
+
 
   if (visibleSessions.length === 0) {
     return (
