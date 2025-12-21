@@ -14,8 +14,15 @@ import {
 } from "@/components/ui/kanban";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { formatDistanceToNow, parseISO, isValid } from "date-fns";
-import { ExternalLink, GitBranch, Clock, RefreshCw } from "lucide-react";
+import { ExternalLink, GitBranch, Clock, RefreshCw, Filter } from "lucide-react";
 import { getArchivedSessions } from "@/lib/archive";
 
 interface SessionKanbanItem extends KanbanItemProps {
@@ -39,6 +46,7 @@ export function KanbanBoard({ onSelectSession }: KanbanBoardProps) {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [archivedSessionIds, setArchivedSessionIds] = useState<Set<string>>(new Set());
+  const [selectedRepo, setSelectedRepo] = useState<string>("all");
 
   useEffect(() => {
     setArchivedSessionIds(getArchivedSessions());
@@ -72,18 +80,34 @@ export function KanbanBoard({ onSelectSession }: KanbanBoardProps) {
     loadSessions();
   }, [loadSessions]);
 
+  const availableRepos = useMemo(() => {
+    const repos = new Set<string>();
+    sessions.forEach(session => {
+      if (session.sourceId && !archivedSessionIds.has(session.id)) {
+        repos.add(session.sourceId);
+      }
+    });
+    return Array.from(repos).sort();
+  }, [sessions, archivedSessionIds]);
+
   const kanbanData = useMemo(() => {
     const validColumnIds = new Set(COLUMNS.map(col => col.id));
     
     return sessions
-      .filter((session) => !archivedSessionIds.has(session.id) && validColumnIds.has(session.status))
+      .filter((session) => {
+        const isNotArchived = !archivedSessionIds.has(session.id);
+        const isValidColumn = validColumnIds.has(session.status);
+        const matchesRepo = selectedRepo === "all" || session.sourceId === selectedRepo;
+        
+        return isNotArchived && isValidColumn && matchesRepo;
+      })
       .map((session) => ({
         id: session.id,
         name: session.title || "Untitled",
         column: session.status,
         session: session,
       })) as SessionKanbanItem[];
-  }, [sessions, archivedSessionIds]);
+  }, [sessions, archivedSessionIds, selectedRepo]);
 
   const columnCounts = useMemo(() => {
     const counts: Record<string, number> = {};
@@ -152,16 +176,41 @@ export function KanbanBoard({ onSelectSession }: KanbanBoardProps) {
           </div>
           <p className="text-[10px] text-white/40 uppercase tracking-wider mt-0.5">Manage session lifecycle (Status updates are local-only)</p>
         </div>
-        <Button 
-          variant="ghost" 
-          size="sm" 
-          onClick={loadSessions} 
-          className="h-8 text-[10px] font-mono uppercase tracking-widest text-white/60 hover:text-white hover:bg-white/5 border border-white/10"
-          aria-label="Refresh sessions"
-        >
-          <RefreshCw className="mr-2 h-3 w-3" />
-          Refresh
-        </Button>
+        <div className="flex items-center gap-2">
+          {availableRepos.length > 0 && (
+            <Select value={selectedRepo} onValueChange={setSelectedRepo}>
+              <SelectTrigger 
+                className="h-8 min-w-[180px] bg-black border-white/10 text-white/80 text-[10px] font-mono uppercase tracking-widest hover:bg-white/5 focus:ring-white/10"
+                aria-label="Filter by repository"
+              >
+                <div className="flex items-center gap-2 truncate">
+                  <Filter className="h-3 w-3 opacity-50" />
+                  <SelectValue placeholder="All Repositories" />
+                </div>
+              </SelectTrigger>
+              <SelectContent className="bg-zinc-950 border-white/10 text-white">
+                <SelectItem value="all" className="text-[10px] font-mono uppercase tracking-wider focus:bg-white/10 focus:text-white">
+                  All Repositories
+                </SelectItem>
+                {availableRepos.map((repo) => (
+                  <SelectItem key={repo} value={repo} className="text-[10px] font-mono uppercase tracking-wider focus:bg-white/10 focus:text-white">
+                    {repo}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          )}
+          <Button 
+            variant="ghost" 
+            size="sm" 
+            onClick={loadSessions} 
+            className="h-8 text-[10px] font-mono uppercase tracking-widest text-white/60 hover:text-white hover:bg-white/5 border border-white/10"
+            aria-label="Refresh sessions"
+          >
+            <RefreshCw className="mr-2 h-3 w-3" />
+            Refresh
+          </Button>
+        </div>
       </header>
 
       <div className="flex-1 overflow-hidden p-6">
