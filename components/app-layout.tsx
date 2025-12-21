@@ -10,6 +10,7 @@ import { CodeDiffSidebar } from "./code-diff-sidebar";
 import { AnalyticsDashboard } from "./analytics-dashboard";
 import { NewSessionDialog } from "./new-session-dialog";
 import { TemplatesPage } from "./templates-page";
+import { KanbanBoard } from "./kanban-board";
 import { Button } from "@/components/ui/button";
 import {
   Sheet,
@@ -36,6 +37,7 @@ import {
   Terminal as TerminalIcon,
   LayoutTemplate,
   Plus,
+  Kanban,
 } from "lucide-react";
 import { TerminalPanel } from "./terminal-panel";
 import { useTerminalAvailable } from "@/hooks/use-terminal-available";
@@ -44,9 +46,9 @@ export function AppLayout() {
   const { clearApiKey } = useJules();
   const { isAvailable: terminalAvailable } = useTerminalAvailable();
   const [selectedSession, setSelectedSession] = useState<Session | null>(null);
-  const [view, setView] = useState<"sessions" | "analytics" | "templates">(
-    "sessions",
-  );
+  const [view, setView] = useState<"sessions" | "analytics" | "templates" | "kanban">(
+    "kanban",
+  ); // Set Kanban as default view as it's the "Control Tower"
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [refreshKey, setRefreshKey] = useState(0);
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
@@ -190,6 +192,18 @@ export function AppLayout() {
             <Button
               variant="ghost"
               size="sm"
+              className={`h-8 px-3 hover:bg-white/5 ${view === "kanban" ? "text-white" : "text-white/60"}`}
+              onClick={() => setView("kanban")}
+            >
+              <Kanban className="h-3.5 w-3.5 mr-1.5" />
+              <span className="text-[10px] font-mono uppercase tracking-wider">
+                Board
+              </span>
+            </Button>
+
+            <Button
+              variant="ghost"
+              size="sm"
               className={`h-8 px-3 hover:bg-white/5 ${view === "sessions" ? "text-white" : "text-white/60"}`}
               onClick={() => setView("sessions")}
             >
@@ -288,45 +302,47 @@ export function AppLayout() {
 
       {/* Main Content */}
       <div className="flex flex-1 overflow-hidden">
-        {/* Desktop Sidebar */}
-        <aside
-          className={`hidden md:flex border-r border-white/[0.08] flex-col bg-zinc-950 transition-all duration-200 ${
-            sidebarCollapsed ? "md:w-12" : "md:w-64"
-          }`}
-        >
-          <div className="px-3 py-2 border-b border-white/[0.08] flex items-center justify-between">
-            {!sidebarCollapsed && (
-              <h2 className="text-[10px] font-bold text-white/40 uppercase tracking-widest">
-                SESSIONS
-              </h2>
-            )}
-            <Button
-              variant="ghost"
-              size="icon"
-              className={`h-6 w-6 hover:bg-white/5 text-white/60 ${sidebarCollapsed ? "mx-auto" : ""}`}
-              onClick={() => setSidebarCollapsed(!sidebarCollapsed)}
-              aria-label={
-                sidebarCollapsed ? "Expand sidebar" : "Collapse sidebar"
-              }
-              aria-expanded={!sidebarCollapsed}
-            >
-              {sidebarCollapsed ? (
-                <ChevronRight className="h-3.5 w-3.5" />
-              ) : (
-                <ChevronLeft className="h-3.5 w-3.5" />
+        {/* Desktop Sidebar - Hide in Kanban view */}
+        {view !== "kanban" && (
+          <aside
+            className={`hidden md:flex border-r border-white/[0.08] flex-col bg-zinc-950 transition-all duration-200 ${
+              sidebarCollapsed ? "md:w-12" : "md:w-64"
+            }`}
+          >
+            <div className="px-3 py-2 border-b border-white/[0.08] flex items-center justify-between">
+              {!sidebarCollapsed && (
+                <h2 className="text-[10px] font-bold text-white/40 uppercase tracking-widest">
+                  SESSIONS
+                </h2>
               )}
-            </Button>
-          </div>
-          <div className="flex-1 overflow-hidden">
-            {!sidebarCollapsed && (
-              <SessionList
-                key={refreshKey}
-                onSelectSession={handleSessionSelect}
-                selectedSessionId={selectedSession?.id}
-              />
-            )}
-          </div>
-        </aside>
+              <Button
+                variant="ghost"
+                size="icon"
+                className={`h-6 w-6 hover:bg-white/5 text-white/60 ${sidebarCollapsed ? "mx-auto" : ""}`}
+                onClick={() => setSidebarCollapsed(!sidebarCollapsed)}
+                aria-label={
+                  sidebarCollapsed ? "Expand sidebar" : "Collapse sidebar"
+                }
+                aria-expanded={!sidebarCollapsed}
+              >
+                {sidebarCollapsed ? (
+                  <ChevronRight className="h-3.5 w-3.5" />
+                ) : (
+                  <ChevronLeft className="h-3.5 w-3.5" />
+                )}
+              </Button>
+            </div>
+            <div className="flex-1 overflow-hidden">
+              {!sidebarCollapsed && (
+                <SessionList
+                  key={refreshKey}
+                  onSelectSession={handleSessionSelect}
+                  selectedSessionId={selectedSession?.id}
+                />
+              )}
+            </div>
+          </aside>
+        )}
 
         {/* Main Panel */}
         <main className="flex-1 overflow-hidden bg-black flex flex-col">
@@ -339,7 +355,9 @@ export function AppLayout() {
               transition={{ duration: 0.15, ease: "easeOut" }}
               className="flex-1 overflow-hidden flex flex-col"
             >
-              {view === "analytics" ? (
+              {view === "kanban" ? (
+                <KanbanBoard onSelectSession={handleSessionSelect} />
+              ) : view === "analytics" ? (
                 <AnalyticsDashboard />
               ) : view === "templates" ? (
                 <TemplatesPage
