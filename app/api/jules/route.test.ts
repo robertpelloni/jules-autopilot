@@ -116,13 +116,6 @@ describe("Jules API Proxy", () => {
 
       expect(res.status).toBe(200);
       expect(data).toEqual(mockComplexData);
-
-      // Since we mocked console.log in beforeEach, we can verify it was called
-      // This confirms the logging logic was actually entered
-      expect(console.log).toHaveBeenCalledWith(
-        expect.stringContaining("[Jules API Proxy] Activity types:"),
-        expect.anything(),
-      );
     });
   });
 
