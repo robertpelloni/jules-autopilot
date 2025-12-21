@@ -315,8 +315,8 @@ export function AppLayout() {
 
       {/* Main Content */}
       <div className="flex flex-1 overflow-hidden">
-        {/* Desktop Sidebar - Hide in Kanban view */}
-        {view !== "kanban" && (
+        {/* Desktop Sidebar - Hide in Kanban and Analytics views */}
+        {view !== "kanban" && view !== "analytics" && (
           <aside
             className={`hidden md:flex border-r border-white/[0.08] flex-col bg-zinc-950 transition-all duration-200 ${
               sidebarCollapsed ? "md:w-12" : "md:w-64"
