@@ -41,15 +41,33 @@ import {
 } from "lucide-react";
 import { TerminalPanel } from "./terminal-panel";
 import { useTerminalAvailable } from "@/hooks/use-terminal-available";
+import { ApiKeySetupForm } from "./api-key-setup";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 
-export function AppLayout() {
-  const { clearApiKey } = useJules();
+interface AppLayoutProps {
+  initialView?: "sessions" | "analytics" | "templates" | "kanban";
+}
+
+export function AppLayout({ initialView }: AppLayoutProps) {
+  const { apiKey, clearApiKey } = useJules();
   const { isAvailable: terminalAvailable } = useTerminalAvailable();
   const [selectedSession, setSelectedSession] = useState<Session | null>(null);
-  const [view, setView] = useState<"sessions" | "analytics" | "templates" | "kanban">(() => {
+  const [view, setView] = useState<
+    "sessions" | "analytics" | "templates" | "kanban"
+  >(() => {
+    if (initialView) return initialView;
     if (typeof window !== "undefined") {
       const savedView = localStorage.getItem("jules-current-view");
-      if (savedView && ["sessions", "analytics", "templates", "kanban"].includes(savedView)) {
+      if (
+        savedView &&
+        ["sessions", "analytics", "templates", "kanban"].includes(savedView)
+      ) {
         return savedView as "sessions" | "analytics" | "templates" | "kanban";
       }
     }
@@ -64,6 +82,7 @@ export function AppLayout() {
   const [currentActivities, setCurrentActivities] = useState<Activity[]>([]);
   const [codeSidebarWidth, setCodeSidebarWidth] = useState(600);
   const [isResizing, setIsResizing] = useState(false);
+  const [isApiKeyDialogOpen, setIsApiKeyDialogOpen] = useState(false);
   const [terminalOpen, setTerminalOpen] = useState(() => {
     if (typeof window !== "undefined") {
       return localStorage.getItem("terminal-open") === "true";
@@ -147,6 +166,10 @@ export function AppLayout() {
   }, []);
 
   const handleStartSessionFromTemplate = (template: SessionTemplate) => {
+    if (!apiKey) {
+      setIsApiKeyDialogOpen(true);
+      return;
+    }
     setNewSessionInitialValues({
       prompt: template.prompt,
       title: template.title,
@@ -155,12 +178,32 @@ export function AppLayout() {
   };
 
   const handleOpenNewSession = () => {
+    if (!apiKey) {
+      setIsApiKeyDialogOpen(true);
+      return;
+    }
     setNewSessionInitialValues(undefined);
     setIsNewSessionOpen(true);
   };
 
+  const handleApiKeySuccess = () => {
+    setIsApiKeyDialogOpen(false);
+    // User probably wants to try again after setting API key
+  };
+
   return (
     <div className="flex h-screen flex-col bg-black">
+      <Dialog open={isApiKeyDialogOpen} onOpenChange={setIsApiKeyDialogOpen}>
+        <DialogContent className="sm:max-w-md bg-zinc-950 border-white/10">
+          <DialogHeader>
+            <DialogTitle className="text-white">API Key Required</DialogTitle>
+            <DialogDescription className="text-white/40">
+              Enter your Jules API key to start a session.
+            </DialogDescription>
+          </DialogHeader>
+          <ApiKeySetupForm onSuccess={handleApiKeySuccess} />
+        </DialogContent>
+      </Dialog>
       {/* Header */}
       <header className="border-b border-white/[0.08] bg-zinc-950/95 backdrop-blur-sm">
         <div className="flex h-14 items-center justify-between px-2 sm:px-4">
@@ -315,10 +358,10 @@ export function AppLayout() {
 
       {/* Main Content */}
       <div className="flex flex-1 overflow-hidden">
-        {/* Desktop Sidebar - Hide in Kanban and Analytics views */}
-        {view !== "kanban" && view !== "analytics" && (
+        {/* Desktop Sidebar - Hide in Kanban, Analytics, and Templates views */}
+        {view !== "kanban" && view !== "analytics" && view !== "templates" && (
           <aside
-            className={`hidden md:flex border-r border-white/[0.08] flex-col bg-zinc-950 transition-all duration-200 ${
+            className={`hidden md:flex border-r border-white/[0.08] flex-col bg-zinc-950 transition-all duration-200 \${
               sidebarCollapsed ? "md:w-12" : "md:w-64"
             }`}
           >

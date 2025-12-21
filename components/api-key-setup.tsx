@@ -13,7 +13,11 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 
-export function ApiKeySetup() {
+interface ApiKeySetupFormProps {
+  onSuccess?: () => void;
+}
+
+export function ApiKeySetupForm({ onSuccess }: ApiKeySetupFormProps) {
   const { setApiKey } = useJules();
   const [key, setKey] = useState("");
   const [isSaving, setIsSaving] = useState(false);
@@ -25,10 +29,71 @@ export function ApiKeySetup() {
       // Simulate a small delay for the animation to be perceived
       await new Promise((resolve) => setTimeout(resolve, 600));
       setApiKey(key.trim());
-      // No need to set isSaving(false) as the component will likely unmount or redirect
+      onSuccess?.();
     }
   };
 
+  return (
+    <form onSubmit={handleSubmit} className="space-y-4">
+      <div className="space-y-2">
+        <label
+          htmlFor="api-key"
+          className="text-xs font-bold uppercase tracking-widest text-white/40"
+        >
+          API Key <span className="text-red-500">*</span>
+        </label>
+        <Input
+          id="api-key"
+          type="password"
+          placeholder="Your Jules API key"
+          value={key}
+          onChange={(e) => setKey(e.target.value)}
+          className="w-full bg-black/50 border-white/10"
+          required
+        />
+        <p className="text-[10px] text-muted-foreground font-mono">
+          e.g., sk-xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
+        </p>
+        <p className="text-xs text-muted-foreground">
+          Your API key is stored locally in your browser and never sent to any
+          server except Jules API.
+        </p>
+      </div>
+      <Button
+        type="submit"
+        className="w-full relative overflow-hidden font-mono uppercase tracking-widest text-xs"
+        disabled={!key.trim() || isSaving}
+      >
+        <AnimatePresence mode="wait" initial={false}>
+          {isSaving ? (
+            <motion.span
+              key="saving"
+              initial={{ opacity: 0, y: 10 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -10 }}
+              transition={{ duration: 0.2 }}
+              className="flex items-center gap-2"
+            >
+              Saving...
+            </motion.span>
+          ) : (
+            <motion.span
+              key="save"
+              initial={{ opacity: 0, y: -10 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: 10 }}
+              transition={{ duration: 0.2 }}
+            >
+              Save your key
+            </motion.span>
+          )}
+        </AnimatePresence>
+      </Button>
+    </form>
+  );
+}
+
+export function ApiKeySetup() {
   return (
     <div className="flex min-h-screen items-center justify-center p-2 sm:p-4 bg-muted/30">
       <Card className="w-full max-w-md">
@@ -48,62 +113,7 @@ export function ApiKeySetup() {
           </CardDescription>
         </CardHeader>
         <CardContent>
-          <form onSubmit={handleSubmit} className="space-y-4">
-            <div className="space-y-2">
-              <label
-                htmlFor="api-key"
-                className="text-xs font-bold uppercase tracking-widest text-white/40"
-              >
-                API Key <span className="text-red-500">*</span>
-              </label>
-              <Input
-                id="api-key"
-                type="password"
-                placeholder="Your Jules API key"
-                value={key}
-                onChange={(e) => setKey(e.target.value)}
-                className="w-full bg-black/50 border-white/10"
-                required
-              />
-              <p className="text-[10px] text-muted-foreground font-mono">
-                e.g., sk-xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
-              </p>
-              <p className="text-xs text-muted-foreground">
-                Your API key is stored locally in your browser and never sent to
-                any server except Jules API.
-              </p>
-            </div>
-            <Button
-              type="submit"
-              className="w-full relative overflow-hidden font-mono uppercase tracking-widest text-xs"
-              disabled={!key.trim() || isSaving}
-            >
-              <AnimatePresence mode="wait" initial={false}>
-                {isSaving ? (
-                  <motion.span
-                    key="saving"
-                    initial={{ opacity: 0, y: 10 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    exit={{ opacity: 0, y: -10 }}
-                    transition={{ duration: 0.2 }}
-                    className="flex items-center gap-2"
-                  >
-                    Saving...
-                  </motion.span>
-                ) : (
-                  <motion.span
-                    key="save"
-                    initial={{ opacity: 0, y: -10 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    exit={{ opacity: 0, y: 10 }}
-                    transition={{ duration: 0.2 }}
-                  >
-                    Save your key
-                  </motion.span>
-                )}
-              </AnimatePresence>
-            </Button>
-          </form>
+          <ApiKeySetupForm />
 
           <div className="mt-6 rounded-lg bg-muted p-4 text-sm">
             <h4 className="font-semibold mb-2">Getting Started</h4>

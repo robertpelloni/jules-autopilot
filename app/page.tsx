@@ -1,11 +1,10 @@
 "use client";
 
 import { useJules } from "@/lib/jules/provider";
-import { ApiKeySetup } from "@/components/api-key-setup";
 import { AppLayout } from "@/components/app-layout";
 
 export default function Home() {
-  const { apiKey, isLoading } = useJules();
+  const { isLoading } = useJules();
 
   if (isLoading) {
     return (
@@ -15,10 +14,6 @@ export default function Home() {
         </p>
       </div>
     );
-  }
-
-  if (!apiKey) {
-    return <ApiKeySetup />;
   }
 
   return <AppLayout />;

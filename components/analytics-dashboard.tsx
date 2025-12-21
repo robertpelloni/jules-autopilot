@@ -58,7 +58,11 @@ export function AnalyticsDashboard() {
   const [dateRange, setDateRange] = useState("30");
 
   const fetchData = useCallback(async () => {
-    if (!client) return;
+    if (!client) {
+      setLoading(false);
+      setLoadingActivities(false);
+      return;
+    }
 
     try {
       setLoadingActivities(true);
