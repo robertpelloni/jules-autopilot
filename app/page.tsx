@@ -1,5 +1,6 @@
 "use client";
 
+import { Suspense } from "react";
 import { useJules } from "@/lib/jules/provider";
 import { AppLayout } from "@/components/app-layout";
 
@@ -16,5 +17,9 @@ export default function Home() {
     );
   }
 
-  return <AppLayout />;
+  return (
+    <Suspense fallback={<div>Loading...</div>}>
+      <AppLayout />
+    </Suspense>
+  );
 }
