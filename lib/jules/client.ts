@@ -342,12 +342,12 @@ export class JulesClient {
     });
   }
 
-  async resumeSession(sessionId: string): Promise<void> {
+  async resumeSession(sessionId: string, message?: string): Promise<void> {
     // No direct 'resume' endpoint found in SDK, using createActivity to wake it up.
     // This is a common pattern for resuming paused/completed sessions in agentic workflows.
     await this.createActivity({
       sessionId,
-      content: 'Please resume working on this task.',
+      content: message || 'Please resume working on this task.',
       type: 'message'
     });
   }
