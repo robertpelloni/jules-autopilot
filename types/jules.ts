@@ -1,7 +1,7 @@
 export interface Source {
   id: string;
   name: string;
-  type: 'github';
+  type: "github";
   metadata?: Record<string, unknown>;
 }
 
@@ -21,8 +21,8 @@ export interface Session {
 export interface Activity {
   id: string;
   sessionId: string;
-  type: 'message' | 'plan' | 'progress' | 'result' | 'error';
-  role: 'user' | 'agent';
+  type: "message" | "plan" | "progress" | "result" | "error";
+  role: "user" | "agent";
   content: string;
   diff?: string; // Unified diff patch from artifacts
   bashOutput?: string; // Bash command output from artifacts
@@ -41,7 +41,7 @@ export interface CreateSessionRequest {
 export interface CreateActivityRequest {
   sessionId: string;
   content: string;
-  type?: 'message';
+  type?: "message";
 }
 
 export interface SessionTemplate {

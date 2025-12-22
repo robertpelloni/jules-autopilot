@@ -1,9 +1,9 @@
-'use client';
+"use client";
 
-import { useState, useEffect, useCallback } from 'react';
-import { useJules } from '@/lib/jules/provider';
-import type { Source, SessionTemplate } from '@/types/jules';
-import { getTemplates } from '@/lib/templates';
+import { useState, useEffect, useCallback } from "react";
+import { useJules } from "@/lib/jules/provider";
+import type { Source, SessionTemplate } from "@/types/jules";
+import { getTemplates } from "@/lib/templates";
 import {
   Dialog,
   DialogContent,
@@ -35,7 +35,13 @@ interface NewSessionDialogProps {
   onOpenChange?: (open: boolean) => void;
 }
 
-export function NewSessionDialog({ onSessionCreated, initialValues, trigger, open: controlledOpen, onOpenChange: setControlledOpen }: NewSessionDialogProps) {
+export function NewSessionDialog({
+  onSessionCreated,
+  initialValues,
+  trigger,
+  open: controlledOpen,
+  onOpenChange: setControlledOpen,
+}: NewSessionDialogProps) {
   const { client } = useJules();
   const [internalOpen, setInternalOpen] = useState(false);
   const isControlled = controlledOpen !== undefined;
@@ -43,19 +49,21 @@ export function NewSessionDialog({ onSessionCreated, initialValues, trigger, ope
   const setOpen = isControlled ? setControlledOpen! : setInternalOpen;
 
   const [saveTemplateOpen, setSaveTemplateOpen] = useState(false);
-  const [templateCreateValues, setTemplateCreateValues] = useState<Partial<SessionTemplate> | undefined>(undefined);
-  
+  const [templateCreateValues, setTemplateCreateValues] = useState<
+    Partial<SessionTemplate> | undefined
+  >(undefined);
+
   const [sources, setSources] = useState<Source[]>([]);
   const [templates, setTemplates] = useState<SessionTemplate[]>([]);
-  const [selectedTemplateId, setSelectedTemplateId] = useState<string>('');
-  
+  const [selectedTemplateId, setSelectedTemplateId] = useState<string>("");
+
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [formData, setFormData] = useState({
-    sourceId: '',
-    title: '',
-    prompt: '',
-    startingBranch: '',
+    sourceId: "",
+    title: "",
+    prompt: "",
+    startingBranch: "",
     autoCreatePr: false,
   });
 
@@ -67,16 +75,24 @@ export function NewSessionDialog({ onSessionCreated, initialValues, trigger, ope
       const data = await client.listSources();
       setSources(data);
       if (data.length > 0) {
-        setFormData((prev) => ({ ...prev, sourceId: prev.sourceId || data[0].id }));
+        setFormData((prev) => ({
+          ...prev,
+          sourceId: prev.sourceId || data[0].id,
+        }));
       } else if (data.length === 0) {
-        setError('No repositories found. Please connect a GitHub repository in the Jules web app first.');
+        setError(
+          "No repositories found. Please connect a GitHub repository in the Jules web app first.",
+        );
       }
     } catch (err) {
-      console.error('Failed to load sources:', err);
-      if (err instanceof Error && err.message.includes('Resource not found')) {
-        setError('Unable to load repositories. Please ensure you have connected at least one GitHub repository in the Jules web app.');
+      console.error("Failed to load sources:", err);
+      if (err instanceof Error && err.message.includes("Resource not found")) {
+        setError(
+          "Unable to load repositories. Please ensure you have connected at least one GitHub repository in the Jules web app.",
+        );
       } else {
-        const errorMessage = err instanceof Error ? err.message : 'Failed to load repositories';
+        const errorMessage =
+          err instanceof Error ? err.message : "Failed to load repositories";
         setError(errorMessage);
       }
     }
@@ -89,7 +105,7 @@ export function NewSessionDialog({ onSessionCreated, initialValues, trigger, ope
   useEffect(() => {
     if (open) {
       if (initialValues) {
-        setFormData(prev => ({
+        setFormData((prev) => ({
           ...prev,
           sourceId: initialValues.sourceId || prev.sourceId,
           title: initialValues.title || prev.title,
@@ -97,7 +113,7 @@ export function NewSessionDialog({ onSessionCreated, initialValues, trigger, ope
           startingBranch: initialValues.startingBranch || prev.startingBranch,
         }));
       }
-      
+
       if (client) {
         loadSources();
       }
@@ -120,13 +136,20 @@ export function NewSessionDialog({ onSessionCreated, initialValues, trigger, ope
         autoCreatePr: formData.autoCreatePr,
       });
       setOpen(false);
-      setFormData({ sourceId: '', title: '', prompt: '', startingBranch: '', autoCreatePr: false });
-      setSelectedTemplateId('');
+      setFormData({
+        sourceId: "",
+        title: "",
+        prompt: "",
+        startingBranch: "",
+        autoCreatePr: false,
+      });
+      setSelectedTemplateId("");
       setError(null);
       onSessionCreated?.();
     } catch (err) {
-      console.error('Failed to create session:', err);
-      const errorMessage = err instanceof Error ? err.message : 'Failed to create session';
+      console.error("Failed to create session:", err);
+      const errorMessage =
+        err instanceof Error ? err.message : "Failed to create session";
       setError(errorMessage);
     } finally {
       setLoading(false);
@@ -135,12 +158,12 @@ export function NewSessionDialog({ onSessionCreated, initialValues, trigger, ope
 
   const handleTemplateSelect = (templateId: string) => {
     setSelectedTemplateId(templateId);
-    const template = templates.find(t => t.id === templateId);
+    const template = templates.find((t) => t.id === templateId);
     if (template) {
-      setFormData(prev => ({
+      setFormData((prev) => ({
         ...prev,
         title: template.title || prev.title,
-        prompt: template.prompt
+        prompt: template.prompt,
       }));
     }
   };
@@ -148,7 +171,7 @@ export function NewSessionDialog({ onSessionCreated, initialValues, trigger, ope
   const openSaveTemplate = () => {
     setTemplateCreateValues({
       prompt: formData.prompt,
-      title: formData.title
+      title: formData.title,
     });
     setSaveTemplateOpen(true);
   };
@@ -159,8 +182,8 @@ export function NewSessionDialog({ onSessionCreated, initialValues, trigger, ope
 
   return (
     <>
-      <TemplateFormDialog 
-        open={saveTemplateOpen} 
+      <TemplateFormDialog
+        open={saveTemplateOpen}
         onOpenChange={setSaveTemplateOpen}
         initialValues={templateCreateValues}
         onSave={onTemplateSaved}
@@ -170,7 +193,7 @@ export function NewSessionDialog({ onSessionCreated, initialValues, trigger, ope
           {trigger ? (
             trigger
           ) : (
-            <Button className="w-full sm:w-auto h-8 text-[10px] font-mono uppercase tracking-widest bg-purple-600 hover:bg-purple-500 text-white border-0">
+            <Button className="w-full sm:w-auto h-8 text-[10px] font-mono uppercase tracking-widest border-0">
               <Plus className="h-3.5 w-3.5 mr-1.5" />
               New Session
             </Button>
@@ -180,7 +203,8 @@ export function NewSessionDialog({ onSessionCreated, initialValues, trigger, ope
           <DialogHeader>
             <DialogTitle className="text-base">Create New Session</DialogTitle>
             <DialogDescription className="text-xs">
-              Start a new Jules session by selecting a source and providing instructions.
+              Start a new Jules session by selecting a source and providing
+              instructions.
             </DialogDescription>
           </DialogHeader>
           <form onSubmit={handleSubmit} className="space-y-3">
@@ -225,7 +249,16 @@ export function NewSessionDialog({ onSessionCreated, initialValues, trigger, ope
             )}
 
             <div className="space-y-1.5">
-              <Label htmlFor="source" className="text-xs font-semibold">Source Repository</Label>
+              <div className="flex justify-between items-center">
+                <Label htmlFor="source" className="text-xs font-semibold">
+                  Source Repository <span className="text-red-500">*</span>
+                </Label>
+                {!formData.sourceId && (
+                  <span className="text-[10px] text-muted-foreground italic">
+                    Required
+                  </span>
+                )}
+              </div>
               <Combobox
                 id="source"
                 options={sources.map((source) => ({
@@ -236,14 +269,18 @@ export function NewSessionDialog({ onSessionCreated, initialValues, trigger, ope
                 onValueChange={(value) =>
                   setFormData((prev) => ({ ...prev, sourceId: value }))
                 }
-                placeholder={sources.length === 0 ? "No repositories available" : "Select a repository"}
+                placeholder={
+                  sources.length === 0
+                    ? "No repositories available"
+                    : "Select a repository"
+                }
                 searchPlaceholder="Search repositories..."
                 emptyMessage="No repositories found."
                 className={`text-xs ${sources.length === 0 ? "opacity-50 cursor-not-allowed" : ""}`}
               />
               {sources.length === 0 && !error && (
                 <p className="text-[10px] text-muted-foreground leading-relaxed">
-                  Connect a repository at{' '}
+                  Connect a repository at{" "}
                   <a
                     href="https://jules.google.com"
                     target="_blank"
@@ -257,20 +294,30 @@ export function NewSessionDialog({ onSessionCreated, initialValues, trigger, ope
             </div>
 
             <div className="space-y-1.5">
-              <Label htmlFor="branch" className="text-xs font-semibold">Branch Name (Optional)</Label>
+              <Label htmlFor="branch" className="text-xs font-semibold">
+                Branch Name (Optional)
+              </Label>
               <Input
                 id="branch"
                 placeholder="main"
                 value={formData.startingBranch}
                 onChange={(e) =>
-                  setFormData((prev) => ({ ...prev, startingBranch: e.target.value }))
+                  setFormData((prev) => ({
+                    ...prev,
+                    startingBranch: e.target.value,
+                  }))
                 }
                 className="h-9 text-xs"
               />
+              <p className="text-[10px] text-muted-foreground">
+                The branch Jules will start from.
+              </p>
             </div>
 
             <div className="space-y-1.5">
-              <Label htmlFor="title" className="text-xs font-semibold">Session Title (Optional)</Label>
+              <Label htmlFor="title" className="text-xs font-semibold">
+                Session Title (Optional)
+              </Label>
               <Input
                 id="title"
                 placeholder="e.g., Fix authentication bug"
@@ -284,7 +331,14 @@ export function NewSessionDialog({ onSessionCreated, initialValues, trigger, ope
 
             <div className="space-y-1.5">
               <div className="flex justify-between items-center">
-                <Label htmlFor="prompt" className="text-xs font-semibold">Instructions</Label>
+                <Label htmlFor="prompt" className="text-xs font-semibold">
+                  Instructions <span className="text-red-500">*</span>
+                </Label>
+                {!formData.prompt && (
+                  <span className="text-[10px] text-muted-foreground italic">
+                    Required
+                  </span>
+                )}
                 {formData.prompt && (
                   <Button
                     type="button"
@@ -317,7 +371,10 @@ export function NewSessionDialog({ onSessionCreated, initialValues, trigger, ope
                 className="h-3.5 w-3.5 rounded border-gray-300 text-purple-600 focus:ring-purple-500 bg-black/20 border-white/20"
                 checked={formData.autoCreatePr}
                 onChange={(e) =>
-                  setFormData((prev) => ({ ...prev, autoCreatePr: e.target.checked }))
+                  setFormData((prev) => ({
+                    ...prev,
+                    autoCreatePr: e.target.checked,
+                  }))
                 }
               />
               <label
@@ -335,17 +392,26 @@ export function NewSessionDialog({ onSessionCreated, initialValues, trigger, ope
             )}
 
             <div className="flex gap-2 justify-end pt-2">
-              <Button type="button" variant="outline" onClick={() => setOpen(false)} className="h-8 text-xs">
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => setOpen(false)}
+                className="h-8 text-[10px] font-mono uppercase tracking-widest"
+              >
                 Cancel
               </Button>
-              <Button type="submit" disabled={loading || !formData.sourceId || !formData.prompt} className="h-8 text-xs">
+              <Button
+                type="submit"
+                disabled={loading || !formData.sourceId || !formData.prompt}
+                className="h-8 text-[10px] font-mono uppercase tracking-widest"
+              >
                 {loading ? (
                   <>
                     <Loader2 className="mr-2 h-3.5 w-3.5 animate-spin" />
                     Creating...
                   </>
                 ) : (
-                  'Create Session'
+                  "Create Session"
                 )}
               </Button>
             </div>

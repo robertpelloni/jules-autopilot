@@ -1,5 +1,61 @@
-'use client';
+"use client";
 
+import { useState, useCallback, useEffect } from "react";
+import { motion, AnimatePresence } from "framer-motion";
+import { useJules } from "@/lib/jules/provider";
+import type { Session, Activity, SessionTemplate } from "@/types/jules";
+import { SessionList } from "./session-list";
+import { ActivityFeed } from "./activity-feed";
+import { CodeDiffSidebar } from "./code-diff-sidebar";
+import { AnalyticsDashboard } from "./analytics-dashboard";
+import { NewSessionDialog } from "./new-session-dialog";
+import { TemplatesPage } from "./templates-page";
+import { KanbanBoard } from "./kanban-board";
+import { Button } from "@/components/ui/button";
+import {
+  Sheet,
+  SheetContent,
+  SheetHeader,
+  SheetTitle,
+  SheetTrigger,
+} from "@/components/ui/sheet";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+  DropdownMenuSeparator,
+} from "@/components/ui/dropdown-menu";
+import {
+  Menu,
+  LogOut,
+  Settings,
+  BarChart3,
+  MessageSquare,
+  ChevronLeft,
+  ChevronRight,
+  Terminal as TerminalIcon,
+  LayoutTemplate,
+  Plus,
+  Kanban,
+} from "lucide-react";
+import { TerminalPanel } from "./terminal-panel";
+import { useTerminalAvailable } from "@/hooks/use-terminal-available";
+import { ApiKeySetupForm } from "./api-key-setup";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+
+interface AppLayoutProps {
+  initialView?: "sessions" | "analytics" | "templates" | "kanban";
+}
+
+export function AppLayout({ initialView }: AppLayoutProps) {
+  const { apiKey, clearApiKey } = useJules();
 import { useState, useCallback, useEffect } from 'react';
 import { useSearchParams, useRouter } from 'next/navigation';
 import { useJules } from '@/lib/jules/provider';
@@ -28,10 +84,26 @@ export function AppLayout() {
   const router = useRouter();
   const { isAvailable: terminalAvailable } = useTerminalAvailable();
   const [selectedSession, setSelectedSession] = useState<Session | null>(null);
-  const [view, setView] = useState<'sessions' | 'analytics' | 'templates'>('sessions');
+  const [view, setView] = useState<
+    "sessions" | "analytics" | "templates" | "kanban"
+  >(() => {
+    if (initialView) return initialView;
+    if (typeof window !== "undefined") {
+      const savedView = localStorage.getItem("jules-current-view");
+      if (
+        savedView &&
+        ["sessions", "analytics", "templates", "kanban"].includes(savedView)
+      ) {
+        return savedView as "sessions" | "analytics" | "templates" | "kanban";
+      }
+    }
+    return "sessions";
+  });
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [refreshKey, setRefreshKey] = useState(0);
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
+  const [codeDiffSidebarCollapsed, setCodeDiffSidebarCollapsed] =
+    useState(false);
   const [codeDiffSidebarCollapsed, setCodeDiffSidebarCollapsed] = useState(false);
   // Replaced keeperSidebarCollapsed with direct logs toggle state
   const [isLogPanelOpen, setIsLogPanelOpen] = useState(false);
@@ -39,21 +111,29 @@ export function AppLayout() {
   const [currentActivities, setCurrentActivities] = useState<Activity[]>([]);
   const [codeSidebarWidth, setCodeSidebarWidth] = useState(600);
   const [isResizing, setIsResizing] = useState(false);
+  const [isApiKeyDialogOpen, setIsApiKeyDialogOpen] = useState(false);
   const [terminalOpen, setTerminalOpen] = useState(() => {
-    if (typeof window !== 'undefined') {
-      return localStorage.getItem('terminal-open') === 'true';
+    if (typeof window !== "undefined") {
+      return localStorage.getItem("terminal-open") === "true";
     }
     return false;
   });
 
+  useEffect(() => {
+    localStorage.setItem("jules-current-view", view);
+  }, [view]);
+
   // State for New Session Dialog (Controlled)
   const [isNewSessionOpen, setIsNewSessionOpen] = useState(false);
-  const [newSessionInitialValues, setNewSessionInitialValues] = useState<{
-    sourceId?: string;
-    title?: string;
-    prompt?: string;
-    startingBranch?: string;
-  } | undefined>(undefined);
+  const [newSessionInitialValues, setNewSessionInitialValues] = useState<
+    | {
+        sourceId?: string;
+        title?: string;
+        prompt?: string;
+        startingBranch?: string;
+      }
+    | undefined
+  >(undefined);
 
   // Sync session selection with URL query param
   useEffect(() => {
@@ -91,21 +171,21 @@ export function AppLayout() {
         }
       }
     },
-    [isResizing]
+    [isResizing],
   );
 
   useEffect(() => {
-    window.addEventListener('mousemove', resize);
-    window.addEventListener('mouseup', stopResizing);
+    window.addEventListener("mousemove", resize);
+    window.addEventListener("mouseup", stopResizing);
     return () => {
-      window.removeEventListener('mousemove', resize);
-      window.removeEventListener('mouseup', stopResizing);
+      window.removeEventListener("mousemove", resize);
+      window.removeEventListener("mouseup", stopResizing);
     };
   }, [resize, stopResizing]);
 
   const handleSessionSelect = (session: Session) => {
     setSelectedSession(session);
-    setView('sessions');
+    setView("sessions");
     setMobileMenuOpen(false);
     // Update URL without refreshing
     const newParams = new URLSearchParams(searchParams.toString());
@@ -135,40 +215,76 @@ export function AppLayout() {
   const handleToggleTerminal = useCallback(() => {
     setTerminalOpen((prev) => {
       const newValue = !prev;
-      localStorage.setItem('terminal-open', String(newValue));
+      localStorage.setItem("terminal-open", String(newValue));
       return newValue;
     });
   }, []);
 
   const handleStartSessionFromTemplate = (template: SessionTemplate) => {
+    if (!apiKey) {
+      setIsApiKeyDialogOpen(true);
+      return;
+    }
     setNewSessionInitialValues({
       prompt: template.prompt,
-      title: template.title
+      title: template.title,
     });
     setIsNewSessionOpen(true);
   };
 
   const handleOpenNewSession = () => {
+    if (!apiKey) {
+      setIsApiKeyDialogOpen(true);
+      return;
+    }
     setNewSessionInitialValues(undefined);
     setIsNewSessionOpen(true);
   };
 
+  const handleApiKeySuccess = () => {
+    setIsApiKeyDialogOpen(false);
+    // User probably wants to try again after setting API key
+  };
+
   return (
+    <div className="flex h-screen flex-col bg-black">
+      <Dialog open={isApiKeyDialogOpen} onOpenChange={setIsApiKeyDialogOpen}>
+        <DialogContent className="sm:max-w-md bg-zinc-950 border-white/10">
+          <DialogHeader>
+            <DialogTitle className="text-white">API Key Required</DialogTitle>
+            <DialogDescription className="text-white/40">
+              Enter your Jules API key to start a session.
+            </DialogDescription>
+          </DialogHeader>
+          <ApiKeySetupForm onSuccess={handleApiKeySuccess} />
+        </DialogContent>
+      </Dialog>
     <div className="flex h-screen flex-col bg-black max-w-full overflow-hidden">
       <SessionKeeperManager />
       {/* Header */}
       <header className="border-b border-white/[0.08] bg-zinc-950/95 backdrop-blur-sm">
-        <div className="flex h-14 items-center justify-between px-4">
+        <div className="flex h-14 items-center justify-between px-2 sm:px-4">
           <div className="flex items-center gap-3">
             <Sheet open={mobileMenuOpen} onOpenChange={setMobileMenuOpen}>
               <SheetTrigger asChild>
-                <Button variant="ghost" size="icon" className="md:hidden h-8 w-8">
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="md:hidden h-8 w-8"
+                  aria-label="Toggle mobile menu"
+                  aria-expanded={mobileMenuOpen}
+                >
                   <Menu className="h-4 w-4" />
                 </Button>
               </SheetTrigger>
-              <SheetContent side="left" className="w-[280px] p-0 bg-zinc-950 border-white/[0.08]">
+              <SheetContent
+                side="left"
+                className="w-[280px] p-0 bg-zinc-950 border-white/[0.08]"
+              >
                 <SheetHeader className="border-b border-white/[0.08] px-3 py-2.5">
-                  <SheetTitle className="text-[10px] font-bold text-white/40 uppercase tracking-widest">SESSIONS</SheetTitle>
+                  <SheetTitle className="text-[10px] font-bold text-white/40 uppercase tracking-widest">
+                    SESSIONS
+                  </SheetTitle>
                 </SheetHeader>
                 <SessionList
                   key={refreshKey}
@@ -177,6 +293,9 @@ export function AppLayout() {
                 />
               </SheetContent>
             </Sheet>
+            <h1 className="text-sm font-bold tracking-tight text-white">
+              JULES
+            </h1>
             <h1 className="text-sm font-bold tracking-tight text-white">JULES</h1>
 
             {/* GitHub Repo Link */}
@@ -196,21 +315,40 @@ export function AppLayout() {
             <Button
               variant="ghost"
               size="sm"
-              className={`h-8 px-3 hover:bg-white/5 ${view === 'sessions' ? 'text-white' : 'text-white/60'}`}
-              onClick={() => setView('sessions')}
+              className={`h-8 px-3 hover:bg-white/5 ${view === "kanban" ? "text-white" : "text-white/60"}`}
+              onClick={() => setView("kanban")}
+              aria-pressed={view === "kanban"}
             >
-              <MessageSquare className="h-3.5 w-3.5 mr-1.5" />
-              <span className="text-[10px] font-mono uppercase tracking-wider">Sessions</span>
+              <Kanban className="h-3.5 w-3.5 mr-1.5" />
+              <span className="text-[10px] font-mono uppercase tracking-wider">
+                Board
+              </span>
             </Button>
 
             <Button
               variant="ghost"
               size="sm"
-              className={`h-8 px-3 hover:bg-white/5 ${view === 'analytics' ? 'text-white' : 'text-white/60'}`}
-              onClick={() => setView('analytics')}
+              className={`h-8 px-3 hover:bg-white/5 ${view === "sessions" ? "text-white" : "text-white/60"}`}
+              onClick={() => setView("sessions")}
+              aria-pressed={view === "sessions"}
+            >
+              <MessageSquare className="h-3.5 w-3.5 mr-1.5" />
+              <span className="text-[10px] font-mono uppercase tracking-wider">
+                Sessions
+              </span>
+            </Button>
+
+            <Button
+              variant="ghost"
+              size="sm"
+              className={`h-8 px-3 hover:bg-white/5 ${view === "analytics" ? "text-white" : "text-white/60"}`}
+              onClick={() => setView("analytics")}
+              aria-pressed={view === "analytics"}
             >
               <BarChart3 className="h-3.5 w-3.5 mr-1.5" />
-              <span className="text-[10px] font-mono uppercase tracking-wider">Analytics</span>
+              <span className="text-[10px] font-mono uppercase tracking-wider">
+                Analytics
+              </span>
             </Button>
 
             {/* Logs Toggle */}
@@ -229,23 +367,27 @@ export function AppLayout() {
               <Button
                 variant="ghost"
                 size="sm"
-                className={`h-8 px-3 hover:bg-white/5 ${terminalOpen ? 'text-green-500' : 'text-white/60'}`}
+                className={`h-8 px-3 hover:bg-white/5 ${terminalOpen ? "text-green-500" : "text-white/60"}`}
                 onClick={handleToggleTerminal}
                 title="Toggle Terminal (Ctrl+`)"
+                aria-label="Toggle Terminal"
+                aria-pressed={terminalOpen}
               >
                 <TerminalIcon className="h-3.5 w-3.5 mr-1.5" />
-                <span className="text-[10px] font-mono uppercase tracking-wider">Terminal</span>
+                <span className="text-[10px] font-mono uppercase tracking-wider">
+                  Terminal
+                </span>
               </Button>
             )}
-            
-            <NewSessionDialog 
-              onSessionCreated={handleSessionCreated} 
+
+            <NewSessionDialog
+              onSessionCreated={handleSessionCreated}
               open={isNewSessionOpen}
               onOpenChange={setIsNewSessionOpen}
               initialValues={newSessionInitialValues}
               trigger={
-                <Button 
-                  className="w-full sm:w-auto h-8 text-[10px] font-mono uppercase tracking-widest bg-purple-600 hover:bg-purple-500 text-white border-0"
+                <Button
+                  className="w-full sm:w-auto h-8 text-[10px] font-mono uppercase tracking-widest border-0"
                   onClick={handleOpenNewSession}
                 >
                   <Plus className="h-3.5 w-3.5 mr-1.5" />
@@ -259,21 +401,39 @@ export function AppLayout() {
 
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
-                <Button variant="ghost" size="icon" className="h-8 w-8 hover:bg-white/5 text-white/60">
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="h-8 w-8 hover:bg-white/5 text-white/60"
+                  aria-label="Settings"
+                >
                   <Settings className="h-4 w-4" />
                 </Button>
               </DropdownMenuTrigger>
-              <DropdownMenuContent align="end" className="w-48 bg-zinc-950 border-white/[0.08]">
-                <DropdownMenuItem onClick={() => setView('templates')} className="hover:bg-white/5 text-white/80">
+              <DropdownMenuContent
+                align="end"
+                className="w-48 bg-zinc-950 border-white/[0.08]"
+              >
+                <DropdownMenuItem
+                  onClick={() => setView("templates")}
+                  className="hover:bg-white/5 text-white/80"
+                >
                   <LayoutTemplate className="mr-2 h-3.5 w-3.5" />
-                  <span className="text-xs uppercase tracking-wide">Manage Templates</span>
+                  <span className="text-xs uppercase tracking-wide">
+                    Manage Templates
+                  </span>
                 </DropdownMenuItem>
-                
+
                 <DropdownMenuSeparator className="bg-white/10" />
 
-                <DropdownMenuItem onClick={handleLogout} className="hover:bg-white/5 text-white/80">
+                <DropdownMenuItem
+                  onClick={handleLogout}
+                  className="hover:bg-white/5 text-white/80"
+                >
                   <LogOut className="mr-2 h-3.5 w-3.5" />
-                  <span className="text-xs uppercase tracking-wide">Logout</span>
+                  <span className="text-xs uppercase tracking-wide">
+                    Logout
+                  </span>
                 </DropdownMenuItem>
               </DropdownMenuContent>
             </DropdownMenu>
@@ -281,6 +441,20 @@ export function AppLayout() {
         </div>
       </header>
 
+      {/* Main Content */}
+      <div className="flex flex-1 overflow-hidden">
+        {/* Desktop Sidebar - Hide in Kanban, Analytics, and Templates views */}
+        {view !== "kanban" && view !== "analytics" && view !== "templates" && (
+          <aside
+            className={`hidden md:flex border-r border-white/[0.08] flex-col bg-zinc-950 transition-all duration-200 \${
+              sidebarCollapsed ? "md:w-12" : "md:w-64"
+            }`}
+          >
+            <div className="px-3 py-2 border-b border-white/[0.08] flex items-center justify-between">
+              {!sidebarCollapsed && (
+                <h2 className="text-[10px] font-bold text-white/40 uppercase tracking-widest">
+                  SESSIONS
+                </h2>
       {/* Main Content Area */}
       <div className="flex flex-1 overflow-hidden min-h-0">
         {/* Desktop Sidebar (Session List) */}
@@ -302,19 +476,142 @@ export function AppLayout() {
               ) : (
                 <ChevronLeft className="h-3.5 w-3.5" />
               )}
-            </Button>
-          </div>
-          <div className="flex-1 overflow-hidden">
-            {!sidebarCollapsed && (
-              <SessionList
-                key={refreshKey}
-                onSelectSession={handleSessionSelect}
-                selectedSessionId={selectedSession?.id}
+              <Button
+                variant="ghost"
+                size="icon"
+                className={`h-6 w-6 hover:bg-white/5 text-white/60 ${sidebarCollapsed ? "mx-auto" : ""}`}
+                onClick={() => setSidebarCollapsed(!sidebarCollapsed)}
+                aria-label={
+                  sidebarCollapsed ? "Expand sidebar" : "Collapse sidebar"
+                }
+                aria-expanded={!sidebarCollapsed}
+              >
+                {sidebarCollapsed ? (
+                  <ChevronRight className="h-3.5 w-3.5" />
+                ) : (
+                  <ChevronLeft className="h-3.5 w-3.5" />
+                )}
+              </Button>
+            </div>
+            <div className="flex-1 overflow-hidden">
+              {!sidebarCollapsed && (
+                <SessionList
+                  key={refreshKey}
+                  onSelectSession={handleSessionSelect}
+                  selectedSessionId={selectedSession?.id}
+                />
+              )}
+            </div>
+          </aside>
+        )}
+
+        {/* Main Panel */}
+        <main className="flex-1 overflow-hidden bg-black flex flex-col">
+          <AnimatePresence mode="wait">
+            <motion.div
+              key={view + (selectedSession?.id || "none")}
+              initial={{ opacity: 0, scale: 0.995 }}
+              animate={{ opacity: 1, scale: 1 }}
+              exit={{ opacity: 0, scale: 0.995 }}
+              transition={{ duration: 0.15, ease: "easeOut" }}
+              className="flex-1 overflow-hidden flex flex-col"
+            >
+              {view === "kanban" ? (
+                <KanbanBoard onSelectSession={handleSessionSelect} />
+              ) : view === "analytics" ? (
+                <AnalyticsDashboard />
+              ) : view === "templates" ? (
+                <TemplatesPage
+                  onStartSession={handleStartSessionFromTemplate}
+                />
+              ) : selectedSession ? (
+                <ActivityFeed
+                  session={selectedSession}
+                  onArchive={handleSessionArchived}
+                  showCodeDiffs={showCodeDiffs}
+                  onToggleCodeDiffs={setShowCodeDiffs}
+                  onActivitiesChange={setCurrentActivities}
+                />
+              ) : (
+                <div className="flex h-full items-center justify-center p-8">
+                  <div className="text-center space-y-4 max-w-sm">
+                    <h2 className="text-sm font-bold text-white/40 uppercase tracking-widest">
+                      NO SESSION
+                    </h2>
+                    <p className="text-[11px] text-white/30 leading-relaxed uppercase tracking-wide font-mono">
+                      Select session or create new
+                    </p>
+                    <div className="pt-2">
+                      <Button
+                        className="w-full sm:w-auto h-8 text-[10px] font-mono uppercase tracking-widest border-0"
+                        onClick={handleOpenNewSession}
+                      >
+                        <Plus className="h-3.5 w-3.5 mr-1.5" />
+                        New Session
+                      </Button>
+                    </div>
+                  </div>
+                </div>
+              )}
+            </motion.div>
+          </AnimatePresence>
+        </main>
+
+        {/* Code Diff Sidebar */}
+        {selectedSession && showCodeDiffs && view === "sessions" && (
+          <>
+            {!codeDiffSidebarCollapsed && (
+              <div
+                className="w-1 cursor-col-resize bg-transparent hover:bg-blue-500/50 transition-colors z-50"
+                onMouseDown={startResizing}
               />
             )}
-          </div>
-        </aside>
-
+            <aside
+              className={`hidden md:flex border-l border-white/[0.08] flex-col bg-zinc-950 ${
+                isResizing ? "transition-none" : "transition-all duration-200"
+              } ${codeDiffSidebarCollapsed ? "md:w-12" : ""}`}
+              style={{
+                width: codeDiffSidebarCollapsed ? undefined : codeSidebarWidth,
+              }}
+            >
+              <div className="px-3 py-2 border-b border-white/[0.08] flex items-center justify-between">
+                {!codeDiffSidebarCollapsed && (
+                  <h2 className="text-[10px] font-bold text-white/40 uppercase tracking-widest">
+                    CODE CHANGES
+                  </h2>
+                )}
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className={`h-6 w-6 hover:bg-white/5 text-white/60 ${codeDiffSidebarCollapsed ? "mx-auto" : ""}`}
+                  onClick={() =>
+                    setCodeDiffSidebarCollapsed(!codeDiffSidebarCollapsed)
+                  }
+                  aria-label={
+                    codeDiffSidebarCollapsed
+                      ? "Expand code changes"
+                      : "Collapse code changes"
+                  }
+                  aria-expanded={!codeDiffSidebarCollapsed}
+                >
+                  {codeDiffSidebarCollapsed ? (
+                    <ChevronLeft className="h-3.5 w-3.5" />
+                  ) : (
+                    <ChevronRight className="h-3.5 w-3.5" />
+                  )}
+                </Button>
+              </div>
+              <div className="flex-1 overflow-hidden">
+                {!codeDiffSidebarCollapsed && (
+                  <CodeDiffSidebar
+                    activities={currentActivities}
+                    repoUrl={`https://github.com/${selectedSession!.sourceId}`}
+                  />
+                )}
+              </div>
+            </aside>
+          </>
+        )}
         {/* Resizable Panel Group (Vertical: Top = Main, Bottom = Logs) */}
         <ResizablePanelGroup direction="vertical" className="flex-1 min-w-0">
 
@@ -425,7 +722,7 @@ export function AppLayout() {
       {/* Terminal Panel */}
       {terminalAvailable && (
         <TerminalPanel
-          sessionId={selectedSession?.id || 'global'}
+          sessionId={selectedSession?.id || "global"}
           repositoryPath=""
           isOpen={terminalOpen}
           onToggle={handleToggleTerminal}
