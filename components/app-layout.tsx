@@ -10,7 +10,7 @@ import { ActivityFeed } from "./activity-feed";
 import { CodeDiffSidebar } from "./code-diff-sidebar";
 import { AnalyticsDashboard } from "./analytics-dashboard";
 import { NewSessionDialog } from "./new-session-dialog";
-// import { TemplatesPage } from "./templates-page";
+import { TemplatesPage } from "./templates-page";
 import { KanbanBoard } from "./kanban-board";
 import { Button } from "@/components/ui/button";
 import {
@@ -469,8 +469,7 @@ export function AppLayout({ initialView }: AppLayoutProps) {
                     {view === 'analytics' ? (
                       <AnalyticsDashboard />
                     ) : view === 'templates' ? (
-                      // <TemplatesPage onStartSession={handleStartSessionFromTemplate} />
-                      <div>Templates Placeholder</div>
+                      <TemplatesPage onStartSession={handleStartSessionFromTemplate} />
                     ) : selectedSession ? (
                       <ActivityFeed
                         key={selectedSession.id}
