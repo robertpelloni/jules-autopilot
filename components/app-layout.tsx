@@ -222,7 +222,7 @@ export function AppLayout({ initialView }: AppLayoutProps) {
   };
 
   return (
-    <div className="flex h-screen flex-col bg-black">
+    <div className="flex h-screen flex-col bg-black max-w-full overflow-hidden">
       <Dialog open={isApiKeyDialogOpen} onOpenChange={setIsApiKeyDialogOpen}>
         <DialogContent className="sm:max-w-md bg-zinc-950 border-white/10">
           <DialogHeader>
@@ -234,7 +234,6 @@ export function AppLayout({ initialView }: AppLayoutProps) {
           <ApiKeySetupForm onSuccess={handleApiKeySuccess} />
         </DialogContent>
       </Dialog>
-    <div className="flex h-screen flex-col bg-black max-w-full overflow-hidden">
       <SessionKeeperManager />
       {/* Header */}
       <header className="border-b border-white/[0.08] bg-zinc-950/95 backdrop-blur-sm">
@@ -416,20 +415,6 @@ export function AppLayout({ initialView }: AppLayoutProps) {
         </div>
       </header>
 
-      {/* Main Content */}
-      <div className="flex flex-1 overflow-hidden">
-        {/* Desktop Sidebar - Hide in Kanban, Analytics, and Templates views */}
-        {view !== "kanban" && view !== "analytics" && view !== "templates" && (
-          <aside
-            className={`hidden md:flex border-r border-white/[0.08] flex-col bg-zinc-950 transition-all duration-200 \${
-              sidebarCollapsed ? "md:w-12" : "md:w-64"
-            }`}
-          >
-            <div className="px-3 py-2 border-b border-white/[0.08] flex items-center justify-between">
-              {!sidebarCollapsed && (
-                <h2 className="text-[10px] font-bold text-white/40 uppercase tracking-widest">
-                  SESSIONS
-                </h2>
       {/* Main Content Area */}
       <div className="flex flex-1 overflow-hidden min-h-0">
         {/* Desktop Sidebar (Session List) */}

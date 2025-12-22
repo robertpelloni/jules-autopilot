@@ -20,6 +20,11 @@
 			"label": "build-nextjs-retry-2",
 			"type": "shell",
 			"command": "npm run build"
+		},
+		{
+			"label": "build-nextjs-retry-3",
+			"type": "shell",
+			"command": "npm run build"
 		}
 	]
 }
