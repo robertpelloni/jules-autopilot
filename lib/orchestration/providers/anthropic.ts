@@ -2,7 +2,8 @@ import { CompletionParams, CompletionResult, ProviderInterface } from '../types'
 
 export const anthropicProvider: ProviderInterface = {
   async complete(params: CompletionParams): Promise<CompletionResult> {
-    const { messages, apiKey, model = 'claude-3-5-sonnet-20240620', systemPrompt } = params;
+    const { messages, apiKey, model, systemPrompt } = params;
+    const modelToUse = model || 'claude-3-5-sonnet-20240620';
 
     const response = await fetch('https://api.anthropic.com/v1/messages', {
         method: 'POST',
@@ -12,7 +13,7 @@ export const anthropicProvider: ProviderInterface = {
           'anthropic-version': '2023-06-01'
         },
         body: JSON.stringify({
-          model,
+          model: modelToUse,
           system: systemPrompt,
           messages: messages.map((m) => ({
             role: m.role === 'user' ? 'user' : 'assistant',

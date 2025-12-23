@@ -2,8 +2,9 @@ import { CompletionParams, CompletionResult, ProviderInterface } from '../types'
 
 export const geminiProvider: ProviderInterface = {
   async complete(params: CompletionParams): Promise<CompletionResult> {
-    const { messages, apiKey, model = 'gemini-1.5-flash', systemPrompt } = params;
-    const url = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`;
+    const { messages, apiKey, model, systemPrompt } = params;
+    const modelToUse = model || 'gemini-1.5-flash';
+    const url = `https://generativelanguage.googleapis.com/v1beta/models/${modelToUse}:generateContent?key=${apiKey}`;
 
     let response;
     let retries = 3;

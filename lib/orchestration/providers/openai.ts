@@ -2,7 +2,8 @@ import { CompletionParams, CompletionResult, ProviderInterface } from '../types'
 
 export const openaiProvider: ProviderInterface = {
   async complete(params: CompletionParams): Promise<CompletionResult> {
-    const { messages, apiKey, model = 'gpt-4o', systemPrompt } = params;
+    const { messages, apiKey, model, systemPrompt } = params;
+    const modelToUse = model || 'gpt-4o';
 
     const msgs = messages.map(m => ({
         role: m.role === 'user' ? 'user' : 'assistant',
@@ -20,7 +21,7 @@ export const openaiProvider: ProviderInterface = {
         'Authorization': `Bearer ${apiKey}`,
       },
       body: JSON.stringify({
-        model,
+        model: modelToUse,
         messages: msgs,
         max_tokens: 300,
       }),

@@ -112,7 +112,7 @@ export function SessionKeeperSettings({
   };
 
   // New Participant State
-  const [newPart, setNewPart] = useState({ provider: 'openai', model: '', apiKey: '', role: 'Advisor' });
+  const [newPart, setNewPart] = useState({ provider: 'openai', model: 'gpt-4o', apiKey: '', role: 'Advisor' });
 
   const updateMessages = (sessionId: string, newMessages: string[]) => {
     if (sessionId === 'global') {
@@ -372,7 +372,7 @@ export function SessionKeeperSettings({
                                           </Select>
                                           <Input 
                                               className="h-6 text-[10px] flex-1" 
-                                              placeholder="Model (e.g. gpt-4)" 
+                                              placeholder="Model (e.g. gpt-4o)" 
                                               value={p.model}
                                               onChange={(e) => {
                                                   const newParts = [...(config.debateParticipants || [])];
