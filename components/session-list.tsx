@@ -97,6 +97,7 @@ export function SessionList({
 
   const getStatusInfo = (session: Session) => {
     const state = sessionStates[session.id];
+    // Prioritize error state
     if (state?.error) {
        return { color: 'bg-red-500', text: `Error ${state.error.code}` };
     }
@@ -269,7 +270,7 @@ export function SessionList({
 
                     {/* Line 2: Status + Created At */}
                     <div className="flex items-center gap-2 text-[9px] text-white/40 leading-tight font-mono tracking-wide mb-0.5">
-                      <span className={`${statusInfo.color} bg-opacity-20 text-white/60 px-1 rounded-sm`}>
+                      <span className={`${statusInfo.color} ${statusInfo.text.includes('Error') ? 'text-white font-bold bg-opacity-100' : 'bg-opacity-20 text-white/60'} px-1 rounded-sm`}>
                         {statusInfo.text}
                       </span>
                       <span>•</span>
