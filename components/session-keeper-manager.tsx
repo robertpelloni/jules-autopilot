@@ -55,6 +55,7 @@ export function SessionKeeperManager() {
         const supervisorState: SupervisorState = savedState ? JSON.parse(savedState) : {};
         let stateChanged = false;
 
+        const { updateSessionState } = useSessionKeeperStore();
         const generateMessage = async (session: any) => {
             let messageToSend = '';
 
@@ -211,54 +212,72 @@ export function SessionKeeperManager() {
         };
 
         for (const session of monitoredSessions) {
-          // 1. Resume Paused/Completed/Failed
-          if (session.status === 'paused' || session.status === 'completed' || session.status === 'failed') {
-             addLog(`Resuming ${session.status} session ${session.id.substring(0, 8)}...`, 'action');
-             
-             const message = await generateMessage(session);
-             await client.resumeSession(session.id, message);
-             
-             addLog(`Resumed ${session.id.substring(0, 8)}`, 'action');
-             continue;
-          }
+          try {
+            // Clear previous error if any
+            updateSessionState(session.id, { error: undefined });
 
-          // 2. Approve Plans
-          if (session.status === 'awaiting_approval' || session.rawState === 'AWAITING_PLAN_APPROVAL') {
-            addLog(`Approving plan for session ${session.id.substring(0, 8)}...`, 'action');
-            await client.approvePlan(session.id);
-            addLog(`Plan approved for ${session.id.substring(0, 8)}`, 'action');
-            continue;
-          }
-
-          // 3. Check for Inactivity & Nudge
-          const lastActivityTime = session.lastActivityAt ? new Date(session.lastActivityAt) : new Date(session.updatedAt);
-          const diffMs = Date.now() - lastActivityTime.getTime();
-          const diffMinutes = diffMs / 60000;
-
-          // Determine threshold
-          let threshold = config.inactivityThresholdMinutes;
-          if (session.rawState === 'IN_PROGRESS') {
-             threshold = config.activeWorkThresholdMinutes;
-             // Guard: If actively working (<30s), always skip
-             if (diffMs < 30000) {
+            // 1. Resume Paused/Completed/Failed
+            if (session.status === 'paused' || session.status === 'completed' || session.status === 'failed') {
+               addLog(`Resuming ${session.status} session ${session.id.substring(0, 8)}...`, 'action');
+               
+               const message = await generateMessage(session);
+               await client.resumeSession(session.id, message);
+               
+               addLog(`Resumed ${session.id.substring(0, 8)}`, 'action');
                continue;
-             }
-          }
-
-          if (diffMinutes > threshold) {
-            const messageToSend = await generateMessage(session);
-            if (!messageToSend) {
-                addLog(`Skipped ${session.id.substring(0, 8)}: No messages configured`, 'skip');
-                continue;
             }
+
+            // 2. Approve Plans
+            if (session.status === 'awaiting_approval' || session.rawState === 'AWAITING_PLAN_APPROVAL') {
+              addLog(`Approving plan for session ${session.id.substring(0, 8)}...`, 'action');
+              await client.approvePlan(session.id);
+              addLog(`Plan approved for ${session.id.substring(0, 8)}`, 'action');
+              continue;
+            }
+
+            // 3. Check for Inactivity & Nudge
+            const lastActivityTime = session.lastActivityAt ? new Date(session.lastActivityAt) : new Date(session.updatedAt);
+            const diffMs = Date.now() - lastActivityTime.getTime();
+            const diffMinutes = diffMs / 60000;
+
+            // Determine threshold
+            let threshold = config.inactivityThresholdMinutes;
+            if (session.rawState === 'IN_PROGRESS') {
+               threshold = config.activeWorkThresholdMinutes;
+               // Guard: If actively working (<30s), always skip
+               if (diffMs < 30000) {
+                 continue;
+               }
+            }
+
+            if (diffMinutes > threshold) {
+              const messageToSend = await generateMessage(session);
+              if (!messageToSend) {
+                  addLog(`Skipped ${session.id.substring(0, 8)}: No messages configured`, 'skip');
+                  continue;
+              }
+              
+              addLog(`Sending nudge to ${session.id.substring(0, 8)} (${Math.round(diffMinutes)}m inactive)`, 'action');
+              await client.createActivity({
+                sessionId: session.id,
+                content: messageToSend,
+                type: 'message'
+              });
+              addLog(`Nudge sent`, 'action');
+            }
+          } catch (err: any) {
+            const isRateLimit = err.message?.includes('429') || err.status === 429;
+            const errorMsg = isRateLimit ? 'Rate Limit (429)' : (err.message || 'Unknown error');
             
-            addLog(`Sending nudge to ${session.id.substring(0, 8)} (${Math.round(diffMinutes)}m inactive)`, 'action');
-            await client.createActivity({
-              sessionId: session.id,
-              content: messageToSend,
-              type: 'message'
+            addLog(`Error processing ${session.id.substring(0, 8)}: ${errorMsg}`, 'error');
+            
+            updateSessionState(session.id, { 
+              error: { 
+                code: isRateLimit ? 429 : 500, 
+                message: errorMsg, 
+                timestamp: Date.now() 
+              } 
             });
-            addLog(`Nudge sent`, 'action');
           }
         }
 

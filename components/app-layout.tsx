@@ -482,7 +482,7 @@ export function AppLayout({ initialView }: AppLayoutProps) {
         >
 
           {/* Top Panel: Dashboard */}
-          <ResizablePanel defaultSize={isLogPanelOpen ? 67 : 100} className="min-h-0">
+          <ResizablePanel defaultSize={isLogPanelOpen ? 70 : 100} minSize={30} className="min-h-0">
             {/* Main Panel Content */}
             <div className="flex h-full w-full flex-row min-w-0">
               <main className="flex-1 overflow-hidden bg-black flex flex-col min-w-0">
@@ -571,8 +571,11 @@ export function AppLayout({ initialView }: AppLayoutProps) {
           {/* Bottom Panel: Logs */}
           {isLogPanelOpen && (
             <>
-              <ResizableHandle withHandle className="h-px w-full [&>div]:rotate-90" />
-              <ResizablePanel defaultSize={33} minSize={10} maxSize={50}>
+              <ResizableHandle 
+                withHandle 
+                className="h-2 w-full cursor-row-resize bg-zinc-900 border-y border-white/10 hover:bg-purple-500/20 transition-colors [&>div]:rotate-90" 
+              />
+              <ResizablePanel defaultSize={30} minSize={10} maxSize={50}>
                 <SessionKeeperLogPanel onClose={() => setIsLogPanelOpen(false)} />
               </ResizablePanel>
             </>
