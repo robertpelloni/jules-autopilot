@@ -17,7 +17,8 @@ export async function runDebate(params: DebateParams) {
   const { history, participants, judge } = params;
 
   // 1. Collect Opinions
-  const opinions = await Promise.all(participants.map(async (p) => {
+  const opinions = [];
+  for (const p of participants) {
     try {
         const provider = getProvider(p.provider);
         if (!provider) throw new Error(`Provider ${p.provider} not found`);
@@ -32,12 +33,14 @@ Analyze the history and provide your recommendation. Be concise.`;
             systemPrompt: sysPrompt
         });
 
-        return { participant: p, content: result.content };
+        opinions.push({ participant: p, content: result.content });
+        // Small delay to avoid rate limits
+        await new Promise(resolve => setTimeout(resolve, 1000));
     } catch (e) {
         console.error(`Participant ${p.provider}/${p.model} failed:`, e);
-        return { participant: p, error: e instanceof Error ? e.message : 'Unknown error', content: '' };
+        opinions.push({ participant: p, error: e instanceof Error ? e.message : 'Unknown error', content: '' });
     }
-  }));
+  }
 
   // 2. Synthesize (Judge)
   const validOpinions = opinions.filter(o => !o.error && o.content);
@@ -78,7 +81,8 @@ export async function runConference(params: DebateParams) {
   const { history, participants } = params;
 
   // 1. Collect Opinions
-  const opinions = await Promise.all(participants.map(async (p) => {
+  const opinions = [];
+  for (const p of participants) {
     try {
         const provider = getProvider(p.provider);
         if (!provider) throw new Error(`Provider ${p.provider} not found`);
@@ -93,12 +97,14 @@ Analyze the history and provide your recommendation. Be concise.`;
             systemPrompt: sysPrompt
         });
 
-        return { participant: p, content: result.content };
+        opinions.push({ participant: p, content: result.content });
+        // Small delay to avoid rate limits
+        await new Promise(resolve => setTimeout(resolve, 1000));
     } catch (e) {
         console.error(`Participant ${p.provider}/${p.model} failed:`, e);
-        return { participant: p, error: e instanceof Error ? e.message : 'Unknown error', content: '' };
+        opinions.push({ participant: p, error: e instanceof Error ? e.message : 'Unknown error', content: '' });
     }
-  }));
+  }
 
   const validOpinions = opinions.filter(o => !o.error && o.content);
 
