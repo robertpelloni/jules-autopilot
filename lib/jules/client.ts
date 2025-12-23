@@ -164,6 +164,14 @@ export class JulesClient {
           );
         }
 
+        if (response.status === 503) {
+          throw new JulesAPIError(
+            "The Jules service is currently unavailable (503). Please try again later.",
+            response.status,
+            error,
+          );
+        }
+
         throw new JulesAPIError(
           error.message || `Request failed with status ${response.status}`,
           response.status,

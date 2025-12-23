@@ -76,7 +76,7 @@ export function SessionKeeperManager() {
                 const sortedActivities = activities.sort((a: any, b: any) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime());
 
                 // Debate / Conference Logic
-                if (config.debateEnabled && config.debateParticipants && config.debateParticipants.length > 0) {
+                if (config.debateEnabled && config.debateParticipants && config.debateParticipants.length > 0 && config.supervisorMode !== 'single') {
                     const mode = config.supervisorMode === 'conference' ? 'conference' : 'debate';
                     
                     // Validate participants have API keys
