@@ -262,11 +262,26 @@ export class JulesClient {
 
   // Sessions
   async listSessions(sourceId?: string): Promise<Session[]> {
-    const params = sourceId ? `?sourceId=${sourceId}` : '';
-    const response = await this.request<{ sessions: ApiSession[] }>(`/sessions${params}`);
+    let allSessions: ApiSession[] = [];
+    let pageToken: string | undefined;
+
+    do {
+      const params = new URLSearchParams();
+      params.set('pageSize', '100');
+      if (sourceId) params.set('sourceId', sourceId);
+      if (pageToken) params.set('pageToken', pageToken);
+
+      const endpoint = `/sessions?${params.toString()}`;
+      const response = await this.request<{ sessions?: ApiSession[]; nextPageToken?: string }>(endpoint);
+
+      if (response.sessions) {
+        allSessions = allSessions.concat(response.sessions);
+      }
+      pageToken = response.nextPageToken;
+    } while (pageToken);
 
     // Transform API response to match our Session type
-    return (response.sessions || []).map((session: ApiSession) => ({
+    return allSessions.map((session: ApiSession) => ({
       id: session.id,
       sourceId: session.sourceContext?.source?.replace('sources/github/', '') || '',
       title: session.title || '',
@@ -408,9 +423,20 @@ export class JulesClient {
         // Try more fields including common variations
         const um = activity.userMessage;
         content = um.message || um.content || um.text || um.prompt || (typeof um === 'string' ? um : '');
-        // If still empty, try to stringify specific sub-fields to avoid hiding content
-        if (!content && typeof um === 'object') {
-             content = JSON.stringify(um);
+
+        // If still empty and it's an object, check specific keys before generic stringify
+        if (!content && typeof um === 'object' && um !== null) {
+             // Avoid stringifying empty objects or internal markers
+             if (Object.keys(um).length > 0) {
+                 // Try to find any string property that looks like content
+                 const stringVal = Object.values(um).find(v => typeof v === 'string' && v.length > 0);
+                 if (stringVal) {
+                    content = stringVal as string;
+                 } else {
+                    // Only stringify if it has meaningful data
+                    content = JSON.stringify(um);
+                 }
+             }
         }
       }
 
