@@ -170,6 +170,14 @@ export function AppLayout({ initialView }: AppLayoutProps) {
     setSelectedSession(session);
     setView("sessions");
     setMobileMenuOpen(false);
+
+    // Fetch full details to ensure we have everything (like sourceId, stats, etc.)
+    if (client) {
+      client.getSession(session.id).then(fullSession => {
+        setSelectedSession(fullSession);
+      }).catch(err => console.error("Failed to fetch full session details", err));
+    }
+
     // Update URL without refreshing
     const newParams = new URLSearchParams(searchParams.toString());
     newParams.set('sessionId', session.id);
@@ -481,7 +489,7 @@ export function AppLayout({ initialView }: AppLayoutProps) {
         >
 
           {/* Top Panel: Dashboard */}
-          <ResizablePanel defaultSize={isLogPanelOpen ? 70 : 100} minSize={10} className="min-h-0">
+          <ResizablePanel defaultSize={isLogPanelOpen ? 60 : 100} minSize={0} className="min-h-0">
             {/* Main Panel Content */}
             <div className="flex h-full w-full flex-row min-w-0">
               <main className="flex-1 overflow-hidden bg-black flex flex-col min-w-0">
@@ -574,7 +582,7 @@ export function AppLayout({ initialView }: AppLayoutProps) {
                 withHandle 
                 className="h-2 w-full cursor-row-resize bg-zinc-900 border-y border-white/10 hover:bg-purple-500/20 transition-colors" 
               />
-              <ResizablePanel defaultSize={30} minSize={10} maxSize={90}>
+              <ResizablePanel defaultSize={40} minSize={0}>
                 <SessionKeeperLogPanel onClose={() => setIsLogPanelOpen(false)} />
               </ResizablePanel>
             </>
