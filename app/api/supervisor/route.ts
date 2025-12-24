@@ -210,9 +210,12 @@ export async function POST(req: Request) {
 
   } catch (error) {
     console.error('Supervisor API Error:', error);
+    const msg = error instanceof Error ? error.message : 'Internal server error';
+    const isRateLimit = msg.includes('rate_limit') || msg.includes('quota') || msg.includes('429');
+    
     return NextResponse.json(
-      { error: error instanceof Error ? error.message : 'Internal server error' },
-      { status: 500 }
+      { error: msg },
+      { status: isRateLimit ? 429 : 500 }
     );
   }
 }
