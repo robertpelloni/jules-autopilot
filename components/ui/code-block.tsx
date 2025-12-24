@@ -17,6 +17,7 @@ interface CodeBlockProps {
   code?: string;
   language?: string;
   className?: string;
+  wrap?: boolean;
 }
 
 export function CodeBlock({
@@ -24,6 +25,7 @@ export function CodeBlock({
   code,
   language = "bash",
   className,
+  wrap = false,
 }: CodeBlockProps) {
   const [activeTab, setActiveTab] = useState(0);
   const [copied, setCopied] = useState(false);
@@ -232,7 +234,10 @@ export function CodeBlock({
                 duration: 0.15,
                 ease: "easeOut",
               }}
-              className="font-mono text-zinc-950 dark:text-zinc-50 block whitespace-pre"
+              className={cn(
+                "font-mono text-zinc-950 dark:text-zinc-50 block",
+                wrap ? "whitespace-pre-wrap break-all" : "whitespace-pre"
+              )}
             >
               {currentCode}
             </motion.code>
