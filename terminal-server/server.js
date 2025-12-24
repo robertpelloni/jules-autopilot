@@ -28,15 +28,16 @@ io.on("connection", (socket) => {
   const { sessionId, workingDir } = socket.handshake.query;
 
   // Use /workspace for Docker, or parent directory for local development
-  const baseDir =
-    process.env.WORKSPACE_DIR ||
-    (fs.existsSync("/workspace")
-      ? "/workspace"
-      : path.join(__dirname, "..", "workspace"));
+  const defaultBaseDir = fs.existsSync("/workspace")
+    ? "/workspace"
+    : path.join(__dirname, ".."); // Project root
+
+  const baseDir = process.env.WORKSPACE_DIR || defaultBaseDir;
   const cwd = workingDir ? path.join(baseDir, workingDir) : baseDir;
 
   // Spawn shell process
-  const shell = process.env.SHELL || "/bin/bash";
+  const isWindows = process.platform === "win32";
+  const shell = process.env.SHELL || (isWindows ? "powershell.exe" : "/bin/bash");
   const ptyProcess = pty.spawn(shell, [], {
     name: "xterm-256color",
     cols: 80,
@@ -100,7 +101,8 @@ const workspaceDir =
   process.env.WORKSPACE_DIR ||
   (fs.existsSync("/workspace")
     ? "/workspace"
-    : path.join(__dirname, "..", "workspace"));
+    : path.join(__dirname, ".."));
+
 if (!fs.existsSync(workspaceDir)) {
   fs.mkdirSync(workspaceDir, { recursive: true });
 }

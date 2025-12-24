@@ -16,7 +16,7 @@
   "private": true,
   "scripts": {
     "dev": "concurrently -n \"TERMINAL,NEXT\" -c \"blue,magenta\" \"npm:terminal:start\" \"next dev\"",
-    "terminal:start": "docker-compose -f deploy/docker-compose.yml up terminal-server",
+    "terminal:start": "cd terminal-server && node server.js",
     "build": "next build",
     "start": "next start",
     "lint": "eslint",
