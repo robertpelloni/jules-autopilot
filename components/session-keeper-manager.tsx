@@ -300,8 +300,8 @@ export function SessionKeeperManager() {
               } 
             });
           }
-          // Add a small delay to prevent rate limiting
-          await new Promise(resolve => setTimeout(resolve, 1000));
+          // Add a delay to prevent rate limiting (increased to 3s)
+          await new Promise(resolve => setTimeout(resolve, 3000));
         }
 
         // Save State if changed

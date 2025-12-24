@@ -190,7 +190,8 @@ export function ActivityFeed({
   useEffect(() => {
     loadActivities(true);
     if (session.status === 'active') {
-      const interval = setInterval(() => loadActivities(false), 5000);
+      // Increased polling interval to 10s to avoid rate limits
+      const interval = setInterval(() => loadActivities(false), 10000);
       return () => clearInterval(interval);
     }
   }, [session.id, session.status, loadActivities]);
