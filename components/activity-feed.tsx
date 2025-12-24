@@ -27,6 +27,7 @@ import {
 import { BorderGlow } from "./ui/border-glow";
 import { ActivityContent } from './activity-content';
 import { PlanContent } from './plan-content';
+import { ActivityInput } from './activity-input';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 
@@ -49,7 +50,6 @@ export function ActivityFeed({
   const [activities, setActivities] = useState<Activity[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [message, setMessage] = useState("");
   const [sending, setSending] = useState(false);
   const [approvingPlan, setApprovingPlan] = useState(false);
   const [newActivityIds, setNewActivityIds] = useState<Set<string>>(new Set());
@@ -260,18 +260,16 @@ export function ActivityFeed({
     );
   };
 
-  const handleSendMessage = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!message.trim() || !client || sending) return;
+  const handleSendMessage = async (content: string) => {
+    if (!client || sending) return;
     try {
       setSending(true);
       setError(null);
       const userMessage = await client.createActivity({
         sessionId: session.id,
-        content: message.trim(),
+        content: content.trim(),
       });
-      setActivities([...activities, userMessage]);
-      setMessage("");
+      setActivities(prev => [...prev, userMessage]);
 
       // Poll for agent's response after a short delay
       setTimeout(async () => {
@@ -910,39 +908,11 @@ export function ActivityFeed({
       </div>
 
       {session.status !== "failed" && (
-        <form
-          onSubmit={handleSendMessage}
-          className="border-t border-white/[0.08] bg-zinc-950/95 p-3"
-        >
-          <div className="flex gap-2">
-            <Textarea
-              value={message}
-              onChange={(e) => setMessage(e.target.value)}
-              placeholder="Send a message to Jules..."
-              className="min-h-[56px] resize-none text-[11px] bg-black border-white/[0.08] text-white placeholder:text-white/30 focus:border-purple-500/50"
-              onKeyDown={(e) => {
-                if (e.key === "Enter" && !e.shiftKey) {
-                  e.preventDefault();
-                  handleSendMessage(e);
-                }
-              }}
-              disabled={sending}
-            />
-            <Button
-              type="submit"
-              size="icon"
-              aria-label="Send message"
-              disabled={!message.trim() || sending}
-              className="h-9 w-9"
-            >
-              {sending ? (
-                <Loader2 className="h-3.5 w-3.5 animate-spin" />
-              ) : (
-                <Send className="h-3.5 w-3.5" />
-              )}
-            </Button>
-          </div>
-        </form>
+        <ActivityInput 
+          onSendMessage={handleSendMessage} 
+          disabled={sending} 
+          placeholder="Send a message to Jules..." 
+        />
       )}
       {session.status === "failed" && (
         <div className="border-t border-white/[0.08] bg-zinc-950/95 p-3 text-center">
