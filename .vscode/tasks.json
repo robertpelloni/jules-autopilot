@@ -40,6 +40,11 @@
 			"label": "delete-corrupt-file",
 			"type": "shell",
 			"command": "del components\\activity-feed.tsx"
+		},
+		{
+			"label": "check-exports",
+			"type": "shell",
+			"command": "node check_exports.js"
 		}
 	]
 }
