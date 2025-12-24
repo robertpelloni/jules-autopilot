@@ -4,7 +4,13 @@ import pty from "node-pty";
 import path from "path";
 import fs from "fs";
 
-const server = http.createServer();
+const server = http.createServer((req, res) => {
+  if (req.url === "/health") {
+    res.writeHead(200);
+    res.end("OK");
+    return;
+  }
+});
 const io = new Server(server, {
   cors: {
     origin: process.env.ALLOWED_ORIGINS || true, // Allow all origins in development
