@@ -60,7 +60,7 @@ export function ActivityFeed({ session, onArchive, showCodeDiffs, onToggleCodeDi
     }
   };
 
-  const formatContent = (content: string, metadata?: Record<string, any>) => {
+  const formatContent = (content: string, metadata?: Record<string, unknown>) => {
     // 1. Handle Placeholders
     if (content === '[userMessaged]' || content === '[agentMessaged]') {
         // Try to recover content from metadata if available
@@ -136,9 +136,8 @@ export function ActivityFeed({ session, onArchive, showCodeDiffs, onToggleCodeDi
       setActivities(prevActivities => {
         if (prevActivities.length === 0 || isInitialLoad) return data;
 
-        const newActivities = data.filter(
-          newAct => !prevActivities.some(prevAct => prevAct.id === newAct.id)
-        );
+        const prevIds = new Set(prevActivities.map(a => a.id));
+        const newActivities = data.filter(newAct => !prevIds.has(newAct.id));
 
         if (newActivities.length > 0) {
           setNewActivityIds(new Set(newActivities.map(a => a.id)));

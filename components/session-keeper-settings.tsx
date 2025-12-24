@@ -260,8 +260,8 @@ export function SessionKeeperSettings({
                       <Label className="text-xs text-white/60">Provider</Label>
                       <Select
                         value={config.supervisorProvider}
-                        onValueChange={(v: any) => {
-                          handleConfigChange({ ...config, supervisorProvider: v, supervisorModel: '' });
+                        onValueChange={(v: string) => {
+                          handleConfigChange({ ...config, supervisorProvider: v as SessionKeeperConfig['supervisorProvider'], supervisorModel: '' });
                           setAvailableModels([]);
                         }}
                       >
@@ -313,7 +313,7 @@ export function SessionKeeperSettings({
                         variant="outline"
                         size="sm"
                         className="h-8 border-white/10 hover:bg-white/5 text-white/60"
-                        onClick={handleLoadModels}
+                        onClick={() => handleLoadModels()}
                         disabled={!config.supervisorApiKey || loadingModels}
                         title="Load Models from Provider"
                       >

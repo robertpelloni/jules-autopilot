@@ -1,5 +1,6 @@
 import type { Source, Session, Activity, CreateSessionRequest, CreateActivityRequest } from '@/types/jules';
 
+// API Response Interfaces (Internal)
 interface ApiSource {
   source?: string;
   name?: string;
@@ -22,26 +23,45 @@ interface ApiSession {
   [key: string]: unknown;
 }
 
-interface Plan {
+interface ApiPlanStep {
+  id: string;
+  title: string;
+  description: string;
+  index: number;
+}
+
+interface ApiPlan {
+  id?: string;
   description?: string;
   summary?: string;
   title?: string;
-  steps?: unknown[];
+  steps?: ApiPlanStep[];
+  createTime?: string;
   [key: string]: unknown;
 }
 
-interface Artifact {
-  changeSet?: {
-    gitPatch?: {
-      unidiffPatch?: string;
-    };
-    unidiffPatch?: string;
-    [key: string]: unknown;
-  };
-  bashOutput?: {
-    output?: string;
-    [key: string]: unknown;
-  };
+interface ApiGitPatch {
+  unidiffPatch?: string;
+  baseCommitId?: string;
+  suggestedCommitMessage?: string;
+}
+
+interface ApiChangeSet {
+  source?: string;
+  gitPatch?: ApiGitPatch;
+  unidiffPatch?: string; // Legacy/Direct support
+}
+
+interface ApiBashOutput {
+  command?: string;
+  output?: string;
+  exitCode?: number;
+}
+
+interface ApiArtifact {
+  changeSet?: ApiChangeSet;
+  bashOutput?: ApiBashOutput;
+  media?: { data: string; mimeType: string };
   [key: string]: unknown;
 }
 
@@ -50,13 +70,14 @@ interface ApiActivity {
   id?: string;
   createTime: string;
   originator?: string;
-  planGenerated?: { plan?: Plan; description?: string; summary?: string; title?: string; steps?: unknown[]; [key: string]: unknown };
-  planApproved?: boolean;
-  progressUpdated?: { progressDescription?: string; description?: string; message?: string; artifacts?: Artifact[]; [key: string]: unknown };
-  sessionCompleted?: { summary?: string; message?: string; artifacts?: Artifact[]; [key: string]: unknown };
+  planGenerated?: { plan?: ApiPlan; description?: string; summary?: string; title?: string; steps?: ApiPlanStep[]; [key: string]: unknown };
+  planApproved?: { [key: string]: unknown } | boolean;
+  progressUpdated?: { progressDescription?: string; description?: string; message?: string; artifacts?: ApiArtifact[]; [key: string]: unknown };
+  sessionCompleted?: { summary?: string; message?: string; artifacts?: ApiArtifact[]; [key: string]: unknown };
   agentMessaged?: { agentMessage?: string; message?: string; [key: string]: unknown };
-  userMessage?: { message?: string; content?: string; [key: string]: unknown };
-  artifacts?: Artifact[];
+  userMessage?: { message?: string; content?: string; [key: string]: unknown }; // Matches userMessaged but handles variations
+  userMessaged?: { message?: string; content?: string; [key: string]: unknown }; // Python SDK name
+  artifacts?: ApiArtifact[];
   message?: string;
   content?: string;
   text?: string;
@@ -105,7 +126,6 @@ export class JulesClient {
       if (!response.ok) {
         const error = await response.json().catch(() => ({}));
 
-        // Handle common HTTP errors with helpful messages
         if (response.status === 401) {
           throw new JulesAPIError(
             'Invalid API key. Please check your Jules API key in settings.',
@@ -123,12 +143,10 @@ export class JulesClient {
         }
 
         if (response.status === 404) {
-          // For activities endpoint, 404 just means no activities yet (new session)
-          // Return empty array instead of throwing error
           if (endpoint.includes('/activities')) {
+            // Return structure matching list response for activities
             return { activities: [] } as T;
           }
-
           throw new JulesAPIError(
             'Resource not found. The requested endpoint may not exist.',
             response.status,
@@ -145,11 +163,8 @@ export class JulesClient {
 
       return response.json();
     } catch (error) {
-      if (error instanceof JulesAPIError) {
-        throw error;
-      }
+      if (error instanceof JulesAPIError) throw error;
 
-      // Handle network errors with helpful messages
       if (error instanceof TypeError && error.message === 'Failed to fetch') {
         throw new JulesAPIError(
           'Unable to connect to the server. Please check your internet connection and try again.',
@@ -158,7 +173,6 @@ export class JulesClient {
         );
       }
 
-      // Generic network error
       throw new JulesAPIError(
         error instanceof Error ? error.message : 'Network request failed. Please try again.',
         undefined,
@@ -169,16 +183,13 @@ export class JulesClient {
 
   // Sources
   async listSources(): Promise<Source[]> {
-    // Fetch all sources with pagination support
     let allSources: ApiSource[] = [];
     let pageToken: string | undefined;
 
     do {
       const params = new URLSearchParams();
-      params.set('pageSize', '100'); // Request max page size
-      if (pageToken) {
-        params.set('pageToken', pageToken);
-      }
+      params.set('pageSize', '100');
+      if (pageToken) params.set('pageToken', pageToken);
 
       const endpoint = `/sources?${params.toString()}`;
       const response = await this.request<{ sources?: ApiSource[]; nextPageToken?: string }>(endpoint);
@@ -186,27 +197,25 @@ export class JulesClient {
       if (response.sources) {
         allSources = allSources.concat(response.sources);
       }
-
       pageToken = response.nextPageToken;
     } while (pageToken);
 
-    // Transform API response to extract repository info
     const sources = allSources.map((source: ApiSource) => {
-      // Extract repo name from source field (e.g., "sources/github/owner/repo")
       const sourcePath = source.source || source.name || '';
       const match = sourcePath.match(/sources\/github\/(.+)/);
       const repoPath = match ? match[1] : sourcePath;
 
       return {
-        id: sourcePath,  // Keep full path for API calls
-        name: repoPath,  // Use short name for display
+        id: sourcePath,
+        name: repoPath,
         type: 'github' as const,
         metadata: source as Record<string, unknown>
       };
     });
 
-    // Temporary fix: Add missing repo if not present
-    const missingRepo = 'sbhavani/dgx-spark-playbooks';
+    // Sort logic same as before...
+    // (omitting specific hardcoded repo logic for brevity unless needed)
+     const missingRepo = 'sbhavani/dgx-spark-playbooks';
     const missingRepoId = `sources/github/${missingRepo}`;
     if (!sources.some(s => s.id === missingRepoId)) {
       sources.push({
@@ -217,41 +226,25 @@ export class JulesClient {
       });
     }
 
-    // Fetch all sessions to determine latest activity per source
+    // Sort by latest activity if possible
     try {
       const allSessions = await this.listSessions();
-
-      // Create a map of sourceId to the most recent activity timestamp
       const latestActivityMap = new Map<string, string>();
-
       for (const session of allSessions) {
         const sourceId = `sources/github/${session.sourceId}`;
         const activityTime = session.lastActivityAt || session.updatedAt || session.createdAt;
-
-        if (!latestActivityMap.has(sourceId) ||
-            (activityTime && activityTime > latestActivityMap.get(sourceId)!)) {
+        if (!latestActivityMap.has(sourceId) || (activityTime && activityTime > latestActivityMap.get(sourceId)!)) {
           latestActivityMap.set(sourceId, activityTime);
         }
       }
-
-      // Sort sources by latest activity (most recent first)
       sources.sort((a, b) => {
         const aTime = latestActivityMap.get(a.id) || '';
         const bTime = latestActivityMap.get(b.id) || '';
-
-        // Sources with activity come before those without
         if (aTime && !bTime) return -1;
         if (!aTime && bTime) return 1;
-
-        // Compare timestamps (descending - most recent first)
         return bTime.localeCompare(aTime);
       });
-
-      console.log('[Jules Client] Loaded sources (sorted by activity):', sources.length, sources);
-    } catch (error) {
-      console.error('[Jules Client] Failed to sort sources by activity:', error);
-      // Continue with unsorted sources if session fetch fails
-    }
+    } catch { /* ignore */ }
 
     return sources;
   }
@@ -280,13 +273,12 @@ export class JulesClient {
       pageToken = response.nextPageToken;
     } while (pageToken);
 
-    // Transform API response to match our Session type
     return allSessions.map((session: ApiSession) => ({
       id: session.id,
       sourceId: session.sourceContext?.source?.replace('sources/github/', '') || '',
       title: session.title || '',
       status: this.mapState(session.state || ''),
-      rawState: session.state, // Pass through original state
+      rawState: session.state,
       createdAt: session.createTime,
       updatedAt: session.updateTime,
       lastActivityAt: session.lastActivityAt,
@@ -295,18 +287,14 @@ export class JulesClient {
   }
 
   private mapState(state: string): Session['status'] {
-    // Maps API states to our internal Session status type
-    // API States from Python SDK:
-    // STATE_UNSPECIFIED, QUEUED, PLANNING, AWAITING_PLAN_APPROVAL,
-    // AWAITING_USER_FEEDBACK, IN_PROGRESS, PAUSED, FAILED, COMPLETED
     const stateMap: Record<string, Session['status']> = {
       'COMPLETED': 'completed',
-      'ACTIVE': 'active', // Legacy/Simplified
+      'ACTIVE': 'active',
       'PLANNING': 'active',
       'QUEUED': 'active',
       'IN_PROGRESS': 'active',
       'AWAITING_USER_FEEDBACK': 'active',
-      'AWAITING_PLAN_APPROVAL': 'awaiting_approval', // New status for plan approval
+      'AWAITING_PLAN_APPROVAL': 'awaiting_approval',
       'FAILED': 'failed',
       'PAUSED': 'paused'
     };
@@ -318,7 +306,6 @@ export class JulesClient {
   }
 
   async createSession(data: CreateSessionRequest): Promise<Session> {
-    // Jules API requires specific structure per https://developers.google.com/jules/api
     let prompt = data.prompt;
     if (data.autoCreatePr) {
       prompt += '\n\nIMPORTANT: Automatically create a pull request when code changes are ready.';
@@ -329,14 +316,12 @@ export class JulesClient {
       sourceContext: {
         source: data.sourceId,
         githubRepoContext: {
-          startingBranch: data.startingBranch || 'main' // Default to main branch
+          startingBranch: data.startingBranch || 'main'
         }
       },
       title: data.title || 'Untitled Session',
-      requirePlanApproval: true // Enable plan approval as per requirements
+      requirePlanApproval: true
     };
-
-    console.log('[Jules Client] Creating session with:', requestBody);
 
     return this.request<Session>('/sessions', {
       method: 'POST',
@@ -351,6 +336,7 @@ export class JulesClient {
   }
 
   async approvePlan(sessionId: string): Promise<void> {
+    // Matches Python SDK: self.client.post(f"{session_id}:approvePlan")
     await this.request<void>(`/sessions/${sessionId}:approvePlan`, {
       method: 'POST',
       body: JSON.stringify({}),
@@ -358,8 +344,6 @@ export class JulesClient {
   }
 
   async resumeSession(sessionId: string): Promise<void> {
-    // No direct 'resume' endpoint found in SDK, using createActivity to wake it up.
-    // This is a common pattern for resuming paused/completed sessions in agentic workflows.
     await this.createActivity({
       sessionId,
       content: 'Please resume working on this task.',
@@ -369,20 +353,41 @@ export class JulesClient {
 
   // Activities
   async listActivities(sessionId: string): Promise<Activity[]> {
-    const response = await this.request<{ activities: ApiActivity[] }>(
-      `/sessions/${sessionId}/activities`
-    );
+    let allActivities: ApiActivity[] = [];
+    let pageToken: string | undefined;
 
-    // Transform API response to match our Activity type
-    return (response.activities || []).map((activity: ApiActivity) => {
-      // Extract ID from name field (e.g., "sessions/ID/activities/ACTIVITY_ID")
+    // Loop for pagination (like Python list_all)
+    do {
+        const params = new URLSearchParams();
+        params.set('pageSize', '100');
+        if (pageToken) params.set('pageToken', pageToken);
+
+        const response = await this.request<{ activities?: ApiActivity[]; nextPageToken?: string }>(
+            `/sessions/${sessionId}/activities?${params.toString()}`
+        );
+
+        if (response.activities) {
+            allActivities = allActivities.concat(response.activities);
+        }
+        pageToken = response.nextPageToken;
+    } while (pageToken);
+
+    return allActivities.map((activity) => this.transformActivity(activity, sessionId));
+  }
+
+  async getActivity(sessionId: string, activityId: string): Promise<Activity> {
+    const response = await this.request<ApiActivity>(`/sessions/${sessionId}/activities/${activityId}`);
+    return this.transformActivity(response, sessionId);
+  }
+
+  private transformActivity(activity: ApiActivity, sessionId: string): Activity {
       const id = activity.name?.split('/').pop() || activity.id || '';
-
-      // Determine type and content based on activity structure
       let type: Activity['type'] = 'message';
       let content = '';
+      let diff = activity.diff || undefined;
+      let bashOutput = activity.bashOutput || undefined;
 
-      // Extract content from various possible fields
+      // Extract specific content based on type
       if (activity.planGenerated) {
         type = 'plan';
         const plan = activity.planGenerated.plan || activity.planGenerated;
@@ -400,47 +405,38 @@ export class JulesClient {
         type = 'result';
         const result = activity.sessionCompleted;
         content = result.summary || result.message || 'Session completed';
-      }
-
-      // Extract artifacts from top-level artifacts array (applies to all activity types)
-      if (activity.artifacts && activity.artifacts.length > 0) {
-        for (const artifact of activity.artifacts) {
-          // Handle both gitPatch.unidiffPatch and direct unidiffPatch formats
-          if (artifact.changeSet?.gitPatch?.unidiffPatch) {
-            activity.diff = artifact.changeSet.gitPatch.unidiffPatch;
-          } else if (artifact.changeSet?.unidiffPatch) {
-            activity.diff = artifact.changeSet.unidiffPatch;
-          }
-          if (artifact.bashOutput?.output) {
-            activity.bashOutput = artifact.bashOutput.output;
-          }
-        }
       } else if (activity.agentMessaged) {
         type = 'message';
         content = activity.agentMessaged.agentMessage || activity.agentMessaged.message || '';
-      } else if (activity.userMessage) {
+      } else if (activity.userMessage || activity.userMessaged) {
         type = 'message';
-        // Try more fields including common variations
-        const um = activity.userMessage;
-        content = um.message || um.content || um.text || um.prompt || (typeof um === 'string' ? um : '');
+        const um = activity.userMessage || activity.userMessaged;
+        content = um?.message || um?.content || (um?.text as string) || '';
 
-        // If still empty and it's an object, check specific keys before generic stringify
         if (!content && typeof um === 'object' && um !== null) {
-             // Avoid stringifying empty objects or internal markers
-             if (Object.keys(um).length > 0) {
-                 // Try to find any string property that looks like content
+            if (Object.keys(um).length > 0) {
                  const stringVal = Object.values(um).find(v => typeof v === 'string' && v.length > 0);
-                 if (stringVal) {
-                    content = stringVal as string;
-                 } else {
-                    // Only stringify if it has meaningful data
-                    content = JSON.stringify(um);
-                 }
-             }
+                 if (stringVal) content = stringVal as string;
+                 else content = JSON.stringify(um);
+            }
         }
       }
 
-      // Fallback: try common content fields
+      // Extract artifacts
+      if (activity.artifacts && activity.artifacts.length > 0) {
+        for (const artifact of activity.artifacts) {
+          if (artifact.changeSet?.gitPatch?.unidiffPatch) {
+            diff = artifact.changeSet.gitPatch.unidiffPatch;
+          } else if (artifact.changeSet?.unidiffPatch) {
+            diff = artifact.changeSet.unidiffPatch;
+          }
+          if (artifact.bashOutput?.output) {
+            bashOutput = artifact.bashOutput.output;
+          }
+        }
+      }
+
+      // Fallback content
       if (!content) {
         content = activity.message ||
                   activity.content ||
@@ -450,107 +446,25 @@ export class JulesClient {
                   '';
       }
 
-      // Last resort: show activity type but try to dump meaningful content
-      if (!content) {
-        // Exclude internal fields
-        const keys = Object.keys(activity).filter(k => !['name', 'createTime', 'originator', 'id'].includes(k));
-        // If we have a specific known key like 'agentMessaged', try to dump it
-        const relevantKey = keys.find(k => k.includes('Message') || k.includes('Plan') || k.includes('content'));
-        if (relevantKey) {
-            content = JSON.stringify(activity[relevantKey]);
-        } else {
-            content = `[${keys.join(', ')}]`;
-        }
-      }
-
       return {
         id,
         sessionId,
         type,
         role: (activity.originator === 'agent' ? 'agent' : 'user') as Activity['role'],
         content,
-        diff: activity.diff, // Include extracted diff if available
-        bashOutput: activity.bashOutput, // Include extracted bash output if available
+        diff,
+        bashOutput,
         createdAt: activity.createTime,
         metadata: activity as Record<string, unknown>
       };
-    });
-  }
-
-  async getActivity(sessionId: string, activityId: string): Promise<Activity> {
-    const response = await this.request<ApiActivity>(`/sessions/${sessionId}/activities/${activityId}`);
-
-    // Transform similar to listActivities
-    const id = response.name?.split('/').pop() || activityId;
-    let type: Activity['type'] = 'message';
-    let content = '';
-
-    if (response.planGenerated) {
-      type = 'plan';
-      const plan = response.planGenerated.plan || response.planGenerated;
-      content = plan.description || plan.summary || plan.title || JSON.stringify(plan.steps || plan, null, 2);
-    } else if (response.planApproved) {
-      type = 'plan';
-      content = 'Plan approved';
-    } else if (response.progressUpdated) {
-      type = 'progress';
-      content = response.progressUpdated.progressDescription ||
-                response.progressUpdated.description ||
-                response.progressUpdated.message ||
-                JSON.stringify(response.progressUpdated, null, 2);
-    } else if (response.sessionCompleted) {
-      type = 'result';
-      const result = response.sessionCompleted;
-      content = result.summary || result.message || 'Session completed';
-    }
-
-    // Extract artifacts from top-level artifacts array (applies to all activity types)
-    if (response.artifacts && response.artifacts.length > 0) {
-      for (const artifact of response.artifacts) {
-        // Handle both gitPatch.unidiffPatch and direct unidiffPatch formats
-        if (artifact.changeSet?.gitPatch?.unidiffPatch) {
-          response.diff = artifact.changeSet.gitPatch.unidiffPatch;
-        } else if (artifact.changeSet?.unidiffPatch) {
-          response.diff = artifact.changeSet.unidiffPatch;
-        }
-        if (artifact.bashOutput?.output) {
-          response.bashOutput = artifact.bashOutput.output;
-        }
-      }
-    } else if (response.agentMessaged) {
-      type = 'message';
-      content = response.agentMessaged.agentMessage || response.agentMessaged.message || '';
-    } else if (response.userMessage) {
-      type = 'message';
-      content = response.userMessage.message || response.userMessage.content || '';
-    }
-
-    if (!content) {
-      content = response.message || response.content || response.text || response.description || '';
-    }
-
-    return {
-      id,
-      sessionId,
-      type,
-      role: (response.originator === 'agent' ? 'agent' : 'user') as Activity['role'],
-      content,
-      diff: response.diff,
-      bashOutput: response.bashOutput,
-      createdAt: response.createTime,
-      metadata: response as Record<string, unknown>
-    };
   }
 
   async createActivity(data: CreateActivityRequest): Promise<Activity> {
-    // Jules API uses :sendMessage endpoint for sending messages
-    // Response is empty - agent response will appear in next activity
     await this.request(`/sessions/${data.sessionId}:sendMessage`, {
       method: 'POST',
       body: JSON.stringify({ prompt: data.content }),
     });
 
-    // Return a placeholder activity since response is empty
     return {
       id: 'pending',
       sessionId: data.sessionId,
@@ -562,7 +476,6 @@ export class JulesClient {
   }
 }
 
-// Helper to create a client instance
 export function createJulesClient(apiKey: string): JulesClient {
   return new JulesClient(apiKey);
 }
