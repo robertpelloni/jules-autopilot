@@ -103,8 +103,8 @@ export function IntegratedTerminal({
       const wsUrl =
         process.env.NEXT_PUBLIC_TERMINAL_WS_URL ||
         (typeof window !== "undefined"
-          ? `ws://${window.location.hostname}:8080`
-          : "ws://localhost:8080");
+          ? `ws://${window.location.hostname}:8081`
+          : "ws://localhost:8081");
 
       console.log("Connecting to terminal server:", wsUrl);
 
