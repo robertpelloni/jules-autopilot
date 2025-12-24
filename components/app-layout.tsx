@@ -388,6 +388,8 @@ export function AppLayout({ initialView }: AppLayoutProps) {
 
             {/* Session Keeper Settings (Controlled) */}
             <SessionKeeperSettings 
+              config={config}
+              onConfigChange={setConfig}
               open={isSettingsOpen} 
               onOpenChange={setIsSettingsOpen} 
               trigger={null} 

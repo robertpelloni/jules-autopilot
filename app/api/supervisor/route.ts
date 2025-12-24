@@ -7,6 +7,8 @@ export async function POST(req: Request) {
     const body = await req.json();
     const { messages, provider, apiKey, model, threadId, assistantId, action, participants } = body;
 
+    console.log('[Supervisor API] Request:', { action, provider, model, participantsCount: participants?.length });
+
     // 1. List Models
     if (action === 'list_models') {
        if (!apiKey || !provider) {

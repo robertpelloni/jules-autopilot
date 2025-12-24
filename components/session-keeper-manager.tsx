@@ -55,6 +55,14 @@ export function SessionKeeperManager() {
         const supervisorState: SupervisorState = savedState ? JSON.parse(savedState) : {};
         let stateChanged = false;
 
+        // Debug Config
+        console.log('[Auto-Pilot Debug] Config:', {
+            mode: config.supervisorMode,
+            debateEnabled: config.debateEnabled,
+            smartPilot: config.smartPilotEnabled,
+            participants: config.debateParticipants?.length
+        });
+
         const generateMessage = async (session: any) => {
             let messageToSend = '';
 
