@@ -168,7 +168,10 @@ export async function POST(req: Request) {
       }
 
       if (runStatus !== 'completed') {
-        throw new Error(`Assistant run failed or timed out: ${runStatus}`);
+        console.error('[Supervisor API] Assistant Run Failed:', JSON.stringify(runData, null, 2));
+        const lastError = runData.last_error;
+        const errorMsg = lastError ? `${lastError.code}: ${lastError.message}` : 'No error details provided';
+        throw new Error(`Assistant run failed (${runStatus}): ${errorMsg}`);
       }
 
       // Get Response
