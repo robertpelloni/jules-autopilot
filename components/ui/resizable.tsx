@@ -6,10 +6,10 @@ import { Panel, Group as PanelGroup, Separator as PanelResizeHandle } from "reac
 
 import { cn } from "@/lib/utils"
 
-function ResizablePanelGroup({
+const ResizablePanelGroup = ({
   className,
   ...props
-}: React.ComponentProps<typeof PanelGroup>) {
+}: React.ComponentProps<typeof PanelGroup>) => {
   return (
     <PanelGroup
       className={cn(
@@ -21,20 +21,15 @@ function ResizablePanelGroup({
   )
 }
 
-function ResizablePanel({
-  className,
-  ...props
-}: React.ComponentProps<typeof Panel>) {
-  return <Panel className={cn(className)} {...props} />
-}
+const ResizablePanel = Panel
 
-function ResizableHandle({
+const ResizableHandle = ({
   withHandle,
   className,
   ...props
 }: React.ComponentProps<typeof PanelResizeHandle> & {
   withHandle?: boolean
-}) {
+}) => {
   return (
     <PanelResizeHandle
       className={cn(

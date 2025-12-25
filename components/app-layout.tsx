@@ -2,7 +2,6 @@
 
 import { useState, useCallback, useEffect } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
-import { motion, AnimatePresence } from "framer-motion";
 import { useJules } from "@/lib/jules/provider";
 import type { Session, Activity, SessionTemplate } from "@/types/jules";
 import { SessionList } from "./session-list";
@@ -87,7 +86,6 @@ export function AppLayout({ initialView }: AppLayoutProps) {
   const [refreshKey, setRefreshKey] = useState(0);
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const [codeDiffSidebarCollapsed, setCodeDiffSidebarCollapsed] = useState(false);
-  // Replaced keeperSidebarCollapsed with direct logs toggle state
   const [isLogPanelOpen, setIsLogPanelOpen] = useState(false);
   const [showCodeDiffs, setShowCodeDiffs] = useState(false);
   const [currentActivities, setCurrentActivities] = useState<Activity[]>([]);
@@ -190,12 +188,8 @@ export function AppLayout({ initialView }: AppLayoutProps) {
   };
 
   const handleSessionArchived = () => {
-    // Clear the selected session and refresh the session list
-    setSelectedSession(null);
+    // Refresh the session list to update the archived/active status
     setRefreshKey((prev) => prev + 1);
-    const newParams = new URLSearchParams(searchParams.toString());
-    newParams.delete('sessionId');
-    router.push(`/?${newParams.toString()}`);
   };
 
   const handleLogout = () => {
@@ -250,7 +244,9 @@ export function AppLayout({ initialView }: AppLayoutProps) {
           <ApiKeySetupForm onSuccess={handleApiKeySuccess} />
         </DialogContent>
       </Dialog>
+      
       <SessionKeeperManager />
+      
       {/* Header */}
       <header className="border-b border-white/[0.08] bg-zinc-950/95 backdrop-blur-sm">
         <div className="flex h-14 items-center justify-between px-2 sm:px-4">
@@ -483,9 +479,10 @@ export function AppLayout({ initialView }: AppLayoutProps) {
             )}
           </div>
         </aside>
+
         {/* Resizable Panel Group (Vertical: Top = Main, Bottom = Logs) */}
         <ResizablePanelGroup 
-          orientation="vertical" 
+          direction="vertical" 
           className="flex-1 min-w-0 flex-col"
           key={isLogPanelOpen ? "vertical-layout-open" : "vertical-layout-closed"}
         >
@@ -499,6 +496,8 @@ export function AppLayout({ initialView }: AppLayoutProps) {
                   <AnalyticsDashboard />
                 ) : view === 'templates' ? (
                   <TemplatesPage onStartSession={handleStartSessionFromTemplate} />
+                ) : view === 'kanban' ? (
+                  <KanbanBoard onSelectSession={handleSessionSelect} />
                 ) : selectedSession ? (
                   <ActivityFeed
                     key={selectedSession.id}
@@ -531,7 +530,7 @@ export function AppLayout({ initialView }: AppLayoutProps) {
                 )}
               </main>
 
-              {/* Code Diff Sidebar (Existing) - Kept inside Main Panel */}
+              {/* Code Diff Sidebar */}
               {selectedSession && showCodeDiffs && view === 'sessions' && (
                 <>
                   {!codeDiffSidebarCollapsed && (

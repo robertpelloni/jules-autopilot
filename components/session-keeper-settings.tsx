@@ -27,6 +27,7 @@ import { Separator } from '@/components/ui/separator';
 import { Brain, Sparkles, Trash2, Settings, Loader2, Download, Users, Plus } from 'lucide-react';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Badge } from '@/components/ui/badge';
+import { cn } from '@/lib/utils';
 
 // Default configuration (Duplicated to allow standalone usage)
 const DEFAULT_CONFIG: SessionKeeperConfig = {
@@ -200,6 +201,7 @@ export function SessionKeeperSettings({
     : (config.customMessages?.[selectedSessionId] || []);
 
   return (
+<<<<<<< HEAD
     <Dialog open={isDialogOpen} onOpenChange={handleOpenChange}>
       {trigger !== null && (
         <DialogTrigger asChild>
@@ -210,6 +212,22 @@ export function SessionKeeperSettings({
           )}
         </DialogTrigger>
       )}
+=======
+    <Dialog open={isOpen} onOpenChange={setIsOpen}>
+      <DialogTrigger asChild>
+        <Button
+          variant="ghost"
+          size="icon"
+          className={cn(
+            "h-8 w-8 hover:bg-white/10 transition-colors",
+            config.isEnabled ? "text-green-400 hover:text-green-300" : "text-white/60 hover:text-white"
+          )}
+          title={config.isEnabled ? "Auto-Pilot Active" : "Auto-Pilot Settings"}
+        >
+          <Settings className={cn("h-4 w-4", config.isEnabled && "animate-spin [animation-duration:3s]")} />
+        </Button>
+      </DialogTrigger>
+>>>>>>> origin/jules-session-keeper-integration-11072096883725838253
       <DialogContent className="max-w-2xl bg-zinc-950 border-white/10 text-white max-h-[85vh] flex flex-col p-0">
         <DialogHeader className="px-6 py-4 border-b border-white/10">
           <DialogTitle className="text-lg font-bold tracking-wide">Auto-Pilot Configuration</DialogTitle>
@@ -293,8 +311,8 @@ export function SessionKeeperSettings({
                       <Label className="text-xs text-white/60">Provider</Label>
                       <Select
                         value={config.supervisorProvider}
-                        onValueChange={(v: any) => {
-                          handleConfigChange({ ...config, supervisorProvider: v, supervisorModel: '' });
+                        onValueChange={(v: string) => {
+                          handleConfigChange({ ...config, supervisorProvider: v as SessionKeeperConfig['supervisorProvider'], supervisorModel: '' });
                           setAvailableModels([]);
                         }}
                       >

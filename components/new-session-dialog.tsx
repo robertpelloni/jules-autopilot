@@ -1,9 +1,9 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
-import { useJules } from "@/lib/jules/provider";
-import type { Source, SessionTemplate } from "@/types/jules";
-import { getTemplates } from "@/lib/templates";
+import { useState, useEffect, useCallback, useRef } from 'react';
+import { useJules } from '@/lib/jules/provider';
+import type { Source, SessionTemplate } from '@/types/jules';
+import { getTemplates } from '@/lib/templates';
 import {
   Dialog,
   DialogContent,
@@ -67,22 +67,25 @@ export function NewSessionDialog({
     autoCreatePr: false,
   });
 
-  const loadSources = useCallback(async () => {
+  const searchTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+
+  const loadSources = useCallback(async (query: string = '') => {
     if (!client) return;
 
     try {
       setError(null);
-      const data = await client.listSources();
+      // Pass filter to listSources if query exists
+      const data = await client.listSources(query || undefined);
       setSources(data);
-      if (data.length > 0) {
-        setFormData((prev) => ({
-          ...prev,
-          sourceId: prev.sourceId || data[0].id,
-        }));
-      } else if (data.length === 0) {
-        setError(
-          "No repositories found. Please connect a GitHub repository in the Jules web app first.",
-        );
+
+      // Auto-select first if we have data and nothing selected, BUT only on initial load (empty query)
+      // Otherwise keep selection or let user pick.
+      if (!query && data.length > 0 && !formData.sourceId) {
+        setFormData((prev) => ({ ...prev, sourceId: data[0].id }));
+      }
+
+      if (data.length === 0 && !query) {
+        setError('No repositories found. Please connect a GitHub repository in the Jules web app first.');
       }
     } catch (err) {
       console.error("Failed to load sources:", err);
@@ -96,7 +99,16 @@ export function NewSessionDialog({
         setError(errorMessage);
       }
     }
-  }, [client]);
+  }, [client, formData.sourceId]);
+
+  const handleSearchChange = (query: string) => {
+    if (searchTimeoutRef.current) {
+        clearTimeout(searchTimeoutRef.current);
+    }
+    searchTimeoutRef.current = setTimeout(() => {
+        loadSources(query);
+    }, 500); // 500ms debounce
+  };
 
   const loadTemplatesList = useCallback(() => {
     setTemplates(getTemplates());
@@ -115,10 +127,13 @@ export function NewSessionDialog({
       }
 
       if (client) {
-        loadSources();
+        loadSources(); // Initial load
       }
       loadTemplatesList();
     }
+    return () => {
+        if (searchTimeoutRef.current) clearTimeout(searchTimeoutRef.current);
+    };
   }, [open, client, loadSources, loadTemplatesList, initialValues]);
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -269,12 +284,9 @@ export function NewSessionDialog({
                 onValueChange={(value) =>
                   setFormData((prev) => ({ ...prev, sourceId: value }))
                 }
-                placeholder={
-                  sources.length === 0
-                    ? "No repositories available"
-                    : "Select a repository"
-                }
-                searchPlaceholder="Search repositories..."
+                onSearchChange={handleSearchChange}
+                placeholder={sources.length === 0 ? "No repositories available" : "Select a repository"}
+                searchPlaceholder="Search repositories (server-side)..."
                 emptyMessage="No repositories found."
                 className={`text-xs ${sources.length === 0 ? "opacity-50 cursor-not-allowed" : ""}`}
               />

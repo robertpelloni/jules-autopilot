@@ -42,6 +42,6 @@ export const openaiProvider: ProviderInterface = {
      });
      if (!resp.ok) throw new Error('Failed to fetch OpenAI models');
      const data = await resp.json();
-     return data.data.map((m: any) => m.id).sort();
+     return data.data.map((m: { id: string }) => m.id).sort();
   }
 };

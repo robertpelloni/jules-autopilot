@@ -1,54 +1,24 @@
 "use client";
 
-import { useEffect, useState, useMemo, useCallback } from "react";
-import { useJules } from "@/lib/jules/provider";
-import type { Session, Source, Activity } from "@/types/jules";
+import { useEffect, useState, useMemo, useCallback } from 'react';
+import { useJules } from '@/lib/jules/provider';
+import { useSessionKeeperStore } from '@/lib/stores/session-keeper';
+import type { Session, Source, Activity } from '@/types/jules';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Button } from '@/components/ui/button';
+import { BackgroundBeams } from '@/components/ui/background-beams';
+import { BorderGlow } from '@/components/ui/border-glow';
 import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
-import { Button } from "@/components/ui/button";
-import { BackgroundBeams } from "@/components/ui/background-beams";
-import { BorderGlow } from "@/components/ui/border-glow";
-import {
-  BarChart,
-  Bar,
-  XAxis,
-  YAxis,
-  CartesianGrid,
-  Tooltip,
-  ResponsiveContainer,
-  AreaChart,
-  Area,
-} from "recharts";
-import {
-  format,
-  subDays,
-  isAfter,
-  parseISO,
-  differenceInMinutes,
-  startOfDay,
-} from "date-fns";
-import {
-  Loader2,
-  RefreshCw,
-  BarChart3,
-  Clock,
-  CheckCircle2,
-} from "lucide-react";
+  BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
+  AreaChart, Area
+} from 'recharts';
+import { format, subDays, isAfter, parseISO, differenceInMinutes, startOfDay } from 'date-fns';
+import { Loader2, RefreshCw, BarChart3, Clock, CheckCircle2, Zap, MessageSquare, Users } from 'lucide-react';
 
 export function AnalyticsDashboard() {
   const { client } = useJules();
+  const { stats: keeperStats } = useSessionKeeperStore();
   const [sessions, setSessions] = useState<Session[]>([]);
   const [sources, setSources] = useState<Source[]>([]);
   const [activities, setActivities] = useState<Activity[]>([]);
@@ -119,11 +89,8 @@ export function AnalyticsDashboard() {
     );
 
     // Filter activities that belong to the filtered sessions
-    // Note: We only have activities for the top 20 recent sessions
-    const sessionIds = new Set(filteredSessions.map((s) => s.id));
-    const filteredActivities = activities.filter((a) =>
-      sessionIds.has(a.sessionId),
-    );
+    const sessionIds = new Set(filteredSessions.map(s => s.id));
+    const filteredActivities = activities.filter(a => sessionIds.has(a.sessionId));
 
     return { sessions: filteredSessions, activities: filteredActivities };
   }, [sessions, activities, dateRange]);
@@ -143,7 +110,7 @@ export function AnalyticsDashboard() {
       (s) => s.status === "failed",
     ).length;
 
-    // Success rate (completed / (completed + failed))
+    // Success rate
     const finishedSessions = completedSessions + failedSessions;
     const successRate =
       finishedSessions > 0
@@ -151,9 +118,8 @@ export function AnalyticsDashboard() {
         : 0;
 
     // Average duration (minutes)
-    // Only for completed sessions to be accurate, or we can use updated-created for all
-    const durations = currentSessions.map((s) =>
-      differenceInMinutes(parseISO(s.updatedAt), parseISO(s.createdAt)),
+    const durations = currentSessions.map(s =>
+      differenceInMinutes(parseISO(s.updatedAt), parseISO(s.createdAt))
     );
     const avgDuration =
       durations.length > 0
@@ -175,28 +141,23 @@ export function AnalyticsDashboard() {
     }));
 
     // Repository usage
-    const repoCounts = currentSessions.reduce(
-      (acc, curr) => {
-        // Try to match by comparing the end of the source ID (since sessions use "owner/repo" and sources use "sources/github/owner/repo")
-        const source = sources.find(
-          (s) =>
-            s.id === curr.sourceId ||
-            s.id.endsWith(curr.sourceId) ||
-            s.name === curr.sourceId,
-        );
-        const name = source ? source.name : curr.sourceId || "Unknown";
-        acc[name] = (acc[name] || 0) + 1;
-        return acc;
-      },
-      {} as Record<string, number>,
-    );
+    const repoCounts = currentSessions.reduce((acc, curr) => {
+      const source = sources.find(s =>
+        s.id === curr.sourceId ||
+        s.id.endsWith(curr.sourceId) ||
+        s.name === curr.sourceId
+      );
+      const name = source ? source.name : (curr.sourceId || 'Unknown');
+      acc[name] = (acc[name] || 0) + 1;
+      return acc;
+    }, {} as Record<string, number>);
 
     const repoData = Object.entries(repoCounts)
       .map(([name, value]) => ({ name, value }))
       .sort((a, b) => b.value - a.value)
-      .slice(0, 5); // Top 5
+      .slice(0, 5);
 
-    // Re-doing timeline properly
+    // Timeline
     const timelineMap = new Map<string, number>();
     currentSessions.forEach((s) => {
       const d = startOfDay(parseISO(s.createdAt)).toISOString();
@@ -235,8 +196,8 @@ export function AnalyticsDashboard() {
 
   return (
     <div className="h-full overflow-hidden bg-black">
-      <div className="h-full overflow-y-auto overflow-x-hidden p-2 sm:p-4 space-y-4">
-        <div className="flex items-center justify-between pb-3 border-b">
+      <div className="h-full overflow-y-auto overflow-x-hidden p-4 space-y-4">
+        <div className="flex items-center justify-between pb-3 border-b border-white/[0.08]">
           <div>
             <h2 className="text-lg font-semibold tracking-tight text-foreground">
               Dashboard
@@ -283,22 +244,70 @@ export function AnalyticsDashboard() {
           </div>
         </div>
 
-        {/* Summary Cards */}
-        <div className="grid gap-3 md:grid-cols-2 lg:grid-cols-5">
-          <BorderGlow glowColor="rgba(168, 85, 247, 0.5)">
-            <Card className="border-l-2 border-l-primary bg-card/95 backdrop-blur-sm">
+        {/* Auto-Pilot Metrics */}
+        <div className="grid gap-3 md:grid-cols-3">
+          <BorderGlow glowColor="rgba(34, 197, 94, 0.4)">
+            <Card className="border-l-2 border-l-green-500 bg-card/95 backdrop-blur-sm">
               <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-1.5 pt-3">
-                <CardTitle className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider">
-                  Total Sessions
-                </CardTitle>
-                <div className="h-6 w-6 rounded bg-primary/10 flex items-center justify-center">
-                  <BarChart3 className="h-3 w-3 text-primary" />
+                <CardTitle className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider">Plans Approved</CardTitle>
+                <div className="h-6 w-6 rounded bg-green-500/10 flex items-center justify-center">
+                  <CheckCircle2 className="h-3 w-3 text-green-500" />
                 </div>
               </CardHeader>
               <CardContent className="pb-3">
-                <div className="text-2xl font-bold tracking-tight">
-                  {stats.totalSessions}
+                <div className="text-2xl font-bold tracking-tight">{keeperStats.totalApprovals}</div>
+                <p className="text-[10px] text-muted-foreground mt-0.5">
+                  automatically
+                </p>
+              </CardContent>
+            </Card>
+          </BorderGlow>
+          <BorderGlow glowColor="rgba(168, 85, 247, 0.4)">
+            <Card className="border-l-2 border-l-purple-500 bg-card/95 backdrop-blur-sm">
+              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-1.5 pt-3">
+                <CardTitle className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider">Smart Nudges</CardTitle>
+                <div className="h-6 w-6 rounded bg-purple-500/10 flex items-center justify-center">
+                  <Zap className="h-3 w-3 text-purple-500" />
                 </div>
+              </CardHeader>
+              <CardContent className="pb-3">
+                <div className="text-2xl font-bold tracking-tight">{keeperStats.totalNudges}</div>
+                <p className="text-[10px] text-muted-foreground mt-0.5">
+                  sent by auto-pilot
+                </p>
+              </CardContent>
+            </Card>
+          </BorderGlow>
+          <BorderGlow glowColor="rgba(59, 130, 246, 0.4)">
+            <Card className="border-l-2 border-l-blue-500 bg-card/95 backdrop-blur-sm">
+              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-1.5 pt-3">
+                <CardTitle className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider">Council Debates</CardTitle>
+                <div className="h-6 w-6 rounded bg-blue-500/10 flex items-center justify-center">
+                  <Users className="h-3 w-3 text-blue-500" />
+                </div>
+              </CardHeader>
+              <CardContent className="pb-3">
+                <div className="text-2xl font-bold tracking-tight">{keeperStats.totalDebates}</div>
+                <p className="text-[10px] text-muted-foreground mt-0.5">
+                  multi-agent sessions
+                </p>
+              </CardContent>
+            </Card>
+          </BorderGlow>
+        </div>
+
+        {/* Summary Cards */}
+        <div className="grid gap-3 md:grid-cols-2 lg:grid-cols-5">
+          <BorderGlow glowColor="rgba(255, 255, 255, 0.3)">
+            <Card className="border-l-2 border-l-white/50 bg-card/95 backdrop-blur-sm">
+              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-1.5 pt-3">
+                <CardTitle className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider">Total Sessions</CardTitle>
+                <div className="h-6 w-6 rounded bg-white/10 flex items-center justify-center">
+                  <BarChart3 className="h-3 w-3 text-white/70" />
+                </div>
+              </CardHeader>
+              <CardContent className="pb-3">
+                <div className="text-2xl font-bold tracking-tight">{stats.totalSessions}</div>
                 <p className="text-[10px] text-muted-foreground mt-0.5">
                   in selected period
                 </p>
@@ -308,17 +317,13 @@ export function AnalyticsDashboard() {
           <BorderGlow glowColor="rgba(59, 130, 246, 0.5)">
             <Card className="border-l-2 border-l-blue-500 bg-card/95 backdrop-blur-sm">
               <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-1.5 pt-3">
-                <CardTitle className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider">
-                  Active Sessions
-                </CardTitle>
+                <CardTitle className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider">Active Sessions</CardTitle>
                 <div className="h-6 w-6 rounded bg-blue-500/10 flex items-center justify-center">
                   <BarChart3 className="h-3 w-3 text-blue-500" />
                 </div>
               </CardHeader>
               <CardContent className="pb-3">
-                <div className="text-2xl font-bold tracking-tight">
-                  {stats.activeSessions}
-                </div>
+                <div className="text-2xl font-bold tracking-tight">{stats.activeSessions}</div>
                 <p className="text-[10px] text-muted-foreground mt-0.5">
                   currently running
                 </p>
@@ -328,17 +333,13 @@ export function AnalyticsDashboard() {
           <BorderGlow glowColor="rgba(34, 197, 94, 0.5)">
             <Card className="border-l-2 border-l-green-500 bg-card/95 backdrop-blur-sm">
               <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-1.5 pt-3">
-                <CardTitle className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider">
-                  Success Rate
-                </CardTitle>
+                <CardTitle className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider">Success Rate</CardTitle>
                 <div className="h-6 w-6 rounded bg-green-500/10 flex items-center justify-center">
                   <CheckCircle2 className="h-3 w-3 text-green-500" />
                 </div>
               </CardHeader>
               <CardContent className="pb-3">
-                <div className="text-2xl font-bold tracking-tight">
-                  {stats.successRate}%
-                </div>
+                <div className="text-2xl font-bold tracking-tight">{stats.successRate}%</div>
                 <p className="text-[10px] text-muted-foreground mt-0.5">
                   {stats.completedSessions} completed
                 </p>
@@ -348,17 +349,13 @@ export function AnalyticsDashboard() {
           <BorderGlow glowColor="rgba(234, 179, 8, 0.5)">
             <Card className="border-l-2 border-l-yellow-500 bg-card/95 backdrop-blur-sm">
               <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-1.5 pt-3">
-                <CardTitle className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider">
-                  Avg Duration
-                </CardTitle>
+                <CardTitle className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider">Avg Duration</CardTitle>
                 <div className="h-6 w-6 rounded bg-yellow-500/10 flex items-center justify-center">
                   <Clock className="h-3 w-3 text-yellow-600" />
                 </div>
               </CardHeader>
               <CardContent className="pb-3">
-                <div className="text-2xl font-bold tracking-tight">
-                  {stats.avgDuration}m
-                </div>
+                <div className="text-2xl font-bold tracking-tight">{stats.avgDuration}m</div>
                 <p className="text-[10px] text-muted-foreground mt-0.5">
                   per session
                 </p>
@@ -368,17 +365,13 @@ export function AnalyticsDashboard() {
           <BorderGlow glowColor="rgba(249, 115, 22, 0.5)">
             <Card className="border-l-2 border-l-orange-500 bg-card/95 backdrop-blur-sm">
               <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-1.5 pt-3">
-                <CardTitle className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider">
-                  Repositories
-                </CardTitle>
+                <CardTitle className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider">Repositories</CardTitle>
                 <div className="h-6 w-6 rounded bg-orange-500/10 flex items-center justify-center">
                   <BarChart3 className="h-3 w-3 text-orange-500" />
                 </div>
               </CardHeader>
               <CardContent className="pb-3">
-                <div className="text-2xl font-bold tracking-tight">
-                  {stats.repoData.length}
-                </div>
+                <div className="text-2xl font-bold tracking-tight">{stats.repoData.length}</div>
                 <p className="text-[10px] text-muted-foreground mt-0.5">
                   active sources
                 </p>

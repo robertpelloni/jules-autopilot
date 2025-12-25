@@ -1,16 +1,15 @@
-import { JulesClient, JulesAPIError } from "./client";
+import { JulesClient, JulesAPIError, createJulesClient } from "./client";
 
 // Mock global fetch
-const mockFetch = jest.fn();
-global.fetch = mockFetch;
+global.fetch = jest.fn();
 
 describe("JulesClient", () => {
   const apiKey = "test-api-key";
   let client: JulesClient;
 
   beforeEach(() => {
-    client = new JulesClient(apiKey);
-    mockFetch.mockClear();
+    jest.clearAllMocks();
+    client = createJulesClient(apiKey);
   });
 
   describe("constructor", () => {
@@ -24,27 +23,27 @@ describe("JulesClient", () => {
       const mockResponse = {
         sessions: [
           {
-            id: "sess-1",
+            name: "sessions/sess-1",
             state: "ACTIVE",
             createTime: "2023-01-01T00:00:00Z",
             sourceContext: { source: "sources/github/owner/repo" },
           },
           {
-            id: "sess-2",
+            name: "sessions/sess-2",
             state: "COMPLETED",
             createTime: "2023-01-02T00:00:00Z",
           },
         ],
       };
 
-      mockFetch.mockResolvedValueOnce({
+      (global.fetch as jest.Mock).mockResolvedValueOnce({
         ok: true,
         json: async () => mockResponse,
       });
 
       const sessions = await client.listSessions();
 
-      expect(mockFetch).toHaveBeenCalledWith(
+      expect(global.fetch).toHaveBeenCalledWith(
         expect.stringContaining("/api/jules?path=%2Fsessions"),
         expect.objectContaining({
           headers: expect.objectContaining({ "X-Jules-Api-Key": apiKey }),
@@ -55,6 +54,50 @@ describe("JulesClient", () => {
       expect(sessions[0].status).toBe("active");
       expect(sessions[1].status).toBe("completed");
       expect(sessions[0].sourceId).toBe("owner/repo");
+    });
+  });
+
+  describe('createSession', () => {
+    it('should set requirePlanApproval to true', async () => {
+      (global.fetch as jest.Mock).mockResolvedValue({
+        ok: true,
+        json: async () => ({
+          name: 'sessions/session-1',
+          createTime: '2023-01-01T00:00:00Z',
+          updateTime: '2023-01-01T00:00:00Z',
+        }),
+      });
+
+      await client.createSession({
+        prompt: 'test prompt',
+        sourceId: 'test/repo',
+      });
+
+      expect(global.fetch).toHaveBeenCalledWith(
+        expect.stringContaining('/api/jules?path=%2Fsessions'),
+        expect.objectContaining({
+          method: 'POST',
+          body: expect.stringContaining('"requirePlanApproval":true'),
+        })
+      );
+    });
+  });
+
+  describe('approvePlan', () => {
+    it('should post to the correct endpoint', async () => {
+      (global.fetch as jest.Mock).mockResolvedValue({
+        ok: true,
+        json: async () => ({}),
+      });
+
+      await client.approvePlan('session-123');
+
+      expect(global.fetch).toHaveBeenCalledWith(
+        expect.stringContaining('/api/jules?path=%2Fsessions%2Fsession-123%3AapprovePlan'),
+        expect.objectContaining({
+          method: 'POST',
+        })
+      );
     });
   });
 
@@ -78,7 +121,7 @@ describe("JulesClient", () => {
         ],
       };
 
-      mockFetch.mockResolvedValueOnce({
+      (global.fetch as jest.Mock).mockResolvedValueOnce({
         ok: true,
         json: async () => mockResponse,
       });
@@ -104,7 +147,7 @@ describe("JulesClient", () => {
         ],
       };
 
-      mockFetch.mockResolvedValueOnce({
+      (global.fetch as jest.Mock).mockResolvedValueOnce({
         ok: true,
         json: async () => mockResponse,
       });
@@ -136,7 +179,7 @@ describe("JulesClient", () => {
         ],
       };
 
-      mockFetch.mockResolvedValueOnce({
+      (global.fetch as jest.Mock).mockResolvedValueOnce({
         ok: true,
         json: async () => mockResponse,
       });
@@ -165,7 +208,7 @@ describe("JulesClient", () => {
         ],
       };
 
-      mockFetch.mockResolvedValueOnce({
+      (global.fetch as jest.Mock).mockResolvedValueOnce({
         ok: true,
         json: async () => mockResponse,
       });
@@ -176,9 +219,36 @@ describe("JulesClient", () => {
     });
   });
 
+  describe('listActivitiesPaged', () => {
+    it('should return activities and next page token', async () => {
+      const mockResponse = {
+        activities: [
+          { name: 'sessions/123/activities/1', createTime: '2023-01-01T00:00:00Z' },
+          { name: 'sessions/123/activities/2', createTime: '2023-01-01T00:00:01Z' },
+        ],
+        nextPageToken: 'next-token',
+      };
+
+      (global.fetch as jest.Mock).mockResolvedValue({
+        ok: true,
+        json: async () => mockResponse,
+      });
+
+      const result = await client.listActivitiesPaged('session-123', 10, 'prev-token');
+
+      expect(global.fetch).toHaveBeenCalledWith(
+        expect.stringContaining('/api/jules?path=%2Fsessions%2Fsession-123%2Factivities%3FpageSize%3D10%26pageToken%3Dprev-token'),
+        expect.any(Object)
+      );
+      expect(result.activities).toHaveLength(2);
+      expect(result.nextPageToken).toBe('next-token');
+      expect(result.activities[0].id).toBe('1');
+    });
+  });
+
   describe("Error Handling", () => {
     it("should throw JulesAPIError on 401", async () => {
-      mockFetch.mockResolvedValue({
+      (global.fetch as jest.Mock).mockResolvedValue({
         ok: false,
         status: 401,
         json: async () => ({ error: { message: "Unauthorized" } }),
@@ -189,7 +259,7 @@ describe("JulesClient", () => {
     });
 
     it("should throw JulesAPIError on network failure", async () => {
-      mockFetch.mockRejectedValue(new TypeError("Failed to fetch"));
+      (global.fetch as jest.Mock).mockRejectedValue(new TypeError("Failed to fetch"));
 
       await expect(client.listSessions()).rejects.toThrow(JulesAPIError);
       await expect(client.listSessions()).rejects.toThrow("Unable to connect");

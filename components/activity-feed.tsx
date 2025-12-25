@@ -10,8 +10,8 @@ import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { Textarea } from '@/components/ui/textarea';
 import { Button } from '@/components/ui/button';
 import { formatDistanceToNow, isValid, parseISO } from 'date-fns';
-import { Send, Archive, Code, Terminal, ChevronDown, ChevronRight, Play, GitBranch, GitPullRequest, MoreVertical, Book, ArrowUp, ArrowDown, Download, Copy, Check, Loader2 } from 'lucide-react';
-import { archiveSession } from '@/lib/archive';
+import { Send, Archive, ArchiveRestore, Code, Terminal, ChevronDown, ChevronRight, Play, GitBranch, GitPullRequest, MoreVertical, Book, ArrowUp, ArrowDown, Download, Copy, Check, Loader2 } from 'lucide-react';
+import { archiveSession, unarchiveSession, isSessionArchived } from '@/lib/archive';
 import { BashOutput } from '@/components/ui/bash-output';
 import { NewSessionDialog } from './new-session-dialog';
 import {
@@ -57,6 +57,12 @@ export function ActivityFeed({
   const [copiedId, setCopiedId] = useState<string | null>(null);
   const [shouldAutoScroll, setShouldAutoScroll] = useState(true);
   const [expandedBashOutputs, setExpandedBashOutputs] = useState<Set<string>>(new Set());
+  const [isArchived, setIsArchived] = useState(false);
+
+  // Check archive status on session change
+  useEffect(() => {
+    setIsArchived(isSessionArchived(session.id));
+  }, [session.id]);
 
   const formatDate = (dateString: string) => {
     if (!dateString) return "Unknown date";
@@ -69,7 +75,17 @@ export function ActivityFeed({
     }
   };
 
-  const formatContent = (content: string) => {
+  const formatContent = (content: string, metadata?: Record<string, unknown>) => {
+    // 1. Handle Placeholders
+    if (content === '[userMessaged]' || content === '[agentMessaged]') {
+        // Try to recover content from metadata if available
+        const realContent = metadata?.original_content || metadata?.message || metadata?.text;
+        if (realContent && typeof realContent === 'string') {
+             // If we found real content, recursively format it
+             return formatContent(realContent, undefined);
+        }
+    }
+
     // Try to parse as JSON and format nicely
     try {
       const parsed = JSON.parse(content);
@@ -189,19 +205,19 @@ export function ActivityFeed({
 
   useEffect(() => {
     loadActivities(true);
-    if (session.status === 'active') {
+    if (session.status === 'active' && !isArchived) {
       // Increased polling interval to 10s to avoid rate limits
       const interval = setInterval(() => loadActivities(false), 10000);
       return () => clearInterval(interval);
     }
-  }, [session.id, session.status, loadActivities]);
+  }, [session.id, session.status, isArchived, loadActivities]);
 
   useEffect(() => {
     onActivitiesChange(activities);
   }, [activities, onActivitiesChange]);
 
   const handleApprovePlan = async () => {
-    if (!client || approvingPlan) return;
+    if (!client || approvingPlan || isArchived) return;
     try {
       setApprovingPlan(true);
       setError(null);
@@ -223,7 +239,7 @@ export function ActivityFeed({
   };
 
   const sendAgentCommand = async (commandPrompt: string) => {
-    if (!client || sending) return;
+    if (!client || sending || isArchived) return;
 
     try {
       setSending(true);
@@ -262,7 +278,7 @@ export function ActivityFeed({
   };
 
   const handleSendMessage = async (content: string) => {
-    if (!client || sending) return;
+    if (!client || sending || isArchived) return;
     try {
       setSending(true);
       setError(null);
@@ -291,7 +307,14 @@ export function ActivityFeed({
 
   const handleArchive = () => {
     archiveSession(session.id);
+    setIsArchived(true);
     onArchive?.();
+  };
+
+  const handleUnarchive = () => {
+    unarchiveSession(session.id);
+    setIsArchived(false);
+    onArchive?.(); // Reuse callback to notify list refresh
   };
 
   const toggleCodeDiffsSidebar = () => {
@@ -413,7 +436,7 @@ export function ActivityFeed({
 
   // Filter activities
   const filteredActivities = useMemo(() => activities.filter((activity) => {
-    if (activity.bashOutput || activity.diff) return true;
+    if (activity.bashOutput || activity.diff || activity.media) return true;
     const content = activity.content?.trim();
     if (!content) return false;
     
@@ -489,6 +512,9 @@ export function ActivityFeed({
     );
   }
 
+  // Check for PR
+  const pullRequest = session.outputs?.find(o => o.pullRequest)?.pullRequest;
+
   return (
     <div className="flex flex-col h-full bg-black relative">
       <div className="border-b border-white/[0.08] bg-zinc-950/95 px-4 py-3">
@@ -504,6 +530,17 @@ export function ActivityFeed({
                 <span>{statusInfo.icon}</span>
                 <span>{statusInfo.label}</span>
               </div>
+              {pullRequest && (
+                <a
+                  href={pullRequest.url}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="flex items-center gap-1 px-2 py-0.5 text-[9px] font-mono font-bold uppercase tracking-wider bg-green-500/10 text-green-400 hover:text-green-300 hover:underline border border-green-500/20 rounded"
+                >
+                  <GitPullRequest className="h-3 w-3" />
+                  <span>PR Created</span>
+                </a>
+              )}
             </div>
             <div className="flex items-center gap-3 text-[9px] font-mono text-white/40 uppercase tracking-wide">
               <span>Started {formatDate(session.createdAt)}</span>
@@ -632,15 +669,34 @@ export function ActivityFeed({
                   Copy Full JSON
                 </DropdownMenuItem>
                 <DropdownMenuSeparator className="bg-white/10" />
-                <DropdownMenuItem onClick={handleArchive} className="text-xs cursor-pointer text-red-400 focus:text-red-400">
-                  <Archive className="mr-2 h-3.5 w-3.5" />
-                  Archive Session
-                </DropdownMenuItem>
+                {isArchived ? (
+                  <DropdownMenuItem onClick={handleUnarchive} className="text-xs cursor-pointer text-purple-400 focus:text-purple-400">
+                    <ArchiveRestore className="mr-2 h-3.5 w-3.5" />
+                    Unarchive Session
+                  </DropdownMenuItem>
+                ) : (
+                  <DropdownMenuItem onClick={handleArchive} className="text-xs cursor-pointer text-red-400 focus:text-red-400">
+                    <Archive className="mr-2 h-3.5 w-3.5" />
+                    Archive Session
+                  </DropdownMenuItem>
+                )}
               </DropdownMenuContent>
             </DropdownMenu>
           </div>
         </div>
       </div>
+
+      {isArchived && (
+        <div className="bg-zinc-900 border-b border-white/[0.08] px-4 py-2 flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            <Archive className="h-4 w-4 text-white/40" />
+            <span className="text-[11px] font-mono text-white/60 uppercase tracking-wide">Archived Session (Read-only)</span>
+          </div>
+          <Button size="sm" variant="ghost" onClick={handleUnarchive} className="h-6 text-[10px] text-purple-400 hover:text-purple-300 hover:bg-purple-500/10">
+            Unarchive
+          </Button>
+        </div>
+      )}
 
       {error && (
         <div className="border-b border-white/[0.08] bg-red-950/20 px-4 py-3">
@@ -770,8 +826,12 @@ export function ActivityFeed({
                 }
 
                 const activity = item;
-                // Only show approve button if session is waiting for approval AND this is the latest plan
-                const showApprove = activity.type === 'plan' && session.status === 'awaiting_approval';
+                const contentNode = formatContent(activity.content, activity.metadata);
+                // Allow rendering if media is present, even if content is empty (though activity filter handles this)
+                if (contentNode === null && !activity.media) return null;
+
+                // Only show approve button if session is waiting for approval AND this is the latest plan AND not archived
+                const showApprove = !isArchived && activity.type === 'plan' && session.status === 'awaiting_approval';
 
                 return (
                   <div
@@ -838,6 +898,17 @@ export function ActivityFeed({
                                 {copiedId === activity.id ? <Check className="h-3 w-3 text-green-500" /> : <Copy className="h-3 w-3 text-white/40" />}
                               </Button>
                             </div>
+
+                            {activity.media && activity.media.data && (
+                               <div className="mb-2 rounded overflow-hidden border border-white/10">
+                                  <img
+                                    src={`data:${activity.media.mimeType};base64,${activity.media.data}`}
+                                    alt="Generated Artifact"
+                                    className="max-w-full h-auto block"
+                                  />
+                               </div>
+                            )}
+
                             <div className="text-[11px] leading-relaxed text-white/90 break-words">
                               <ActivityContent content={activity.content} metadata={activity.metadata} />
                             </div>
@@ -908,7 +979,7 @@ export function ActivityFeed({
         </div>
       </div>
 
-      {session.status !== "failed" && (
+      {!isArchived && session.status !== "failed" && (
         <ActivityInput 
           onSendMessage={handleSendMessage} 
           disabled={sending} 

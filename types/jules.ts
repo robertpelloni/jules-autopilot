@@ -5,6 +5,17 @@ export interface Source {
   metadata?: Record<string, unknown>;
 }
 
+export interface PullRequest {
+  url: string;
+  title: string;
+  description: string;
+}
+
+export interface SessionOutput {
+  pullRequest?: PullRequest;
+  [key: string]: unknown;
+}
+
 export interface Session {
   id: string;
   sourceId: string;
@@ -17,6 +28,7 @@ export interface Session {
   lastActivityAt?: string;
   branch?: string;
   summary?: string;
+  outputs?: SessionOutput[];
 }
 
 export interface Activity {
@@ -27,6 +39,7 @@ export interface Activity {
   content: string;
   diff?: string; // Unified diff patch from artifacts
   bashOutput?: string; // Bash command output from artifacts
+  media?: { data: string; mimeType: string }; // Media artifact
   metadata?: Record<string, unknown>;
   createdAt: string;
 }
