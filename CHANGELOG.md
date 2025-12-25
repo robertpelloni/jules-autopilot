@@ -2,6 +2,22 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.2.2] - 2025-12-25
+
+### Added
+- **Session Keeper**: Enhanced auto-pilot capabilities with "Debate Mode" and "Smart Supervisor".
+- **Versioning**: Added `VERSION.md` and centralized version management.
+- **Dashboard**: Added submodule status dashboard (upcoming).
+
+### Fixed
+- **Build System**: Resolved merge conflicts in `analytics-dashboard.tsx`, `session-keeper-log-panel.tsx`, `combobox.tsx`, `resizable.tsx`, and `session-keeper.ts`.
+- **TypeScript Errors**: Fixed interface mismatches in `SessionKeeperSettings` and `AppLayout`.
+- **Submodules**: Updated all submodules to latest upstream versions.
+
+### Changed
+- **UI**: Improved `SessionKeeperSettings` dialog with controlled state management.
+- **Architecture**: Refactored `SessionKeeperManager` to better handle debate/conference modes.
+
 ## [0.2.1] - 2025-12-25
 
 ### Added

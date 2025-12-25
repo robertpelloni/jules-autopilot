@@ -1,0 +1,135 @@
+'use client';
+
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
+import { ScrollArea } from "@/components/ui/scroll-area";
+import { Separator } from "@/components/ui/separator";
+import { ArrowLeft, GitBranch, FolderTree, Clock, Hash } from "lucide-react";
+import Link from "next/link";
+import { Button } from "@/components/ui/button";
+import submodulesData from "../submodules.json";
+
+export default function SystemDashboard() {
+  const { submodules, generatedAt } = submodulesData as { 
+    submodules: { path: string; commit: string; describe: string; lastUpdated: string }[], 
+    generatedAt: string 
+  };
+
+  return (
+    <div className="min-h-screen bg-black text-white p-8 font-mono">
+      <div className="max-w-5xl mx-auto space-y-8">
+        <div className="flex items-center justify-between">
+          <div className="space-y-1">
+            <h1 className="text-2xl font-bold tracking-tight flex items-center gap-3">
+              <FolderTree className="h-6 w-6 text-purple-500" />
+              System Dashboard
+            </h1>
+            <p className="text-white/40 text-sm">
+              Submodule status and project structure.
+            </p>
+          </div>
+          <Link href="/">
+            <Button variant="outline" className="border-white/10 hover:bg-white/5">
+              <ArrowLeft className="mr-2 h-4 w-4" />
+              Back to App
+            </Button>
+          </Link>
+        </div>
+
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+          {/* Build Info */}
+          <Card className="bg-zinc-950 border-white/10 md:col-span-1">
+            <CardHeader>
+              <CardTitle className="text-sm uppercase tracking-widest text-white/40">Build Info</CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="flex justify-between items-center">
+                <span className="text-xs text-white/60">Version</span>
+                <Badge variant="outline" className="border-purple-500/50 text-purple-400">
+                  v{process.env.NEXT_PUBLIC_APP_VERSION || 'Unknown'}
+                </Badge>
+              </div>
+              <div className="flex justify-between items-center">
+                <span className="text-xs text-white/60">Generated</span>
+                <span className="text-xs text-white/40 text-right">
+                  {new Date(generatedAt).toLocaleString()}
+                </span>
+              </div>
+              <div className="flex justify-between items-center">
+                <span className="text-xs text-white/60">Total Modules</span>
+                <span className="text-xs font-bold">{submodules.length}</span>
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* Project Structure Explanation */}
+          <Card className="bg-zinc-950 border-white/10 md:col-span-2">
+            <CardHeader>
+              <CardTitle className="text-sm uppercase tracking-widest text-white/40">Directory Structure</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <ScrollArea className="h-[150px]">
+                <div className="space-y-2 text-xs text-white/60">
+                  <div className="flex gap-2">
+                    <span className="text-purple-400 font-bold">app/</span>
+                    <span>Next.js App Router pages and layouts.</span>
+                  </div>
+                  <div className="flex gap-2">
+                    <span className="text-purple-400 font-bold">components/</span>
+                    <span>React components (UI, Features).</span>
+                  </div>
+                  <div className="flex gap-2">
+                    <span className="text-purple-400 font-bold">external/</span>
+                    <span>Git submodules for shared libraries and MCP servers.</span>
+                  </div>
+                  <div className="flex gap-2">
+                    <span className="text-purple-400 font-bold">lib/</span>
+                    <span>Utility functions, API clients, and stores.</span>
+                  </div>
+                  <div className="flex gap-2">
+                    <span className="text-purple-400 font-bold">types/</span>
+                    <span>TypeScript definitions.</span>
+                  </div>
+                </div>
+              </ScrollArea>
+            </CardContent>
+          </Card>
+        </div>
+
+        <Separator className="bg-white/10" />
+
+        {/* Submodules List */}
+        <div className="space-y-4">
+          <h2 className="text-lg font-bold tracking-wide text-white/80">Submodules</h2>
+          <div className="grid gap-4">
+            {submodules.map((mod) => (
+              <Card key={mod.path} className="bg-zinc-950 border-white/10 hover:border-white/20 transition-colors">
+                <CardContent className="p-4 flex items-center justify-between">
+                  <div className="flex items-center gap-4">
+                    <div className="h-10 w-10 rounded bg-white/5 flex items-center justify-center">
+                      <GitBranch className="h-5 w-5 text-white/40" />
+                    </div>
+                    <div>
+                      <div className="font-bold text-sm text-white/90">{mod.path}</div>
+                      <div className="text-xs text-white/40 font-mono mt-1 flex items-center gap-2">
+                        <Hash className="h-3 w-3" />
+                        {mod.commit.substring(0, 7)}
+                        <span className="w-1 h-1 rounded-full bg-white/20" />
+                        {mod.describe}
+                      </div>
+                    </div>
+                  </div>
+                  <div className="text-right">
+                    <Badge variant="secondary" className="bg-white/5 text-white/60 hover:bg-white/10">
+                      {mod.path.split('/')[0]}
+                    </Badge>
+                  </div>
+                </CardContent>
+              </Card>
+            ))}
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}

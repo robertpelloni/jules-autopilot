@@ -27,8 +27,12 @@
   - `Combobox`: Server-side filtering support (`onSearchChange`).
   - `NewSessionDialog`: Debounced repository search for large orgs.
   - `AnalyticsDashboard`: Session Keeper metrics integration.
+- **System**:
+  - Centralized Versioning (`VERSION.md`).
+  - Submodule Synchronization.
 
 ## Planned / Pending
+- **System Dashboard**: A dedicated page to view submodule versions, build info, and project structure.
 - **Council Debate Visualization**: Visualizing the multi-agent debate process in the UI (currently logs-only).
 - **Terminal Integration Polish**: Verify secure API key passing and connection resilience.
 - **Template Management**: Refine template creation/editing flow.

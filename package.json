@@ -1,7 +1,7 @@
 {
   "name": "jules-ui",
   "description": "The modern, developer-first interface for Google's Jules AI agent. Features live code diffs, interactive terminal outputs, analytics, and a streamlined dark mode experience.",
-  "version": "0.2.1",
+  "version": "0.2.2",
   "keywords": [
     "jules-ai",
     "google-jules",
@@ -17,6 +17,7 @@
   "scripts": {
     "dev": "concurrently -n \"TERMINAL,NEXT\" -c \"blue,magenta\" \"npm:terminal:start\" \"next dev\"",
     "terminal:start": "cd terminal-server && node server.js",
+    "prebuild": "node scripts/get-submodule-info.js",
     "build": "next build",
     "start": "next start",
     "lint": "eslint",

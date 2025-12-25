@@ -1,0 +1,65 @@
+{
+  "generatedAt": "2025-12-25T18:49:03.094Z",
+  "submodules": [
+    {
+      "path": "external/antigravity-jules-orchestration",
+      "commit": "129b73eb04dece6d2da9a7b7c667bed8de4ba61b",
+      "describe": "(v2.6.1-1-g129b73e)",
+      "lastUpdated": "2025-12-25T18:49:03.092Z"
+    },
+    {
+      "path": "external/gemini-cli-jules",
+      "commit": "9f2fc14a41e8b604bdaf2d50ae6041cdc5507175",
+      "describe": "(v0.1.0-3-g9f2fc14)",
+      "lastUpdated": "2025-12-25T18:49:03.094Z"
+    },
+    {
+      "path": "external/google-jules-mcp",
+      "commit": "39b4251a78a9d159b77b97063213691557117fd8",
+      "describe": "(heads/main)",
+      "lastUpdated": "2025-12-25T18:49:03.094Z"
+    },
+    {
+      "path": "external/jules-action",
+      "commit": "bff7875eaa123cac6742b7cfc51005b95ba4d566",
+      "describe": "(ai-assisted)",
+      "lastUpdated": "2025-12-25T18:49:03.094Z"
+    },
+    {
+      "path": "external/jules-awesome-list",
+      "commit": "0118486377fdb4cf20432b2c3e85a18aa01f984d",
+      "describe": "(heads/main)",
+      "lastUpdated": "2025-12-25T18:49:03.094Z"
+    },
+    {
+      "path": "external/jules-mcp-server",
+      "commit": "577978905479f0a2e11712da155baef757663217",
+      "describe": "(v0.1.6)",
+      "lastUpdated": "2025-12-25T18:49:03.094Z"
+    },
+    {
+      "path": "external/jules-system-prompt",
+      "commit": "de4a2bfd2449d7fedc7032ac01c1de4ec288e009",
+      "describe": "(v1.0.0-alpha-2-gde4a2bf)",
+      "lastUpdated": "2025-12-25T18:49:03.094Z"
+    },
+    {
+      "path": "external/jules-task-queue",
+      "commit": "f11d2ad87b31347ab5793058b44044ad586f7548",
+      "describe": "(heads/main)",
+      "lastUpdated": "2025-12-25T18:49:03.094Z"
+    },
+    {
+      "path": "external/jules_mcp",
+      "commit": "db115769c46afa4031877e6eac2cbc54684a6a14",
+      "describe": "(heads/main)",
+      "lastUpdated": "2025-12-25T18:49:03.094Z"
+    },
+    {
+      "path": "jules-sdk-reference",
+      "commit": "51685d61ec9d9e3ea523ef410c22bea1e8a15274",
+      "describe": "(heads/main)",
+      "lastUpdated": "2025-12-25T18:49:03.094Z"
+    }
+  ]
+}

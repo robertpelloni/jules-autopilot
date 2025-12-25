@@ -39,6 +39,7 @@ import {
   Plus,
   Kanban,
   Activity as ActivityIcon,
+  FolderTree,
 } from "lucide-react";
 import { TerminalPanel } from "./terminal-panel";
 import { useTerminalAvailable } from "@/hooks/use-terminal-available";
@@ -249,6 +250,9 @@ export function AppLayout({ initialView }: AppLayoutProps) {
               </SheetContent>
             </Sheet>
             <h1 className="text-sm font-bold tracking-tight text-white">JULES</h1>
+            <span className="text-[9px] font-mono text-white/30 bg-white/5 px-1.5 py-0.5 rounded-sm">
+              v{process.env.NEXT_PUBLIC_APP_VERSION}
+            </span>
 
             {/* GitHub Repo Link */}
             {selectedSession?.sourceId && (
@@ -332,6 +336,11 @@ export function AppLayout({ initialView }: AppLayoutProps) {
                 <DropdownMenuItem onClick={() => setView('templates')} className="hover:bg-white/5 text-white/80">
                   <LayoutTemplate className="mr-2 h-3.5 w-3.5" />
                   <span className="text-xs uppercase tracking-wide">Manage Templates</span>
+                </DropdownMenuItem>
+
+                <DropdownMenuItem onClick={() => router.push('/system')} className="hover:bg-white/5 text-white/80">
+                  <FolderTree className="mr-2 h-3.5 w-3.5" />
+                  <span className="text-xs uppercase tracking-wide">System Status</span>
                 </DropdownMenuItem>
                 
                 <DropdownMenuSeparator className="bg-white/10" />

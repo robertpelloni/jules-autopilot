@@ -1,5 +1,7 @@
 # Gemini Assistant Guidelines
 
+**IMPORTANT**: Please refer to [LLM_INSTRUCTIONS.md](./LLM_INSTRUCTIONS.md) for the master set of instructions, coding standards, and versioning protocols.
+
 ## Git Workflow
 
 - **Commit Messages**:
