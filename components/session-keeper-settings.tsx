@@ -26,6 +26,7 @@ import { Separator } from '@/components/ui/separator';
 import { Brain, Sparkles, Trash2, Settings, Loader2, Download, Users, Plus } from 'lucide-react';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Badge } from '@/components/ui/badge';
+import { cn } from '@/lib/utils';
 
 // Default configuration (Duplicated to allow standalone usage)
 const DEFAULT_CONFIG: SessionKeeperConfig = {
@@ -189,8 +190,16 @@ export function SessionKeeperSettings({
   return (
     <Dialog open={isOpen} onOpenChange={setIsOpen}>
       <DialogTrigger asChild>
-        <Button variant="ghost" size="icon" className="h-8 w-8 text-white/60 hover:text-white hover:bg-white/10" title="Auto-Pilot Settings">
-          <Settings className="h-4 w-4" />
+        <Button
+          variant="ghost"
+          size="icon"
+          className={cn(
+            "h-8 w-8 hover:bg-white/10 transition-colors",
+            config.isEnabled ? "text-green-400 hover:text-green-300" : "text-white/60 hover:text-white"
+          )}
+          title={config.isEnabled ? "Auto-Pilot Active" : "Auto-Pilot Settings"}
+        >
+          <Settings className={cn("h-4 w-4", config.isEnabled && "animate-spin [animation-duration:3s]")} />
         </Button>
       </DialogTrigger>
       <DialogContent className="max-w-2xl bg-zinc-950 border-white/10 text-white max-h-[85vh] flex flex-col p-0">
