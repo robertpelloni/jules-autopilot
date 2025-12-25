@@ -1,7 +1,7 @@
 export interface Source {
   id: string;
   name: string;
-  type: "github";
+  type: 'github';
   metadata?: Record<string, unknown>;
 }
 
@@ -27,15 +27,18 @@ export interface Session {
   updatedAt: string;
   lastActivityAt?: string;
   branch?: string;
+<<<<<<< HEAD
   summary?: string;
+=======
+>>>>>>> cca362fe49a84150efc5a322c7a17148c86140f9
   outputs?: SessionOutput[];
 }
 
 export interface Activity {
   id: string;
   sessionId: string;
-  type: "message" | "plan" | "progress" | "result" | "error";
-  role: "user" | "agent";
+  type: 'message' | 'plan' | 'progress' | 'result' | 'error';
+  role: 'user' | 'agent';
   content: string;
   diff?: string; // Unified diff patch from artifacts
   bashOutput?: string; // Bash command output from artifacts
@@ -55,7 +58,7 @@ export interface CreateSessionRequest {
 export interface CreateActivityRequest {
   sessionId: string;
   content: string;
-  type?: "message";
+  type?: 'message';
 }
 
 export interface SessionTemplate {
@@ -82,7 +85,6 @@ export interface SessionKeeperConfig {
 
   // Smart Auto-Pilot Settings
   smartPilotEnabled: boolean;
-  supervisorMode?: 'single' | 'debate' | 'conference';
   supervisorProvider: 'openai' | 'openai-assistants' | 'anthropic' | 'gemini';
   supervisorApiKey: string;
   supervisorModel: string;

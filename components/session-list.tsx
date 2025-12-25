@@ -1,7 +1,8 @@
-"use client";
+'use client';
 
 import { useEffect, useState, useCallback, useMemo } from "react";
 import { useJules } from "@/lib/jules/provider";
+import { useSessionKeeperStore } from "@/lib/stores/session-keeper";
 import type { Session } from "@/types/jules";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -12,18 +13,16 @@ import {
   TooltipContent,
   TooltipProvider,
   TooltipTrigger,
-} from "@/components/ui/tooltip";
-import { ScrollArea } from "@/components/ui/scroll-area";
-import { CardSpotlight } from "@/components/ui/card-spotlight";
-import { formatDistanceToNow, isValid, parseISO, isToday } from "date-fns";
-import { getArchivedSessions } from "@/lib/archive";
-import { useSessionKeeperStore } from "@/lib/stores/session-keeper";
-import { BroadcastDialog } from "./broadcast-dialog";
+} from '@/components/ui/tooltip';
+import { ScrollArea } from '@/components/ui/scroll-area';
+import { CardSpotlight } from '@/components/ui/card-spotlight';
+import { formatDistanceToNow, isValid, parseISO, isToday } from 'date-fns';
+import { getArchivedSessions } from '@/lib/archive';
 
 function truncateText(text: string, maxLength: number) {
-  if (!text) return "";
+  if (!text) return '';
   if (text.length <= maxLength) return text;
-  return text.slice(0, maxLength) + "...";
+  return text.slice(0, maxLength) + '...';
 }
 
 interface SessionListProps {
@@ -31,12 +30,11 @@ interface SessionListProps {
   selectedSessionId?: string;
 }
 
-export function SessionList({
-  onSelectSession,
-  selectedSessionId,
-}: SessionListProps) {
+export function SessionList({ onSelectSession, selectedSessionId }: SessionListProps) {
   const { client } = useJules();
-  const { sessionStates } = useSessionKeeperStore();
+  // Use sessionStates from store for error/status info
+  const { sessionStates } = useSessionKeeperStore(); 
+  
   const [sessions, setSessions] = useState<Session[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -49,14 +47,14 @@ export function SessionList({
   }, []);
 
   const formatDate = (dateString: string) => {
-    if (!dateString) return "Unknown date";
+    if (!dateString) return 'Unknown date';
 
     try {
       const date = parseISO(dateString);
-      if (!isValid(date)) return "Unknown date";
+      if (!isValid(date)) return 'Unknown date';
       return formatDistanceToNow(date, { addSuffix: true });
     } catch {
-      return "Unknown date";
+      return 'Unknown date';
     }
   };
 
@@ -85,7 +83,7 @@ export function SessionList({
           setError(err.message);
         }
       } else {
-        setError("Failed to load sessions");
+        setError('Failed to load sessions');
       }
       setSessions([]);
     } finally {
@@ -97,14 +95,8 @@ export function SessionList({
     loadSessions();
   }, [loadSessions]);
 
-  const getStatusInfo = (session: Session) => {
-    const state = sessionStates[session.id];
-    // Prioritize error state
-    if (state?.error) {
-       return { color: 'bg-red-500', text: `Error ${state.error.code}` };
-    }
-
-    switch (session.status) {
+  const getStatusInfo = (status: Session['status']) => {
+    switch (status) {
       case 'active':
         return { color: 'bg-green-500', text: 'Active' };
       case 'completed':
@@ -151,12 +143,7 @@ export function SessionList({
     return (
       <div className="flex flex-col items-center justify-center gap-3 p-6">
         <p className="text-xs text-destructive text-center">{error}</p>
-        <Button
-          variant="outline"
-          size="sm"
-          onClick={loadSessions}
-          className="h-7 text-[10px] font-mono uppercase tracking-widest"
-        >
+        <Button variant="outline" size="sm" onClick={loadSessions} className="h-7 text-xs">
           Retry
         </Button>
       </div>
@@ -213,7 +200,6 @@ export function SessionList({
               {showArchived ? "Show Active Sessions" : "Show Archived Sessions"}
             </TooltipContent>
           </Tooltip>
-          {!showArchived && <BroadcastDialog sessions={sessions.filter(s => !archivedSessionIds.has(s.id))} />}
         </div>
         <ScrollArea className="flex-1 min-h-0">
           <div className="p-2 space-y-1">
@@ -232,7 +218,7 @@ export function SessionList({
             ) : (
               visibleSessions.map((session) => {
                 const statusInfo = getStatusInfo(session);
-                const sessionState = sessionStates[session.id];
+                const sessionState = sessionStates?.[session.id];
                 const lastActivityTime = session.lastActivityAt ? formatDate(session.lastActivityAt) : null;
                 const lastActivitySnippet = sessionState?.lastActivitySnippet ? truncateText(sessionState.lastActivitySnippet, 40) : null;
 

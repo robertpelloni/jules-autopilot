@@ -14,12 +14,15 @@ export interface StatusSummary {
   nextCheckIn: number;
 }
 
+<<<<<<< HEAD
 export interface SessionState {
   error?: { code: number; message: string; timestamp: number };
   ignoreUntil?: number;
   lastActivitySnippet?: string;
 }
 
+=======
+>>>>>>> cca362fe49a84150efc5a322c7a17148c86140f9
 export interface SessionKeeperStats {
   totalNudges: number;
   totalApprovals: number;
@@ -30,13 +33,19 @@ interface SessionKeeperState {
   config: SessionKeeperConfig;
   logs: Log[];
   statusSummary: StatusSummary;
+<<<<<<< HEAD
   sessionStates: Record<string, SessionState>;
+=======
+>>>>>>> cca362fe49a84150efc5a322c7a17148c86140f9
   stats: SessionKeeperStats;
   setConfig: (config: SessionKeeperConfig) => void;
   addLog: (message: string, type: Log['type']) => void;
   clearLogs: () => void;
   setStatusSummary: (summary: Partial<StatusSummary>) => void;
+<<<<<<< HEAD
   updateSessionState: (sessionId: string, state: Partial<SessionState>) => void;
+=======
+>>>>>>> cca362fe49a84150efc5a322c7a17148c86140f9
   incrementStat: (stat: keyof SessionKeeperStats) => void;
 }
 
@@ -69,7 +78,10 @@ export const useSessionKeeperStore = create<SessionKeeperState>()(
       config: DEFAULT_CONFIG,
       logs: [],
       statusSummary: { monitoringCount: 0, lastAction: 'None', nextCheckIn: 0 },
+<<<<<<< HEAD
       sessionStates: {},
+=======
+>>>>>>> cca362fe49a84150efc5a322c7a17148c86140f9
       stats: { totalNudges: 0, totalApprovals: 0, totalDebates: 0 },
 
       setConfig: (config) => set({ config }),
@@ -88,6 +100,7 @@ export const useSessionKeeperStore = create<SessionKeeperState>()(
         statusSummary: { ...state.statusSummary, ...summary }
       })),
 
+<<<<<<< HEAD
       updateSessionState: (sessionId, newState) => set((state) => ({
         sessionStates: {
           ...state.sessionStates,
@@ -98,6 +111,8 @@ export const useSessionKeeperStore = create<SessionKeeperState>()(
         }
       })),
 
+=======
+>>>>>>> cca362fe49a84150efc5a322c7a17148c86140f9
       incrementStat: (stat) => set((state) => ({
         stats: { ...state.stats, [stat]: state.stats[stat] + 1 }
       })),

@@ -130,15 +130,15 @@ export class JulesAPIError extends Error {
   constructor(
     message: string,
     public status?: number,
-    public response?: unknown,
+    public response?: unknown
   ) {
     super(message);
-    this.name = "JulesAPIError";
+    this.name = 'JulesAPIError';
   }
 }
 
 export class JulesClient {
-  private baseURL = "/api/jules";
+  private baseURL = '/api/jules';
   private apiKey: string;
 
   constructor(apiKey: string) {
@@ -147,7 +147,7 @@ export class JulesClient {
 
   private async request<T>(
     endpoint: string,
-    options: RequestInit = {},
+    options: RequestInit = {}
   ): Promise<T> {
     // Build URL with path as query param for our proxy
     const url = `${this.baseURL}?path=${encodeURIComponent(endpoint)}`;
@@ -156,8 +156,8 @@ export class JulesClient {
       const response = await fetch(url, {
         ...options,
         headers: {
-          "Content-Type": "application/json",
-          "X-Jules-Api-Key": this.apiKey,
+          'Content-Type': 'application/json',
+          'X-Jules-Api-Key': this.apiKey,
           ...options.headers,
         },
       });
@@ -167,17 +167,17 @@ export class JulesClient {
 
         if (response.status === 401) {
           throw new JulesAPIError(
-            "Invalid API key. Please check your Jules API key in settings.",
+            'Invalid API key. Please check your Jules API key in settings.',
             response.status,
-            error,
+            error
           );
         }
 
         if (response.status === 403) {
           throw new JulesAPIError(
-            "Access forbidden. Please ensure your API key has the correct permissions.",
+            'Access forbidden. Please ensure your API key has the correct permissions.',
             response.status,
-            error,
+            error
           );
         }
 
@@ -188,24 +188,16 @@ export class JulesClient {
             return { activities: [] } as T;
           }
           throw new JulesAPIError(
-            "Resource not found. The requested endpoint may not exist.",
+            'Resource not found. The requested endpoint may not exist.',
             response.status,
-            error,
-          );
-        }
-
-        if (response.status === 503) {
-          throw new JulesAPIError(
-            "The Jules service is currently unavailable (503). Please try again later.",
-            response.status,
-            error,
+            error
           );
         }
 
         throw new JulesAPIError(
           error.message || `Request failed with status ${response.status}`,
           response.status,
-          error,
+          error
         );
       }
 
@@ -216,18 +208,16 @@ export class JulesClient {
       // Handle network errors with helpful messages
       if (error instanceof TypeError && error.message === "Failed to fetch") {
         throw new JulesAPIError(
-          "Unable to connect to the server. Please check your internet connection and try again.",
+          'Unable to connect to the server. Please check your internet connection and try again.',
           undefined,
-          error,
+          error
         );
       }
 
       throw new JulesAPIError(
-        error instanceof Error
-          ? error.message
-          : "Network request failed. Please try again.",
+        error instanceof Error ? error.message : 'Network request failed. Please try again.',
         undefined,
-        error,
+        error
       );
     }
   }
@@ -244,10 +234,7 @@ export class JulesClient {
       if (filter) params.set("filter", filter);
 
       const endpoint = `/sources?${params.toString()}`;
-      const response = await this.request<{
-        sources?: ApiSource[];
-        nextPageToken?: string;
-      }>(endpoint);
+      const response = await this.request<{ sources?: ApiSource[]; nextPageToken?: string }>(endpoint);
 
       if (response.sources) {
         allSources = allSources.concat(response.sources);
@@ -272,12 +259,12 @@ export class JulesClient {
     // Temporary fix: Add missing repo if not present
     const missingRepo = "sbhavani/dgx-spark-playbooks";
     const missingRepoId = `sources/github/${missingRepo}`;
-    if (!sources.some((s) => s.id === missingRepoId)) {
+    if (!sources.some(s => s.id === missingRepoId)) {
       sources.push({
         id: missingRepoId,
         name: missingRepo,
-        type: "github",
-        metadata: { source: missingRepoId, name: missingRepoId },
+        type: 'github',
+        metadata: { source: missingRepoId, name: missingRepoId }
       });
     }
 
@@ -362,7 +349,7 @@ export class JulesClient {
       'FAILED': 'failed',
       'PAUSED': 'paused'
     };
-    return stateMap[state] || "active";
+    return stateMap[state] || 'active';
   }
 
   private transformSession(session: ApiSession): Session {
@@ -393,8 +380,7 @@ export class JulesClient {
   async createSession(data: CreateSessionRequest): Promise<Session> {
     let prompt = data.prompt;
     if (data.autoCreatePr) {
-      prompt +=
-        "\n\nIMPORTANT: Automatically create a pull request when code changes are ready.";
+      prompt += '\n\nIMPORTANT: Automatically create a pull request when code changes are ready.';
     }
 
     const requestBody = {
@@ -402,8 +388,8 @@ export class JulesClient {
       sourceContext: {
         source: data.sourceId,
         githubRepoContext: {
-          startingBranch: data.startingBranch || "main", // Default to main branch
-        },
+          startingBranch: data.startingBranch || 'main' // Default to main branch
+        }
       },
       title: data.title || 'Untitled Session',
       requirePlanApproval: true // Enable plan approval as per requirements
@@ -418,47 +404,16 @@ export class JulesClient {
     return this.transformSession(response);
   }
 
-  async updateSession(id: string, data: Partial<Session>): Promise<Session> {
-    const body: any = { ...data };
-    // Map local status back to API state if needed
-    if (data.status) {
-        const stateMap: Record<string, string> = {
-            'active': 'ACTIVE',
-            'completed': 'COMPLETED',
-            'failed': 'FAILED',
-            'paused': 'PAUSED',
-            'awaiting_approval': 'AWAITING_PLAN_APPROVAL'
-        };
-        if (stateMap[data.status]) {
-            body.state = stateMap[data.status];
-            delete body.status;
-        }
-    }
-
-    // Remove fields that shouldn't be sent
-    delete body.id;
-    delete body.createdAt;
-    delete body.updatedAt;
-    delete body.lastActivityAt;
-    delete body.sourceId; // Usually immutable
-    delete body.branch;
-
-    return this.request<Session>(`/sessions/${id}`, {
-      method: "PATCH",
-      body: JSON.stringify(body),
-    });
-  }
-
   async deleteSession(id: string): Promise<void> {
     await this.request<void>(`/sessions/${id}`, {
-      method: "DELETE",
+      method: 'DELETE',
     });
   }
 
   async approvePlan(sessionId: string): Promise<void> {
     // Matches Python SDK: self.client.post(f"{session_id}:approvePlan")
     await this.request<void>(`/sessions/${sessionId}:approvePlan`, {
-      method: "POST",
+      method: 'POST',
       body: JSON.stringify({}),
     });
   }
@@ -516,25 +471,20 @@ export class JulesClient {
 
       // Extract specific content based on type
       if (activity.planGenerated) {
-        type = "plan";
+        type = 'plan';
         const plan = activity.planGenerated.plan || activity.planGenerated;
-        content =
-          plan.description ||
-          plan.summary ||
-          plan.title ||
-          JSON.stringify(plan.steps || plan, null, 2);
+        content = plan.description || plan.summary || plan.title || JSON.stringify(plan.steps || plan, null, 2);
       } else if (activity.planApproved) {
-        type = "plan";
-        content = "Plan approved";
+        type = 'plan';
+        content = 'Plan approved';
       } else if (activity.progressUpdated) {
-        type = "progress";
-        content =
-          activity.progressUpdated.progressDescription ||
-          activity.progressUpdated.description ||
-          activity.progressUpdated.message ||
-          JSON.stringify(activity.progressUpdated, null, 2);
+        type = 'progress';
+        content = activity.progressUpdated.progressDescription ||
+                  activity.progressUpdated.description ||
+                  activity.progressUpdated.message ||
+                  JSON.stringify(activity.progressUpdated, null, 2);
       } else if (activity.sessionCompleted) {
-        type = "result";
+        type = 'result';
         const result = activity.sessionCompleted;
         content = result.summary || result.message || 'Session completed';
       } else if (activity.agentMessaged) {
@@ -573,45 +523,39 @@ export class JulesClient {
 
       // Fallback content
       if (!content) {
-        content =
-          activity.message ||
-          activity.content ||
-          activity.text ||
-          activity.description ||
-          (activity.artifacts
-            ? JSON.stringify(activity.artifacts, null, 2)
-            : "") ||
-          "";
+        content = activity.message ||
+                  activity.content ||
+                  activity.text ||
+                  activity.description ||
+                  (activity.artifacts ? JSON.stringify(activity.artifacts, null, 2) : '') ||
+                  '';
       }
 
       return {
         id,
         sessionId,
         type,
-        role: (activity.originator === "agent"
-          ? "agent"
-          : "user") as Activity["role"],
+        role: (activity.originator === 'agent' ? 'agent' : 'user') as Activity['role'],
         content,
         diff,
         bashOutput,
         media,
         createdAt: activity.createTime,
-        metadata: activity as Record<string, unknown>,
+        metadata: activity as Record<string, unknown>
       };
-
   }
 
   async createActivity(data: CreateActivityRequest): Promise<Activity> {
     await this.request(`/sessions/${data.sessionId}:sendMessage`, {
-      method: "POST",
+      method: 'POST',
       body: JSON.stringify({ prompt: data.content }),
     });
 
     return {
-      id: "pending",
+      id: 'pending',
       sessionId: data.sessionId,
-      type: "message",
-      role: "user",
+      type: 'message',
+      role: 'user',
       content: data.content,
       createdAt: new Date().toISOString(),
     };

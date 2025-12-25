@@ -12,8 +12,13 @@ export function SessionKeeperLogPanel({ onClose }: SessionKeeperLogPanelProps) {
   const { logs, clearLogs } = useSessionKeeperStore();
 
   return (
+<<<<<<< HEAD
     <div className="flex flex-col h-full bg-background border-t overflow-hidden">
       <div className="flex items-center justify-between px-4 py-2 border-b bg-muted/40 shrink-0">
+=======
+    <div className="flex flex-col h-full bg-background border-t">
+      <div className="flex items-center justify-between px-4 py-2 border-b bg-muted/40">
+>>>>>>> cca362fe49a84150efc5a322c7a17148c86140f9
         <h3 className="font-semibold text-sm flex items-center gap-2">
           Session Keeper Activity Log
           <span className="text-xs font-normal text-muted-foreground">({logs.length} events)</span>

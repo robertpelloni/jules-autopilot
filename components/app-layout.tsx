@@ -1,4 +1,4 @@
-"use client";
+'use client';
 
 import { useState, useCallback, useEffect } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
@@ -67,21 +67,7 @@ export function AppLayout({ initialView }: AppLayoutProps) {
   const router = useRouter();
   const { isAvailable: terminalAvailable } = useTerminalAvailable();
   const [selectedSession, setSelectedSession] = useState<Session | null>(null);
-  const [view, setView] = useState<
-    "sessions" | "analytics" | "templates" | "kanban"
-  >(() => {
-    if (initialView) return initialView;
-    if (typeof window !== "undefined") {
-      const savedView = localStorage.getItem("jules-current-view");
-      if (
-        savedView &&
-        ["sessions", "analytics", "templates", "kanban"].includes(savedView)
-      ) {
-        return savedView as "sessions" | "analytics" | "templates" | "kanban";
-      }
-    }
-    return "sessions";
-  });
+  const [view, setView] = useState<'sessions' | 'analytics' | 'templates' | 'kanban'>('sessions');
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [refreshKey, setRefreshKey] = useState(0);
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
@@ -91,30 +77,36 @@ export function AppLayout({ initialView }: AppLayoutProps) {
   const [currentActivities, setCurrentActivities] = useState<Activity[]>([]);
   const [codeSidebarWidth, setCodeSidebarWidth] = useState(600);
   const [isResizing, setIsResizing] = useState(false);
-  const [isApiKeyDialogOpen, setIsApiKeyDialogOpen] = useState(false);
-  const [isSettingsOpen, setIsSettingsOpen] = useState(false);
   const [terminalOpen, setTerminalOpen] = useState(() => {
-    if (typeof window !== "undefined") {
-      return localStorage.getItem("terminal-open") === "true";
+    if (typeof window !== 'undefined') {
+      return localStorage.getItem('terminal-open') === 'true';
     }
     return false;
   });
 
-  useEffect(() => {
-    localStorage.setItem("jules-current-view", view);
-  }, [view]);
-
   // State for New Session Dialog (Controlled)
   const [isNewSessionOpen, setIsNewSessionOpen] = useState(false);
-  const [newSessionInitialValues, setNewSessionInitialValues] = useState<
-    | {
-        sourceId?: string;
-        title?: string;
-        prompt?: string;
-        startingBranch?: string;
-      }
-    | undefined
-  >(undefined);
+  const [newSessionInitialValues, setNewSessionInitialValues] = useState<{
+    sourceId?: string;
+    title?: string;
+    prompt?: string;
+    startingBranch?: string;
+  } | undefined>(undefined);
+
+  // API Key Dialog State
+  const [isApiKeyDialogOpen, setIsApiKeyDialogOpen] = useState(false);
+
+  useEffect(() => {
+    if (!apiKey) {
+      setIsApiKeyDialogOpen(true);
+    } else {
+      setIsApiKeyDialogOpen(false);
+    }
+  }, [apiKey]);
+
+  const handleApiKeySuccess = () => {
+    setIsApiKeyDialogOpen(false);
+  };
 
   // Sync session selection with URL query param
   useEffect(() => {
@@ -152,30 +144,22 @@ export function AppLayout({ initialView }: AppLayoutProps) {
         }
       }
     },
-    [isResizing],
+    [isResizing]
   );
 
   useEffect(() => {
-    window.addEventListener("mousemove", resize);
-    window.addEventListener("mouseup", stopResizing);
+    window.addEventListener('mousemove', resize);
+    window.addEventListener('mouseup', stopResizing);
     return () => {
-      window.removeEventListener("mousemove", resize);
-      window.removeEventListener("mouseup", stopResizing);
+      window.removeEventListener('mousemove', resize);
+      window.removeEventListener('mouseup', stopResizing);
     };
   }, [resize, stopResizing]);
 
   const handleSessionSelect = (session: Session) => {
     setSelectedSession(session);
-    setView("sessions");
+    setView('sessions');
     setMobileMenuOpen(false);
-
-    // Fetch full details to ensure we have everything (like sourceId, stats, etc.)
-    if (client) {
-      client.getSession(session.id).then(fullSession => {
-        setSelectedSession(fullSession);
-      }).catch(err => console.error("Failed to fetch full session details", err));
-    }
-
     // Update URL without refreshing
     const newParams = new URLSearchParams(searchParams.toString());
     newParams.set('sessionId', session.id);
@@ -200,36 +184,26 @@ export function AppLayout({ initialView }: AppLayoutProps) {
   const handleToggleTerminal = useCallback(() => {
     setTerminalOpen((prev) => {
       const newValue = !prev;
-      localStorage.setItem("terminal-open", String(newValue));
+      localStorage.setItem('terminal-open', String(newValue));
       return newValue;
     });
   }, []);
 
   const handleStartSessionFromTemplate = (template: SessionTemplate) => {
-    if (!apiKey) {
-      setIsApiKeyDialogOpen(true);
-      return;
-    }
     setNewSessionInitialValues({
       prompt: template.prompt,
-      title: template.title,
+      title: template.title
     });
     setIsNewSessionOpen(true);
   };
 
   const handleOpenNewSession = () => {
-    if (!apiKey) {
-      setIsApiKeyDialogOpen(true);
-      return;
-    }
     setNewSessionInitialValues(undefined);
     setIsNewSessionOpen(true);
   };
 
-  const handleApiKeySuccess = () => {
-    setIsApiKeyDialogOpen(false);
-    // User probably wants to try again after setting API key
-  };
+  // Session Keeper Settings State
+  const [isSettingsOpen, setIsSettingsOpen] = useState(false);
 
   return (
     <div className="flex h-screen flex-col bg-black max-w-full overflow-hidden">
@@ -249,7 +223,7 @@ export function AppLayout({ initialView }: AppLayoutProps) {
       
       {/* Header */}
       <header className="border-b border-white/[0.08] bg-zinc-950/95 backdrop-blur-sm">
-        <div className="flex h-14 items-center justify-between px-2 sm:px-4">
+        <div className="flex h-14 items-center justify-between px-4">
           <div className="flex items-center gap-3">
             <Sheet open={mobileMenuOpen} onOpenChange={setMobileMenuOpen}>
               <SheetTrigger asChild>
@@ -263,14 +237,9 @@ export function AppLayout({ initialView }: AppLayoutProps) {
                   <Menu className="h-4 w-4" />
                 </Button>
               </SheetTrigger>
-              <SheetContent
-                side="left"
-                className="w-[280px] p-0 bg-zinc-950 border-white/[0.08]"
-              >
+              <SheetContent side="left" className="w-[280px] p-0 bg-zinc-950 border-white/[0.08]">
                 <SheetHeader className="border-b border-white/[0.08] px-3 py-2.5">
-                  <SheetTitle className="text-[10px] font-bold text-white/40 uppercase tracking-widest">
-                    SESSIONS
-                  </SheetTitle>
+                  <SheetTitle className="text-[10px] font-bold text-white/40 uppercase tracking-widest">SESSIONS</SheetTitle>
                 </SheetHeader>
                 <SessionList
                   key={refreshKey}
@@ -279,9 +248,7 @@ export function AppLayout({ initialView }: AppLayoutProps) {
                 />
               </SheetContent>
             </Sheet>
-            <h1 className="text-sm font-bold tracking-tight text-white">
-              JULES
-            </h1>
+            <h1 className="text-sm font-bold tracking-tight text-white">JULES</h1>
 
             {/* GitHub Repo Link */}
             {selectedSession?.sourceId && (
@@ -296,88 +263,52 @@ export function AppLayout({ initialView }: AppLayoutProps) {
             )}
           </div>
 
-          <div className="flex items-center gap-1 overflow-x-auto no-scrollbar pl-2">
+          <div className="flex items-center gap-1">
             <Button
               variant="ghost"
               size="sm"
-              className={`h-8 px-3 hover:bg-white/5 ${view === "kanban" ? "text-white" : "text-white/60"}`}
-              onClick={() => setView("kanban")}
-              aria-pressed={view === "kanban"}
+              className={`h-8 px-3 hover:bg-white/5 ${view === 'sessions' ? 'text-white' : 'text-white/60'}`}
+              onClick={() => setView('sessions')}
             >
-              <Kanban className="h-3.5 w-3.5 sm:mr-1.5" />
-              <span className="text-[10px] font-mono uppercase tracking-wider hidden sm:inline">
-                Board
-              </span>
+              <MessageSquare className="h-3.5 w-3.5 mr-1.5" />
+              <span className="text-[10px] font-mono uppercase tracking-wider">Sessions</span>
             </Button>
 
             <Button
               variant="ghost"
               size="sm"
-              className={`h-8 px-3 hover:bg-white/5 ${view === "sessions" ? "text-white" : "text-white/60"}`}
-              onClick={() => setView("sessions")}
-              aria-pressed={view === "sessions"}
+              className={`h-8 px-3 hover:bg-white/5 ${view === 'analytics' ? 'text-white' : 'text-white/60'}`}
+              onClick={() => setView('analytics')}
             >
-              <MessageSquare className="h-3.5 w-3.5 sm:mr-1.5" />
-              <span className="text-[10px] font-mono uppercase tracking-wider hidden sm:inline">
-                Sessions
-              </span>
-            </Button>
-
-            <Button
-              variant="ghost"
-              size="sm"
-              className={`h-8 px-3 hover:bg-white/5 ${view === "analytics" ? "text-white" : "text-white/60"}`}
-              onClick={() => setView("analytics")}
-              aria-pressed={view === "analytics"}
-            >
-              <BarChart3 className="h-3.5 w-3.5 sm:mr-1.5" />
-              <span className="text-[10px] font-mono uppercase tracking-wider hidden sm:inline">
-                Analytics
-              </span>
-            </Button>
-
-            {/* Logs Toggle */}
-            <Button
-              variant="ghost"
-              size="sm"
-              className={`h-8 px-3 hover:bg-white/5 ${isLogPanelOpen ? 'text-purple-500' : 'text-white/60'}`}
-              onClick={() => setIsLogPanelOpen(!isLogPanelOpen)}
-              title="Toggle Auto-Pilot Logs"
-            >
-              <ActivityIcon className="h-3.5 w-3.5 sm:mr-1.5" />
-              <span className="text-[10px] font-mono uppercase tracking-wider hidden sm:inline">Logs</span>
+              <BarChart3 className="h-3.5 w-3.5 mr-1.5" />
+              <span className="text-[10px] font-mono uppercase tracking-wider">Analytics</span>
             </Button>
 
             {terminalAvailable && (
               <Button
                 variant="ghost"
                 size="sm"
-                className={`h-8 px-3 hover:bg-white/5 ${terminalOpen ? "text-green-500" : "text-white/60"}`}
+                className={`h-8 px-3 hover:bg-white/5 ${terminalOpen ? 'text-green-500' : 'text-white/60'}`}
                 onClick={handleToggleTerminal}
                 title="Toggle Terminal (Ctrl+`)"
-                aria-label="Toggle Terminal"
-                aria-pressed={terminalOpen}
               >
-                <TerminalIcon className="h-3.5 w-3.5 sm:mr-1.5" />
-                <span className="text-[10px] font-mono uppercase tracking-wider hidden sm:inline">
-                  Terminal
-                </span>
+                <TerminalIcon className="h-3.5 w-3.5 mr-1.5" />
+                <span className="text-[10px] font-mono uppercase tracking-wider">Terminal</span>
               </Button>
             )}
-
-            <NewSessionDialog
-              onSessionCreated={handleSessionCreated}
+            
+            <NewSessionDialog 
+              onSessionCreated={handleSessionCreated} 
               open={isNewSessionOpen}
               onOpenChange={setIsNewSessionOpen}
               initialValues={newSessionInitialValues}
               trigger={
-                <Button
-                  className="w-full sm:w-auto h-8 text-[10px] font-mono uppercase tracking-widest border-0 px-2 sm:px-4"
+                <Button 
+                  className="w-full sm:w-auto h-8 text-[10px] font-mono uppercase tracking-widest bg-purple-600 hover:bg-purple-500 text-white border-0"
                   onClick={handleOpenNewSession}
                 >
-                  <Plus className="h-3.5 w-3.5 sm:mr-1.5" />
-                  <span className="hidden sm:inline">New Session</span>
-                  <span className="sm:hidden">New</span>
+                  <Plus className="h-3.5 w-3.5 mr-1.5" />
+                  New Session
                 </Button>
               }
             />
@@ -393,51 +324,21 @@ export function AppLayout({ initialView }: AppLayoutProps) {
 
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  className="h-8 w-8 hover:bg-white/5 text-white/60"
-                  aria-label="Settings"
-                >
+                <Button variant="ghost" size="icon" className="h-8 w-8 hover:bg-white/5 text-white/60">
                   <Settings className="h-4 w-4" />
                 </Button>
               </DropdownMenuTrigger>
-              <DropdownMenuContent
-                align="end"
-                className="w-48 bg-zinc-950 border-white/[0.08]"
-              >
-                <DropdownMenuItem
-                  onClick={() => setIsSettingsOpen(true)}
-                  className="hover:bg-white/5 text-white/80"
-                >
-                  <Settings className="mr-2 h-3.5 w-3.5" />
-                  <span className="text-xs uppercase tracking-wide">
-                    Auto-Pilot Settings
-                  </span>
-                </DropdownMenuItem>
-
-                <DropdownMenuSeparator className="bg-white/10" />
-
-                <DropdownMenuItem
-                  onClick={() => setView("templates")}
-                  className="hover:bg-white/5 text-white/80"
-                >
+              <DropdownMenuContent align="end" className="w-48 bg-zinc-950 border-white/[0.08]">
+                <DropdownMenuItem onClick={() => setView('templates')} className="hover:bg-white/5 text-white/80">
                   <LayoutTemplate className="mr-2 h-3.5 w-3.5" />
-                  <span className="text-xs uppercase tracking-wide">
-                    Manage Templates
-                  </span>
+                  <span className="text-xs uppercase tracking-wide">Manage Templates</span>
                 </DropdownMenuItem>
-
+                
                 <DropdownMenuSeparator className="bg-white/10" />
 
-                <DropdownMenuItem
-                  onClick={handleLogout}
-                  className="hover:bg-white/5 text-white/80"
-                >
+                <DropdownMenuItem onClick={handleLogout} className="hover:bg-white/5 text-white/80">
                   <LogOut className="mr-2 h-3.5 w-3.5" />
-                  <span className="text-xs uppercase tracking-wide">
-                    Logout
-                  </span>
+                  <span className="text-xs uppercase tracking-wide">Logout</span>
                 </DropdownMenuItem>
               </DropdownMenuContent>
             </DropdownMenu>
@@ -460,7 +361,6 @@ export function AppLayout({ initialView }: AppLayoutProps) {
               size="icon"
               className={`h-6 w-6 hover:bg-white/5 text-white/60 ${sidebarCollapsed ? 'mx-auto' : ''}`}
               onClick={() => setSidebarCollapsed(!sidebarCollapsed)}
-              aria-label={sidebarCollapsed ? "Expand sidebar" : "Collapse sidebar"}
             >
               {sidebarCollapsed ? (
                 <ChevronRight className="h-3.5 w-3.5" />
@@ -595,7 +495,7 @@ export function AppLayout({ initialView }: AppLayoutProps) {
       {/* Terminal Panel */}
       {terminalAvailable && (
         <TerminalPanel
-          sessionId={selectedSession?.id || "global"}
+          sessionId={selectedSession?.id || 'global'}
           repositoryPath=""
           isOpen={terminalOpen}
           onToggle={handleToggleTerminal}
