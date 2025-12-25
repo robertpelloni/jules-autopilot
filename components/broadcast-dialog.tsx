@@ -12,6 +12,13 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { Loader2, Megaphone } from "lucide-react";
@@ -20,6 +27,21 @@ import type { Session } from "@/types/jules";
 interface BroadcastDialogProps {
   sessions: Session[];
 }
+
+const TEMPLATES = [
+  {
+    label: "Merge & Update",
+    text: "Please merge all feature branches into main and then update your local branch to main."
+  },
+  {
+    label: "Reanalyze & Check Features",
+    text: "Outstanding. Please reanalyze the project and conversation history and determine if there are any further features to implement."
+  },
+  {
+    label: "Roadmap & Documentation",
+    text: "Please closely analyze the entire conversation history in full and note every feature, package, implementation detail, etc, and organize them into the roadmap and documentation, noting what has already been accomplished and what is not done yet. Please then continue work on the next feature."
+  }
+];
 
 export function BroadcastDialog({ sessions }: BroadcastDialogProps) {
   const { client } = useJules();
@@ -77,6 +99,21 @@ export function BroadcastDialog({ sessions }: BroadcastDialogProps) {
           </DialogDescription>
         </DialogHeader>
         <div className="grid gap-4 py-4">
+          <div className="grid gap-2">
+            <Label className="text-white">Template</Label>
+            <Select onValueChange={(value) => setMessage(value)}>
+              <SelectTrigger className="bg-zinc-900 border-white/10 text-white">
+                <SelectValue placeholder="Select a template..." />
+              </SelectTrigger>
+              <SelectContent className="bg-zinc-900 border-white/10 text-white">
+                {TEMPLATES.map((template, index) => (
+                  <SelectItem key={index} value={template.text} className="focus:bg-white/10 focus:text-white cursor-pointer">
+                    {template.label}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
           <div className="grid gap-2">
             <Label htmlFor="message" className="text-white">Message</Label>
             <Textarea
