@@ -14,14 +14,22 @@ export interface StatusSummary {
   nextCheckIn: number;
 }
 
+export interface SessionKeeperStats {
+  totalNudges: number;
+  totalApprovals: number;
+  totalDebates: number;
+}
+
 interface SessionKeeperState {
   config: SessionKeeperConfig;
   logs: Log[];
   statusSummary: StatusSummary;
+  stats: SessionKeeperStats;
   setConfig: (config: SessionKeeperConfig) => void;
   addLog: (message: string, type: Log['type']) => void;
   clearLogs: () => void;
   setStatusSummary: (summary: Partial<StatusSummary>) => void;
+  incrementStat: (stat: keyof SessionKeeperStats) => void;
 }
 
 const DEFAULT_CONFIG: SessionKeeperConfig = {
@@ -53,6 +61,7 @@ export const useSessionKeeperStore = create<SessionKeeperState>()(
       config: DEFAULT_CONFIG,
       logs: [],
       statusSummary: { monitoringCount: 0, lastAction: 'None', nextCheckIn: 0 },
+      stats: { totalNudges: 0, totalApprovals: 0, totalDebates: 0 },
 
       setConfig: (config) => set({ config }),
 
@@ -69,10 +78,14 @@ export const useSessionKeeperStore = create<SessionKeeperState>()(
       setStatusSummary: (summary) => set((state) => ({
         statusSummary: { ...state.statusSummary, ...summary }
       })),
+
+      incrementStat: (stat) => set((state) => ({
+        stats: { ...state.stats, [stat]: state.stats[stat] + 1 }
+      })),
     }),
     {
       name: 'jules-session-keeper-store',
-      partialize: (state) => ({ config: state.config }), // Only persist config
+      partialize: (state) => ({ config: state.config, stats: state.stats }), // Persist config AND stats
     }
   )
 );

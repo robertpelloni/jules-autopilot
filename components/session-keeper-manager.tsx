@@ -10,7 +10,7 @@ import { Activity } from '@/types/jules';
 export function SessionKeeperManager() {
   const { client } = useJules();
   const router = useRouter();
-  const { config, addLog, setStatusSummary } = useSessionKeeperStore();
+  const { config, addLog, setStatusSummary, incrementStat } = useSessionKeeperStore();
   const intervalRef = useRef<NodeJS.Timeout | null>(null);
 
   useEffect(() => {
@@ -48,27 +48,6 @@ export function SessionKeeperManager() {
              continue;
           }
 
-          // Since we fetched 1, it's the latest (API usually returns newest first or we assume sort?
-          // Wait, client.ts transform logic doesn't sort. API default sort?
-          // Python SDK list_all doesn't explicit sort.
-          // If API returns oldest first, pageSize=1 returns the FIRST activity ever.
-          // I should verify API behavior or fetch more?
-          // Actually, earlier I sorted manually.
-          // If API returns chronological, I need to fetch the LAST page or something.
-          // Most chat APIs return chronological.
-          // But usually they support `orderBy` or `desc`.
-          // My client doesn't support that param.
-          // If I can't sort by API, I MUST fetch all to get the last one?
-          // That defeats the optimization.
-          // Assuming standard "list" behavior returns page 1.
-
-          // Workaround: If we assume we can't optimize without API support, we might have to fetch all.
-          // BUT, let's assume for now we might need to fetch all if we can't guarantee order.
-          // HOWEVER, I can optimize by checking `session.lastActivityAt` if available!
-          // `ApiSession` has `lastActivityAt`.
-          // My `Session` type has `lastActivityAt`.
-          // This is the key! I don't need to fetch activities at all for the timestamp check!
-
           const lastActivityTimeStr = session.lastActivityAt || session.updatedAt;
           const lastActivityTime = new Date(lastActivityTimeStr).getTime();
           const now = Date.now();
@@ -96,21 +75,15 @@ export function SessionKeeperManager() {
              addLog(`Approving plan for session ${session.id} (State: Awaiting Approval)`, 'action');
              switchToSession();
              await client.approvePlan(session.id);
+             incrementStat('totalApprovals');
              continue;
           }
-
-          // Also manually check latest activity for 'plan' type if state isn't reliable?
-          // If we want to be robust, we fetch latest activity.
-          // If we use pageSize=1 and it returns oldest, it's useless.
-          // Let's assume we rely on session state for approval mostly.
-          // But if we want to be sure, we might need to fetch.
 
           // 2. Check for Inactivity
           if (inactiveMinutes > threshold) {
              let message = '';
 
              // Now we need context. FETCH FULL HISTORY (or enough context).
-             // Since we are about to act, the cost is justified.
              const fullActivities = await client.listActivities(session.id);
              fullActivities.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
              const latestActivity = fullActivities[0];
@@ -120,6 +93,7 @@ export function SessionKeeperManager() {
                  addLog(`Approving plan for session ${session.id} (Found unapproved plan)`, 'action');
                  switchToSession();
                  await client.approvePlan(session.id);
+                 incrementStat('totalApprovals');
                  continue;
              }
 
@@ -149,6 +123,7 @@ export function SessionKeeperManager() {
                         const data = await response.json();
                         message = data.content;
                         addLog(`Council Verdict: "${message.substring(0, 30)}..."`, 'action');
+                        incrementStat('totalDebates');
                     } else {
                         addLog('Council debate failed, falling back.', 'error');
                     }
@@ -199,6 +174,7 @@ export function SessionKeeperManager() {
                content: message,
                type: 'message'
              });
+             incrementStat('totalNudges');
           }
         }
 
@@ -213,7 +189,7 @@ export function SessionKeeperManager() {
     return () => {
       if (intervalRef.current) clearInterval(intervalRef.current);
     };
-  }, [config, client, addLog, setStatusSummary, router]);
+  }, [config, client, addLog, setStatusSummary, router, incrementStat]);
 
   return null;
 }
