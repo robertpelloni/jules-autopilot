@@ -70,7 +70,6 @@ export function SessionKeeperManager() {
           };
 
           // 1. Check for Plan Approval (Needs fetching activities)
-          // We only need to check this if status is AWAITING_APPROVAL.
           if (session.status === 'awaiting_approval' || session.rawState === 'AWAITING_PLAN_APPROVAL') {
              addLog(`Approving plan for session ${session.id} (State: Awaiting Approval)`, 'action');
              switchToSession();
@@ -121,8 +120,20 @@ export function SessionKeeperManager() {
 
                     if (response.ok) {
                         const data = await response.json();
-                        message = data.content;
-                        addLog(`Council Verdict: "${message.substring(0, 30)}..."`, 'action');
+
+                        // Construct Rich Markdown Transcript
+                        let transcript = `### 🏛️ Council Debate\n\n`;
+                        if (data.opinions && Array.isArray(data.opinions)) {
+                            data.opinions.forEach((op: any) => {
+                                const role = op.participant?.role || op.participant?.model || 'Member';
+                                const provider = op.participant?.provider ? `(${op.participant.provider})` : '';
+                                transcript += `**${role}** ${provider}:\n> ${op.content.replace(/\n/g, '\n> ')}\n\n`;
+                            });
+                        }
+                        transcript += `\n---\n**Verdict:**\n${data.content}`;
+
+                        message = transcript;
+                        addLog(`Council Verdict: "${data.content.substring(0, 30)}..."`, 'action');
                         incrementStat('totalDebates');
                     } else {
                         addLog('Council debate failed, falling back.', 'error');
@@ -168,7 +179,7 @@ export function SessionKeeperManager() {
                  }
              }
 
-             addLog(`Sending nudge to ${session.id} (${inactiveMinutes.toFixed(1)}m > ${threshold}m): "${message}"`, 'action');
+             addLog(`Sending nudge to ${session.id} (${inactiveMinutes.toFixed(1)}m > ${threshold}m): "${message.substring(0, 50)}..."`, 'action');
              await client.createActivity({
                sessionId: session.id,
                content: message,
