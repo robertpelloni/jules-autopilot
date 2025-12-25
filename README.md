@@ -127,6 +127,9 @@ npm run lint     # Run linter
 npm test         # Run tests
 ```
 
+### SDK Reference
+The project includes the official Python SDK as a reference submodule at `jules-sdk-reference`. This is used to ensure the TypeScript client implementation (`lib/jules/client.ts`) remains compliant with the official API models and logic.
+
 ## 📚 API Integration
 
 Integrates with Jules API (`https://jules.googleapis.com/v1alpha`) for session management, activity streaming, and real-time updates. See [developers.google.com/jules/api](https://developers.google.com/jules/api) for full documentation.
