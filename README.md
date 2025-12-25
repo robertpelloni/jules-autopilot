@@ -102,7 +102,7 @@ _Analytics Dashboard - Track session success rates, duration, and activity volum
 
 **Terminal Server:** [Node.js](https://nodejs.org/), [Socket.io](https://socket.io/), [node-pty](https://github.com/microsoft/node-pty)
 
-- **Base Image:** `nvcr.io/nvidia/pytorch:25.11-py3` (Configurable)
+- **Base Image:** `python:3.11-slim-bookworm` (Configurable)
 - **Pre-installed Tools:** `gemini-cli`, `python3`, `git`, `bash`
 
 **Infrastructure:** [Docker](https://www.docker.com/), [Docker Compose](https://docs.docker.com/compose/)

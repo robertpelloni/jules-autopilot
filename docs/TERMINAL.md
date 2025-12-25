@@ -159,7 +159,7 @@ environment:
 
 ### Custom Base Image
 
-The terminal server uses `nvcr.io/nvidia/pytorch:25.11-py3` by default. To use a different image (e.g., standard Ubuntu or a custom ML image):
+The terminal server uses `python:3.11-slim-bookworm` by default. To use a different image (e.g., standard Ubuntu or a custom ML image):
 
 1. Set the environment variable:
 
