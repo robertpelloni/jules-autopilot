@@ -373,28 +373,32 @@ export class JulesClient {
     });
   }
 
-  // Activities
+  // Activities (Paged)
+  async listActivitiesPaged(sessionId: string, pageSize: number = 100, pageToken?: string): Promise<{ activities: Activity[], nextPageToken?: string }> {
+      const params = new URLSearchParams();
+      params.set('pageSize', pageSize.toString());
+      if (pageToken) params.set('pageToken', pageToken);
+
+      const response = await this.request<{ activities?: ApiActivity[]; nextPageToken?: string }>(
+          `/sessions/${sessionId}/activities?${params.toString()}`
+      );
+
+      const activities = (response.activities || []).map(a => this.transformActivity(a, sessionId));
+      return { activities, nextPageToken: response.nextPageToken };
+  }
+
+  // Activities (Fetch All - Legacy/Convenience)
   async listActivities(sessionId: string): Promise<Activity[]> {
-    let allActivities: ApiActivity[] = [];
+    let allActivities: Activity[] = [];
     let pageToken: string | undefined;
 
-    // Loop for pagination (like Python list_all)
     do {
-        const params = new URLSearchParams();
-        params.set('pageSize', '100');
-        if (pageToken) params.set('pageToken', pageToken);
-
-        const response = await this.request<{ activities?: ApiActivity[]; nextPageToken?: string }>(
-            `/sessions/${sessionId}/activities?${params.toString()}`
-        );
-
-        if (response.activities) {
-            allActivities = allActivities.concat(response.activities);
-        }
-        pageToken = response.nextPageToken;
+        const result = await this.listActivitiesPaged(sessionId, 100, pageToken);
+        allActivities = allActivities.concat(result.activities);
+        pageToken = result.nextPageToken;
     } while (pageToken);
 
-    return allActivities.map((activity) => this.transformActivity(activity, sessionId));
+    return allActivities;
   }
 
   async getActivity(sessionId: string, activityId: string): Promise<Activity> {
