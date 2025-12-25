@@ -236,7 +236,11 @@ export function SessionList({
                 >
                   <Tooltip>
                     <TooltipTrigger asChild>
-                      <div className={`flex-shrink-0 mt-1 w-2 h-2 rounded-full ${statusInfo.color}`} />
+                      <div
+                        role="img"
+                        className={`flex-shrink-0 mt-1 w-2 h-2 rounded-full ${statusInfo.color}`}
+                        aria-label={`Status: ${session.status}`}
+                      />
                     </TooltipTrigger>
                     <TooltipContent side="right" className="bg-zinc-900 border-white/10 text-white text-[10px]">
                       <p>Status: {session.status}</p>
