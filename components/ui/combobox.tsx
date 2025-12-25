@@ -42,26 +42,15 @@ export interface ComboboxOption {
 }
 
 interface ComboboxProps {
-<<<<<<< HEAD
   options: ComboboxOption[];
   value?: string;
   onValueChange?: (value: string) => void;
+  onSearchChange?: (value: string) => void;
   placeholder?: string;
   searchPlaceholder?: string;
   emptyMessage?: string;
   className?: string;
   id?: string;
-=======
-  options: ComboboxOption[]
-  value?: string
-  onValueChange?: (value: string) => void
-  onSearchChange?: (value: string) => void
-  placeholder?: string
-  searchPlaceholder?: string
-  emptyMessage?: string
-  className?: string
-  id?: string
->>>>>>> origin/jules-session-keeper-integration-11072096883725838253
 }
 
 export function Combobox({
