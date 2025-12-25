@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useRef } from 'react';
+import { useRouter } from 'next/navigation';
 import { useJules } from '@/lib/jules/provider';
 import { useSessionKeeperStore } from '@/lib/stores/session-keeper';
 import { decideNextAction } from '@/lib/orchestration/supervisor';
@@ -8,6 +9,7 @@ import { Activity } from '@/types/jules';
 
 export function SessionKeeperManager() {
   const { client } = useJules();
+  const router = useRouter();
   const { config, addLog, setStatusSummary } = useSessionKeeperStore();
   const intervalRef = useRef<NodeJS.Timeout | null>(null);
 
@@ -54,22 +56,38 @@ export function SessionKeeperManager() {
 
           // Determine threshold
           let threshold = config.inactivityThresholdMinutes;
-          // Use working threshold for active states
-          if (['active', 'in_progress', 'planning'].includes(session.status)) {
+
+          // Use working threshold ONLY if agent is actively working (not waiting for user)
+          // If state is AWAITING_USER_FEEDBACK or similar, we treat it as "idle" (user needs to act)
+          // so we use the shorter inactivityThresholdMinutes to nudge (as user proxy).
+          const isAgentWorking = ['IN_PROGRESS', 'PLANNING'].includes(session.rawState || '');
+          if (isAgentWorking) {
              threshold = config.activeWorkThresholdMinutes;
           }
+
+          const switchToSession = () => {
+             if (config.autoSwitch) {
+                 // Check if already on session to avoid redundant pushes
+                 const currentParams = new URLSearchParams(window.location.search);
+                 if (currentParams.get('sessionId') !== session.id) {
+                     router.push(`/?sessionId=${session.id}`);
+                 }
+             }
+          };
 
           // Check for plan approval (High Priority)
           // Look for latest 'plan' activity
           if (lastActivity.type === 'plan' && !lastActivity.metadata?.planApproved) {
              addLog(`Approving plan for session ${session.id}`, 'action');
+             switchToSession();
              await client.approvePlan(session.id);
              continue;
           }
 
           // Also check explicit "AWAITING_PLAN_APPROVAL" state if API provides it
-          if (session.status === 'awaiting_approval') {
+          if (session.status === 'awaiting_approval' || session.rawState === 'AWAITING_PLAN_APPROVAL') {
              addLog(`Approving plan for session ${session.id} (State: Awaiting Approval)`, 'action');
+             switchToSession();
              await client.approvePlan(session.id);
              continue;
           }
@@ -77,6 +95,8 @@ export function SessionKeeperManager() {
           // Check for inactivity
           if (inactiveMinutes > threshold) {
              let message = '';
+
+             switchToSession();
 
              // 1. DEBATE MODE
              if (config.debateEnabled && config.debateParticipants && config.debateParticipants.length > 0) {
@@ -171,7 +191,7 @@ export function SessionKeeperManager() {
     return () => {
       if (intervalRef.current) clearInterval(intervalRef.current);
     };
-  }, [config, client, addLog, setStatusSummary]);
+  }, [config, client, addLog, setStatusSummary, router]);
 
   return null;
 }
