@@ -13,7 +13,7 @@ type Columns = {
 };
 
 export function SessionBoard() {
-  const { julesClient } = useJules();
+  const { client } = useJules();
   const [columns, setColumns] = useState<Columns>({
     active: [],
     paused: [],
@@ -23,7 +23,8 @@ export function SessionBoard() {
 
   useEffect(() => {
     async function fetchSessions() {
-      const fetchedSessions = await julesClient.listSessions();
+      if (!client) return;
+      const fetchedSessions = await client.listSessions();
       const newColumns: Columns = {
         active: [],
         paused: [],
@@ -37,7 +38,7 @@ export function SessionBoard() {
       setColumns(newColumns);
     }
     fetchSessions();
-  }, [julesClient]);
+  }, [client]);
 
   const findContainer = (id: string) => {
     if (id in columns) {
@@ -95,7 +96,9 @@ export function SessionBoard() {
 
         const newStatus = overContainer as 'active' | 'paused' | 'completed';
         draggedSession.status = newStatus;
-        julesClient.updateSession(draggedSession.id, { status: newStatus });
+        if (client) {
+          client.updateSession(draggedSession.id, { status: newStatus });
+        }
 
         setColumns(newColumns);
       }

@@ -6,11 +6,7 @@ import type { Session } from "@/types/jules";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-<<<<<<< HEAD
-import { Search, AlertCircle } from "lucide-react";
-=======
 import { Search, X } from "lucide-react";
->>>>>>> upstream/palette/api-key-ux
 import {
   Tooltip,
   TooltipContent,

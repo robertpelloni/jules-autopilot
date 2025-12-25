@@ -16,6 +16,7 @@ export interface Session {
   updatedAt: string;
   lastActivityAt?: string;
   branch?: string;
+  summary?: string;
 }
 
 export interface Activity {

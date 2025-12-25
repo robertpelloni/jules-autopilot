@@ -336,6 +336,7 @@ export class JulesClient {
       id: session.id,
       sourceId: session.sourceContext?.source?.replace('sources/github/', '') || '',
       title: session.title || '',
+      summary: session.summary as string | undefined,
       status: this.mapState(session.state || ''),
       rawState: session.state, // Pass through original state
       createdAt: session.createTime,
@@ -394,6 +395,37 @@ export class JulesClient {
     return this.request<Session>("/sessions", {
       method: "POST",
       body: JSON.stringify(requestBody),
+    });
+  }
+
+  async updateSession(id: string, data: Partial<Session>): Promise<Session> {
+    const body: any = { ...data };
+    // Map local status back to API state if needed
+    if (data.status) {
+        const stateMap: Record<string, string> = {
+            'active': 'ACTIVE',
+            'completed': 'COMPLETED',
+            'failed': 'FAILED',
+            'paused': 'PAUSED',
+            'awaiting_approval': 'AWAITING_PLAN_APPROVAL'
+        };
+        if (stateMap[data.status]) {
+            body.state = stateMap[data.status];
+            delete body.status;
+        }
+    }
+
+    // Remove fields that shouldn't be sent
+    delete body.id;
+    delete body.createdAt;
+    delete body.updatedAt;
+    delete body.lastActivityAt;
+    delete body.sourceId; // Usually immutable
+    delete body.branch;
+
+    return this.request<Session>(`/sessions/${id}`, {
+      method: "PATCH",
+      body: JSON.stringify(body),
     });
   }
 
