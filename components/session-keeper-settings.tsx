@@ -201,33 +201,24 @@ export function SessionKeeperSettings({
     : (config.customMessages?.[selectedSessionId] || []);
 
   return (
-<<<<<<< HEAD
     <Dialog open={isDialogOpen} onOpenChange={handleOpenChange}>
       {trigger !== null && (
         <DialogTrigger asChild>
           {trigger || (
-            <Button variant="ghost" size="icon" className="h-8 w-8 text-white/60 hover:text-white hover:bg-white/10" title="Auto-Pilot Settings">
-              <Settings className="h-4 w-4" />
+            <Button
+              variant="ghost"
+              size="icon"
+              className={cn(
+                "h-8 w-8 hover:bg-white/10 transition-colors",
+                config.isEnabled ? "text-green-400 hover:text-green-300" : "text-white/60 hover:text-white"
+              )}
+              title={config.isEnabled ? "Auto-Pilot Active" : "Auto-Pilot Settings"}
+            >
+              <Settings className={cn("h-4 w-4", config.isEnabled && "animate-spin [animation-duration:3s]")} />
             </Button>
           )}
         </DialogTrigger>
       )}
-=======
-    <Dialog open={isOpen} onOpenChange={setIsOpen}>
-      <DialogTrigger asChild>
-        <Button
-          variant="ghost"
-          size="icon"
-          className={cn(
-            "h-8 w-8 hover:bg-white/10 transition-colors",
-            config.isEnabled ? "text-green-400 hover:text-green-300" : "text-white/60 hover:text-white"
-          )}
-          title={config.isEnabled ? "Auto-Pilot Active" : "Auto-Pilot Settings"}
-        >
-          <Settings className={cn("h-4 w-4", config.isEnabled && "animate-spin [animation-duration:3s]")} />
-        </Button>
-      </DialogTrigger>
->>>>>>> origin/jules-session-keeper-integration-11072096883725838253
       <DialogContent className="max-w-2xl bg-zinc-950 border-white/10 text-white max-h-[85vh] flex flex-col p-0">
         <DialogHeader className="px-6 py-4 border-b border-white/10">
           <DialogTitle className="text-lg font-bold tracking-wide">Auto-Pilot Configuration</DialogTitle>
