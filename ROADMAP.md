@@ -33,8 +33,11 @@
   - Centralized Versioning (`VERSION.md`).
   - Submodule Synchronization.
   - **System Dashboard**: A dedicated page to view submodule versions, build info, and project structure.
+  - **Real-time Submodule Status**: Live git status checks and commit dates in System Dashboard.
+- **Collaboration**:
+  - **Broadcast Messages**: Send messages to all open sessions simultaneously.
+  - **Kanban Board**: Manage sessions in a Kanban style (Running, Waiting, Done).
 
 ## Planned / Pending
 - **Terminal Integration Polish**: Verify secure API key passing and connection resilience.
 - **Template Management**: Refine template creation/editing flow.
-- **Real-time Submodule Status**: Add live git status checks to the System Dashboard.

@@ -31,6 +31,7 @@ Jules UI is a modern, developer-first interface for Google's Jules AI agent. It 
 The project relies heavily on submodules in `external/`.
 -   **Always** run `git submodule update --init --recursive` when starting.
 -   **Never** modify submodule code directly unless you intend to push upstream.
+-   **Dashboard**: The System Dashboard (`/system`) provides a real-time view of submodule versions, commit dates, and sync status. Ensure `scripts/get-submodule-info.js` is run during build.
 
 ## Feature Roadmap
 See `ROADMAP.md` for the current status of features.
@@ -41,3 +42,11 @@ When finishing a session, update `HANDOFF.md` with:
 2.  Recent changes.
 3.  Known issues.
 4.  Next steps.
+5.  **Submodule Status**: Note any submodules that were updated or need attention.
+
+## Universal Agent Protocol
+All agents (Claude, Gemini, GPT, Copilot) must:
+1.  **Plan**: Outline steps before executing.
+2.  **Context**: Read this file and `ROADMAP.md` before starting.
+3.  **Version**: Check `VERSION.md` and increment for significant changes.
+4.  **Test**: Verify builds after changes.

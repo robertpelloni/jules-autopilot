@@ -22,11 +22,24 @@ try {
       commit = commit.substring(1);
     }
 
+    let lastUpdated = new Date().toISOString();
+    try {
+        // Try to get the actual commit date of the submodule
+        // We need to resolve the absolute path
+        const submodulePath = path.join(__dirname, '..', pathStr);
+        if (fs.existsSync(submodulePath)) {
+            const dateOutput = execSync(`git log -1 --format=%cd --date=iso`, { cwd: submodulePath, encoding: 'utf8' });
+            lastUpdated = dateOutput.trim();
+        }
+    } catch (e) {
+        console.warn(`Could not get date for submodule ${pathStr}:`, e.message);
+    }
+
     return {
       path: pathStr,
       commit: commit,
       describe: describe || 'N/A',
-      lastUpdated: new Date().toISOString()
+      lastUpdated: lastUpdated
     };
   });
 

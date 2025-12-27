@@ -2,6 +2,16 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.2.6] - 2025-12-26
+
+### Added
+- **Submodule Dashboard**: Enhanced the System Dashboard to display commit dates for all submodules.
+- **Documentation**: Updated `LLM_INSTRUCTIONS.md` and other agent guides to enforce versioning and submodule protocols.
+
+### Changed
+- **Build Script**: Updated `scripts/get-submodule-info.js` to capture actual commit dates from submodules.
+- **Versioning**: Bumped version to 0.2.6.
+
 ## [0.2.5] - 2025-12-25
 
 ### Added

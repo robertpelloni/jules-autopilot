@@ -165,6 +165,9 @@ export default function SystemDashboard() {
                         {mod.commit.substring(0, 7)}
                         <span className="w-1 h-1 rounded-full bg-white/20" />
                         {mod.describe}
+                        <span className="w-1 h-1 rounded-full bg-white/20" />
+                        <Clock className="h-3 w-3" />
+                        {new Date(mod.lastUpdated).toLocaleDateString()}
                       </div>
                     </div>
                   </div>
