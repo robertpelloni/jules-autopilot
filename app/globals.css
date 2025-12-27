@@ -114,6 +114,47 @@
   --sidebar-ring: oklch(0.65 0.25 285);
 }
 
+/* Theme Overrides */
+.theme-blue {
+  --primary: oklch(0.6 0.2 250);
+  --ring: oklch(0.6 0.2 250);
+  --sidebar-primary: oklch(0.6 0.2 250);
+  --sidebar-ring: oklch(0.6 0.2 250);
+  --chart-1: oklch(0.6 0.2 250);
+}
+
+.theme-green {
+  --primary: oklch(0.6 0.2 150);
+  --ring: oklch(0.6 0.2 150);
+  --sidebar-primary: oklch(0.6 0.2 150);
+  --sidebar-ring: oklch(0.6 0.2 150);
+  --chart-1: oklch(0.6 0.2 150);
+}
+
+.theme-orange {
+  --primary: oklch(0.6 0.2 45);
+  --ring: oklch(0.6 0.2 45);
+  --sidebar-primary: oklch(0.6 0.2 45);
+  --sidebar-ring: oklch(0.6 0.2 45);
+  --chart-1: oklch(0.6 0.2 45);
+}
+
+.theme-red {
+  --primary: oklch(0.6 0.2 25);
+  --ring: oklch(0.6 0.2 25);
+  --sidebar-primary: oklch(0.6 0.2 25);
+  --sidebar-ring: oklch(0.6 0.2 25);
+  --chart-1: oklch(0.6 0.2 25);
+}
+
+.theme-slate {
+  --primary: oklch(0.6 0 0);
+  --ring: oklch(0.6 0 0);
+  --sidebar-primary: oklch(0.6 0 0);
+  --sidebar-ring: oklch(0.6 0 0);
+  --chart-1: oklch(0.6 0 0);
+}
+
 @layer base {
   * {
     @apply border-border outline-ring/50;

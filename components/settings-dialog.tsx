@@ -6,8 +6,9 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Settings, Github, Brain } from 'lucide-react';
+import { Settings, Github, Brain, Palette } from 'lucide-react';
 import { SessionKeeperSettingsContent } from './session-keeper-settings-content';
+import { ThemeCustomizer } from './theme-customizer';
 import { useSessionKeeperStore } from '@/lib/stores/session-keeper';
 import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
@@ -52,6 +53,10 @@ export function SettingsDialog({ open: propOpen, onOpenChange: propOnOpenChange,
                 <Github className="h-3.5 w-3.5" />
                 Integrations
               </TabsTrigger>
+              <TabsTrigger value="appearance" className="text-xs flex items-center gap-2">
+                <Palette className="h-3.5 w-3.5" />
+                Appearance
+              </TabsTrigger>
               <TabsTrigger value="supervisor" className="text-xs flex items-center gap-2">
                 <Brain className="h-3.5 w-3.5" />
                 Supervisor
@@ -83,6 +88,12 @@ export function SettingsDialog({ open: propOpen, onOpenChange: propOnOpenChange,
                  </div>
                </div>
              </div>
+          </TabsContent>
+
+          <TabsContent value="appearance" className="flex-1 p-6">
+            <div className="max-w-md">
+              <ThemeCustomizer />
+            </div>
           </TabsContent>
 
           <TabsContent value="supervisor" className="flex-1 min-h-0 overflow-hidden">
