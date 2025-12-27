@@ -58,6 +58,8 @@ import { SessionKeeperManager } from "./session-keeper-manager";
 import { SessionKeeper } from "./SessionKeeper";
 import { useSessionKeeperStore } from "@/lib/stores/session-keeper";
 
+import { BroadcastDialog } from "@/components/broadcast-dialog";
+
 interface AppLayoutProps {
   initialView?: "sessions" | "analytics" | "templates" | "kanban";
 }
@@ -299,6 +301,16 @@ export function AppLayout({ initialView }: AppLayoutProps) {
               <span className="text-[10px] font-mono uppercase tracking-wider">Kanban</span>
             </Button>
 
+            <Button
+              variant="ghost"
+              size="sm"
+              className="h-8 px-3 hover:bg-white/5 text-white/60"
+              onClick={() => router.push('/system')}
+            >
+              <FolderTree className="h-3.5 w-3.5 mr-1.5" />
+              <span className="text-[10px] font-mono uppercase tracking-wider">System</span>
+            </Button>
+
             {terminalAvailable && (
               <Button
                 variant="ghost"
@@ -327,6 +339,8 @@ export function AppLayout({ initialView }: AppLayoutProps) {
                 </Button>
               }
             />
+
+            <BroadcastDialog sessions={[]} />
 
             {/* Session Keeper Settings (Controlled) */}
             <SessionKeeperSettings 
@@ -405,15 +419,15 @@ export function AppLayout({ initialView }: AppLayoutProps) {
           </div>
         </aside>
 
-        {/* Resizable Panel Group (Horizontal: Left = Main, Right = System) */}
+        {/* Resizable Panel Group (Vertical: Top = Main, Bottom = Logs) */}
         <ResizablePanelGroup 
-          direction="horizontal" 
+          direction="vertical" 
           className="flex-1 min-w-0"
-          key={isLogPanelOpen ? "horizontal-layout-open" : "horizontal-layout-closed"}
+          key={isLogPanelOpen ? "vertical-layout-open" : "vertical-layout-closed"}
         >
 
           {/* Main Panel: Dashboard */}
-          <ResizablePanel defaultSize={isLogPanelOpen ? 75 : 100} minSize={30} className="min-w-0">
+          <ResizablePanel defaultSize={isLogPanelOpen ? 70 : 100} minSize={30} className="min-w-0">
             {/* Main Panel Content */}
             <div className="flex h-full w-full flex-row min-w-0">
               <main className="flex-1 overflow-hidden bg-black flex flex-col min-w-0">
@@ -501,15 +515,15 @@ export function AppLayout({ initialView }: AppLayoutProps) {
             </div>
           </ResizablePanel>
 
-          {/* Right Panel: System/Logs */}
+          {/* Bottom Panel: System/Logs */}
           {isLogPanelOpen && (
             <>
               <ResizableHandle 
                 withHandle 
-                className="w-2 h-full cursor-col-resize bg-zinc-900 border-x border-white/10 hover:bg-purple-500/20 transition-colors" 
+                className="h-2 w-full cursor-row-resize bg-zinc-900 border-y border-white/10 hover:bg-purple-500/20 transition-colors" 
               />
-              <ResizablePanel defaultSize={25} minSize={20} maxSize={40}>
-                <SessionKeeper onClose={() => setIsLogPanelOpen(false)} isSidebar />
+              <ResizablePanel defaultSize={30} minSize={10} maxSize={50}>
+                <SessionKeeper onClose={() => setIsLogPanelOpen(false)} isSidebar={false} />
               </ResizablePanel>
             </>
           )}
