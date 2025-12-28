@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.4.7] - 2025-12-27
+
+### Added
+- **Save as Template:** New workflow to save the current session as a reusable template.
+- **Deep Code Review:** Integrated `ArtifactBrowser` with `DebateDialog` for file-specific reviews.
+- **Debate Enhancements:** Lifted `DebateDialog` to `AppLayout` for global access and pre-filling context.
+
 ## [0.4.5] - 2025-12-27
 
 ### Added
@@ -14,12 +21,6 @@ All notable changes to this project will be documented in this file.
 ### Added
 - **System Dashboard Enhancement:** Added build number and detailed project structure documentation.
 - **Documentation:** Consolidated LLM instructions and updated all agent-specific guides.
-
-## [0.4.3] - 2025-12-27
-
-### Added
-- **Deep Code Review:** Integrated `ArtifactBrowser` with `DebateDialog` to allow "Review this File" functionality.
-- **Debate Enhancements:** Lifted `DebateDialog` to `AppLayout` for global access and pre-filling context.
 
 ## [0.4.2] - 2025-12-27
 

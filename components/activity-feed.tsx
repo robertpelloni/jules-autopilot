@@ -10,7 +10,7 @@ import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { Textarea } from '@/components/ui/textarea';
 import { Button } from '@/components/ui/button';
 import { formatDistanceToNow, isValid, parseISO } from 'date-fns';
-import { Send, Archive, ArchiveRestore, Code, Terminal, ChevronDown, ChevronRight, Play, GitBranch, GitPullRequest, MoreVertical, Book, ArrowUp, ArrowDown, Download, Copy, Check, Users } from 'lucide-react';
+import { Send, Archive, ArchiveRestore, Code, Terminal, ChevronDown, ChevronRight, Play, GitBranch, GitPullRequest, MoreVertical, Book, ArrowUp, ArrowDown, Download, Copy, Check, Users, LayoutTemplate } from 'lucide-react';
 import { archiveSession, unarchiveSession, isSessionArchived } from '@/lib/archive';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
@@ -36,9 +36,11 @@ interface ActivityFeedProps {
   showCodeDiffs: boolean;
   onToggleCodeDiffs: (show: boolean) => void;
   onActivitiesChange: (activities: Activity[]) => void;
+  onStartDebate?: () => void;
+  onSaveTemplate?: () => void;
 }
 
-export function ActivityFeed({ session, onArchive, showCodeDiffs, onToggleCodeDiffs, onActivitiesChange }: ActivityFeedProps) {
+export function ActivityFeed({ session, onArchive, showCodeDiffs, onToggleCodeDiffs, onActivitiesChange, onStartDebate, onSaveTemplate }: ActivityFeedProps) {
   const { client } = useJules();
   const [activities, setActivities] = useState<Activity[]>([]);
   const [loading, setLoading] = useState(true);
@@ -89,9 +91,7 @@ export function ActivityFeed({ session, onArchive, showCodeDiffs, onToggleCodeDi
             return <PlanContent content={parsed} />;
           }
           return <pre className="text-[11px] overflow-x-auto font-mono bg-muted/50 p-2 rounded">{JSON.stringify(parsed, null, 2)}</pre>;
-        } catch {
-          // Fall through to markdown
-        }
+        } catch { }
     }
 
     return (
@@ -437,15 +437,16 @@ export function ActivityFeed({ session, onArchive, showCodeDiffs, onToggleCodeDi
                       <Play className="mr-2 h-3.5 w-3.5" />
                       <span>Start Code Review</span>
                     </DropdownMenuItem>
-                    <DebateDialog
-                      sessionId={session.id}
-                      trigger={
-                        <DropdownMenuItem onSelect={(e) => e.preventDefault()} className="focus:bg-white/10 focus:text-white text-xs cursor-pointer">
-                          <Users className="mr-2 h-3.5 w-3.5" />
-                          <span>Start Debate</span>
-                        </DropdownMenuItem>
-                      }
-                    />
+                    <DropdownMenuItem onSelect={(e) => { e.preventDefault(); onStartDebate?.(); }} className="focus:bg-white/10 focus:text-white text-xs cursor-pointer">
+                      <Users className="mr-2 h-3.5 w-3.5" />
+                      <span>Start Debate</span>
+                    </DropdownMenuItem>
+                    {onSaveTemplate && (
+                      <DropdownMenuItem onSelect={(e) => { e.preventDefault(); onSaveTemplate(); }} className="focus:bg-white/10 focus:text-white text-xs cursor-pointer text-purple-400 focus:text-purple-400">
+                        <LayoutTemplate className="mr-2 h-3.5 w-3.5" />
+                        <span>Save as Template</span>
+                      </DropdownMenuItem>
+                    )}
                   </>
                 )}
 
@@ -587,7 +588,6 @@ export function ActivityFeed({ session, onArchive, showCodeDiffs, onToggleCodeDi
                   );
                 }
 
-                // Handle Debate Type
                 if (item.type === 'debate' && item.metadata?.debate) {
                     return (
                         <div key={item.id} className={`flex gap-2.5 ${newActivityIds.has(item.id) ? 'animate-in fade-in slide-in-from-bottom-2 duration-500' : ''}`}>
