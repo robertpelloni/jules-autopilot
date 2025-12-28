@@ -2,6 +2,12 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.4.4] - 2025-12-27
+
+### Added
+- **System Dashboard Enhancement:** Added build number and detailed project structure documentation.
+- **Documentation:** Consolidated LLM instructions and updated all agent-specific guides.
+
 ## [0.4.3] - 2025-12-27
 
 ### Added

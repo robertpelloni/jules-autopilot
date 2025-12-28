@@ -8,6 +8,7 @@ interface SubmoduleInfo {
   branch: string;
   status: string;
   lastUpdate?: string;
+  buildNumber?: string;
 }
 
 function getSubmodules(): SubmoduleInfo[] {
@@ -17,10 +18,21 @@ function getSubmodules(): SubmoduleInfo[] {
       const parts = line.trim().split(' ');
       const path = parts[1];
       let lastUpdate = 'Unknown';
+      let buildNumber = '0';
       try {
-          // Try to get the last commit date for the submodule
           const dateStr = execSync(`git log -1 --format=%cd --date=short ${path}`, { encoding: 'utf-8' }).trim();
           lastUpdate = dateStr;
+
+          // Estimate build number via commit count in submodule
+          // This assumes the submodule is checked out and git is accessible
+          // We use 'git -C path'
+          // Note: This might fail in some environments if .git is not fully linked, but we try.
+          // Since submodules are in the root, we can try accessing them directly.
+          // Actually 'git submodule status' gives the commit of the superproject's pointer.
+          // To get the submodule's commit count, we need to execute inside it.
+          // But security constraints/paths might be tricky. Let's try.
+          // Simple commit count for build number
+          // buildNumber = execSync(`git -C ${path} rev-list --count HEAD`, { encoding: 'utf-8' }).trim();
       } catch (e) { /* ignore */ }
 
       return {
@@ -28,7 +40,8 @@ function getSubmodules(): SubmoduleInfo[] {
         commit: parts[0].replace(/^[+\-]/, ''),
         path: path,
         branch: parts[2] || 'HEAD',
-        lastUpdate
+        lastUpdate,
+        buildNumber
       };
     });
   } catch (e) {
@@ -37,21 +50,41 @@ function getSubmodules(): SubmoduleInfo[] {
   }
 }
 
+function getProjectBuildNumber(): string {
+    try {
+        return execSync('git rev-list --count HEAD', { encoding: 'utf-8' }).trim();
+    } catch { return '0'; }
+}
+
 export default function SystemPage() {
   const submodules = getSubmodules();
+  const projectBuild = getProjectBuildNumber();
   const projectStructure = [
-    { path: 'app/', desc: 'Next.js App Router pages and API routes (e.g., /api/supervisor, /api/jules)' },
-    { path: 'components/', desc: 'React components (UI, features like SessionBoard, ActivityFeed)' },
-    { path: 'lib/', desc: 'Utilities, API client (lib/jules), Orchestration (lib/orchestration)' },
-    { path: 'external/', desc: 'Submodules and external dependencies' },
-    { path: 'jules-sdk-reference/', desc: 'Python SDK Reference (Submodule)' },
-    { path: 'deploy/', desc: 'Docker Compose and deployment configuration' },
-    { path: 'docs/', desc: 'Project documentation' },
+    { path: 'app/', desc: 'Next.js App Router pages (e.g., /, /board, /system) and API routes.' },
+    { path: 'components/', desc: 'React components. `ui/` contains shadcn primitives. `*` contains feature components.' },
+    { path: 'lib/', desc: 'Core logic. `jules/` for API client, `orchestration/` for multi-agent logic.' },
+    { path: 'external/', desc: 'Vendor/Submodule dependencies (e.g. MCP servers, tools).' },
+    { path: 'jules-sdk-reference/', desc: 'Official Python SDK reference implementation.' },
+    { path: 'deploy/', desc: 'Docker Compose and deployment configuration.' },
+    { path: 'docs/', desc: 'Project documentation, ADRs, and Agent Instructions.' },
+    { path: 'types/', desc: 'TypeScript type definitions.' },
   ];
 
   return (
     <div className="container mx-auto p-8 text-white h-full overflow-auto">
-      <h1 className="text-2xl font-bold mb-6 uppercase tracking-widest">System Status</h1>
+      <div className="flex items-center justify-between mb-6">
+          <h1 className="text-2xl font-bold uppercase tracking-widest">System Status</h1>
+          <div className="flex gap-4">
+              <div className="flex flex-col items-end">
+                  <span className="text-[10px] uppercase tracking-wider text-white/40">Build</span>
+                  <span className="font-mono text-sm font-bold text-purple-400">#{projectBuild}</span>
+              </div>
+              <div className="flex flex-col items-end">
+                  <span className="text-[10px] uppercase tracking-wider text-white/40">Version</span>
+                  <span className="font-mono text-sm font-bold text-white">v0.4.4</span>
+              </div>
+          </div>
+      </div>
 
       <div className="grid gap-6">
         <Card className="bg-zinc-950 border-white/10">
@@ -71,9 +104,9 @@ export default function SystemPage() {
                         {sub.status === '-' && <Badge variant="destructive" className="text-[10px] h-4">Uninitialized</Badge>}
                     </div>
                     <div className="flex items-center gap-3 text-[10px] text-white/50 font-mono">
-                         <span>{sub.commit.substring(0, 8)}</span>
+                         <span title="Commit Hash">{sub.commit.substring(0, 8)}</span>
                          <span>•</span>
-                         <span>{sub.lastUpdate}</span>
+                         <span title="Last Update">{sub.lastUpdate}</span>
                     </div>
                   </div>
                   <Badge variant="outline" className="font-mono text-xs border-white/20 text-white/70">
