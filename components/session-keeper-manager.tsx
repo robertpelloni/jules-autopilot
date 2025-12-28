@@ -17,7 +17,15 @@ interface SupervisorState {
 
 export function SessionKeeperManager() {
   const { client, apiKey } = useJules();
-  const { config, addLog, addDebate, setStatusSummary, updateSessionState, incrementStat } = useSessionKeeperStore();
+  
+  // Use granular selectors to prevent re-renders when other parts of the store (like statusSummary) change
+  const config = useSessionKeeperStore(state => state.config);
+  const addLog = useSessionKeeperStore(state => state.addLog);
+  const addDebate = useSessionKeeperStore(state => state.addDebate);
+  const setStatusSummary = useSessionKeeperStore(state => state.setStatusSummary);
+  const updateSessionState = useSessionKeeperStore(state => state.updateSessionState);
+  const incrementStat = useSessionKeeperStore(state => state.incrementStat);
+
   const intervalRef = useRef<NodeJS.Timeout | null>(null);
   const processingRef = useRef(false);
 
@@ -55,13 +63,6 @@ export function SessionKeeperManager() {
         const savedState = localStorage.getItem('jules_supervisor_state');
         const supervisorState: SupervisorState = savedState ? JSON.parse(savedState) : {};
         let stateChanged = false;
-
-        // Debug Config
-        console.log('[Auto-Pilot Debug] Config:', {
-            debateEnabled: config.debateEnabled,
-            smartPilot: config.smartPilotEnabled,
-            participants: config.debateParticipants?.length
-        });
 
         const generateMessage = async (session: Session) => {
             let messageToSend = '';
