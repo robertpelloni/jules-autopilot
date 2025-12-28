@@ -31,12 +31,21 @@ export function QuickReviewButton({ onSessionCreated }: QuickReviewButtonProps) 
       // 2. Use the first available source
       const sourceId = sources[0].id;
 
-      // 3. Create the session
-      await client.createSession({
+      // 3. Create the session with Enhanced Prompt
+      const prompt = `Perform a Deep Code Analysis of this repository.
+
+Structure your review into 3 sections:
+1. Security Audit
+2. Performance Analysis
+3. Maintainability
+
+For each section, list specific findings and recommendations.`;
+
+      await client.createSession(
         sourceId,
-        title: '[Code Review] Auto Code Review',
-        prompt: 'Please perform a comprehensive code review of the repository. Look for bugs, security issues, and opportunities for refactoring. Provide a detailed summary of your findings.',
-      });
+        prompt,
+        '[Deep Analysis] Auto Code Review'
+      );
 
       // 4. Notify parent to refresh
       onSessionCreated?.();

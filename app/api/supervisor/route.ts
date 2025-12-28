@@ -1,11 +1,12 @@
 import { NextResponse } from 'next/server';
 import { getProvider } from '@/lib/orchestration/providers';
 import { runDebate } from '@/lib/orchestration/debate';
+import { runCodeReview } from '@/lib/orchestration/review';
 
 export async function POST(req: Request) {
   try {
     const body = await req.json();
-    const { messages, provider, apiKey, model, threadId, assistantId, action, participants, topic } = body;
+    const { messages, provider, apiKey, model, threadId, assistantId, action, participants, topic, codeContext } = body;
 
     // 1. List Models
     if (action === 'list_models') {
@@ -38,7 +39,25 @@ export async function POST(req: Request) {
         }
     }
 
-    // 3. Stateless Logic (Default Supervisor)
+    // 3. Code Review
+    if (action === 'review') {
+        if (!codeContext) return NextResponse.json({ error: 'Missing codeContext' }, { status: 400 });
+
+        try {
+            const result = await runCodeReview({
+                codeContext,
+                provider: provider || 'openai',
+                model: model || 'gpt-4o',
+                apiKey
+            });
+            return NextResponse.json({ content: result });
+        } catch (e) {
+            console.error("Review Error", e);
+            return NextResponse.json({ error: e instanceof Error ? e.message : 'Review failed' }, { status: 500 });
+        }
+    }
+
+    // 4. Stateless Logic (Default Supervisor)
     const p = getProvider(provider);
     if (p) {
         if (!apiKey) return NextResponse.json({ error: 'API Key required' }, { status: 400 });

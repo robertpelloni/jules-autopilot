@@ -4,17 +4,23 @@ import { useState, useEffect } from 'react';
 import { useJules } from '@/lib/jules/provider';
 import type { Artifact, Session } from '@/types/jules';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { FileCode, Terminal, Image as ImageIcon, File, Download, Loader2 } from 'lucide-react';
+import { FileCode, Terminal, Image as ImageIcon, File, Download, Loader2, Play, ShieldCheck } from 'lucide-react';
 import { BashOutput } from '@/components/ui/bash-output';
 import { formatDistanceToNow, parseISO } from 'date-fns';
+import { toast } from 'sonner';
 
-export function ArtifactBrowser({ session }: { session: Session }) {
+interface ArtifactBrowserProps {
+  session: Session;
+  onReview?: (artifact: Artifact) => void;
+}
+
+export function ArtifactBrowser({ session, onReview }: ArtifactBrowserProps) {
   const { client } = useJules();
   const [artifacts, setArtifacts] = useState<Artifact[]>([]);
   const [selectedArtifact, setSelectedArtifact] = useState<Artifact | null>(null);
   const [loading, setLoading] = useState(true);
+  const [analyzing, setAnalyzing] = useState(false);
 
   useEffect(() => {
     if (!client || !session?.id) return;
@@ -33,6 +39,47 @@ export function ArtifactBrowser({ session }: { session: Session }) {
 
     fetchArtifacts();
   }, [client, session?.id]);
+
+  const handleDeepAnalysis = async (artifact: Artifact) => {
+      if (!client || !session.id) return;
+
+      const content = artifact.changeSet?.gitPatch?.unidiffPatch || artifact.changeSet?.unidiffPatch;
+      if (!content) return;
+
+      try {
+          setAnalyzing(true);
+          toast.info('Starting Deep Code Analysis...');
+
+          const response = await fetch('/api/supervisor', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({
+                  action: 'review',
+                  codeContext: content,
+                  provider: 'openai', // Default
+                  apiKey: 'placeholder' // Should use server env or user key
+              })
+          });
+
+          if (!response.ok) throw new Error(await response.text());
+          const result = await response.json();
+
+          // Post result
+          await client.createActivity({
+              sessionId: session.id,
+              content: result.content,
+              type: 'result'
+          });
+
+          toast.success('Analysis complete! Check the activity feed.');
+
+      } catch (error) {
+          console.error('Analysis failed', error);
+          toast.error('Analysis failed.');
+      } finally {
+          setAnalyzing(false);
+      }
+  };
 
   const getArtifactIcon = (artifact: Artifact) => {
     if (artifact.changeSet) return <FileCode className="h-4 w-4 text-blue-400" />;
@@ -62,7 +109,20 @@ export function ArtifactBrowser({ session }: { session: Session }) {
       const patch = artifact.changeSet.gitPatch?.unidiffPatch || artifact.changeSet.unidiffPatch;
       return (
         <div className="space-y-2">
-          <h3 className="text-sm font-semibold text-blue-400 font-mono">Git Diff</h3>
+          <div className="flex items-center justify-between">
+             <h3 className="text-sm font-semibold text-blue-400 font-mono">Git Diff</h3>
+             <div className="flex gap-2">
+                {onReview && (
+                    <Button variant="outline" size="sm" className="h-7 text-xs" onClick={() => onReview(artifact)}>
+                        <Play className="mr-2 h-3 w-3" /> Debate
+                    </Button>
+                )}
+                <Button variant="outline" size="sm" className="h-7 text-xs" disabled={analyzing} onClick={() => handleDeepAnalysis(artifact)}>
+                    {analyzing ? <Loader2 className="mr-2 h-3 w-3 animate-spin" /> : <ShieldCheck className="mr-2 h-3 w-3" />}
+                    Deep Analysis
+                </Button>
+             </div>
+          </div>
           <pre className="p-4 bg-zinc-950 border border-white/10 rounded-md overflow-x-auto text-xs font-mono text-gray-300">
             {patch || 'No diff content available'}
           </pre>
@@ -117,7 +177,7 @@ export function ArtifactBrowser({ session }: { session: Session }) {
             <div className="p-2 space-y-1">
               {artifacts.map((artifact, i) => (
                 <button
-                  key={i} // Artifacts might lack ID, using index as fallback
+                  key={i}
                   onClick={() => setSelectedArtifact(artifact)}
                   className={`w-full flex items-center gap-3 p-2 rounded text-left text-xs transition-colors ${
                     selectedArtifact === artifact ? 'bg-white/10 text-white' : 'text-white/60 hover:bg-white/5 hover:text-white'

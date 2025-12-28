@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.4.5] - 2025-12-27
+
+### Added
+- **Deep Code Analysis Orchestrator:** Implemented `lib/orchestration/review.ts` to run parallel LLM audits (Security, Performance, Maintainability) and synthesize results.
+- **Deep Analysis Action:** Added "Deep Analysis" button to `ArtifactBrowser` for inspecting code artifacts using the new orchestrator.
+- **Quick Review Enhancement:** Improved the default "Quick Review" prompt to request structured analysis.
+
 ## [0.4.4] - 2025-12-27
 
 ### Added
