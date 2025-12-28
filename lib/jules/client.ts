@@ -3,18 +3,21 @@ import { Session, Activity, Source, Artifact, SessionTemplate } from '@/types/ju
 const API_BASE_URL = '/api/jules';
 
 export class JulesClient {
-  private apiKey: string;
+  private apiKey?: string;
 
-  constructor(apiKey: string) {
+  constructor(apiKey?: string) {
     this.apiKey = apiKey;
   }
 
   private async fetch<T>(endpoint: string, options: RequestInit = {}): Promise<T> {
-    const headers = {
-      'Authorization': `Bearer ${this.apiKey}`,
+    const headers: Record<string, string> = {
       'Content-Type': 'application/json',
-      ...options.headers,
+      ...(options.headers as Record<string, string>),
     };
+
+    if (this.apiKey) {
+      headers['Authorization'] = `Bearer ${this.apiKey}`;
+    }
 
     const response = await fetch(`${API_BASE_URL}${endpoint}`, {
       ...options,
@@ -23,10 +26,13 @@ export class JulesClient {
 
     if (!response.ok) {
       const errorText = await response.text();
+      // Handle 401 specifically?
+      if (response.status === 401) {
+          // Could trigger a re-login flow or event
+      }
       throw new Error(`API Error: ${response.status} ${response.statusText} - ${errorText}`);
     }
 
-    // Handle empty responses
     const text = await response.text();
     return text ? JSON.parse(text) : null;
   }

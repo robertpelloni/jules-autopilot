@@ -2,11 +2,17 @@ import { NextResponse } from 'next/server';
 import { getProvider } from '@/lib/orchestration/providers';
 import { runDebate } from '@/lib/orchestration/debate';
 import { runCodeReview } from '@/lib/orchestration/review';
+import { getSession } from '@/lib/session';
 
 export async function POST(req: Request) {
   try {
+    const session = await getSession();
+    const sessionApiKey = session?.apiKey;
+
     const body = await req.json();
-    const { messages, provider, apiKey, model, threadId, assistantId, action, participants, topic, codeContext } = body;
+    const { messages, provider, apiKey: bodyApiKey, model, threadId, assistantId, action, participants, topic, codeContext } = body;
+
+    const apiKey = sessionApiKey || bodyApiKey;
 
     // 1. List Models
     if (action === 'list_models') {
@@ -30,8 +36,14 @@ export async function POST(req: Request) {
         if (!participants || !Array.isArray(participants)) {
             return NextResponse.json({ error: 'Invalid participants' }, { status: 400 });
         }
+        // Inject API Key into participants if missing (since runDebate uses them)
+        const enrichedParticipants = participants.map((p: any) => ({
+            ...p,
+            apiKey: p.apiKey === 'placeholder' || !p.apiKey ? apiKey : p.apiKey
+        }));
+
         try {
-            const result = await runDebate({ history: messages, participants, topic });
+            const result = await runDebate({ history: messages, participants: enrichedParticipants, topic });
             return NextResponse.json(result);
         } catch (e) {
             console.error("Debate Error", e);

@@ -1,34 +1,31 @@
-# Jules UI Roadmap
+# Project Roadmap
 
-## Completed Features
-- **Project Structure**:
-  - Added `jules-sdk-reference` submodule (Python SDK).
-  - Configured build (tsconfig, eslint) to handle submodules correctly.
-- **API Client (`lib/jules/client.ts`)**:
-  - Full parity with Python SDK models (`Session`, `Activity`, `SessionOutput`, etc.).
-  - Pagination support (`listActivitiesPaged`, `listSessions`, `listSources`).
-  - Filtering support for `listSources`.
-  - `approvePlan` implementation.
-  - `Media` and `PullRequest` artifact extraction.
-- **Session Keeper (Auto-Pilot)**:
-  - Background monitoring loop (`SessionKeeperManager`).
-  - Zero-Fetch optimization (uses `lastActivityAt`).
-  - "Smart Thresholds" (Active vs Idle states).
-  - "Auto-Switch" to active session.
-  - "Smart Pilot" (Supervisor LLM) and "Council Debate" (Multi-agent) integrations.
-  - Settings UI with visual feedback.
-  - Logs Panel.
-  - Analytics Integration (Nudges, Approvals, Debates metrics).
-- **UI Enhancements**:
-  - `ActivityFeed`: Set-based O(N) deduplication.
-  - `ActivityFeed`: Rendering of Base64 images (Media) and PR links.
-  - `AppLayout`: Resizable vertical split for logs.
-  - `resizable.tsx`: Robust export handling for `react-resizable-panels`.
-  - `Combobox`: Server-side filtering support (`onSearchChange`).
-  - `NewSessionDialog`: Debounced repository search for large orgs.
-  - `AnalyticsDashboard`: Session Keeper metrics integration.
-  - **Council Debate Visualization**: Visualizing the multi-agent debate process in the chat feed (Markdown transcript).
+## Phase 1: Foundation (Completed)
+- [x] Initial Next.js Setup
+- [x] Jules API Integration (`lib/jules/client.ts`)
+- [x] Basic Session Chat Interface
+- [x] Real-time Activity Feed
 
-## Planned / Pending
-- **Terminal Integration Polish**: Verify secure API key passing and connection resilience.
-- **Template Management**: Refine template creation/editing flow.
+## Phase 2: Enhanced Interactions (Completed)
+- [x] Code Diff Viewer
+- [x] Terminal Output Rendering
+- [x] Session Keeper (Auto-Pilot)
+- [x] Session Kanban Board
+- [x] System Status Dashboard
+
+## Phase 3: Advanced Features (Completed)
+- [x] **Multi-Agent Debate:** Orchestrate debates between Supervisor and Worker agents.
+- [x] **Deep Code Analysis:** Parallel code audits (Security, Performance, Maintainability).
+- [x] **Artifact Management:** Artifact Browser with list and preview.
+- [x] **Session Templates:** Save and reuse session configurations.
+
+## Phase 4: Production Readiness (In Progress)
+- [ ] **Secure Authentication:** Replace client-side API Key storage with HTTP-only cookies and Middleware.
+- [ ] **Docker Optimization:** Multi-stage builds and smaller images.
+- [ ] **CI/CD Pipeline:** Automated testing and build checks.
+- [ ] **E2E Testing:** Comprehensive Playwright suite.
+
+## Phase 5: Future
+- [ ] **User Accounts:** OAuth integration (Google/GitHub).
+- [ ] **Persistent Database:** Move from in-memory/localStorage to Postgres/SQLite.
+- [ ] **Plugin System:** Allow custom tools for the agent.

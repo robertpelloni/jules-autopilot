@@ -1,12 +1,15 @@
 import { NextResponse, NextRequest } from 'next/server';
+import { getSession } from '@/lib/session';
 
 const JULES_API_BASE = 'https://jules.googleapis.com/v1alpha';
 
 export async function GET(request: NextRequest) {
   try {
-    const apiKey = request.headers.get('x-jules-api-key');
+    const session = await getSession();
+    const apiKey = session?.apiKey;
+
     if (!apiKey) {
-      return NextResponse.json({ error: 'API key required' }, { status: 401 });
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
     const path = request.nextUrl.searchParams.get('path') || '';
@@ -34,9 +37,11 @@ export async function GET(request: NextRequest) {
 
 export async function POST(request: NextRequest) {
   try {
-    const apiKey = request.headers.get('x-jules-api-key');
+    const session = await getSession();
+    const apiKey = session?.apiKey;
+
     if (!apiKey) {
-      return NextResponse.json({ error: 'API key required' }, { status: 401 });
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
     const path = request.nextUrl.searchParams.get('path') || '';
@@ -78,9 +83,11 @@ export async function POST(request: NextRequest) {
 
 export async function DELETE(request: NextRequest) {
   try {
-    const apiKey = request.headers.get('x-jules-api-key');
+    const session = await getSession();
+    const apiKey = session?.apiKey;
+
     if (!apiKey) {
-      return NextResponse.json({ error: 'API key required' }, { status: 401 });
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
     const path = request.nextUrl.searchParams.get('path') || '';

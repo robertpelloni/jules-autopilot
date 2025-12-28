@@ -2,12 +2,13 @@
 
 import { createContext, useContext, useEffect, useState, useCallback, useRef } from 'react';
 import { JulesClient } from './client';
+import { useRouter } from 'next/navigation';
 
 interface JulesContextType {
   client: JulesClient | null;
   isLoading: boolean;
-  setApiKey: (key: string) => void;
-  clearApiKey: () => void;
+  setApiKey: (key: string) => Promise<void>;
+  clearApiKey: () => Promise<void>;
   refreshTrigger: number;
   triggerRefresh: () => void;
 }
@@ -18,33 +19,45 @@ export function JulesProvider({ children }: { children: React.ReactNode }) {
   const [client, setClient] = useState<JulesClient | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [refreshTrigger, setRefreshTrigger] = useState(0);
+  const router = useRouter();
   const initialized = useRef(false);
 
   useEffect(() => {
     if (initialized.current) return;
     initialized.current = true;
 
-    // Check for API key in localStorage
-    if (typeof window !== 'undefined') {
-      const storedKey = localStorage.getItem('jules_api_key');
-      if (storedKey) {
-        setClient(new JulesClient(storedKey));
-      }
-      setIsLoading(false);
-    } else {
-      setIsLoading(false);
-    }
+    const checkSession = async () => {
+        try {
+            const res = await fetch('/api/auth/me');
+            if (res.ok) {
+                setClient(new JulesClient());
+            } else {
+                setClient(null);
+            }
+        } catch {
+            setClient(null);
+        } finally {
+            setIsLoading(false);
+        }
+    };
+
+    checkSession();
   }, []);
 
-  const setApiKey = useCallback((key: string) => {
-    localStorage.setItem('jules_api_key', key);
-    setClient(new JulesClient(key));
-  }, []);
+  const setApiKey = useCallback(async (key: string) => {
+    await fetch('/api/auth/login', {
+        method: 'POST',
+        body: JSON.stringify({ apiKey: key })
+    });
+    setClient(new JulesClient());
+    router.refresh();
+  }, [router]);
 
-  const clearApiKey = useCallback(() => {
-    localStorage.removeItem('jules_api_key');
+  const clearApiKey = useCallback(async () => {
+    await fetch('/api/auth/logout', { method: 'POST' });
     setClient(null);
-  }, []);
+    router.push('/login');
+  }, [router]);
 
   const triggerRefresh = useCallback(() => {
     setRefreshTrigger(prev => prev + 1);
