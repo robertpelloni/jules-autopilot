@@ -2,6 +2,12 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.4.2] - 2025-12-27
+
+### Added
+- **Interactive Debate:** Enhanced the Multi-Agent Debate feature with structured rounds and a visual viewer (`DebateViewer`).
+- **Activity Types:** Added `debate` activity type to support rich rendering of debate sessions.
+
 ## [0.4.1] - 2025-12-27
 
 ### Added

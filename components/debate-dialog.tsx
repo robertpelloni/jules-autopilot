@@ -53,6 +53,7 @@ export function DebateDialog({ sessionId, trigger, onDebateStart }: DebateDialog
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           action: 'debate',
+          topic: topic,
           messages: messages,
           participants: [
             {
@@ -60,9 +61,9 @@ export function DebateDialog({ sessionId, trigger, onDebateStart }: DebateDialog
                 name: 'Architect',
                 role: 'Solution Architect',
                 provider: 'openai',
-                model: 'gpt-4o', // Assuming this works or env var is set on server
-                apiKey: 'sk-placeholder', // Ideally from user settings or server env
-                systemPrompt: `Analyze the current codebase and proposed changes. Propose a robust architectural solution. Focus on scalability and maintainability. Topic: ${topic}`
+                model: 'gpt-4o',
+                apiKey: 'sk-placeholder',
+                systemPrompt: `Analyze the current codebase and proposed changes. Propose a robust architectural solution. Focus on scalability and maintainability.`
             },
             {
                 id: 'critic',
@@ -71,7 +72,7 @@ export function DebateDialog({ sessionId, trigger, onDebateStart }: DebateDialog
                 provider: 'openai',
                 model: 'gpt-4o',
                 apiKey: 'sk-placeholder',
-                systemPrompt: `Critique the proposed solution from a security perspective. Identify potential vulnerabilities and suggest mitigations. Topic: ${topic}`
+                systemPrompt: `Critique the proposed solution from a security perspective. Identify potential vulnerabilities and suggest mitigations.`
             }
           ]
         })
@@ -86,8 +87,9 @@ export function DebateDialog({ sessionId, trigger, onDebateStart }: DebateDialog
       // Post result to activity feed
       await client.createActivity({
           sessionId,
-          content: `## Debate Results\n\n${result.content}`,
-          type: 'plan' // Use plan type for rich rendering
+          content: result.summary || "Debate completed.",
+          type: 'debate',
+          metadata: { debate: result }
       });
 
       toast.success('Debate completed!');

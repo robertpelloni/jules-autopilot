@@ -52,7 +52,7 @@ export interface Artifact {
 export interface Activity {
   id: string;
   sessionId: string;
-  type: 'message' | 'plan' | 'progress' | 'result' | 'error';
+  type: 'message' | 'plan' | 'progress' | 'result' | 'error' | 'debate';
   role: 'user' | 'agent';
   content: string;
   diff?: string; // Unified diff patch from artifacts

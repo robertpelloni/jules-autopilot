@@ -9,7 +9,7 @@ export interface Participant {
   name: string;
   role: string; // e.g. "Proposer", "Reviewer"
   systemPrompt: string;
-  provider: 'openai' | 'anthropic' | 'gemini' | 'openai-assistants'; // Added openai-assistants
+  provider: 'openai' | 'anthropic' | 'gemini' | 'openai-assistants';
   model: string;
   apiKey?: string;
 }
@@ -38,4 +38,24 @@ export interface LLMProvider {
     systemPrompt?: string;
   }): Promise<CompletionResult>;
   listModels(apiKey?: string): Promise<string[]>;
+}
+
+export interface DebateTurn {
+  participantId: string;
+  participantName: string;
+  role: string;
+  content: string;
+  timestamp: string;
+}
+
+export interface DebateRound {
+  roundNumber: number;
+  turns: DebateTurn[];
+}
+
+export interface DebateResult {
+  topic?: string;
+  rounds: DebateRound[];
+  summary?: string;
+  history: Message[];
 }

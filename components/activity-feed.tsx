@@ -17,6 +17,7 @@ import remarkGfm from 'remark-gfm';
 import { BashOutput } from '@/components/ui/bash-output';
 import { NewSessionDialog } from './new-session-dialog';
 import { DebateDialog } from './debate-dialog';
+import { DebateViewer } from './debate-viewer';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -317,6 +318,7 @@ export function ActivityFeed({ session, onArchive, showCodeDiffs, onToggleCodeDi
       case 'progress': return 'bg-yellow-500';
       case 'result': return 'bg-green-500';
       case 'error': return 'bg-red-500';
+      case 'debate': return 'bg-pink-500';
       default: return 'bg-gray-500';
     }
   };
@@ -583,6 +585,18 @@ export function ActivityFeed({ session, onArchive, showCodeDiffs, onToggleCodeDi
                       </Card>
                     </div>
                   );
+                }
+
+                // Handle Debate Type
+                if (item.type === 'debate' && item.metadata?.debate) {
+                    return (
+                        <div key={item.id} className={`flex gap-2.5 ${newActivityIds.has(item.id) ? 'animate-in fade-in slide-in-from-bottom-2 duration-500' : ''}`}>
+                            <Avatar className="h-6 w-6 shrink-0 mt-0.5 bg-zinc-900 border border-white/10">{getActivityIcon(item)}</Avatar>
+                            <div className="flex-1">
+                                <DebateViewer result={item.metadata.debate as any} />
+                            </div>
+                        </div>
+                    );
                 }
 
                 const activity = item;

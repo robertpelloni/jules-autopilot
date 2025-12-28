@@ -5,7 +5,7 @@ import { runDebate } from '@/lib/orchestration/debate';
 export async function POST(req: Request) {
   try {
     const body = await req.json();
-    const { messages, provider, apiKey, model, threadId, assistantId, action, participants } = body;
+    const { messages, provider, apiKey, model, threadId, assistantId, action, participants, topic } = body;
 
     // 1. List Models
     if (action === 'list_models') {
@@ -30,7 +30,7 @@ export async function POST(req: Request) {
             return NextResponse.json({ error: 'Invalid participants' }, { status: 400 });
         }
         try {
-            const result = await runDebate({ history: messages, participants });
+            const result = await runDebate({ history: messages, participants, topic });
             return NextResponse.json(result);
         } catch (e) {
             console.error("Debate Error", e);
