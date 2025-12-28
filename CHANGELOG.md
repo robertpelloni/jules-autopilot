@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.3.3] - 2025-12-27
+
+### Changed
+- **Submodules**: Updated all submodules to latest versions and merged upstream changes.
+- **System Dashboard**: Enhanced directory structure documentation in `/system`.
+- **Maintenance**: Merged feature branches and performed general repository maintenance.
+
 ## [0.3.2] - 2025-12-27
 
 ### Added

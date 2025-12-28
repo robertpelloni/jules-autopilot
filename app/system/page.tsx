@@ -121,19 +121,31 @@ export default function SystemDashboard() {
                 <div className="space-y-2 text-xs text-white/60">
                   <div className="flex gap-2">
                     <span className="text-purple-400 font-bold">app/</span>
-                    <span>Next.js App Router pages and layouts.</span>
+                    <span>Next.js App Router pages, API routes, and layouts.</span>
                   </div>
                   <div className="flex gap-2">
                     <span className="text-purple-400 font-bold">components/</span>
-                    <span>React components (UI, Features).</span>
+                    <span>React components (UI, Features, Dialogs).</span>
                   </div>
                   <div className="flex gap-2">
                     <span className="text-purple-400 font-bold">external/</span>
-                    <span>Git submodules for shared libraries and MCP servers.</span>
+                    <span>Git submodules for shared libraries, MCP servers, and tools.</span>
+                  </div>
+                  <div className="flex gap-2">
+                    <span className="text-purple-400 font-bold">hooks/</span>
+                    <span>Custom React hooks (e.g., use-notifications).</span>
                   </div>
                   <div className="flex gap-2">
                     <span className="text-purple-400 font-bold">lib/</span>
-                    <span>Utility functions, API clients, and stores.</span>
+                    <span>Utility functions, API clients, and state stores.</span>
+                  </div>
+                  <div className="flex gap-2">
+                    <span className="text-purple-400 font-bold">scripts/</span>
+                    <span>Build and maintenance scripts (e.g., submodule info).</span>
+                  </div>
+                  <div className="flex gap-2">
+                    <span className="text-purple-400 font-bold">docs/</span>
+                    <span>Project documentation, PRDs, and handoff notes.</span>
                   </div>
                   <div className="flex gap-2">
                     <span className="text-purple-400 font-bold">types/</span>
