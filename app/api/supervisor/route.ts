@@ -53,6 +53,21 @@ export async function POST(req: Request) {
         if (!participants || !Array.isArray(participants)) {
             return NextResponse.json({ error: 'Invalid participants' }, { status: 400 });
         }
+
+    // 4. Handoff
+    if (action === "handoff") {
+         if (!messages || messages.length === 0) {
+             return NextResponse.json({ error: "No messages to summarize" }, { status: 400 });
+         }
+         try {
+             const { summarizeSession } = await import("@/lib/orchestration/summarize");
+             const summary = await summarizeSession(messages, provider || "openai", apiKey, model || "gpt-4o");
+             return NextResponse.json({ content: summary });
+         } catch (e) {
+             console.error("Handoff Error", e);
+             return NextResponse.json({ error: e instanceof Error ? e.message : "Handoff failed" }, { status: 500 });
+         }
+    }
         try {
             const result = await runConference({ history: messages, participants });
             return NextResponse.json(result);

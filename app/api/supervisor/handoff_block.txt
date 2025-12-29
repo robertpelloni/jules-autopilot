@@ -1,0 +1,24 @@
+    // 4. Handoff
+    if (action === 'handoff') {
+         if (!messages || messages.length === 0) {
+             return NextResponse.json({ error: 'No messages to summarize' }, { status: 400 });
+         }
+         try {
+             // Use summarization logic
+             // We can reuse the provider infrastructure via 'generateText' or 'summarizeSession' logic directly here
+             // Since we can't easily import 'summarizeSession' due to path issues in this specific environment setup without verifying tsconfig paths...
+             // Let's implement the logic inline or try to import if confident.
+             // Given the previous steps created 'submodules/jules-app/lib/orchestration/summarize.ts', we can try to import it.
+             // But first, let's verify if we can modify this file safely.
+             
+             // Dynamic import to avoid build issues if file not found during static analysis in some envs? No, standard import is better.
+             const { summarizeSession } = await import('@/lib/orchestration/summarize');
+             const summary = await summarizeSession(messages, provider || 'openai', apiKey, model || 'gpt-4o');
+             return NextResponse.json({ content: summary });
+
+         } catch (e) {
+             console.error('Handoff Error', e);
+             return NextResponse.json({ error: e instanceof Error ? e.message : 'Handoff failed' }, { status: 500 });
+         }
+    }
+

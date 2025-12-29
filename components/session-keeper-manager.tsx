@@ -267,6 +267,75 @@ export function SessionKeeperManager() {
               updateSessionState(session.id, { error: undefined });
             }
 
+            // 0. CHECK FOR HANDOFF (30 Days Old)
+            const createdTime = new Date(session.createdAt);
+            const ageMs = Date.now() - createdTime.getTime();
+            const ageDays = ageMs / (1000 * 60 * 60 * 24);
+            const HANDOFF_THRESHOLD_DAYS = 30;
+
+            if (ageDays >= HANDOFF_THRESHOLD_DAYS && session.status !== "completed" && session.status !== "failed") {
+               addLog(`Session ${session.id.substring(0, 8)} is ${Math.floor(ageDays)} days old. Initiating handoff...`, "action");
+               
+               // 1. Fetch History
+               const activities = await client.listActivities(session.id);
+               const history = activities.map((a: Activity) => ({
+                   role: a.role === "agent" ? "assistant" : "user",
+                   content: a.content
+               }));
+
+               // 2. Summarize
+               const summaryResponse = await fetch("/api/supervisor", {
+                   method: "POST",
+                   headers: { "Content-Type": "application/json" },
+                   body: JSON.stringify({
+                       action: "handoff",
+                       messages: history,
+                       provider: config.supervisorProvider || "openai",
+                       apiKey: config.supervisorApiKey,
+                       model: config.supervisorModel
+                   })
+               });
+
+               if (summaryResponse.ok) {
+                   const { content: summary } = await summaryResponse.json();
+                   
+                   // 3. Create New Session
+                   const newSession = await client.createSession({
+                       sourceId: session.sourceId,
+                       prompt: session.prompt || "Continuing previous session",
+                       title: `${session.title || "Untitled"} (Part 2)`,
+                       startingBranch: session.branch,
+                   });
+
+                   // 4. Inject Handoff Log
+                   await client.createActivity({
+                       sessionId: newSession.id,
+                       content: `*** SESSION HANDOFF ***
+
+Previous Session Summary:
+${summary}
+
+Original Start Date: ${session.createdAt}`,
+                       type: "message"
+                   });
+
+                   addLog(`Created new session ${newSession.id.substring(0, 8)} with handoff log.`, "action");
+
+                   // 5. Archive Old Session
+                   await client.createActivity({
+                       sessionId: session.id,
+                       content: `*** SESSION ARCHIVED ***
+
+This session has been handed off to ${newSession.id}. Marking as completed.`,
+                       type: "message"
+                   });
+                   
+                   safeSwitch(newSession.id);
+                   continue; // Skip further processing for this old session
+               } else {
+                   addLog(`Handoff failed for ${session.id}: Supervisor error`, "error");
+               }
+            }
             // 1. Resume Paused/Completed/Failed
             if (session.status === 'paused' || session.status === 'completed' || session.status === 'failed') {
                addLog(`Resuming ${session.status} session ${session.id.substring(0, 8)}...`, 'action');
@@ -304,8 +373,8 @@ export function SessionKeeperManager() {
                }
             }
 
-            ifsafeSwitch(session.id);
-               (diffMinutes > threshold) {
+            safeSwitch(session.id);
+               if (diffMinutes > threshold) {
               const messageToSend = await generateMessage(session);
               if (!messageToSend) {
                   addLog(`Skipped ${session.id.substring(0, 8)}: No messages configured`, 'skip');
