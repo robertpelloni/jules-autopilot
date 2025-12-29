@@ -9,7 +9,7 @@ import { ScrollArea } from '@/components/ui/scroll-area';
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Brain, Save, Download, Copy, FileJson, Loader2, Trash2 } from 'lucide-react';
+import { Brain, Save, Download, Copy, FileJson, Loader2, Trash2, Search, Sparkles } from 'lucide-react';
 import { format } from 'date-fns';
 
 interface MemoryFile {
@@ -32,6 +32,7 @@ export function MemoryManager({ sessionId }: { sessionId?: string }) {
   const [selectedMemory, setSelectedMemory] = useState<MemoryFile | null>(null);
   const [generatedMemory, setGeneratedMemory] = useState<MemoryFile | null>(null);
   const [saveFilename, setSaveFilename] = useState('');
+  const [searchQuery, setSearchQuery] = useState('');
 
   useEffect(() => {
     if (isOpen) {
@@ -103,6 +104,27 @@ export function MemoryManager({ sessionId }: { sessionId?: string }) {
     }
   };
 
+  const handleDelete = async (filename: string, e: React.MouseEvent) => {
+    e.stopPropagation();
+    if (!confirm(`Are you sure you want to delete ${filename}?`)) return;
+
+    try {
+      const res = await fetch(`/api/memory?filename=${encodeURIComponent(filename)}`, {
+        method: 'DELETE',
+      });
+
+      if (!res.ok) throw new Error('Failed to delete');
+
+      setMemories(prev => prev.filter(m => m.filename !== filename));
+      if (selectedMemory?.filename === filename) {
+        setSelectedMemory(null);
+      }
+    } catch (e) {
+      console.error(e);
+      alert("Failed to delete memory");
+    }
+  };
+
   const copyContext = (context: string) => {
     navigator.clipboard.writeText(context);
     alert("Context copied to clipboard! Paste this into your new session prompt.");
@@ -131,16 +153,44 @@ export function MemoryManager({ sessionId }: { sessionId?: string }) {
               <Label className="text-xs font-bold uppercase text-muted-foreground">Saved Memories</Label>
               <Button variant="ghost" size="icon" onClick={fetchMemories}><Loader2 className="h-3 w-3" /></Button>
             </div>
+            
+            <div className="relative">
+              <Search className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />
+              <Input
+                placeholder="Search memories..."
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                className="pl-8 h-9"
+              />
+            </div>
+
             <ScrollArea className="flex-1">
               <div className="space-y-2">
-                {memories.map((m, i) => (
-                  <Card 
-                    key={i} 
+                {memories
+                  .filter(m =>
+                    !searchQuery ||
+                    m.filename?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+                    m.summary?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+                    m.context?.toLowerCase().includes(searchQuery.toLowerCase())
+                  )
+                  .map((m, i) => (
+                  <Card
+                    key={i}
                     className={`cursor-pointer hover:bg-accent transition-colors ${selectedMemory === m ? 'border-primary' : ''}`}
                     onClick={() => { setSelectedMemory(m); setGeneratedMemory(null); }}
                   >
                     <CardContent className="p-3">
-                      <div className="font-semibold text-sm truncate">{m.filename}</div>
+                      <div className="flex justify-between items-start gap-2">
+                        <div className="font-semibold text-sm truncate flex-1">{m.filename}</div>
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="h-6 w-6 text-muted-foreground hover:text-destructive -mt-1 -mr-1 shrink-0"
+                          onClick={(e) => handleDelete(m.filename!, e)}
+                        >
+                          <Trash2 className="h-3 w-3" />
+                        </Button>
+                      </div>
                       <div className="text-xs text-muted-foreground flex justify-between mt-1">
                         <span>{format(new Date(m.generatedAt), 'MMM d')}</span>
                         <span className="font-mono">{m.sessionId.substring(0, 6)}</span>
@@ -241,4 +291,4 @@ export function MemoryManager({ sessionId }: { sessionId?: string }) {
   );
 }
 
-import { Sparkles } from 'lucide-react';
+

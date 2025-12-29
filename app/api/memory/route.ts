@@ -63,3 +63,37 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: error instanceof Error ? error.message : 'Unknown error' }, { status: 500 });
   }
 }
+
+export async function DELETE(req: NextRequest) {
+  try {
+    const { searchParams } = new URL(req.url);
+    const filename = searchParams.get('filename');
+
+    if (!filename) {
+      return NextResponse.json({ error: 'Missing filename' }, { status: 400 });
+    }
+
+    // Security check: prevent directory traversal
+    if (filename.includes('..') || filename.includes('/') || filename.includes('\\')) {
+        return NextResponse.json({ error: 'Invalid filename' }, { status: 400 });
+    }
+
+    const memoriesDir = path.join(process.cwd(), '.jules', 'memories');
+    const filePath = path.join(memoriesDir, filename);
+
+    try {
+        await fs.access(filePath);
+    } catch {
+        return NextResponse.json({ error: 'File not found' }, { status: 404 });
+    }
+
+    await fs.unlink(filePath);
+
+    return NextResponse.json({ success: true });
+
+  } catch (error) {
+    console.error('Memory Delete Error:', error);
+    return NextResponse.json({ error: error instanceof Error ? error.message : 'Unknown error' }, { status: 500 });
+  }
+}
+

@@ -161,16 +161,3 @@ All notable changes to this project will be documented in this file.
 - **Build Errors**: Resolved type mismatches and missing methods in `JulesClient`.
 - **Merge Conflicts**: Fixed conflicts in `session-list.tsx` and `activity-feed.tsx`.
 
-- **Session List**: Updated to support filtering and passing sessions to the Broadcast Dialog.
-- **Jules Client**: Added `updateSession` method and improved type definitions.
-
-### Fixed
-- **Build Errors**: Resolved type mismatches and missing methods in `JulesClient`.
-- **Merge Conflicts**: Fixed conflicts in `session-list.tsx` and `activity-feed.tsx`.
-
-
-
-### Fixed
-- **Build Errors**: Resolved type mismatches and missing methods in `JulesClient`.
-- **Merge Conflicts**: Fixed conflicts in `session-list.tsx` and `activity-feed.tsx`.
-
