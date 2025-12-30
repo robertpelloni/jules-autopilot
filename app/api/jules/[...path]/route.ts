@@ -3,7 +3,7 @@ import { getSession } from '@/lib/session';
 
 const JULES_API_BASE = 'https://jules.googleapis.com/v1alpha';
 
-export async function GET(request: NextRequest) {
+export async function GET(request: NextRequest, props: { params: Promise<{ path: string[] }> }) {
   try {
     const session = await getSession();
     const apiKey = session?.apiKey;
@@ -12,8 +12,10 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    const path = request.nextUrl.searchParams.get("path") || "";
-    const url = `${JULES_API_BASE}${path}`;
+    const params = await props.params;
+    const path = `/${params.path.join('/')}`;
+    const searchParams = request.nextUrl.searchParams.toString();
+    const url = `${JULES_API_BASE}${path}${searchParams ? `?${searchParams}` : ''}`;
 
     const response = await fetch(url, {
       method: "GET",
@@ -38,7 +40,7 @@ export async function GET(request: NextRequest) {
   }
 }
 
-export async function POST(request: NextRequest) {
+export async function POST(request: NextRequest, props: { params: Promise<{ path: string[] }> }) {
   try {
     const session = await getSession();
     const apiKey = session?.apiKey;
@@ -47,7 +49,8 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    const path = request.nextUrl.searchParams.get("path") || "";
+    const params = await props.params;
+    const path = `/${params.path.join('/')}`;
     const url = `${JULES_API_BASE}${path}`;
     const body = await request.text();
 
@@ -84,7 +87,7 @@ export async function POST(request: NextRequest) {
   }
 }
 
-export async function DELETE(request: NextRequest) {
+export async function DELETE(request: NextRequest, props: { params: Promise<{ path: string[] }> }) {
   try {
     const session = await getSession();
     const apiKey = session?.apiKey;
@@ -93,7 +96,8 @@ export async function DELETE(request: NextRequest) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    const path = request.nextUrl.searchParams.get("path") || "";
+    const params = await props.params;
+    const path = `/${params.path.join('/')}`;
     const url = `${JULES_API_BASE}${path}`;
 
     const response = await fetch(url, {
