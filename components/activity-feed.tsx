@@ -671,7 +671,7 @@ export function ActivityFeed({ session, onArchive, showCodeDiffs, onToggleCodeDi
         </div>
       </div>
 
-      {!isArchived && session.status !== "failed" && (
+      {!isArchived && (
         <ActivityInput 
           onSendMessage={handleSendMessage} 
           disabled={sending} 

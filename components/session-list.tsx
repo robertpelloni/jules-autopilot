@@ -51,6 +51,13 @@ export function SessionList({ onSelectSession, selectedSessionId, className }: S
      }
   };
 
+  const getSourceLabel = (sourceId?: string) => {
+    if (!sourceId) return null;
+    const match = sourceId.match(/^sources\/[^\/]+\/([^\/]+\/[^\/]+)$/);
+    if (match) return match[1];
+    return sourceId.replace('sources/', '');
+  };
+
   return (
     <ScrollArea className={cn("h-full", className)}>
       <div className="space-y-2 p-2">
@@ -69,6 +76,12 @@ export function SessionList({ onSelectSession, selectedSessionId, className }: S
                <span className="font-semibold text-sm text-zinc-200 line-clamp-1">{session.title || 'Untitled Session'}</span>
                {getStatusIcon(session.status)}
             </div>
+            
+            {session.sourceId && (
+              <div className="text-xs text-zinc-400 font-mono truncate opacity-70">
+                {getSourceLabel(session.sourceId)}
+              </div>
+            )}
 
             <div className="flex justify-between items-end mt-1">
                <span className="text-xs text-zinc-500 flex items-center gap-1">

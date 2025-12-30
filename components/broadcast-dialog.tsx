@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useJules } from "@/lib/jules/provider";
 import { Button } from "@/components/ui/button";
 import {
@@ -64,6 +64,14 @@ export function BroadcastDialog({ sessions }: BroadcastDialogProps) {
 
   // Use all provided sessions regardless of status, assuming the parent filters for "open" (unarchived) sessions
   const targetSessions = sessions;
+
+  // Reset progress when dialog closes
+  useEffect(() => {
+    if (!open) {
+      setSending(false);
+      setProgress(0);
+    }
+  }, [open]);
 
   const handleSend = async () => {
     if (!client || !message.trim()) return;

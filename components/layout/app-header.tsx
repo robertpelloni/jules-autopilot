@@ -1,3 +1,5 @@
+import { useState, useEffect } from "react";
+import { useJules } from "@/lib/jules/provider";
 import { Button } from "@/components/ui/button";
 import {
   Sheet,
@@ -89,6 +91,14 @@ export function AppHeader({
   onLogout,
 }: AppHeaderProps) {
   const router = useRouter();
+  const { client } = useJules();
+  const [openSessions, setOpenSessions] = useState<Session[]>([]);
+
+  // Load all sessions for broadcast
+  useEffect(() => {
+    if (!client) return;
+    client.listSessions().then(setOpenSessions).catch(console.error);
+  }, [client, refreshKey]);
 
   return (
     <header className="border-b border-white/[0.08] bg-zinc-950/95 backdrop-blur-sm">
@@ -265,14 +275,23 @@ export function AppHeader({
             </Button>
           )}
 
-              <SessionList
-                key={refreshKey}
-                onSelectSession={onSelectSession}
-                selectedSessionId={selectedSession?.id}
-                className="h-[calc(100vh-60px)]"
-              />
+          <NewSessionDialog
+            onSessionCreated={onSessionCreated}
+            open={isNewSessionOpen}
+            onOpenChange={setIsNewSessionOpen}
+            initialValues={newSessionInitialValues}
+            trigger={
+              <Button
+                className="w-full sm:w-auto h-8 text-[10px] font-mono uppercase tracking-widest bg-purple-600 hover:bg-purple-500 text-white border-0"
+                onClick={onOpenNewSession}
+              >
+                <Plus className="h-3.5 w-3.5 mr-1.5" />
+                New Session
+              </Button>
+            }
+          />
 
-          <BroadcastDialog sessions={[]} />
+          <BroadcastDialog sessions={openSessions} />
 
           <ModeToggle />
 
