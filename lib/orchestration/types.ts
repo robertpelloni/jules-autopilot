@@ -38,23 +38,7 @@ export interface CompletionResult {
   };
 }
 
-<<<<<<< HEAD
 export interface ProviderInterface {
-  complete(params: CompletionParams): Promise<CompletionResult>;
-  listModels(apiKey?: string): Promise<string[]>;
-}
-
-export interface LLMProvider {
-=======
-export interface CompletionParams {
-  messages: Message[];
-  model: string;
-  apiKey?: string;
-  systemPrompt?: string;
-}
-
-export interface ProviderInterface {
->>>>>>> origin/jules-session-keeper-integration-11072096883725838253
   id: string;
   complete(params: CompletionParams): Promise<CompletionResult>;
   listModels(apiKey?: string): Promise<string[]>;

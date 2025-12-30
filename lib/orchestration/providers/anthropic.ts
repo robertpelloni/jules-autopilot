@@ -10,11 +10,7 @@ export const anthropicProvider: ProviderInterface = {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-<<<<<<< HEAD
           'x-api-key': apiKey || '',
-=======
-          'x-api-key': apiKey as string,
->>>>>>> origin/jules-session-keeper-integration-11072096883725838253
           'anthropic-version': '2023-06-01'
         },
         body: JSON.stringify({

@@ -24,11 +24,7 @@ export async function generateText({
   provider: string;
   apiKey: string;
   model: string;
-<<<<<<< HEAD
   messages: { role: 'user' | 'assistant' | 'system'; content: string; name?: string }[];
-=======
-  messages: Message[];
->>>>>>> origin/jules-session-keeper-integration-11072096883725838253
 }): Promise<string> {
   const aiProvider = getProvider(provider);
   if (!aiProvider) {
