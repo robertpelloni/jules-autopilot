@@ -239,12 +239,17 @@ export class JulesClient {
       if (filter) params.set("filter", filter);
 
       const endpoint = `/sources?${params.toString()}`;
-      const response = await this.request<{ sources?: ApiSource[]; nextPageToken?: string }>(endpoint);
+      try {
+        const response = await this.request<{ sources?: ApiSource[]; nextPageToken?: string }>(endpoint);
 
-      if (response.sources) {
-        allSources = allSources.concat(response.sources);
+        if (response.sources) {
+            allSources = allSources.concat(response.sources);
+        }
+        pageToken = response.nextPageToken;
+      } catch (err) {
+         console.error("Failed to list sources:", err);
+         break;
       }
-      pageToken = response.nextPageToken;
     } while (pageToken);
 
     const sources = allSources.map((source: ApiSource) => {
@@ -313,8 +318,13 @@ export class JulesClient {
 
   // Session Management
   async listSessions(): Promise<Session[]> {
-    const response = await this.request<{ sessions: ApiSession[] }>('/sessions');
-    return (response.sessions || []).map(s => this.transformSession(s));
+    try {
+        const response = await this.request<{ sessions: ApiSession[] }>('/sessions');
+        return (response.sessions || []).map(s => this.transformSession(s));
+    } catch (err) {
+        console.error("Failed to list sessions", err);
+        return [];
+    }
   }
 
   private mapState(state: string): Session['status'] {
