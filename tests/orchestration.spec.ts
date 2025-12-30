@@ -2,20 +2,48 @@ import { test, expect } from '@playwright/test';
 
 test.describe('Agent Orchestration', () => {
   test.beforeEach(async ({ page }) => {
+    // Mock authentication
+    await page.route('**/api/auth/me', async route => {
+        await route.fulfill({ status: 200, contentType: 'application/json', json: { authenticated: true } });
+    });
+
+    // Mock initial session list to be empty or contain default
+    await page.route('**/api/jules/sessions', async route => {
+         if (route.request().method() === 'GET') {
+             await route.fulfill({ status: 200, contentType: 'application/json', json: [] });
+         } else {
+             await route.continue();
+         }
+    });
+
     // Navigate to root
     await page.goto('/');
-
-    // Check if the login form is present by looking for the API key input
-    const keyInput = page.getByPlaceholder('Google Jules API Key');
-    if (await keyInput.isVisible({ timeout: 5000 })) {
-      await keyInput.fill('test-api-key-123');
-      await page.getByRole('button', { name: 'Enter Workspace' }).click();
-      // Wait for navigation or state change
-      await page.waitForURL('**/', { timeout: 10000 });
-    }
+    
+    // Wait for the app to load (AppHeader should be visible)
+    await expect(page.locator('header')).toBeVisible({ timeout: 10000 });
   });
 
   test('can create a new session', async ({ page }) => {
+    // Intercept the creation POST request
+    await page.route('**/api/jules/sessions', async route => {
+        if (route.request().method() === 'POST') {
+             const json = {
+                id: 'test-session-123',
+                title: 'Hello World Task',
+                state: 'ACTIVE',
+                createTime: new Date().toISOString(),
+                sourceContext: { source: 'sources/github/test/repo' }
+            };
+            await route.fulfill({ status: 201, contentType: 'application/json', json });
+        } else {
+            await route.continue();
+        }
+    });
+
+    // Intercept list sessions to include the new one after creation
+    // This is tricky because the UI might refetch. 
+    // We can update the mock handler dynamically or just respond with the new list if the header refreshes.
+    
     // Wait for the "New Session" button to appear.
     // We use the reliable data-testid added to AppHeader
     const newSessionBtn = page.getByTestId('new-session-btn');
@@ -29,32 +57,6 @@ test.describe('Agent Orchestration', () => {
     // Fill out the form
     await page.getByPlaceholder('What should I build?').fill('Create a simple hello world script');
     
-    // Intercept the API call to avoid backend dependency
-    await page.route('**/api/jules/sessions', async route => {
-        const json = {
-            id: 'test-session-123',
-            title: 'Hello World Task',
-            state: 'ACTIVE',
-            createTime: new Date().toISOString(),
-            sourceContext: { source: 'sources/github/test/repo' }
-        };
-        await route.fulfill({ status: 201, contentType: 'application/json', json });
-    });
-
-    // Intercept list sessions to include the new one
-    await page.route('**/api/jules/sessions?*', async route => {
-         const json = {
-            sessions: [{
-                id: 'test-session-123',
-                title: 'Hello World Task',
-                state: 'ACTIVE',
-                createTime: new Date().toISOString(),
-                sourceContext: { source: 'sources/github/test/repo' }
-            }]
-        };
-        await route.fulfill({ status: 200, contentType: 'application/json', json });
-    });
-
     // Click Start Session
     const startBtn = page.getByRole('button', { name: 'Start Session' });
     await startBtn.click();
