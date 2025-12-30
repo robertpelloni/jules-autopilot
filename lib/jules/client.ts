@@ -187,6 +187,12 @@ export class JulesClient {
           if (endpoint.includes("/activities")) {
             return { activities: [] } as T;
           }
+          if (endpoint.includes("/sessions?")) {
+            return { sessions: [] } as T;
+          }
+          if (endpoint.includes("/sources?")) {
+            return { sources: [] } as T;
+          }
           throw new JulesAPIError(
             'Resource not found. The requested endpoint may not exist.',
             response.status,
