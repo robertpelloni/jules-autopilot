@@ -554,76 +554,71 @@ export class JulesClient {
   }
 
   async listArtifacts(sessionId: string): Promise<Artifact[]> {
-    // Artifacts are children of activities in the data model.
-    // There is no direct "list artifacts" endpoint at the session level.
-    // We must fetch all activities for the session and extract their artifacts.
-    
-    let allActivities: Activity[] = [];
-    try {
-        // Fetch a reasonable number of recent activities. 
-        // For a full "browse all artifacts" feature, we might need pagination here, 
-        // but 100 is a good starting point for the UI context.
-        allActivities = await this.listActivities(sessionId, 100);
-    } catch (e) {
-        console.warn("Failed to list activities for artifacts extraction", e);
-        return [];
-    }
-
     const artifacts: Artifact[] = [];
+    let pageToken: string | undefined;
+    const limit = 50;
 
-    for (const activity of allActivities) {
-        // We need to look at the raw metadata or reconstruct the structure 
-        // because transformActivity might flatten or lose some context 
-        // needed for the full artifact object.
-        // However, looking at transformActivity: it extracts diff, bashOutput, media
-        // into the Activity object itself for the feed.
-        
-        // Let's inspect the 'metadata' field which preserves the raw ApiActivity structure
-        // if we updated transformActivity to save it (which we did: 'metadata: activity').
-        
-        const rawActivity = activity.metadata as ApiActivity | undefined;
-        
-        if (!rawActivity) continue;
+    try {
+      do {
+        const params = new URLSearchParams();
+        params.set("pageSize", limit.toString());
+        if (pageToken) params.set("pageToken", pageToken);
 
-        const activityArtifacts: ApiArtifact[] = [
-             ...(rawActivity.artifacts || []),
-             ...(rawActivity.progressUpdated?.artifacts || []),
-             ...(rawActivity.sessionCompleted?.artifacts || [])
-        ];
+        const response = await this.request<{ activities?: ApiActivity[], nextPageToken?: string }>(
+            `/sessions/${sessionId}/activities?${params.toString()}`
+        );
+        
+        const activities = (response.activities || []).map(a => this.transformActivity(a, sessionId));
 
-        // Process each API artifact into our domain Artifact model
-        for (const apiArtifact of activityArtifacts) {
-            artifacts.push({
-                // Add an ID if missing to help React keys
-                id: `art-${activity.id}-${artifacts.length}`,
-                createTime: activity.createdAt,
-                name: `Artifact from ${activity.type}`, // Placeholder name
-                
-                changeSet: apiArtifact.changeSet ? {
-                    source: apiArtifact.changeSet.source,
-                    gitPatch: apiArtifact.changeSet.gitPatch ? {
-                        unidiffPatch: apiArtifact.changeSet.gitPatch.unidiffPatch,
-                        baseCommitId: apiArtifact.changeSet.gitPatch.baseCommitId,
-                        suggestedCommitMessage: apiArtifact.changeSet.gitPatch.suggestedCommitMessage
+        for (const activity of activities) {
+            const rawActivity = activity.metadata as ApiActivity | undefined;
+            
+            if (!rawActivity) continue;
+
+            const activityArtifacts: ApiArtifact[] = [
+                 ...(rawActivity.artifacts || []),
+                 ...(rawActivity.progressUpdated?.artifacts || []),
+                 ...(rawActivity.sessionCompleted?.artifacts || [])
+            ];
+
+            for (const apiArtifact of activityArtifacts) {
+                artifacts.push({
+                    id: `art-${activity.id}-${artifacts.length}`,
+                    createTime: activity.createdAt,
+                    name: `Artifact from ${activity.type}`,
+                    
+                    changeSet: apiArtifact.changeSet ? {
+                        source: apiArtifact.changeSet.source,
+                        gitPatch: apiArtifact.changeSet.gitPatch ? {
+                            unidiffPatch: apiArtifact.changeSet.gitPatch.unidiffPatch,
+                            baseCommitId: apiArtifact.changeSet.gitPatch.baseCommitId,
+                            suggestedCommitMessage: apiArtifact.changeSet.gitPatch.suggestedCommitMessage
+                        } : undefined,
+                        unidiffPatch: apiArtifact.changeSet.unidiffPatch // Legacy support
                     } : undefined,
-                    unidiffPatch: apiArtifact.changeSet.unidiffPatch // Legacy support
-                } : undefined,
 
-                bashOutput: apiArtifact.bashOutput ? {
-                    command: apiArtifact.bashOutput.command,
-                    output: apiArtifact.bashOutput.output,
-                    exitCode: apiArtifact.bashOutput.exitCode
-                } : undefined,
+                    bashOutput: apiArtifact.bashOutput ? {
+                        command: apiArtifact.bashOutput.command,
+                        output: apiArtifact.bashOutput.output,
+                        exitCode: apiArtifact.bashOutput.exitCode
+                    } : undefined,
 
-                media: apiArtifact.media ? {
-                    data: apiArtifact.media.data,
-                    mimeType: apiArtifact.media.mimeType
-                } : undefined
-            });
+                    media: apiArtifact.media ? {
+                        data: apiArtifact.media.data,
+                        mimeType: apiArtifact.media.mimeType
+                    } : undefined
+                });
+            }
         }
-    }
 
-    return artifacts;
+        pageToken = response.nextPageToken;
+      } while (pageToken);
+      
+      return artifacts;
+    } catch (e) {
+      console.error("Failed to list artifacts via activities:", e);
+      return [];
+    }
   }
 
   async getArtifact(sessionId: string, artifactId: string): Promise<Artifact> {

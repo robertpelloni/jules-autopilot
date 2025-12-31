@@ -1,7 +1,7 @@
 # Universal LLM Instructions
 
-**Version**: 1.1.0
-**Last Updated**: 2025-12-30
+**Version**: 1.2.0
+**Last Updated**: 2025-12-31
 
 This document is the **single source of truth** for all AI agents (Claude, Gemini, GPT, Copilot, etc.) working on the Jules UI project.
 
@@ -11,7 +11,7 @@ This document is the **single source of truth** for all AI agents (Claude, Gemin
 2.  **Git Workflow**:
     *   **Submodules**: Always run `git submodule update --init --recursive` when starting.
     *   **Commits**: Use semantic commit messages (e.g., `feat:`, `fix:`, `chore:`).
-    *   **Versioning**: ALWAYS update `VERSION` and `CHANGELOG.md` when completing a significant task.
+    *   **Versioning**: ALWAYS update `VERSION.md` as the source of truth, then run `npm run update-version` or `node scripts/update-version.js` to sync `package.json` and `lib/version.ts`.
 3.  **No Hallucinations**: Do not invent APIs. Check `lib/` and `types/` for existing code.
 
 ## 📂 Project Structure
@@ -22,6 +22,7 @@ This document is the **single source of truth** for all AI agents (Claude, Gemin
 *   `lib/` - Business Logic (Prisma, Jules Client, Utils).
 *   `prisma/` - Database Schema.
 *   `public/` - Static Assets.
+*   `scripts/` - Maintenance and build scripts.
 
 ## 📦 Submodules
 
@@ -44,10 +45,10 @@ This document is the **single source of truth** for all AI agents (Claude, Gemin
 
 When you complete a task:
 
-1.  Read `VERSION` file.
+1.  Read `VERSION.md` file.
 2.  Increment version (Patch for bugs, Minor for features).
-3.  Update `VERSION` file.
-4.  Update `package.json` version.
+3.  Update `VERSION.md` file.
+4.  Run `node scripts/update-version.js`.
 5.  Add entry to `CHANGELOG.md`.
 6.  Commit: `chore: bump version to X.Y.Z`.
 

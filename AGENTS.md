@@ -10,3 +10,7 @@
 ## Model-Specific Notes
 *   Follow the Git Workflow described in the universal instructions.
 *   Prioritize "developer-first" UX in all implementations.
+
+## Persona: Architect
+- **Role**: High-level planning, system design, and roadmap management.
+- **Focus**: `PRD.md`, `ROADMAP.md`, `docs/`, and `.jules/architect.md`.

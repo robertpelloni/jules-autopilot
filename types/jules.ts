@@ -39,6 +39,8 @@ export interface Artifact {
   changeSet?: {
     gitPatch?: {
       unidiffPatch?: string;
+      baseCommitId?: string;
+      suggestedCommitMessage?: string;
     };
     unidiffPatch?: string;
     [key: string]: unknown;

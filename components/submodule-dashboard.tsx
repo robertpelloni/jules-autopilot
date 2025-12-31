@@ -69,17 +69,21 @@ export function SubmoduleDashboard() {
               </div>
 
               <div className="flex items-center justify-between py-1 border-t border-white/5">
-                 <span className="text-white/40 flex items-center gap-1.5">
+                <span className="text-white/40 flex items-center gap-1.5">
                   <GitBranch className="h-3 w-3" /> Remote
                 </span>
-                <a 
-                  href={submodule.url.replace('.git', '')} 
-                  target="_blank" 
-                  rel="noopener noreferrer"
-                  className="text-blue-400 hover:text-blue-300 hover:underline truncate max-w-[150px]"
-                >
-                  View on GitHub
-                </a>
+                {submodule.url ? (
+                  <a 
+                    href={submodule.url.replace('.git', '')} 
+                    target="_blank" 
+                    rel="noopener noreferrer"
+                    className="text-blue-400 hover:text-blue-300 hover:underline truncate max-w-[150px]"
+                  >
+                    View on GitHub
+                  </a>
+                ) : (
+                  <span className="text-white/40">No remote</span>
+                )}
               </div>
             </CardContent>
           </Card>
