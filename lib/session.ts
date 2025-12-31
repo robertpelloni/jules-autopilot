@@ -26,6 +26,7 @@ export async function getSession() {
   try {
     return await decrypt(session);
   } catch (error) {
+    console.error('Session decryption error:', error);
     return null;
   }
 }
