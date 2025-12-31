@@ -1,16 +1,18 @@
-FROM node:20-alpine AS base
+FROM node:20-slim AS base
 
 # Install dependencies only when needed
 FROM base AS deps
-RUN apk add --no-cache libc6-compat
+RUN apt-get update -y && apt-get install -y openssl
 WORKDIR /app
 
 # Copy package files
-COPY package.json package-lock.json* ./
+COPY package.json ./
 # Copy prisma schema
 COPY prisma ./prisma/
 
-RUN npm ci
+# Use npm install instead of ci to ensure platform-specific binaries (like tailwind oxide) are downloaded correctly
+# We skip copying package-lock.json to force a fresh resolution on Linux, ensuring correct native binaries
+RUN npm install
 
 # Development image
 FROM base AS dev

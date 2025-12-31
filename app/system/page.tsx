@@ -18,10 +18,10 @@ interface LiveSubmoduleStatus {
 }
 
 export default function SystemDashboard() {
-  const { submodules: buildSubmodules, generatedAt } = submodulesData as { 
+  const { submodules: buildSubmodules, generatedAt } = (submodulesData as unknown as { 
     submodules: { path: string; commit: string; describe: string; lastUpdated: string }[], 
     generatedAt: string 
-  };
+  });
 
   const [liveStatus, setLiveStatus] = useState<LiveSubmoduleStatus[]>([]);
   const [isLoading, setIsLoading] = useState(false);
