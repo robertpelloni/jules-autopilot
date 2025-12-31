@@ -1,19 +1,31 @@
-# New Features - Dec 2025
+# New Features Documentation
 
-## 1. Structured Code Review
-- **Backend**: `/api/review` endpoint running structured analysis via LLM.
-- **Frontend**: `ReviewScorecard` component visualizing score (0-100), summary, and categorized issues.
-- **Integration**: Triggered via "Start Code Review" in Activity Feed; results render automatically as interactive scorecards.
+## Multi-Agent Debate with Context Injection
 
-## 2. Multi-Agent Debate
-- **Backend**: `/api/debate` endpoint orchestrating multi-turn debates between specialized agents (e.g., Architect vs. Security Engineer).
-- **Frontend**: `DebateViewer` component displaying rounds and turns in an accordion layout.
-- **Integration**: Triggered via "Start Debate" dialog; results render as a collapsible debate view in the feed.
+The Multi-Agent Debate feature now supports **Local Context Injection**.
+This allows the debating agents (Architect, Security Engineer, etc.) to access the actual file structure and content of key configuration files (`package.json`, `README.md`, etc.) from the local repository.
 
-## 3. Submodule Dashboard
-- **Feature**: dedicated page at `/dashboard/submodules` to view the status of all monorepo submodules.
-- **Implementation**: Generated `app/submodules.json` during build time via `scripts/get-submodule-info.js`.
+### How it works
+1.  **Frontend**: When a debate is triggered in `DebateDialog`, the client calls `client.gatherRepositoryContext('.')`.
+2.  **Context Injection**: This context string is prepended to the conversation history as a "SYSTEM CONTEXT" message.
+3.  **Backend**: The `runDebate` function receives this enhanced history, ensuring all participants are grounded in the actual codebase reality.
 
-## 4. Plan Approval Workflow
-- **UI**: `PlanContent` component renders structured agent plans with steps and descriptions.
-- **Flow**: Users can review generated plans in the feed and approve them to proceed with execution.
+### API Changes
+*   **Endpoint**: `/api/debate` (No schema change, just enriched payload content).
+*   **Client**: `gatherRepositoryContext` is now utilized in both Code Review and Debate workflows.
+
+## Plan Approval
+
+The Plan Approval workflow is fully supported via the proxy endpoint.
+*   **Client Method**: `client.approvePlan(sessionId)`
+*   **Endpoint**: POST `/api/jules/sessions/{sessionId}/approve-plan` -> Proxies to Google's `sessions.approvePlan`.
+
+## Session Resume
+
+Resuming a session is handled by sending a message to the agent, as there is no dedicated `resume` endpoint in the Google Jules API v1alpha.
+*   **Client Method**: `client.resumeSession(sessionId)`
+*   **Implementation**: Sends a user message "Please resume working on this task." to the session via `/api/jules/sessions/{sessionId}:sendMessage`.
+
+## API Proxy
+
+The Next.js API Routes at `app/api/jules/[...path]` serve as a transparent proxy to the Google Jules API, handling authentication via the session's API key.

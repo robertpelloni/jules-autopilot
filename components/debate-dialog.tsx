@@ -55,6 +55,14 @@ export function DebateDialog({
       // Get current history from session
       const history = await client.listActivities(sessionId);
 
+      // Gather local repository context
+      let repoContext = '';
+      try {
+        repoContext = await client.gatherRepositoryContext('.');
+      } catch (err) {
+        console.warn('Failed to gather repo context for debate:', err);
+      }
+
       // Format history for the API
       const messages = history
         .filter(h => h.type === 'message' && (h.role === 'user' || h.role === 'agent'))
@@ -62,6 +70,14 @@ export function DebateDialog({
             role: h.role === 'agent' ? 'assistant' : 'user',
             content: h.content
         }));
+
+      // Inject context as a system-like message at the start
+      if (repoContext) {
+        messages.unshift({
+          role: 'user', // Using user role to ensure visibility to all participants as context
+          content: `SYSTEM CONTEXT:\nThe following is the current repository structure and key file contents. Use this context to inform your debate arguments.\n\n${repoContext}`
+        });
+      }
 
       // Call Debate API
       const response = await fetch('/api/debate', {
