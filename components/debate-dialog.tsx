@@ -79,6 +79,10 @@ export function DebateDialog({
         });
       }
 
+      // Get API Keys from localStorage
+      const openAIKey = localStorage.getItem('openai_api_key') || process.env.NEXT_PUBLIC_OPENAI_KEY || 'env';
+      const anthropicKey = localStorage.getItem('anthropic_api_key') || process.env.NEXT_PUBLIC_ANTHROPIC_KEY || openAIKey;
+
               // Call Debate API
               const response = await fetch('/api/debate', {
                 method: 'POST',
@@ -93,16 +97,16 @@ export function DebateDialog({
                         role: 'Solution Architect',
                         provider: 'openai',
                         model: 'gpt-4o',
-                        apiKey: process.env.NEXT_PUBLIC_OPENAI_KEY || 'env',
+                        apiKey: openAIKey,
                         systemPrompt: `Analyze the current codebase and proposed changes. Propose a robust architectural solution. Focus on scalability and maintainability.`
                     },
                     {
                         id: 'critic',
                         name: 'Security Engineer',
                         role: 'Security Reviewer',
-                        provider: 'anthropic', // Changed to demonstrate multi-provider capability if key is available, else fallback logic in provider should handle or error
+                        provider: 'anthropic',
                         model: 'claude-3-5-sonnet-20240620',
-                        apiKey: process.env.NEXT_PUBLIC_ANTHROPIC_KEY || process.env.NEXT_PUBLIC_OPENAI_KEY || 'env', // Fallback to OpenAI key if Anthropic not set, though provider check will fail if mismatch. ideally user inputs keys.
+                        apiKey: anthropicKey,
                         systemPrompt: `Critique the proposed solution from a security perspective. Identify potential vulnerabilities and suggest mitigations.`
                     }
                   ]
