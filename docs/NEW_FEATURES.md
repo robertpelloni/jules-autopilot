@@ -1,52 +1,27 @@
-# New Features Documentation
+# Multi-Agent Debate and LLM Providers Update
 
-## Comprehensive Code Review System (v0.8.0)
+## Overview
+This update focuses on refining the Multi-Agent Debate feature and integrating additional LLM providers to enhance the platform's orchestration capabilities.
 
-A robust, multi-persona code review system has been implemented to provide structured, actionable feedback on codebases.
+## Completed
+1.  **Refined Debate Logic:**
+    *   Verified `runDebate` in `lib/orchestration/debate.ts` for correct orchestration.
+    *   Confirmed `systemPrompt` injection and context handling.
+    *   Ensured `runConference` alias works as intended.
 
-### Features
-1.  **Multi-Persona Analysis**: The code is analyzed in parallel by three specialized AI agents:
-    *   **Security Expert**: Focuses on vulnerabilities and injection risks.
-    *   **Performance Engineer**: Identifies inefficiencies and scaling bottlenecks.
-    *   **Clean Code Advocate**: Reviews maintainability, naming, and patterns.
-2.  **Structured Scorecard**: The individual reviews are synthesized by a "Lead Architect" agent into a structured JSON format containing:
-    *   **Overall Score (0-100)**
-    *   **Executive Summary**
-    *   **Categorized Issues** (High/Medium/Low severity).
-3.  **Visual UI**: A new `ReviewScorecard` component renders the results directly in the activity feed, featuring progress bars, severity badges, and actionable suggestions.
-4.  **Local Context Injection**: The review system gathers actual file content from the local repository to ensure the analysis is grounded in reality.
+2.  **LLM Provider Expansion:**
+    *   Analyzed `lib/orchestration/providers/index.ts` and existing providers (`openai.ts`, `anthropic.ts`).
+    *   Confirmed `Anthropic` provider is already implemented but needs integration verification in `DebateDialog`.
+    *   Updated `SettingsDialog` to include fields for OpenAI, Anthropic, and Google Gemini API keys, allowing users to persist these keys in local storage.
 
-### Architecture
-*   **Backend**: `lib/orchestration/review.ts` orchestrates the parallel LLM calls and final synthesis.
-*   **API**: `/api/review` endpoint handles the request, ensuring secure execution server-side.
-*   **Frontend**: `components/activity-feed.tsx` detects `ReviewResult` payloads and renders the scorecard.
+## Next Steps
+1.  **Enhance `DebateDialog`:**
+    *   Update the UI to allow selecting different providers (OpenAI, Anthropic) for each debate participant.
+    *   Ensure API keys for different providers are handled correctly (e.g., `NEXT_PUBLIC_ANTHROPIC_KEY`).
 
-## Multi-Agent Debate with Context Injection
+2.  **Verify Multi-Provider Debate:**
+    *   Test a debate session where one agent uses OpenAI and another uses Anthropic (if keys available).
+    *   Verify the `summary` generation uses the correct provider.
 
-The Multi-Agent Debate feature now supports **Local Context Injection**.
-This allows the debating agents (Architect, Security Engineer, etc.) to access the actual file structure and content of key configuration files (`package.json`, `README.md`, etc.) from the local repository.
-
-### How it works
-1.  **Frontend**: When a debate is triggered in `DebateDialog`, the client calls `client.gatherRepositoryContext('.')`.
-2.  **Context Injection**: This context string is prepended to the conversation history as a "SYSTEM CONTEXT" message.
-3.  **Backend**: The `runDebate` function receives this enhanced history, ensuring all participants are grounded in the actual codebase reality.
-
-### API Changes
-*   **Endpoint**: `/api/debate` (No schema change, just enriched payload content).
-*   **Client**: `gatherRepositoryContext` is now utilized in both Code Review and Debate workflows.
-
-## Plan Approval
-
-The Plan Approval workflow is fully supported via the proxy endpoint.
-*   **Client Method**: `client.approvePlan(sessionId)`
-*   **Endpoint**: POST `/api/jules/sessions/{sessionId}/approve-plan` -> Proxies to Google's `sessions.approvePlan`.
-
-## Session Resume
-
-Resuming a session is handled by sending a message to the agent, as there is no dedicated `resume` endpoint in the Google Jules API v1alpha.
-*   **Client Method**: `client.resumeSession(sessionId)`
-*   **Implementation**: Sends a user message "Please resume working on this task." to the session via `/api/jules/sessions/{sessionId}:sendMessage`.
-
-## API Proxy
-
-The Next.js API Routes at `app/api/jules/[...path]` serve as a transparent proxy to the Google Jules API, handling authentication via the session's API key.
+3.  **Documentation:**
+    *   Update `docs/NEW_FEATURES.md` with details on the new provider options and debate capabilities.

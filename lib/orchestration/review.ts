@@ -1,4 +1,3 @@
-
 import { LLMProvider, Message, CompletionResult } from './types';
 
 export interface ReviewPersona {
@@ -15,6 +14,8 @@ export interface ReviewRequest {
     reviewType?: 'simple' | 'comprehensive';
     customPersonas?: ReviewPersona[];
     outputFormat?: 'markdown' | 'json';
+    prUrl?: string;
+    githubToken?: string;
 }
 
 export interface ReviewIssue {
@@ -41,28 +42,66 @@ export async function runCodeReview(request: ReviewRequest): Promise<string | Re
         throw new Error(`Provider ${request.provider} not found`);
     }
 
+    let result: string | ReviewResult;
+
     if (request.outputFormat === 'json') {
-        return await runStructuredReview(request, provider);
+        result = await runStructuredReview(request, provider);
+    } else if (request.reviewType === 'comprehensive') {
+        result = await runComprehensiveReview(request, provider);
+    } else {
+        const systemPrompt = request.systemPrompt || `You are an expert code reviewer.
+        Review the provided code context.
+        - Identify potential bugs, security issues, and performance bottlenecks.
+        - Suggest improvements for readability and maintainability.
+        - Be concise and actionable.`;
+
+        const completion = await provider.complete({
+            messages: [{ role: 'user', content: request.codeContext }],
+            model: request.model,
+            apiKey: request.apiKey,
+            systemPrompt
+        });
+        result = completion.content;
     }
 
-    if (request.reviewType === 'comprehensive') {
-        return await runComprehensiveReview(request, provider);
+    // Auto-comment on GitHub PR if configured
+    if (request.prUrl && request.githubToken && typeof result !== 'string' && 'score' in result) {
+         try {
+             const { Octokit } = await import('octokit');
+             const octokit = new Octokit({ auth: request.githubToken });
+             
+             // Extract owner/repo/number from URL
+             // e.g. https://github.com/owner/repo/pull/123
+             const match = request.prUrl.match(/github\.com\/([^/]+)\/([^/]+)\/pull\/(\d+)/);
+             if (match) {
+                 const [_, owner, repo, numberStr] = match;
+                 const number = parseInt(numberStr, 10);
+                 
+                 const body = `## 🕵️ Jules Code Review
+**Score: ${result.score}/100**
+
+${result.summary}
+
+### Key Issues
+${result.issues.map(i => `- **[${i.severity.toUpperCase()}]** ${i.description} _(${i.file || 'General'})_`).join('\n')}
+
+_Automated review by Jules AI_`;
+
+                 await octokit.rest.issues.createComment({
+                     owner,
+                     repo,
+                     issue_number: number,
+                     body
+                 });
+                 console.log(`Posted review comment to PR #${number}`);
+             }
+         } catch (e) {
+             console.error("Failed to post GitHub comment:", e);
+             // Don't fail the whole review request just because commenting failed
+         }
     }
 
-    const systemPrompt = request.systemPrompt || `You are an expert code reviewer.
-    Review the provided code context.
-    - Identify potential bugs, security issues, and performance bottlenecks.
-    - Suggest improvements for readability and maintainability.
-    - Be concise and actionable.`;
-
-    const result = await provider.complete({
-        messages: [{ role: 'user', content: request.codeContext }],
-        model: request.model,
-        apiKey: request.apiKey,
-        systemPrompt
-    });
-
-    return result.content;
+    return result;
 }
 
 async function runStructuredReview(request: ReviewRequest, provider: any): Promise<ReviewResult> {

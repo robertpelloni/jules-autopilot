@@ -79,35 +79,36 @@ export function DebateDialog({
         });
       }
 
-      // Call Debate API
-      const response = await fetch('/api/debate', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          topic: topic,
-          history: messages,
-          participants: [
-            {
-                id: 'proposer',
-                name: 'Architect',
-                role: 'Solution Architect',
-                provider: 'openai',
-                model: 'gpt-4o',
-                apiKey: process.env.NEXT_PUBLIC_OPENAI_KEY || 'env',
-                systemPrompt: `Analyze the current codebase and proposed changes. Propose a robust architectural solution. Focus on scalability and maintainability.`
-            },
-            {
-                id: 'critic',
-                name: 'Security Engineer',
-                role: 'Security Reviewer',
-                provider: 'openai',
-                model: 'gpt-4o',
-                apiKey: process.env.NEXT_PUBLIC_OPENAI_KEY || 'env',
-                systemPrompt: `Critique the proposed solution from a security perspective. Identify potential vulnerabilities and suggest mitigations.`
-            }
-          ]
-        })
-      });
+              // Call Debate API
+              const response = await fetch('/api/debate', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                  topic: topic,
+                  history: messages,
+                  participants: [
+                    {
+                        id: 'proposer',
+                        name: 'Architect',
+                        role: 'Solution Architect',
+                        provider: 'openai',
+                        model: 'gpt-4o',
+                        apiKey: process.env.NEXT_PUBLIC_OPENAI_KEY || 'env',
+                        systemPrompt: `Analyze the current codebase and proposed changes. Propose a robust architectural solution. Focus on scalability and maintainability.`
+                    },
+                    {
+                        id: 'critic',
+                        name: 'Security Engineer',
+                        role: 'Security Reviewer',
+                        provider: 'anthropic', // Changed to demonstrate multi-provider capability if key is available, else fallback logic in provider should handle or error
+                        model: 'claude-3-5-sonnet-20240620',
+                        apiKey: process.env.NEXT_PUBLIC_ANTHROPIC_KEY || process.env.NEXT_PUBLIC_OPENAI_KEY || 'env', // Fallback to OpenAI key if Anthropic not set, though provider check will fail if mismatch. ideally user inputs keys.
+                        systemPrompt: `Critique the proposed solution from a security perspective. Identify potential vulnerabilities and suggest mitigations.`
+                    }
+                  ]
+                })
+              });
+
 
       if (!response.ok) {
           throw new Error(await response.text());

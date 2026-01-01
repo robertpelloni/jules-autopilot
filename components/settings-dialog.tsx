@@ -23,6 +23,9 @@ export function SettingsDialog({ open: propOpen, onOpenChange: propOnOpenChange,
   const { config, setConfig } = useSessionKeeperStore();
   const [internalOpen, setInternalOpen] = useState(false);
   const [githubToken, setGithubToken] = useState('');
+  const [openAIKey, setOpenAIKey] = useState('');
+  const [anthropicKey, setAnthropicKey] = useState('');
+  const [geminiKey, setGeminiKey] = useState('');
   
   const open = propOpen !== undefined ? propOpen : internalOpen;
   const onOpenChange = propOnOpenChange || setInternalOpen;
@@ -32,8 +35,15 @@ export function SettingsDialog({ open: propOpen, onOpenChange: propOnOpenChange,
     if (typeof window !== 'undefined') {
       // Use setTimeout to avoid synchronous state updates during render phase
       const timer = setTimeout(() => {
-        const token = localStorage.getItem('github_pat');
-        if (token) setGithubToken(token);
+        const ghToken = localStorage.getItem('github_pat');
+        const oaKey = localStorage.getItem('openai_api_key');
+        const antKey = localStorage.getItem('anthropic_api_key');
+        const gemKey = localStorage.getItem('google_api_key');
+        
+        if (ghToken) setGithubToken(ghToken);
+        if (oaKey) setOpenAIKey(oaKey);
+        if (antKey) setAnthropicKey(antKey);
+        if (gemKey) setGeminiKey(gemKey);
       }, 0);
       return () => clearTimeout(timer);
     }
@@ -42,6 +52,13 @@ export function SettingsDialog({ open: propOpen, onOpenChange: propOnOpenChange,
   const handleSaveGithub = () => {
     localStorage.setItem('github_pat', githubToken);
     toast.success('GitHub token saved');
+  };
+
+  const handleSaveLLMKeys = () => {
+    if (openAIKey) localStorage.setItem('openai_api_key', openAIKey);
+    if (anthropicKey) localStorage.setItem('anthropic_api_key', anthropicKey);
+    if (geminiKey) localStorage.setItem('google_api_key', geminiKey);
+    toast.success('LLM API Keys saved');
   };
 
   return (
@@ -71,6 +88,52 @@ export function SettingsDialog({ open: propOpen, onOpenChange: propOnOpenChange,
           
           <TabsContent value="integrations" className="flex-1 p-6">
              <div className="space-y-6 max-w-md">
+                 <div className="space-y-4 border border-white/10 p-4 rounded-lg bg-white/5">
+                   <div className="flex items-center gap-2 mb-2">
+                      <Brain className="h-5 w-5 text-purple-400" />
+                      <h3 className="text-sm font-bold">LLM Providers</h3>
+                   </div>
+                   
+                   <div className="space-y-4">
+                     {/* OpenAI */}
+                     <div className="space-y-2">
+                        <Label className="text-xs text-white/60">OpenAI API Key</Label>
+                        <Input 
+                          type="password" 
+                          value={openAIKey} 
+                          onChange={e => setOpenAIKey(e.target.value)} 
+                          placeholder="sk-..."
+                          className="bg-black/50 border-white/10 text-xs font-mono"
+                        />
+                     </div>
+
+                     {/* Anthropic */}
+                     <div className="space-y-2">
+                        <Label className="text-xs text-white/60">Anthropic API Key</Label>
+                        <Input 
+                          type="password" 
+                          value={anthropicKey} 
+                          onChange={e => setAnthropicKey(e.target.value)} 
+                          placeholder="sk-ant-..."
+                          className="bg-black/50 border-white/10 text-xs font-mono"
+                        />
+                     </div>
+                     
+                     <div className="space-y-2">
+                        <Label className="text-xs text-white/60">Google Gemini API Key</Label>
+                         <Input 
+                          type="password" 
+                          value={geminiKey} 
+                          onChange={e => setGeminiKey(e.target.value)} 
+                          placeholder="AIza..."
+                          className="bg-black/50 border-white/10 text-xs font-mono"
+                        />
+                     </div>
+
+                     <Button size="sm" onClick={handleSaveLLMKeys} className="w-full mt-2">Save Keys</Button>
+                   </div>
+                 </div>
+
                <div className="space-y-4 border border-white/10 p-4 rounded-lg bg-white/5">
                  <div className="flex items-center gap-2 mb-2">
                     <Github className="h-5 w-5 text-white" />

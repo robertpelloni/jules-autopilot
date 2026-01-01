@@ -4,7 +4,7 @@ import { runCodeReview, ReviewRequest } from '@/lib/orchestration/review';
 export async function POST(req: NextRequest) {
     try {
         const body = await req.json();
-        const { codeContext, provider, model, apiKey, reviewType, outputFormat, customPersonas } = body;
+        const { codeContext, provider, model, apiKey, reviewType, outputFormat, customPersonas, prUrl, githubToken } = body;
 
         if (!codeContext || !provider || !model || !apiKey) {
             return NextResponse.json(
@@ -20,7 +20,9 @@ export async function POST(req: NextRequest) {
             apiKey,
             reviewType,
             outputFormat,
-            customPersonas
+            customPersonas,
+            prUrl,
+            githubToken: githubToken || process.env.GITHUB_TOKEN
         };
 
         const result = await runCodeReview(request);

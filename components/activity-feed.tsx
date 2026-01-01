@@ -264,6 +264,11 @@ export function ActivityFeed({ session, onArchive, showCodeDiffs, onToggleCodeDi
         }
 
         // 3. Call the specialized API endpoint
+        // Extract PR URL from session metadata if available
+        const prUrl = session.metadata?.pull_request && typeof session.metadata.pull_request === 'object' && 'url' in session.metadata.pull_request 
+            ? (session.metadata.pull_request as { url: string }).url 
+            : undefined;
+
         const response = await fetch('/api/review', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
@@ -273,7 +278,8 @@ export function ActivityFeed({ session, onArchive, showCodeDiffs, onToggleCodeDi
                 model: 'gpt-4o',
                 apiKey: process.env.NEXT_PUBLIC_OPENAI_KEY || '', // Fallback to env var if available
                 outputFormat: 'json',
-                reviewType: 'comprehensive'
+                reviewType: 'comprehensive',
+                prUrl
             })
         });
 
