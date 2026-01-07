@@ -20,9 +20,13 @@ export function AppSidebar({
 }: AppSidebarProps) {
   return (
     <aside
-      className={`hidden md:flex border-r border-white/[0.08] flex-col bg-zinc-950 transition-all duration-200 ${
-        collapsed ? "md:w-12" : "md:w-64"
+      className={`hidden md:flex border-r border-white/[0.08] flex-col bg-zinc-950 transition-all duration-200 relative z-20 ${
+        collapsed ? "md:w-12" : "md:w-64 resize-x"
       }`}
+      style={{
+        minWidth: collapsed ? "3rem" : "16rem",
+        maxWidth: collapsed ? "3rem" : "40rem"
+      }}
     >
       <div className="px-3 py-2 border-b border-white/[0.08] flex items-center justify-between">
         {!collapsed && (

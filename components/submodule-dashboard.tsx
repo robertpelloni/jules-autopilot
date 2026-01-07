@@ -19,6 +19,16 @@ interface Submodule {
 const submodules = (submoduleInfo as any).submodules as Submodule[];
 const generatedAt = (submoduleInfo as any).generatedAt as string;
 
+const getStatusColor = (status?: string) => {
+  switch (status) {
+    case 'synced': return 'bg-green-500/10 text-green-400 border-green-500/20';
+    case 'modified': return 'bg-yellow-500/10 text-yellow-400 border-yellow-500/20';
+    case 'uninitialized': return 'bg-red-500/10 text-red-400 border-red-500/20';
+    case 'conflict': return 'bg-orange-500/10 text-orange-400 border-orange-500/20';
+    default: return 'bg-white/5 text-white/40 border-white/10';
+  }
+};
+
 export function SubmoduleDashboard() {
   return (
     <div className="space-y-6 p-6 max-w-7xl mx-auto">
@@ -44,9 +54,14 @@ export function SubmoduleDashboard() {
                     {submodule.path}
                   </CardDescription>
                 </div>
-                <Badge variant="outline" className="text-[10px] font-mono bg-white/5 border-white/10">
-                  {submodule.branch}
-                </Badge>
+                <div className="flex flex-col items-end gap-1">
+                  <Badge variant="outline" className={`text-[10px] font-mono ${getStatusColor(submodule.status)}`}>
+                    {submodule.status || 'unknown'}
+                  </Badge>
+                  <Badge variant="outline" className="text-[10px] font-mono bg-white/5 border-white/10 text-white/60">
+                    {submodule.branch}
+                  </Badge>
+                </div>
               </div>
             </CardHeader>
             <CardContent className="flex-1 flex flex-col justify-end gap-3 text-xs">

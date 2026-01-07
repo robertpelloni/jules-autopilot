@@ -23,10 +23,14 @@ interface SearchResult {
   matchContext?: string;
 }
 
-export function SearchCommandDialog() {
+interface SearchCommandDialogProps {
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+}
+
+export function SearchCommandDialog({ open, onOpenChange }: SearchCommandDialogProps) {
   const { client } = useJules();
   const router = useRouter();
-  const [open, setOpen] = React.useState(false);
   const [query, setQuery] = React.useState('');
   const [isSearching, setIsSearching] = React.useState(false);
   const [results, setResults] = React.useState<SearchResult[]>([]);
@@ -37,12 +41,12 @@ export function SearchCommandDialog() {
     const down = (e: KeyboardEvent) => {
       if (e.key === 'k' && (e.metaKey || e.ctrlKey)) {
         e.preventDefault();
-        setOpen((open) => !open);
+        onOpenChange(!open);
       }
     };
     document.addEventListener('keydown', down);
     return () => document.removeEventListener('keydown', down);
-  }, []);
+  }, [open, onOpenChange]);
 
   // Load sessions on open
   React.useEffect(() => {
@@ -50,7 +54,6 @@ export function SearchCommandDialog() {
       client.listSessions().then(setSessions).catch(console.error);
     }
   }, [open, client, sessions.length]);
-
   // Debounced Search
   React.useEffect(() => {
     if (!query || !client) {
@@ -134,14 +137,14 @@ export function SearchCommandDialog() {
   }, [query, client, sessions]);
 
   const handleSelect = (result: SearchResult) => {
-    setOpen(false);
+    onOpenChange(false);
     const params = new URLSearchParams();
     params.set('sessionId', result.session.id);
     router.push(`/?${params.toString()}`);
   };
 
   return (
-    <CommandDialog open={open} onOpenChange={setOpen}>
+    <CommandDialog open={open} onOpenChange={onOpenChange}>
       <CommandInput 
         placeholder="Search sessions, code, or conversations..." 
         value={query}

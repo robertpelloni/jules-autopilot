@@ -113,6 +113,7 @@ export interface SessionKeeperConfig {
 
   // Debate Configuration
   debateEnabled?: boolean;
+  resumePaused?: boolean;
   debateParticipants?: {
       id: string;
       provider: string;

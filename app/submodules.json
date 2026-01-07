@@ -1,65 +1,105 @@
 {
-  "generatedAt": "2025-12-31T19:47:36.812Z",
+  "generatedAt": "2026-01-06T18:11:21.830Z",
   "submodules": [
     {
+      "name": "antigravity-jules-orchestration",
       "path": "external/antigravity-jules-orchestration",
+      "branch": "HEAD",
       "commit": "71f92ab85e64f9e44329a70b6b50871131c68907",
+      "url": "https://github.com/Scarmonit/antigravity-jules-orchestration",
+      "lastCommitDate": "2025-12-27 23:45:58 -0500",
       "describe": "(v2.6.1-11-g71f92ab)",
-      "lastUpdated": "2025-12-27 23:45:58 -0500"
+      "status": "synced"
     },
     {
+      "name": "gemini-cli-jules",
       "path": "external/gemini-cli-jules",
+      "branch": "HEAD",
       "commit": "9f2fc14a41e8b604bdaf2d50ae6041cdc5507175",
+      "url": "https://github.com/gemini-cli-extensions/jules",
+      "lastCommitDate": "2025-10-30 09:11:17 -0400",
       "describe": "(v0.1.0-3-g9f2fc14)",
-      "lastUpdated": "2025-10-30 09:11:17 -0400"
+      "status": "synced"
     },
     {
+      "name": "google-jules-mcp",
       "path": "external/google-jules-mcp",
+      "branch": "HEAD",
       "commit": "39b4251a78a9d159b77b97063213691557117fd8",
+      "url": "https://github.com/samihalawa/google-jules-mcp",
+      "lastCommitDate": "2025-12-04 14:47:05 +0100",
       "describe": "(heads/main)",
-      "lastUpdated": "2025-12-04 14:47:05 +0100"
+      "status": "synced"
     },
     {
+      "name": "jules-action",
       "path": "external/jules-action",
+      "branch": "HEAD",
       "commit": "bff7875eaa123cac6742b7cfc51005b95ba4d566",
+      "url": "https://github.com/google-labs-code/jules-action",
+      "lastCommitDate": "2025-12-13 14:42:23 -0800",
       "describe": "(ai-assisted)",
-      "lastUpdated": "2025-12-13 14:42:23 -0800"
+      "status": "synced"
     },
     {
+      "name": "jules-awesome-list",
       "path": "external/jules-awesome-list",
+      "branch": "HEAD",
       "commit": "0118486377fdb4cf20432b2c3e85a18aa01f984d",
+      "url": "https://github.com/google-labs-code/jules-awesome-list",
+      "lastCommitDate": "2025-05-20 21:01:03 -0700",
       "describe": "(heads/main)",
-      "lastUpdated": "2025-05-20 21:01:03 -0700"
+      "status": "synced"
     },
     {
+      "name": "jules-mcp-server",
       "path": "external/jules-mcp-server",
+      "branch": "HEAD",
       "commit": "577978905479f0a2e11712da155baef757663217",
+      "url": "https://github.com/CodeAgentBridge/jules-mcp-server",
+      "lastCommitDate": "2025-10-15 21:07:03 +0200",
       "describe": "(v0.1.6)",
-      "lastUpdated": "2025-10-15 21:07:03 +0200"
+      "status": "synced"
     },
     {
+      "name": "jules-system-prompt",
       "path": "external/jules-system-prompt",
+      "branch": "HEAD",
       "commit": "de4a2bfd2449d7fedc7032ac01c1de4ec288e009",
+      "url": "https://github.com/DiaAviLinden/Jules-system-prompt",
+      "lastCommitDate": "2025-12-08 18:22:13 -0500",
       "describe": "(v1.0.0-alpha-2-gde4a2bf)",
-      "lastUpdated": "2025-12-08 18:22:13 -0500"
+      "status": "synced"
     },
     {
+      "name": "jules-task-queue",
       "path": "external/jules-task-queue",
+      "branch": "HEAD",
       "commit": "f11d2ad87b31347ab5793058b44044ad586f7548",
+      "url": "https://github.com/iHildy/jules-task-queue",
+      "lastCommitDate": "2025-12-14 21:59:46 -0600",
       "describe": "(heads/main)",
-      "lastUpdated": "2025-12-14 21:59:46 -0600"
+      "status": "synced"
     },
     {
+      "name": "jules_mcp",
       "path": "external/jules_mcp",
+      "branch": "HEAD",
       "commit": "db115769c46afa4031877e6eac2cbc54684a6a14",
+      "url": "https://github.com/GatienBoquet/jules_mcp",
+      "lastCommitDate": "2025-10-04 23:25:46 -0400",
       "describe": "(heads/main)",
-      "lastUpdated": "2025-10-04 23:25:46 -0400"
+      "status": "synced"
     },
     {
+      "name": "jules-sdk-reference",
       "path": "jules-sdk-reference",
+      "branch": "HEAD",
       "commit": "51685d61ec9d9e3ea523ef410c22bea1e8a15274",
+      "url": "https://github.com/AsyncFuncAI/jules-agent-sdk-python",
+      "lastCommitDate": "2025-10-04 15:49:11 -0500",
       "describe": "(heads/main)",
-      "lastUpdated": "2025-10-04 15:49:11 -0500"
+      "status": "synced"
     }
   ]
 }

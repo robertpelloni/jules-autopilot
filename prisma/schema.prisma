@@ -16,6 +16,7 @@ model SessionTemplate {
   prompt      String
   title       String?
   isFavorite  Boolean  @default(false)
+  isPrebuilt  Boolean  @default(false)
   tags        String   // Stored as CSV string
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt

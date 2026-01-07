@@ -343,8 +343,8 @@ This session has been handed off to ${newSession.id}. Marking as completed.`,
                    addLog(`Handoff failed for ${session.id}: Supervisor error`, "error");
                }
             }
-            // 1. Resume Paused/Completed/Failed
-            if (session.status === 'paused' || session.status === 'completed' || session.status === 'failed') {
+            // 1. Resume Paused/Completed/Failed (ONLY IF enabled in config)
+            if (config.resumePaused && (session.status === 'paused' || session.status === 'completed' || session.status === 'failed')) {
                addLog(`Resuming ${session.status} session ${session.id.substring(0, 8)}...`, 'action');
                safeSwitch(session.id);
                
