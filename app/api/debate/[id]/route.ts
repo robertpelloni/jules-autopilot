@@ -36,3 +36,25 @@ export async function GET(
     );
   }
 }
+
+export async function DELETE(
+  req: NextRequest,
+  props: { params: Promise<{ id: string }> }
+) {
+  try {
+    const params = await props.params;
+    const { id } = params;
+
+    await prisma.debate.delete({
+      where: { id },
+    });
+
+    return NextResponse.json({ success: true });
+  } catch (error) {
+    console.error('Failed to delete debate:', error);
+    return NextResponse.json(
+      { error: 'Failed to delete debate' },
+      { status: 500 }
+    );
+  }
+}
