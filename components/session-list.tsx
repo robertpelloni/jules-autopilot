@@ -1,105 +1,289 @@
-'use client';
+"use client";
 
-import { useEffect, useState } from 'react';
-import { useJules } from '@/lib/jules/provider';
-import type { Session } from '@/types/jules';
-import { Badge } from '@/components/ui/badge';
-import { ScrollArea } from '@/components/ui/scroll-area';
-import { formatDistanceToNow } from 'date-fns';
-import { Clock, CheckCircle2, XCircle, PlayCircle, Loader2 } from 'lucide-react';
-import { cn } from '@/lib/utils';
+import { useEffect, useState, useCallback, useMemo } from "react";
+import { useJules } from "@/lib/jules/provider";
+import type { Session } from "@/types/jules";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Search, Loader2 } from "lucide-react";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
+import { ScrollArea } from "@/components/ui/scroll-area";
+import { CardSpotlight } from "@/components/ui/card-spotlight";
+import { formatDistanceToNow, isValid, parseISO, isToday } from "date-fns";
+import { getArchivedSessions } from "@/lib/archive";
+import { cn } from "@/lib/utils";
+
+function truncateText(text: string, maxLength: number) {
+  if (!text) return "";
+  if (text.length <= maxLength) return text;
+  return text.slice(0, maxLength) + "...";
+}
 
 interface SessionListProps {
   onSelectSession?: (sessionId: string | Session) => void;
   selectedSessionId?: string | null;
-  className?: string; // Added for compatibility
+  className?: string;
 }
 
-export function SessionList({ onSelectSession, selectedSessionId, className }: SessionListProps) {
+export function SessionList({
+  onSelectSession,
+  selectedSessionId,
+  className,
+}: SessionListProps) {
   const { client, refreshTrigger } = useJules();
   const [sessions, setSessions] = useState<Session[]>([]);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [searchQuery, setSearchQuery] = useState("");
+  const [archivedSessionIds, setArchivedSessionIds] = useState<Set<string>>(new Set());
 
   useEffect(() => {
-    if (!client) return;
+    setArchivedSessionIds(getArchivedSessions());
+  }, []);
 
-    const loadSessions = async () => {
-        try {
-            const data = await client.listSessions();
-            setSessions(data.sort((a, b) => new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime()));
-        } catch (e) {
-            console.error(e);
-        } finally {
-            setLoading(false);
+  const formatDate = (dateString: string) => {
+    if (!dateString) return "Unknown date";
+
+    try {
+      const date = parseISO(dateString);
+      if (!isValid(date)) return "Unknown date";
+      return formatDistanceToNow(date, { addSuffix: true });
+    } catch {
+      return "Unknown date";
+    }
+  };
+
+  const loadSessions = useCallback(async () => {
+    if (!client) {
+      setLoading(false);
+      return;
+    }
+
+    // Don't set loading to true on every poll to avoid flashing
+    if (sessions.length === 0) setLoading(true);
+    
+    setError(null);
+    try {
+      const data = await client.listSessions();
+      // Sort by updatedAt desc like in local
+      setSessions(data.sort((a, b) => new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime()));
+    } catch (err) {
+      console.error("Failed to load sessions:", err);
+      if (err instanceof Error) {
+        if (err.message.includes("Invalid API key")) {
+          setError("Invalid API key. Please check your API key and try again.");
+        } else if (err.message.includes("Resource not found")) {
+          setSessions([]);
+          setError(null);
+        } else {
+          setError(err.message);
         }
-    };
+      } else {
+        setError("Failed to load sessions");
+      }
+      if (sessions.length === 0) setSessions([]); 
+    } finally {
+      setLoading(false);
+    }
+  }, [client, sessions.length]);
 
+  // Initial load and polling
+  useEffect(() => {
     loadSessions();
     const interval = setInterval(loadSessions, 10000); // Poll every 10s
     return () => clearInterval(interval);
-  }, [client, refreshTrigger]);
+  }, [loadSessions, refreshTrigger]);
 
-  if (loading) {
-     return <div className="p-4 flex justify-center"><Loader2 className="animate-spin h-5 w-5 text-zinc-500" /></div>;
+  const getStatusColor = (status: string) => {
+    switch (status) {
+      case "active":
+      case "running":
+        return "bg-blue-500";
+      case "completed":
+        return "bg-green-500";
+      case "failed":
+        return "bg-red-500";
+      case "paused":
+        return "bg-yellow-500"; 
+      default:
+        return "bg-gray-500";
+    }
+  };
+
+  const getRepoShortName = (sourceId: string) => {
+    const parts = sourceId.split("/");
+    return parts[parts.length - 1] || sourceId;
+  };
+
+  const visibleSessions = useMemo(() => {
+    return sessions
+      .filter((session) => !archivedSessionIds.has(session.id))
+      .filter((session) => {
+        if (!searchQuery) return true;
+        const query = searchQuery.toLowerCase();
+        const title = (session.title || "").toLowerCase();
+        const repo = (session.sourceId || "").toLowerCase();
+        return title.includes(query) || repo.includes(query);
+      });
+  }, [sessions, archivedSessionIds, searchQuery]);
+
+  if (loading && sessions.length === 0) {
+    return (
+      <div className={cn("flex flex-col items-center justify-center p-6 gap-3", className)}>
+        <Loader2 className="h-5 w-5 animate-spin text-white/20" />
+        <p className="text-xs text-muted-foreground font-mono uppercase tracking-widest">
+          Loading sessions...
+        </p>
+      </div>
+    );
   }
 
-  const getStatusIcon = (status: string) => {
-     switch(status) {
-         case 'completed': return <CheckCircle2 className="h-3 w-3 text-green-500" />;
-         case 'failed': return <XCircle className="h-3 w-3 text-red-500" />;
-         case 'running': return <Loader2 className="h-3 w-3 text-blue-500 animate-spin" />;
-         case 'paused': return <Clock className="h-3 w-3 text-amber-500" />;
-         default: return <PlayCircle className="h-3 w-3 text-zinc-500" />;
-     }
-  };
+  if (error && sessions.length === 0) {
+    return (
+      <div className={cn("flex flex-col items-center justify-center gap-3 p-6", className)}>
+        <p className="text-xs text-destructive text-center">{error}</p>
+        <Button
+          variant="outline"
+          size="sm"
+          onClick={loadSessions}
+          className="h-7 text-[10px] font-mono uppercase tracking-widest"
+        >
+          Retry
+        </Button>
+      </div>
+    );
+  }
 
-  const getSourceLabel = (sourceId?: string) => {
-    if (!sourceId) return null;
-    const match = sourceId.match(/^sources\/[^\/]+\/([^\/]+\/[^\/]+)$/);
-    if (match) return match[1];
-    return sourceId.replace('sources/', '');
-  };
+  if (visibleSessions.length === 0 && !loading) {
+    return (
+      <div className={cn("flex items-center justify-center p-6", className)}>
+        <p className="text-xs text-muted-foreground text-center leading-relaxed">
+          {searchQuery
+            ? "No sessions match your search."
+            : sessions.length === 0
+              ? "No sessions yet. Create one to get started!"
+              : "All sessions are archived."}
+        </p>
+      </div>
+    );
+  }
+
+  const sessionLimit = 100;
+  const dailySessionCount = sessions.filter((session) => {
+    if (!session.createdAt) return false;
+    try {
+      return isToday(parseISO(session.createdAt));
+    } catch {
+      return false;
+    }
+  }).length;
+  const percentage = Math.min((dailySessionCount / sessionLimit) * 100, 100);
 
   return (
-    <ScrollArea className={cn("h-full", className)}>
-      <div className="space-y-2 p-2">
-        {sessions.map((session) => (
-          <div
-            key={session.id}
-            onClick={() => onSelectSession?.(session)}
-            className={cn(
-               "group flex flex-col gap-1 p-3 rounded-lg border cursor-pointer transition-all hover:bg-white/5",
-               selectedSessionId === session.id
-                 ? "bg-white/10 border-blue-500/50 shadow-[0_0_10px_rgba(59,130,246,0.2)]"
-                 : "bg-zinc-950/50 border-white/5"
-            )}
-          >
-            <div className="flex justify-between items-start">
-               <span className="font-semibold text-xs text-zinc-200 line-clamp-1">{session.title || 'Untitled Session'}</span>
-               {getStatusIcon(session.status)}
-            </div>
-            
-            {session.sourceId && (
-              <div className="text-xs text-zinc-400 font-mono truncate opacity-70">
-                {getSourceLabel(session.sourceId)}
-              </div>
-            )}
-
-            <div className="flex justify-between items-end mt-1">
-               <span className="text-xs text-zinc-500 flex items-center gap-1">
-                  <Clock className="h-3 w-3" />
-                  {formatDistanceToNow(new Date(session.updatedAt), { addSuffix: true })}
-               </span>
-               <Badge variant="outline" className="text-[10px] h-4 px-1 border-white/10 text-zinc-400">
-                  {session.status}
-               </Badge>
-            </div>
+    <TooltipProvider>
+      <div className={cn("h-full flex flex-col bg-zinc-950 overflow-hidden", className)}>
+        <div className="px-3 py-2 border-b border-white/[0.08] shrink-0">
+          <div className="relative">
+            <Search className="absolute left-2 top-1/2 h-3 w-3 -translate-y-1/2 text-muted-foreground" />
+            <Input
+              placeholder="Search for repo or sessions"
+              aria-label="Search sessions"
+              className="h-7 w-full bg-black/50 pl-7 text-[10px] border-white/10 focus-visible:ring-purple-500/50 placeholder:text-muted-foreground/50"
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+            />
           </div>
-        ))}
-        {sessions.length === 0 && (
-            <div className="text-center py-8 text-zinc-500 text-sm">No sessions found.</div>
-        )}
+        </div>
+        <ScrollArea className="flex-1 min-h-0">
+          <div className="p-2 space-y-1">
+            {visibleSessions.map((session) => (
+              <CardSpotlight
+                key={session.id}
+                radius={250}
+                color={selectedSessionId === session.id ? "#a855f7" : "#404040"}
+                className={`relative ${
+                  selectedSessionId === session.id ? "border-purple-500/30" : ""
+                }`}
+              >
+                <div
+                  role="button"
+                  tabIndex={0}
+                  aria-label={`Select session ${session.title || "Untitled"}`}
+                  className="w-full flex items-start gap-2.5 px-3 py-2.5 text-left relative z-10 cursor-pointer outline-none focus-visible:ring-1 focus-visible:ring-purple-500/50"
+                  onClick={() => onSelectSession?.(session)}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter" || e.key === " ") {
+                      e.preventDefault();
+                      onSelectSession?.(session);
+                    }
+                  }}
+                >
+                  <div
+                    className={`flex-shrink-0 mt-1 w-2 h-2 rounded-full ${getStatusColor(session.status)}`}
+                  />
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-2 mb-0.5 w-full min-w-0">
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <div className="text-[10px] font-bold leading-tight text-white uppercase tracking-wide flex-1 min-w-0 block overflow-hidden text-ellipsis whitespace-nowrap">
+                            {truncateText(session.title || "Untitled", 30)}
+                          </div>
+                        </TooltipTrigger>
+                        <TooltipContent
+                          side="bottom"
+                          align="start"
+                          className="bg-zinc-900 border-white/10 text-white text-[10px] max-w-[200px] break-words z-[60]"
+                        >
+                          <p>{session.title || "Untitled"}</p>
+                        </TooltipContent>
+                      </Tooltip>
+                      {session.sourceId && (
+                        <Badge className="shrink-0 text-[9px] px-1.5 py-0 h-4 font-mono bg-white/10 text-white/70 hover:bg-white/20 border-0 rounded-sm uppercase tracking-wider">
+                          {getRepoShortName(session.sourceId)}
+                        </Badge>
+                      )}
+                    </div>
+                    <div className="text-[9px] text-white/40 leading-tight font-mono tracking-wide">
+                      {formatDate(session.createdAt)}
+                    </div>
+                  </div>
+                </div>
+              </CardSpotlight>
+            ))}
+          </div>
+        </ScrollArea>
+
+        {/* Session Limit Indicator */}
+        <div className="border-t border-white/[0.08] px-3 py-2.5 bg-black/50 shrink-0">
+          <div className="flex items-center justify-between mb-1.5">
+            <span className="text-[9px] font-bold text-white/30 uppercase tracking-widest">
+              DAILY
+            </span>
+            <span className="text-[10px] font-mono font-bold text-white/60">
+              {dailySessionCount}/{sessionLimit}
+            </span>
+          </div>
+          <div className="w-full h-1 bg-white/5 overflow-hidden">
+            <div
+              className="h-full bg-white transition-all duration-300"
+              style={{ width: `${percentage}%` }}
+            />
+          </div>
+          {dailySessionCount >= sessionLimit * 0.8 && (
+            <p className="text-[8px] text-white/30 mt-1 leading-tight uppercase tracking-wider font-mono">
+              {dailySessionCount >= sessionLimit
+                ? "LIMIT REACHED"
+                : "APPROACHING LIMIT"}
+            </p>
+          )}
+        </div>
       </div>
-    </ScrollArea>
+    </TooltipProvider>
   );
 }
