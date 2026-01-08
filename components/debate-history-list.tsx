@@ -6,10 +6,11 @@ import { ScrollArea } from '@/components/ui/scroll-area';
 import { Badge } from '@/components/ui/badge';
 import { Loader2, MessageSquare, Calendar, Trash2 } from 'lucide-react';
 import { format } from 'date-fns';
-import { DebateResult } from '@/lib/orchestration/types';
+import { DebateResult, Message } from '@/lib/orchestration/types';
 import { DebateDetailsDialog } from './debate-details-dialog';
 import { Button } from '@/components/ui/button';
 import { toast } from 'sonner';
+import { DebateDialog } from '@/components/debate-dialog';
 import {
   Dialog,
   DialogContent,
@@ -33,6 +34,28 @@ export function DebateHistoryList() {
     const [detailsOpen, setDetailsOpen] = useState(false);
     const [deleteId, setDeleteId] = useState<string | null>(null);
     const [isDeleting, setIsDeleting] = useState(false);
+    const [resumeData, setResumeData] = useState<{topic: string, history: Message[], sessionId?: string} | null>(null);
+
+    const handleResume = (debate: DebateResult) => {
+        const history: Message[] = [...(debate.history || [])];
+        
+        if (debate.rounds) {
+            debate.rounds.forEach(round => {
+                round.turns.forEach(turn => {
+                    history.push({
+                        role: 'assistant',
+                        content: `[${turn.participantName} (${turn.role})]: ${turn.content}`
+                    });
+                });
+            });
+        }
+
+        setResumeData({
+            topic: `Continued: ${debate.topic}`,
+            history,
+            sessionId: debate.metadata?.sessionId
+        });
+    };
 
     const handleDelete = async () => {
         if (!deleteId) return;
@@ -146,7 +169,18 @@ export function DebateHistoryList() {
                 debateId={selectedDebateId}
                 open={detailsOpen}
                 onOpenChange={setDetailsOpen}
+                onResume={handleResume}
             />
+
+            {resumeData && (
+                <DebateDialog
+                    open={!!resumeData}
+                    onOpenChange={(open) => !open && setResumeData(null)}
+                    initialTopic={resumeData.topic}
+                    initialHistory={resumeData.history}
+                    sessionId={resumeData.sessionId}
+                />
+            )}
 
             <Dialog open={!!deleteId} onOpenChange={(open) => !open && setDeleteId(null)}>
                 <DialogContent className="bg-zinc-950 border-zinc-800 text-white">

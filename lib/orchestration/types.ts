@@ -65,4 +65,5 @@ export interface DebateResult {
   rounds: DebateRound[];
   summary?: string;
   history: Message[];
+  metadata?: any;
 }

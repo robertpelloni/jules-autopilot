@@ -24,14 +24,17 @@ import { Loader2 } from 'lucide-react';
 import { useJules } from '@/lib/jules/provider';
 import { toast } from 'sonner';
 
+import { Message } from '@/lib/orchestration/types';
+
 interface DebateDialogProps {
-  sessionId: string;
+  sessionId?: string;
   trigger?: React.ReactNode;
   onDebateStart?: () => void;
   open?: boolean;
   onOpenChange?: (open: boolean) => void;
   initialTopic?: string;
   initialContext?: string;
+  initialHistory?: Message[];
 }
 
 const PROVIDER_OPTIONS: Record<string, {
@@ -72,7 +75,8 @@ export function DebateDialog({
   onDebateStart, 
   open: controlledOpen, 
   onOpenChange: setControlledOpen,
-  initialTopic = ''
+  initialTopic = '',
+  initialHistory
 }: DebateDialogProps) {
   const { client } = useJules();
   const [internalOpen, setInternalOpen] = useState(false);
@@ -121,27 +125,46 @@ export function DebateDialog({
       setErrorDetail(null);
       toast.info('Starting debate session...');
 
-      const history = await client.listActivities(sessionId);
-
+      let messages: Message[] = [];
       let repoContext = '';
-      try {
-        repoContext = await client.gatherRepositoryContext('.');
-      } catch (err) {
-        console.warn('Failed to gather repo context for debate:', err);
+
+      if (sessionId) {
+        if (!initialHistory) {
+             const history = await client.listActivities(sessionId);
+             messages = history
+                .filter(h => h.type === 'message' && (h.role === 'user' || h.role === 'agent'))
+                .map(h => ({
+                    role: (h.role === 'agent' ? 'assistant' : 'user') as 'user' | 'assistant',
+                    content: h.content
+                }));
+        }
+      } else if (!initialHistory) {
+         throw new Error("Cannot start debate: No session ID and no initial history provided.");
+      }
+      
+      if (!repoContext) {
+           try {
+              repoContext = await client.gatherRepositoryContext('.');
+           } catch (err) {
+              console.warn('Failed to gather repo context for debate:', err);
+           }
       }
 
-      const messages = history
-        .filter(h => h.type === 'message' && (h.role === 'user' || h.role === 'agent'))
-        .map(h => ({
-            role: h.role === 'agent' ? 'assistant' : 'user',
-            content: h.content
-        }));
+      if (messages.length === 0 && initialHistory) {
+         messages = [...initialHistory];
+      }
 
       if (repoContext) {
-        messages.unshift({
+        const contextMsg: Message = {
           role: 'user', 
           content: `SYSTEM CONTEXT:\nThe following is the current repository structure and key file contents. Use this context to inform your debate arguments.\n\n${repoContext}`
-        });
+        };
+
+        if (initialHistory && initialHistory.length > 0) {
+            messages.push(contextMsg);
+        } else {
+            messages.unshift(contextMsg);
+        }
       }
 
       const debateParticipants = participants.map(p => {
@@ -164,7 +187,8 @@ export function DebateDialog({
         body: JSON.stringify({
           topic: topic,
           history: messages,
-          participants: debateParticipants
+          participants: debateParticipants,
+          metadata: sessionId ? { sessionId } : undefined
         })
       });
 
@@ -183,12 +207,14 @@ export function DebateDialog({
 
       const result = await response.json();
 
-      await client.createActivity({
-          sessionId,
-          content: result.summary || "Debate completed.",
-          type: 'debate',
-          metadata: { debate: result }
-      });
+      if (sessionId) {
+          await client.createActivity({
+              sessionId,
+              content: result.summary || "Debate completed.",
+              type: 'debate',
+              metadata: { debate: result }
+          });
+      }
 
       toast.success('Debate completed!');
       if (setOpen) setOpen(false);

@@ -6,7 +6,7 @@ import { prisma } from '@/lib/prisma';
 export async function POST(req: NextRequest) {
     try {
         const body = await req.json();
-        const { topic, rounds, participants, history } = body;
+        const { topic, rounds, participants, history, metadata } = body;
 
         if (!topic || !participants || participants.length === 0) {
             return NextResponse.json(
@@ -55,6 +55,7 @@ export async function POST(req: NextRequest) {
                     summary: result.summary,
                     rounds: JSON.stringify(result.rounds),
                     history: JSON.stringify(result.history),
+                    metadata: metadata ? JSON.stringify(metadata) : null,
                 }
             });
         } catch (dbError) {
