@@ -4,9 +4,55 @@ import type { SessionTemplate } from '@prisma/client';
 
 export async function GET() {
   try {
-    const templates = await prisma.sessionTemplate.findMany({
+    let templates = await prisma.sessionTemplate.findMany({
       orderBy: { updatedAt: 'desc' }
     });
+
+    if (templates.length === 0) {
+      // Seed default templates
+      const defaults = [
+        {
+          name: "Feature Implementation",
+          description: "Implement a new feature with tests and documentation",
+          prompt: "I want to implement a new feature. Please help me plan, write code, tests, and documentation.",
+          isPrebuilt: true,
+          tags: "feature,dev",
+          isFavorite: true
+        },
+        {
+          name: "Bug Fix",
+          description: "Analyze and fix a bug with regression tests",
+          prompt: "I have a bug to fix. I will provide the details. Please help me reproduce, fix, and verify it.",
+          isPrebuilt: true,
+          tags: "bugfix,maintenance",
+          isFavorite: true
+        },
+        {
+          name: "Code Review",
+          description: "Review code for best practices and security",
+          prompt: "Please review the following code or diff. Look for security issues, performance problems, and style violations.",
+          isPrebuilt: true,
+          tags: "review,quality",
+          isFavorite: false
+        },
+        {
+          name: "Refactoring",
+          description: "Refactor code to improve structure and maintainability",
+          prompt: "I want to refactor some code. Help me improve its structure without changing behavior.",
+          isPrebuilt: true,
+          tags: "refactor,cleanup",
+          isFavorite: false
+        }
+      ];
+
+      for (const t of defaults) {
+        await prisma.sessionTemplate.create({ data: t });
+      }
+
+      templates = await prisma.sessionTemplate.findMany({
+        orderBy: { updatedAt: 'desc' }
+      });
+    }
 
     const formatted = templates.map((t: SessionTemplate) => ({
         ...t,

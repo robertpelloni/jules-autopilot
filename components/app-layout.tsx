@@ -15,7 +15,7 @@ import {
 } from "@/components/ui/dialog";
 import { ResizableHandle, ResizablePanel, ResizablePanelGroup } from "@/components/ui/resizable";
 import { SessionKeeperManager } from "./session-keeper-manager";
-import { SessionKeeper } from "./SessionKeeper";
+import { SessionKeeper } from "@/components/SessionKeeper";
 import { useSessionKeeperStore } from "@/lib/stores/session-keeper";
 import { DebateDialog } from './debate-dialog';
 
@@ -62,6 +62,9 @@ export function AppLayout({ initialView }: AppLayoutProps) {
 
   // API Key Dialog State
   const [isApiKeyDialogOpen, setIsApiKeyDialogOpen] = useState(false);
+
+  // Search Dialog State
+  const [isSearchOpen, setIsSearchOpen] = useState(false);
 
   useEffect(() => {
     // Only update if the value actually changes to avoid unnecessary renders
@@ -226,7 +229,7 @@ export function AppLayout({ initialView }: AppLayoutProps) {
 
   return (
     <div className="flex h-screen flex-col bg-black max-w-full overflow-hidden">
-      <SearchCommandDialog />
+      <SearchCommandDialog open={isSearchOpen} onOpenChange={setIsSearchOpen} />
       <Dialog open={isApiKeyDialogOpen} onOpenChange={setIsApiKeyDialogOpen}>
         <DialogContent className="sm:max-w-md bg-zinc-950 border-white/10">
           <DialogHeader>
@@ -244,6 +247,7 @@ export function AppLayout({ initialView }: AppLayoutProps) {
       <AppHeader
         view={view}
         setView={setView as any}
+        onToggleSearch={() => setIsSearchOpen(true)}
         mobileMenuOpen={mobileMenuOpen}
         setMobileMenuOpen={setMobileMenuOpen}
         refreshKey={refreshKey}

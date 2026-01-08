@@ -73,7 +73,7 @@ export function SessionList({ onSelectSession, selectedSessionId, className }: S
             )}
           >
             <div className="flex justify-between items-start">
-               <span className="font-semibold text-sm text-zinc-200 line-clamp-1">{session.title || 'Untitled Session'}</span>
+               <span className="font-semibold text-xs text-zinc-200 line-clamp-1">{session.title || 'Untitled Session'}</span>
                {getStatusIcon(session.status)}
             </div>
             
