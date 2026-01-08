@@ -25,7 +25,7 @@ import { MainContent } from "./layout/main-content";
 import { SearchCommandDialog } from "./search-command-dialog";
 
 interface AppLayoutProps {
-  initialView?: "sessions" | "analytics" | "templates" | "kanban";
+  initialView?: "sessions" | "analytics" | "templates" | "kanban" | "debates" | "board" | "artifacts";
 }
 
 export function AppLayout({ initialView }: AppLayoutProps) {
@@ -35,7 +35,8 @@ export function AppLayout({ initialView }: AppLayoutProps) {
   const router = useRouter();
   const { isAvailable: terminalAvailable } = useTerminalAvailable();
   const [selectedSession, setSelectedSession] = useState<Session | null>(null);
-  const [view, setView] = useState<'sessions' | 'analytics' | 'templates' | 'kanban'>('sessions');
+  const [view, setView] = useState<'sessions' | 'analytics' | 'templates' | 'kanban' | 'debates' | 'board' | 'artifacts'>('sessions');
+
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [refreshKey, setRefreshKey] = useState(0);
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
@@ -246,7 +247,7 @@ export function AppLayout({ initialView }: AppLayoutProps) {
       
       <AppHeader
         view={view}
-        setView={setView as any}
+        setView={setView}
         onToggleSearch={() => setIsSearchOpen(true)}
         mobileMenuOpen={mobileMenuOpen}
         setMobileMenuOpen={setMobileMenuOpen}

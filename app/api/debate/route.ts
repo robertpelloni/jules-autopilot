@@ -48,7 +48,6 @@ export async function POST(req: NextRequest) {
             topic
         });
 
-        // Persist debate result
         try {
             await prisma.debate.create({
                 data: {
@@ -60,7 +59,6 @@ export async function POST(req: NextRequest) {
             });
         } catch (dbError) {
             console.error('Failed to persist debate:', dbError);
-            // Continue execution, don't fail the request if persistence fails
         }
 
         return NextResponse.json(result);

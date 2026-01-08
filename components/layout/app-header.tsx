@@ -29,7 +29,8 @@ import {
   FolderTree,
   Search,
   LayoutGrid,
-  Files
+  Files,
+  Scale
 } from "lucide-react";
 import { SessionList } from "@/components/session-list";
 import { NewSessionDialog } from "@/components/new-session-dialog";
@@ -40,8 +41,8 @@ import { Session } from "@/types/jules";
 import { useRouter } from "next/navigation";
 
 interface AppHeaderProps {
-  view: 'sessions' | 'analytics' | 'templates' | 'kanban' | 'board' | 'artifacts';
-  setView: (view: 'sessions' | 'analytics' | 'templates' | 'kanban' | 'board' | 'artifacts') => void;
+  view: 'sessions' | 'analytics' | 'templates' | 'kanban' | 'board' | 'artifacts' | 'debates';
+  setView: (view: 'sessions' | 'analytics' | 'templates' | 'kanban' | 'board' | 'artifacts' | 'debates') => void;
   onToggleSearch: () => void;
   mobileMenuOpen: boolean;
 
@@ -146,6 +147,15 @@ export function AppHeader({
                   <Button
                     variant="ghost"
                     size="sm"
+                    className={`w-full justify-start ${view === "debates" ? "bg-white/10 text-white" : "text-white/60"}`}
+                    onClick={() => { setView("debates"); setMobileMenuOpen(false); }}
+                  >
+                    <Scale className="h-4 w-4 mr-2" />
+                    Debates
+                  </Button>
+                  <Button
+                    variant="ghost"
+                    size="sm"
                     className={`w-full justify-start ${view === "kanban" ? "bg-white/10 text-white" : "text-white/60"}`}
                     onClick={() => { setView("kanban"); setMobileMenuOpen(false); }}
                   >
@@ -242,6 +252,20 @@ export function AppHeader({
             <BarChart3 className="h-3.5 w-3.5 mr-1.5" />
             <span className="text-[10px] font-mono uppercase tracking-wider hidden sm:inline">
               Analytics
+            </span>
+          </Button>
+
+          <Button
+            variant="ghost"
+            size="sm"
+            className={`h-8 px-3 hover:bg-white/5 ${
+              view === "debates" ? "text-white" : "text-white/60"
+            }`}
+            onClick={() => setView("debates")}
+          >
+            <Scale className="h-3.5 w-3.5 mr-1.5" />
+            <span className="text-[10px] font-mono uppercase tracking-wider hidden sm:inline">
+              Debates
             </span>
           </Button>
 

@@ -5,10 +5,11 @@ import { TemplatesPage } from "@/components/templates-page";
 import { KanbanBoard } from "@/components/kanban-board";
 import { ActivityFeed } from "@/components/activity-feed";
 import { CodeDiffSidebar } from "@/components/code-diff-sidebar";
+import { DebateHistoryList } from "@/components/debate-history-list";
 import { Session, Activity, SessionTemplate, Artifact } from "@/types/jules";
 
 interface MainContentProps {
-  view: 'sessions' | 'analytics' | 'templates' | 'kanban';
+  view: 'sessions' | 'analytics' | 'templates' | 'kanban' | 'debates' | 'board' | 'artifacts';
   selectedSession: Session | null;
   onSessionSelect: (session: Session) => void;
   onStartSessionFromTemplate: (template: SessionTemplate) => void;
@@ -55,6 +56,11 @@ export function MainContent({
           <TemplatesPage onStartSession={onStartSessionFromTemplate} />
         ) : view === "kanban" ? (
           <KanbanBoard onSelectSession={onSessionSelect} />
+        ) : view === "debates" ? (
+          <div className="p-6 h-full overflow-y-auto">
+            <h1 className="text-2xl font-bold text-white mb-6">Debate History</h1>
+            <DebateHistoryList />
+          </div>
         ) : selectedSession ? (
           <ActivityFeed
             key={selectedSession.id}
