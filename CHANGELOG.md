@@ -2,15 +2,17 @@
 
 All notable changes to this project will be documented in this file.
 
-## [0.6.2] - 2025-12-30
+## [0.7.1] - 2026-01-08
 
-### Fixed
--   **Broadcast System:** Fixed an issue where broadcast messages were restricted to only "active" sessions. Now broadcasts to all sessions (including failed/completed) to allow for mass-reactivation.
--   **Supervisor Logic:** Updated the supervisor prompt to explicitly handle "reactivation" instructions for stalled sessions.
--   **Submodule Documentation:** Created `docs/SUBMODULES.md` for a clear view of all external dependencies.
--   **Documentation:** Consolidated LLM instructions into `LLM_INSTRUCTIONS.md`.
+### Added
+-   **Dashboard:** Enhanced Submodule Dashboard to display git descriptions (tags) for better version tracking.
 
-## [0.6.2] - 2026-01-08
+### Changed
+-   **Submodules:** Updated all external submodules to their latest upstream versions.
+-   **Maintenance:** Merged all pending feature branches (`palette`, `kanban`, `mobile-layout`, `copilot`) into `main` and resolved conflicts.
+-   **Dependencies:** Regenerated `pnpm-lock.yaml` to resolve merge conflicts.
+
+## [0.7.0] - 2026-01-08
 
 ### Added
 - **Multi-Agent Debate:** Configurable providers (OpenAI, Anthropic, Gemini, Qwen) and models in Debate Dialog.

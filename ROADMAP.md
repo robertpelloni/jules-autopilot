@@ -46,7 +46,7 @@
 -   **Advanced Orchestration:**
     -   [x] Real implementations for `runCodeReview` using LLMs with structured output.
     -   [x] **Dynamic Multi-Agent Debate:** Configurable providers (OpenAI, Anthropic, Gemini, Qwen) and models.
-    -   [ ] **Debate Persistence:** Save full debate transcripts to database/memory.
+    -   [x] **Debate Persistence:** Save full debate transcripts to database/memory.
     -   [ ] **Debate "Spectator Mode":** Real-time streaming of debate thoughts to the UI.
 
 ## 🔮 Long Term (Vision)

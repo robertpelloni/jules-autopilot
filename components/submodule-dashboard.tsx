@@ -12,6 +12,7 @@ interface Submodule {
   commit: string;
   url: string;
   lastCommitDate?: string;
+  describe?: string;
   status?: string;
 }
 
@@ -61,6 +62,11 @@ export function SubmoduleDashboard() {
                   <Badge variant="outline" className="text-[10px] font-mono bg-white/5 border-white/10 text-white/60">
                     {submodule.branch}
                   </Badge>
+                  {submodule.describe && (
+                    <Badge variant="outline" className="text-[10px] font-mono bg-purple-500/10 border-purple-500/20 text-purple-400">
+                      {submodule.describe}
+                    </Badge>
+                  )}
                 </div>
               </div>
             </CardHeader>
