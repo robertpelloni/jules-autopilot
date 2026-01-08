@@ -7,6 +7,7 @@ import { Badge } from '@/components/ui/badge';
 import { Loader2, MessageSquare, Calendar } from 'lucide-react';
 import { format } from 'date-fns';
 import { DebateResult } from '@/lib/orchestration/types';
+import { DebateDetailsDialog } from './debate-details-dialog';
 
 interface StoredDebate {
     id: string;
@@ -18,6 +19,8 @@ interface StoredDebate {
 export function DebateHistoryList() {
     const [debates, setDebates] = useState<StoredDebate[]>([]);
     const [loading, setLoading] = useState(true);
+    const [selectedDebateId, setSelectedDebateId] = useState<string | null>(null);
+    const [detailsOpen, setDetailsOpen] = useState(false);
 
     useEffect(() => {
         const fetchDebates = async () => {
@@ -57,29 +60,44 @@ export function DebateHistoryList() {
     }
 
     return (
-        <ScrollArea className="h-[600px] w-full pr-4">
-            <div className="space-y-4">
-                {debates.map((debate) => (
-                    <Card key={debate.id} className="bg-zinc-900 border-zinc-800 hover:border-zinc-700 transition-colors">
-                        <CardHeader className="pb-2">
-                            <div className="flex justify-between items-start">
-                                <CardTitle className="text-lg font-medium text-zinc-100">
-                                    {debate.topic}
-                                </CardTitle>
-                                <Badge variant="outline" className="text-zinc-400 border-zinc-700">
-                                    <Calendar className="h-3 w-3 mr-1" />
-                                    {format(new Date(debate.createdAt), 'MMM d, h:mm a')}
-                                </Badge>
-                            </div>
-                        </CardHeader>
-                        <CardContent>
-                            <CardDescription className="text-zinc-400 line-clamp-3">
-                                {debate.summary || "No summary available."}
-                            </CardDescription>
-                        </CardContent>
-                    </Card>
-                ))}
-            </div>
-        </ScrollArea>
+        <>
+            <ScrollArea className="h-[600px] w-full pr-4">
+                <div className="space-y-4">
+                    {debates.map((debate) => (
+                        <Card 
+                            key={debate.id} 
+                            className="bg-zinc-900 border-zinc-800 hover:border-zinc-700 transition-all cursor-pointer hover:bg-zinc-800/50"
+                            onClick={() => {
+                                setSelectedDebateId(debate.id);
+                                setDetailsOpen(true);
+                            }}
+                        >
+                            <CardHeader className="pb-2">
+                                <div className="flex justify-between items-start">
+                                    <CardTitle className="text-lg font-medium text-zinc-100">
+                                        {debate.topic}
+                                    </CardTitle>
+                                    <Badge variant="outline" className="text-zinc-400 border-zinc-700">
+                                        <Calendar className="h-3 w-3 mr-1" />
+                                        {format(new Date(debate.createdAt), 'MMM d, h:mm a')}
+                                    </Badge>
+                                </div>
+                            </CardHeader>
+                            <CardContent>
+                                <CardDescription className="text-zinc-400 line-clamp-3">
+                                    {debate.summary || "No summary available."}
+                                </CardDescription>
+                            </CardContent>
+                        </Card>
+                    ))}
+                </div>
+            </ScrollArea>
+
+            <DebateDetailsDialog
+                debateId={selectedDebateId}
+                open={detailsOpen}
+                onOpenChange={setDetailsOpen}
+            />
+        </>
     );
 }
