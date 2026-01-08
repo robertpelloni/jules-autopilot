@@ -47,3 +47,14 @@ model KeeperLog {
   metadata  String?  // JSON
   createdAt DateTime @default(now())
 }
+
+model Debate {
+  id        String   @id @default(uuid())
+  topic     String
+  summary   String?
+  rounds    String   // JSON: DebateRound[]
+  history   String   // JSON: Message[]
+  metadata  String?  // JSON: Extra context
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}

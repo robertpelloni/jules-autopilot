@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { runDebate } from '@/lib/orchestration/debate';
 import { Participant } from '@/lib/orchestration/types';
+import { prisma } from '@/lib/prisma';
 
 export async function POST(req: NextRequest) {
     try {
@@ -46,6 +47,21 @@ export async function POST(req: NextRequest) {
             rounds: rounds || 1,
             topic
         });
+
+        // Persist debate result
+        try {
+            await prisma.debate.create({
+                data: {
+                    topic: result.topic || topic,
+                    summary: result.summary,
+                    rounds: JSON.stringify(result.rounds),
+                    history: JSON.stringify(result.history),
+                }
+            });
+        } catch (dbError) {
+            console.error('Failed to persist debate:', dbError);
+            // Continue execution, don't fail the request if persistence fails
+        }
 
         return NextResponse.json(result);
     } catch (error) {
