@@ -28,6 +28,4 @@
 [submodule "external/jules-system-prompt"]
 	path = external/jules-system-prompt
 	url = https://github.com/DiaAviLinden/Jules-system-prompt
-[submodule "submodules/jules-agent-sdk-python"]
-	path = submodules/jules-agent-sdk-python
-	url = https://github.com/AsyncFuncAI/jules-agent-sdk-python
+
