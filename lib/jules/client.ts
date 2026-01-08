@@ -440,7 +440,7 @@ export class JulesClient {
     }
   }
 
-  async listActivities(sessionId: string, limit: number = 50, offset: number = 0): Promise<Activity[]> {
+  async listActivities(sessionId: string, limit: number = 1000, offset: number = 0): Promise<Activity[]> {
     const endpoint = `/sessions/${sessionId}/activities?pageSize=${limit}&pageToken=${offset}`; // Using pagination parameters that align more with typical Google APIs, adjust if backend expects offset
     // Note: The backend seems to return { activities: [...] } or just [...] depending on endpoint. 
     // Assuming standard response wrapper
