@@ -1,3 +1,7 @@
+export const runtime = 'nodejs';
+export const dynamic = 'force-dynamic';
+export const maxDuration = 60;
+
 import { NextRequest, NextResponse } from 'next/server';
 import fs from 'fs/promises';
 import path from 'path';
@@ -6,12 +10,24 @@ export async function GET(req: NextRequest) {
   try {
     const { searchParams } = new URL(req.url);
     const dir = searchParams.get('path') || '.';
+    
     const basePath = process.cwd();
     const fullPath = path.resolve(basePath, dir);
 
-    // Security check: ensure we don't break out of the project root
     if (!fullPath.startsWith(basePath)) {
         return NextResponse.json({ error: 'Access denied' }, { status: 403 });
+    }
+
+    if (process.env.VERCEL && dir === '.') {
+         return NextResponse.json({
+             files: [
+                 { name: 'app', isDirectory: true, path: 'app' },
+                 { name: 'components', isDirectory: true, path: 'components' },
+                 { name: 'lib', isDirectory: true, path: 'lib' },
+                 { name: 'public', isDirectory: true, path: 'public' },
+                 { name: 'prisma', isDirectory: true, path: 'prisma' },
+             ]
+         });
     }
 
     const entries = await fs.readdir(fullPath, { withFileTypes: true });
