@@ -1,11 +1,10 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { runDebate } from '@/lib/orchestration/debate';
-import { DebateConfig } from '@/lib/orchestration/types';
+import { Participant } from '@/lib/orchestration/types';
 
 export async function POST(req: NextRequest) {
     try {
         const body = await req.json();
-        // body should match DebateConfig + history
         const { topic, rounds, participants, history } = body;
 
         if (!topic || !participants || participants.length === 0) {
@@ -15,9 +14,35 @@ export async function POST(req: NextRequest) {
             );
         }
 
+        const enrichedParticipants = (participants as Participant[]).map((p) => {
+            let finalApiKey = p.apiKey;
+            
+            if (p.apiKey === 'env' || !p.apiKey) {
+                switch (p.provider) {
+                    case 'openai':
+                        finalApiKey = process.env.OPENAI_API_KEY;
+                        break;
+                    case 'anthropic':
+                        finalApiKey = process.env.ANTHROPIC_API_KEY;
+                        break;
+                    case 'gemini':
+                        finalApiKey = process.env.GEMINI_API_KEY || process.env.GOOGLE_API_KEY;
+                        break;
+                    case 'qwen':
+                        finalApiKey = process.env.QWEN_API_KEY;
+                        break;
+                }
+            }
+            
+            return {
+                ...p,
+                apiKey: finalApiKey
+            };
+        });
+
         const result = await runDebate({
             history: history || [],
-            participants,
+            participants: enrichedParticipants,
             rounds: rounds || 1,
             topic
         });

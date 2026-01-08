@@ -10,17 +10,16 @@ export const geminiProvider: ProviderInterface = {
   async complete(params: CompletionParams): Promise<CompletionResult> {
     const { messages, apiKey, model, systemPrompt } = params;
     let modelToUse = model || 'gemini-1.5-flash';
-    // Strip 'models/' prefix if user accidentally included it
+    
     if (modelToUse.startsWith('models/')) {
         modelToUse = modelToUse.replace('models/', '');
     }
     
-    // Use v1beta for newer models, but ensure model name is correct
     const url = `https://generativelanguage.googleapis.com/v1beta/models/${modelToUse}:generateContent?key=${apiKey}`;
 
     let response;
     let retries = 3;
-    let backoff = 2000; // Start with 2 seconds
+    let backoff = 2000;
 
     while (retries >= 0) {
       try {
@@ -31,10 +30,13 @@ export const geminiProvider: ProviderInterface = {
             systemInstruction: systemPrompt ? {
               parts: [{ text: systemPrompt }]
             } : undefined,
-            contents: messages.map((m) => ({
-              role: m.role === 'user' ? 'user' : 'model',
-              parts: [{ text: m.content }]
-            })),
+            contents: messages.map(m => {
+                const role = m.role === 'assistant' ? 'model' : 'user';
+                return {
+                    role,
+                    parts: [{ text: m.content }]
+                };
+            }),
             generationConfig: { 
                 maxOutputTokens: params.maxTokens || 300,
                 responseMimeType: params.jsonMode ? "application/json" : undefined 
@@ -43,7 +45,7 @@ export const geminiProvider: ProviderInterface = {
         });
 
         if (response.status === 429) {
-          if (retries === 0) break; // Let it fall through to error handling
+          if (retries === 0) break;
           console.warn(`Gemini API 429 (Rate Limit). Retrying in ${backoff}ms...`);
           await new Promise(resolve => setTimeout(resolve, backoff));
           retries--;
@@ -51,7 +53,7 @@ export const geminiProvider: ProviderInterface = {
           continue;
         }
 
-        break; // Not a 429, proceed
+        break;
       } catch (err) {
         if (retries === 0) throw err;
         console.warn(`Gemini API Network Error. Retrying in ${backoff}ms...`, err);

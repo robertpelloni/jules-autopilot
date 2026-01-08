@@ -16,10 +16,12 @@ export const anthropicProvider: ProviderInterface = {
         body: JSON.stringify({
           model: modelToUse,
           system: systemPrompt,
-          messages: messages.map((m) => ({
-            role: m.role === 'user' ? 'user' : 'assistant',
-            content: m.content
-          })),
+          messages: messages.map(m => {
+            // Anthropic strictly requires 'user' or 'assistant' roles.
+            // We map 'system' (e.g. moderator messages) to 'user' to preserve context.
+            const role = m.role === 'assistant' ? 'assistant' : 'user';
+            return { role, content: m.content };
+          }),
           max_tokens: params.maxTokens || 300,
         }),
       });

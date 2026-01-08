@@ -7,51 +7,56 @@ export const qwenProvider: ProviderInterface = {
   async complete(params: CompletionParams): Promise<CompletionResult> {
     const { messages, apiKey, model = 'qwen-turbo', systemPrompt } = params;
 
-    // Construct messages array for Qwen
-    const qwenMessages = [
-        { role: 'system', content: systemPrompt || 'You are a helpful assistant.' },
-        ...messages
-    ];
+    const qwenMessages = messages.map(m => {
+        let role = m.role;
+        if (role !== 'user' && role !== 'system' && role !== 'assistant') {
+            role = 'assistant';
+        }
+        
+        const msg: any = { role, content: m.content };
+        
+        if (m.name) {
+             const sanitized = m.name.replace(/[^a-zA-Z0-9_-]/g, '_');
+             if (sanitized) msg.name = sanitized;
+        }
+        return msg;
+    });
 
-    const response = await fetch(QWEN_ENDPOINT, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${apiKey}`,
-          'X-DashScope-SSE': 'disable'
+    if (systemPrompt) {
+        qwenMessages.unshift({ role: 'system', content: systemPrompt });
+    } else if (!qwenMessages.some(m => m.role === 'system')) {
+        qwenMessages.unshift({ role: 'system', content: 'You are a helpful assistant.' });
+    }
+
+    const response = await fetch('https://dashscope.aliyuncs.com/api/v1/services/aigc/text-generation/generation', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${apiKey}`
+      },
+      body: JSON.stringify({
+        model: model,
+        input: {
+          messages: qwenMessages
         },
-        body: JSON.stringify({
-            model: model,
-            input: {
-                messages: qwenMessages
-            },
-            parameters: {
-                max_tokens: 300,
-                result_format: 'message'
-            }
-        })
-      });
+        parameters: {
+            // result_format: 'message' is often needed for chat-like output structure from Qwen (Necessary API config)
+            result_format: 'message', 
+            max_tokens: params.maxTokens
+        }
+      })
+    });
 
-      if (!response.ok) {
-         const err = await response.json().catch(() => ({}));
-         throw new Error(`Qwen API Error: ${response.status} - ${err.message || response.statusText}`);
-      }
+    if (!response.ok) {
+      const error = await response.json().catch(() => ({}));
+      throw new Error(`Qwen API error: ${error.message || response.statusText}`);
+    }
 
-      const data = await response.json();
-      if (data.code) {
-          throw new Error(`Qwen API Error: ${data.code} - ${data.message}`);
-      }
-
-      return { content: data.output.choices?.[0]?.message?.content || '' };
+    const data = await response.json();
+    return { content: data.output?.choices?.[0]?.message?.content || data.output?.text || '' };
   },
 
-  async listModels(apiKey: string): Promise<string[]> {
-      return [
-        'qwen-turbo',
-        'qwen-plus',
-        'qwen-max',
-        'qwen-max-longcontext',
-        'qwen-coder-plus'
-      ];
+  async listModels(apiKey?: string): Promise<string[]> {
+      return ['qwen-turbo', 'qwen-plus', 'qwen-max'];
   }
 };

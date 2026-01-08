@@ -35,12 +35,12 @@ describe('Debate Orchestration', () => {
         topic: 'Test Topic'
       });
 
-      // 2 participants * 1 round = 2 calls
-      expect(mockProvider.complete).toHaveBeenCalledTimes(2);
+      // 2 participants * 1 round + 1 summary = 3 calls
+      expect(mockProvider.complete).toHaveBeenCalledTimes(3);
       
-      // Moderator summary
-      expect(generateText).toHaveBeenCalledTimes(1);
-      expect(result.summary).toBe('Summary');
+      // Moderator summary uses provider.complete directly
+      expect(generateText).not.toHaveBeenCalled();
+      expect(result.summary).toBe('Argument');
       expect(result.rounds).toHaveLength(1);
       expect(result.rounds[0].turns).toHaveLength(2);
     });
@@ -81,7 +81,8 @@ describe('Debate Orchestration', () => {
         participants: mockParticipants as any,
       });
 
-      expect(mockProvider.complete).toHaveBeenCalledTimes(2);
+      // 2 participants + 1 summary = 3 calls
+      expect(mockProvider.complete).toHaveBeenCalledTimes(3);
       expect(result.rounds).toHaveLength(1);
     });
   });

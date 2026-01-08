@@ -6,10 +6,21 @@ export const openaiProvider: ProviderInterface = {
     const { messages, apiKey, model, systemPrompt } = params;
     const modelToUse = model || 'gpt-4o';
 
-    const msgs = messages.map(m => ({
-        role: m.role === 'user' ? 'user' : 'assistant',
-        content: m.content
-    }));
+    const msgs = messages.map(m => {
+        let role = m.role;
+        if (role !== 'user' && role !== 'system' && role !== 'assistant') {
+            role = 'assistant';
+        }
+
+        const msg: any = { role, content: m.content };
+        
+        if (m.name) {
+            const sanitized = m.name.replace(/[^a-zA-Z0-9_-]/g, '_');
+            if (sanitized) msg.name = sanitized;
+        }
+        
+        return msg;
+    });
 
     if (systemPrompt) {
         msgs.unshift({ role: 'system', content: systemPrompt });

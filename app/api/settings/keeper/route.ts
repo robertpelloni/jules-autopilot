@@ -5,9 +5,9 @@ import { SessionKeeperConfig } from '@/types/jules';
 const DEFAULT_SETTINGS: SessionKeeperConfig = {
   isEnabled: false,
   autoSwitch: false,
-  checkIntervalSeconds: 60,
-  inactivityThresholdMinutes: 10,
-  activeWorkThresholdMinutes: 5,
+  checkIntervalSeconds: 30,
+  inactivityThresholdMinutes: 1,
+  activeWorkThresholdMinutes: 30,
   messages: [],
   customMessages: {},
   smartPilotEnabled: false,

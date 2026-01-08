@@ -34,6 +34,31 @@ describe('Anthropic Provider', () => {
       expect(result.content).toBe('Hello');
     });
 
+    it('should map system role in messages to user role', async () => {
+        const mockResponse = { content: [{ text: 'Hello' }] };
+        (global.fetch as jest.Mock).mockResolvedValue({
+            ok: true,
+            json: async () => mockResponse,
+        });
+
+        await anthropicProvider.complete({
+            messages: [
+                { role: 'user', content: 'User msg' },
+                { role: 'system', content: 'Intermediate system msg' },
+                { role: 'assistant', content: 'Assistant msg' }
+            ],
+            apiKey: 'key',
+            model: 'claude-3-5',
+        });
+
+        expect(global.fetch).toHaveBeenCalledWith(
+            expect.any(String),
+            expect.objectContaining({
+                body: expect.stringMatching(/"role":"user","content":"Intermediate system msg"/)
+            })
+        );
+    });
+
     it('should throw error on API failure', async () => {
       (global.fetch as jest.Mock).mockResolvedValue({
         ok: false,

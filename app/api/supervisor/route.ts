@@ -36,11 +36,35 @@ export async function POST(req: Request) {
         if (!participants || !Array.isArray(participants)) {
             return NextResponse.json({ error: 'Invalid participants' }, { status: 400 });
         }
-        // Inject API Key into participants if missing (since runDebate uses them)
-        const enrichedParticipants = participants.map((p: any) => ({
-            ...p,
-            apiKey: p.apiKey === 'placeholder' || !p.apiKey ? apiKey : p.apiKey
-        }));
+        const enrichedParticipants = participants.map((p: any) => {
+            let finalApiKey = p.apiKey;
+            
+            if (finalApiKey === 'env' || finalApiKey === 'placeholder' || !finalApiKey) {
+                switch (p.provider) {
+                    case 'openai':
+                        finalApiKey = process.env.OPENAI_API_KEY;
+                        break;
+                    case 'anthropic':
+                        finalApiKey = process.env.ANTHROPIC_API_KEY;
+                        break;
+                    case 'gemini':
+                        finalApiKey = process.env.GEMINI_API_KEY || process.env.GOOGLE_API_KEY;
+                        break;
+                    case 'qwen':
+                        finalApiKey = process.env.QWEN_API_KEY;
+                        break;
+                }
+            }
+            
+            if (!finalApiKey && (p.provider === 'openai' || !p.provider)) {
+                 finalApiKey = apiKey;
+            }
+
+            return {
+                ...p,
+                apiKey: finalApiKey || apiKey
+            };
+        });
 
         try {
             const result = await runDebate({ history: messages, participants: enrichedParticipants, topic });

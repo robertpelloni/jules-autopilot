@@ -47,6 +47,7 @@ export function SessionKeeperManager() {
     }
 
     if (!config.isEnabled || !client) {
+      if (config.isEnabled && !client) console.warn('[SessionKeeper] Enabled but no client available');
       setStatusSummary({
         monitoringCount: 0,
         lastAction: 'Disabled',
@@ -380,8 +381,8 @@ This session has been handed off to ${newSession.id}. Marking as completed.`,
                }
             }
 
-            safeSwitch(session.id);
-               if (diffMinutes > threshold) {
+            if (diffMinutes > threshold) {
+              safeSwitch(session.id);
               const messageToSend = await generateMessage(session);
               if (!messageToSend) {
                   addLog(`Skipped ${session.id.substring(0, 8)}: No messages configured`, 'skip');
@@ -396,6 +397,8 @@ This session has been handed off to ${newSession.id}. Marking as completed.`,
               });
               addLog(`Nudge sent`, 'action');
               incrementStat('totalNudges');
+            } else if (diffMinutes > threshold * 0.8) {
+               addLog(`Monitoring ${session.id.substring(0, 8)}: ${diffMinutes.toFixed(1)}m/${threshold}m inactive`, 'info');
             }
           } catch (err: unknown) {
             const error = err as { message?: string; status?: number };
