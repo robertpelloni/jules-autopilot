@@ -28,26 +28,32 @@
 - [x] **Council Debate Visualization**: Visualizing the multi-agent debate process in the UI.
 - [x] **GitHub Issue Integration**: Integration with GitHub Issues for new sessions.
 
-## Phase 4: Production Readiness (In Progress)
+## Phase 4: Production Readiness (Completed)
 - [x] **Secure Authentication:** Replace client-side API Key storage with HTTP-only cookies and Middleware.
 - [x] **Docker Optimization:** Multi-stage builds and smaller images.
 - [x] **CI/CD Pipeline:** Automated testing and build checks.
 - [x] **E2E Testing:** Comprehensive Playwright suite.
+- [x] **Hierarchical Documentation:** Structured AGENTS.md and centralized knowledge base.
+- [x] **Versioning System:** Single source of truth (VERSION.md) and strict changelog management.
+- [x] **Submodule Dashboard:** Real-time tracking of submodule versions and git status.
 
 ## Phase 5: Future
 - [ ] **User Accounts:** OAuth integration (Google/GitHub).
-- [x] **Persistent Database:** Move from in-memory/localStorage to Postgres/SQLite.
 - [ ] **Plugin System:** Allow custom tools for the agent.
+- [ ] **Advanced Analytics:** Token usage tracking and cost estimation per session.
 
-## 📅 Short Term (v0.8.x)
+## 📅 Short Term (v0.7.x - v0.8.x)
 -   **Advanced Orchestration:**
     -   [x] Real implementations for `runCodeReview` using LLMs with structured output.
-    -   [ ] Fully functional multi-agent debate loop with real providers (Refining logic).
+    -   [x] **Dynamic Multi-Agent Debate:** Configurable providers (OpenAI, Anthropic, Gemini, Qwen) and models.
+    -   [ ] **Debate Persistence:** Save full debate transcripts to database/memory.
+    -   [ ] **Debate "Spectator Mode":** Real-time streaming of debate thoughts to the UI.
 
 ## 🔮 Long Term (Vision)
 -   **Jules Autonomous:**
     -   Self-hosting capability.
     -   Full repository management (auto-PR, auto-merge).
+
 
 ## 🛠️ Infrastructure
 -   **CI/CD:** Automated testing pipeline for all submodules.

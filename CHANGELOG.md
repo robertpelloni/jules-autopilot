@@ -10,6 +10,17 @@ All notable changes to this project will be documented in this file.
 -   **Submodule Documentation:** Created `docs/SUBMODULES.md` for a clear view of all external dependencies.
 -   **Documentation:** Consolidated LLM instructions into `LLM_INSTRUCTIONS.md`.
 
+## [0.6.2] - 2026-01-08
+
+### Added
+- **Multi-Agent Debate:** Configurable providers (OpenAI, Anthropic, Gemini, Qwen) and models in Debate Dialog.
+- **Documentation:** Hierarchical `AGENTS.md` structure (Root, components, lib, external) for better context.
+- **Submodules:** Sync and cleanup of external submodules; removed invalid `jules-agent-sdk-python` entry.
+
+### Changed
+- **Versioning:** Centralized version number in `VERSION.md`.
+- **Git:** Merged upstream feature branches (`palette/api-key-ux`, `ui-mobile-responsive-layout`, `feat/issue-31-kanban-board`).
+
 ## [0.6.1] - 2025-12-30
 
 ### Fixed
