@@ -67,3 +67,14 @@ export interface DebateResult {
   history: Message[];
   metadata?: any;
 }
+
+export type DebateProgressEvent = 
+  | { type: 'start'; topic?: string; rounds: number }
+  | { type: 'round_start'; roundNumber: number }
+  | { type: 'turn_start'; participantId: string; participantName: string; role: string }
+  | { type: 'turn_complete'; participantId: string; content: string }
+  | { type: 'round_complete'; roundNumber: number; turns: DebateTurn[] }
+  | { type: 'summary_start' }
+  | { type: 'summary_complete'; summary: string }
+  | { type: 'complete'; result: DebateResult }
+  | { type: 'error'; error: string };

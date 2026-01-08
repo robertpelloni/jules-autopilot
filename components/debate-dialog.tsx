@@ -13,6 +13,7 @@ import {
 } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { Textarea } from '@/components/ui/textarea';
 import {
   Select,
   SelectContent,
@@ -20,11 +21,13 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import { Loader2 } from 'lucide-react';
+import { Loader2, Plus, Trash2, AlertCircle } from 'lucide-react';
 import { useJules } from '@/lib/jules/provider';
 import { toast } from 'sonner';
+import { ScrollArea } from '@/components/ui/scroll-area';
+import { Card, CardContent } from '@/components/ui/card';
 
-import { Message } from '@/lib/orchestration/types';
+import { Message, Participant } from '@/lib/orchestration/types';
 
 interface DebateDialogProps {
   sessionId?: string;
@@ -35,6 +38,12 @@ interface DebateDialogProps {
   initialTopic?: string;
   initialContext?: string;
   initialHistory?: Message[];
+}
+
+// UI-specific extension of Participant to handle key retrieval
+interface UIParticipant extends Participant {
+  apiKeyKey: string;
+  envFallback: string;
 }
 
 const PROVIDER_OPTIONS: Record<string, {
@@ -69,6 +78,8 @@ const PROVIDER_OPTIONS: Record<string, {
   }
 };
 
+const DEFAULT_SYSTEM_PROMPT = "You are a helpful assistant participating in a debate.";
+
 export function DebateDialog({ 
   sessionId, 
   trigger, 
@@ -88,7 +99,7 @@ export function DebateDialog({
   const open = isControlled ? controlledOpen : internalOpen;
   const setOpen = isControlled ? setControlledOpen : setInternalOpen;
   
-  const [participants, setParticipants] = useState([
+  const [participants, setParticipants] = useState<UIParticipant[]>([
     {
       id: 'proposer',
       name: 'Architect',
@@ -117,8 +128,48 @@ export function DebateDialog({
     }
   }, [open]);
 
+  const addParticipant = () => {
+    const newId = `participant-${Date.now()}`;
+    setParticipants([...participants, {
+      id: newId,
+      name: 'New Agent',
+      role: 'Observer',
+      provider: 'openai',
+      model: 'gpt-4o',
+      apiKeyKey: 'openai_api_key',
+      envFallback: 'NEXT_PUBLIC_OPENAI_KEY',
+      systemPrompt: DEFAULT_SYSTEM_PROMPT
+    }]);
+  };
+
+  const removeParticipant = (index: number) => {
+    if (participants.length <= 1) {
+      toast.error("At least one participant is required.");
+      return;
+    }
+    const newP = [...participants];
+    newP.splice(index, 1);
+    setParticipants(newP);
+  };
+
+  const updateParticipant = (index: number, updates: Partial<UIParticipant>) => {
+    const newP = [...participants];
+    newP[index] = { ...newP[index], ...updates };
+    setParticipants(newP);
+  };
+
   const handleStartDebate = async () => {
     if (!client) return;
+    
+    // Validation
+    if (!topic.trim()) {
+      setErrorDetail("Topic is required.");
+      return;
+    }
+    if (participants.length < 2) {
+      setErrorDetail("At least two participants are recommended for a debate.");
+      // We allow 1 for testing but warn
+    }
 
     try {
       setLoading(true);
@@ -199,9 +250,17 @@ export function DebateDialog({
         try {
             const errorJson = JSON.parse(errorText);
             errorMessage = errorJson.error || errorText;
-        } catch (_) {
-            
+        } catch (_) { /* ignore */ }
+        
+        // Enhance error message based on status code
+        if (response.status === 401) {
+            errorMessage = `Authentication failed: ${errorMessage}`;
+        } else if (response.status === 429) {
+            errorMessage = `Rate limit exceeded: ${errorMessage}`;
+        } else if (response.status === 504) {
+            errorMessage = `Gateway Timeout: The debate took too long to complete.`;
         }
+
         throw new Error(errorMessage);
       }
 
@@ -235,103 +294,148 @@ export function DebateDialog({
       <DialogTrigger asChild>
         {trigger}
       </DialogTrigger>
-      <DialogContent className="sm:max-w-[600px] bg-zinc-950 border-zinc-800 text-white">
-        <DialogHeader>
+      <DialogContent className="sm:max-w-[700px] h-[80vh] flex flex-col bg-zinc-950 border-zinc-800 text-white p-0 gap-0">
+        <DialogHeader className="p-6 pb-4 border-b border-zinc-800">
           <DialogTitle>Start Multi-Agent Debate</DialogTitle>
           <DialogDescription>
-            Launch a debate between an Architect and a Security Engineer about the current session.
+            Configure participants and topic for the debate session.
           </DialogDescription>
         </DialogHeader>
         
-        {errorDetail && (
-            <div className="bg-red-900/30 border border-red-800 text-red-200 p-3 rounded text-sm mb-4">
-                <strong>Error:</strong> {errorDetail}
-            </div>
-        )}
-
-        <div className="grid gap-4 py-4">
-          <div className="grid grid-cols-4 items-center gap-4">
-            <Label htmlFor="topic" className="text-right">
-              Topic
-            </Label>
-            <Input
-              id="topic"
-              value={topic}
-              onChange={(e) => setTopic(e.target.value)}
-              placeholder="e.g. Auth Implementation"
-              className="col-span-3 bg-zinc-900 border-zinc-700"
-            />
-          </div>
-          
-          <div className="border-t border-zinc-800 pt-4 mt-2">
-            <h4 className="text-sm font-medium mb-3 text-zinc-400">Participants</h4>
-            {participants.map((p, idx) => (
-                <div key={p.id} className="grid grid-cols-4 items-center gap-4 mb-2 text-sm">
-                    <Label className="text-right text-xs">{p.role}</Label>
-                    <div className="col-span-3 flex gap-2">
-                         <Input 
-                            value={p.name} 
-                            onChange={(e) => {
-                                const newParticipants = [...participants];
-                                newParticipants[idx].name = e.target.value;
-                                setParticipants(newParticipants);
-                            }}
-                            className="h-8 bg-zinc-900 border-zinc-700 w-[30%]"
-                            placeholder="Name"
-                         />
-                         
-                         <Select
-                            value={p.provider}
-                            onValueChange={(val) => {
-                                const newParticipants = [...participants];
-                                const config = PROVIDER_OPTIONS[val];
-                                if (config) {
-                                    newParticipants[idx] = {
-                                        ...newParticipants[idx],
-                                        provider: val,
-                                        model: config.models[0],
-                                        apiKeyKey: config.apiKeyKey,
-                                        envFallback: config.envFallback
-                                    };
-                                    setParticipants(newParticipants);
-                                }
-                            }}
-                         >
-                            <SelectTrigger className="h-8 bg-zinc-900 border-zinc-700 w-[30%] text-xs">
-                                <SelectValue placeholder="Provider" />
-                            </SelectTrigger>
-                            <SelectContent className="bg-zinc-900 border-zinc-800 text-zinc-300">
-                                {Object.entries(PROVIDER_OPTIONS).map(([key, config]) => (
-                                    <SelectItem key={key} value={key} className="focus:bg-zinc-800 focus:text-zinc-100">{config.label}</SelectItem>
-                                ))}
-                            </SelectContent>
-                         </Select>
-
-                         <Select
-                            value={p.model}
-                            onValueChange={(val) => {
-                                const newParticipants = [...participants];
-                                newParticipants[idx].model = val;
-                                setParticipants(newParticipants);
-                            }}
-                         >
-                            <SelectTrigger className="h-8 bg-zinc-900 border-zinc-700 w-[40%] text-xs">
-                                <SelectValue placeholder="Model" />
-                            </SelectTrigger>
-                            <SelectContent className="bg-zinc-900 border-zinc-800 text-zinc-300">
-                                {PROVIDER_OPTIONS[p.provider]?.models.map((m) => (
-                                    <SelectItem key={m} value={m} className="focus:bg-zinc-800 focus:text-zinc-100">{m}</SelectItem>
-                                ))}
-                            </SelectContent>
-                         </Select>
-                    </div>
+        <ScrollArea className="flex-1 p-6">
+            {errorDetail && (
+                <div className="bg-red-900/30 border border-red-800 text-red-200 p-3 rounded text-sm mb-6 flex items-start gap-2">
+                    <AlertCircle className="h-4 w-4 mt-0.5 shrink-0" />
+                    <span>{errorDetail}</span>
                 </div>
-            ))}
-          </div>
+            )}
 
-        </div>
-        <DialogFooter>
-          <Button type="submit" onClick={handleStartDebate} disabled={loading} className="bg-purple-600 hover:bg-purple-500">
+            <div className="grid gap-6">
+              <div className="grid gap-2">
+                <Label htmlFor="topic">Debate Topic</Label>
+                <Input
+                  id="topic"
+                  value={topic}
+                  onChange={(e) => setTopic(e.target.value)}
+                  placeholder="e.g. Auth Implementation Trade-offs"
+                  className="bg-zinc-900 border-zinc-700"
+                />
+              </div>
+              
+              <div className="space-y-4">
+                <div className="flex items-center justify-between">
+                    <Label>Participants ({participants.length})</Label>
+                    <Button onClick={addParticipant} variant="outline" size="sm" className="h-7 text-xs border-dashed border-zinc-600 hover:border-zinc-500">
+                        <Plus className="h-3 w-3 mr-1" /> Add Agent
+                    </Button>
+                </div>
+                
+                <div className="space-y-3">
+                    {participants.map((p, idx) => (
+                        <Card key={p.id} className="bg-zinc-900/50 border-zinc-800">
+                            <CardContent className="p-3 space-y-3">
+                                <div className="flex gap-2 items-start">
+                                    <div className="grid gap-3 flex-1">
+                                        <div className="grid grid-cols-2 gap-3">
+                                            <div className="space-y-1">
+                                                <Label className="text-xs text-zinc-500">Role</Label>
+                                                <Input 
+                                                    value={p.role} 
+                                                    onChange={(e) => updateParticipant(idx, { role: e.target.value })}
+                                                    className="h-8 bg-zinc-950 border-zinc-700 text-xs"
+                                                    placeholder="Role (e.g. Architect)"
+                                                />
+                                            </div>
+                                            <div className="space-y-1">
+                                                <Label className="text-xs text-zinc-500">Name</Label>
+                                                <Input 
+                                                    value={p.name} 
+                                                    onChange={(e) => updateParticipant(idx, { name: e.target.value })}
+                                                    className="h-8 bg-zinc-950 border-zinc-700 text-xs"
+                                                    placeholder="Name"
+                                                />
+                                            </div>
+                                        </div>
+                                        
+                                        <div className="grid grid-cols-2 gap-3">
+                                            <div className="space-y-1">
+                                                <Label className="text-xs text-zinc-500">Provider</Label>
+                                                <Select
+                                                    value={p.provider}
+                                                    onValueChange={(val) => {
+                                                        const config = PROVIDER_OPTIONS[val];
+                                                        if (config) {
+                                                            updateParticipant(idx, {
+                                                                provider: val as any,
+                                                                model: config.models[0],
+                                                                apiKeyKey: config.apiKeyKey,
+                                                                envFallback: config.envFallback
+                                                            });
+                                                        }
+                                                    }}
+                                                >
+                                                    <SelectTrigger className="h-8 bg-zinc-950 border-zinc-700 text-xs">
+                                                        <SelectValue placeholder="Provider" />
+                                                    </SelectTrigger>
+                                                    <SelectContent className="bg-zinc-900 border-zinc-800">
+                                                        {Object.entries(PROVIDER_OPTIONS).map(([key, config]) => (
+                                                            <SelectItem key={key} value={key}>{config.label}</SelectItem>
+                                                        ))}
+                                                    </SelectContent>
+                                                </Select>
+                                            </div>
+                                            <div className="space-y-1">
+                                                <Label className="text-xs text-zinc-500">Model</Label>
+                                                 <Select
+                                                    value={p.model}
+                                                    onValueChange={(val) => updateParticipant(idx, { model: val })}
+                                                >
+                                                    <SelectTrigger className="h-8 bg-zinc-950 border-zinc-700 text-xs">
+                                                        <SelectValue placeholder="Model" />
+                                                    </SelectTrigger>
+                                                    <SelectContent className="bg-zinc-900 border-zinc-800">
+                                                        {PROVIDER_OPTIONS[p.provider]?.models.map((m) => (
+                                                            <SelectItem key={m} value={m}>{m}</SelectItem>
+                                                        ))}
+                                                    </SelectContent>
+                                                </Select>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    
+                                    <Button 
+                                        variant="ghost" 
+                                        size="icon" 
+                                        onClick={() => removeParticipant(idx)}
+                                        className="h-8 w-8 text-zinc-500 hover:text-red-400 hover:bg-zinc-800/50 mt-6"
+                                        disabled={participants.length <= 1}
+                                    >
+                                        <Trash2 className="h-4 w-4" />
+                                    </Button>
+                                </div>
+                                
+                                <div className="space-y-1">
+                                    <Label className="text-xs text-zinc-500">System Prompt</Label>
+                                    <Textarea 
+                                        value={p.systemPrompt}
+                                        onChange={(e) => updateParticipant(idx, { systemPrompt: e.target.value })}
+                                        className="min-h-[60px] bg-zinc-950 border-zinc-700 text-xs font-mono"
+                                        placeholder="Instructions for this agent..."
+                                    />
+                                </div>
+                            </CardContent>
+                        </Card>
+                    ))}
+                </div>
+              </div>
+            </div>
+        </ScrollArea>
+        
+        <DialogFooter className="p-6 pt-4 border-t border-zinc-800 bg-zinc-950">
+          <Button variant="outline" onClick={() => setOpen(false)} disabled={loading} className="border-zinc-700 hover:bg-zinc-900 text-zinc-300">
+            Cancel
+          </Button>
+          <Button type="submit" onClick={handleStartDebate} disabled={loading} className="bg-purple-600 hover:bg-purple-500 text-white">
             {loading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
             {loading ? 'Debating...' : 'Start Debate'}
           </Button>

@@ -1,24 +1,29 @@
-import { Message, Participant, DebateResult, DebateRound, DebateTurn } from './types';
+import { Message, Participant, DebateResult, DebateRound, DebateTurn, DebateProgressEvent } from './types';
 import { getProvider, generateText } from './providers';
 
-export async function runDebate({ history, participants, rounds = 1, topic }: {
+export async function runDebate({ history, participants, rounds = 1, topic, onProgress }: {
     history: Message[];
     participants: Participant[];
     rounds?: number;
     topic?: string;
+    onProgress?: (event: DebateProgressEvent) => void;
 }): Promise<DebateResult> {
 
     const currentHistory = [...history];
     const debateRounds: DebateRound[] = [];
     
+    onProgress?.({ type: 'start', topic, rounds });
+
     // We need a default API key/provider for the moderator/summarizer if not explicitly provided
     // We'll use the first participant's credentials as a fallback for the moderator
     const primaryParticipant = participants[0];
 
     for (let i = 0; i < rounds; i++) {
+        onProgress?.({ type: 'round_start', roundNumber: i + 1 });
         const turns: DebateTurn[] = [];
 
         for (const p of participants) {
+            onProgress?.({ type: 'turn_start', participantId: p.id, participantName: p.name, role: p.role });
             const provider = getProvider(p.provider);
             if (!provider) {
                 console.warn(`Provider ${p.provider} not found for participant ${p.name}`);
@@ -65,16 +70,20 @@ export async function runDebate({ history, participants, rounds = 1, topic }: {
                     content,
                     timestamp: new Date().toISOString()
                 });
+                
+                onProgress?.({ type: 'turn_complete', participantId: p.id, content });
 
             } catch (err) {
                 console.error(`Error processing turn for ${p.name}:`, err);
+                const errorContent = `[Error: ${err instanceof Error ? err.message : 'Unknown error'}]`;
                 turns.push({
                     participantId: p.id,
                     participantName: p.name,
                     role: p.role,
-                    content: `[Error: ${err instanceof Error ? err.message : 'Unknown error'}]`,
+                    content: errorContent,
                     timestamp: new Date().toISOString()
                 });
+                onProgress?.({ type: 'turn_complete', participantId: p.id, content: errorContent });
             }
         }
 
@@ -82,9 +91,12 @@ export async function runDebate({ history, participants, rounds = 1, topic }: {
             roundNumber: i + 1,
             turns
         });
+        
+        onProgress?.({ type: 'round_complete', roundNumber: i + 1, turns });
     }
 
     // --- Consensus / Summary Phase ---
+    onProgress?.({ type: 'summary_start' });
     let summary = `Debate completed (${rounds} round${rounds > 1 ? 's' : ''}).`;
     
     // Use the primary participant for summary, but check if we have a valid provider first.
@@ -129,18 +141,25 @@ export async function runDebate({ history, participants, rounds = 1, topic }: {
             summary += " (Auto-summary generation failed)";
         }
     }
+    
+    onProgress?.({ type: 'summary_complete', summary });
 
-    return {
+    const result: DebateResult = {
         topic,
         rounds: debateRounds,
         summary,
         history: currentHistory
     };
+    
+    onProgress?.({ type: 'complete', result });
+
+    return result;
 }
 
-export async function runConference({ history, participants }: {
+export async function runConference({ history, participants, onProgress }: {
     history: Message[];
     participants: Participant[];
+    onProgress?: (event: DebateProgressEvent) => void;
 }): Promise<DebateResult> {
     // A conference is essentially a single-round debate/discussion
     // where each participant weighs in on the current state.
@@ -149,6 +168,8 @@ export async function runConference({ history, participants }: {
         history,
         participants,
         rounds: 1,
-        topic: "Team Conference"
+        topic: "Team Conference",
+        onProgress
     });
 }
+
