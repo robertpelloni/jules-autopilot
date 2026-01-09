@@ -4,6 +4,38 @@ import { runDebate, runConference } from '@/lib/orchestration/debate';
 import { runCodeReview } from '@/lib/orchestration/review';
 import { getSession } from '@/lib/session';
 
+function enrichParticipants(participants: any[], apiKey: string | undefined) {
+    return participants.map((p: any) => {
+        let finalApiKey = p.apiKey;
+        
+        if (finalApiKey === 'env' || finalApiKey === 'placeholder' || !finalApiKey) {
+            switch (p.provider) {
+                case 'openai':
+                    finalApiKey = process.env.OPENAI_API_KEY;
+                    break;
+                case 'anthropic':
+                    finalApiKey = process.env.ANTHROPIC_API_KEY;
+                    break;
+                case 'gemini':
+                    finalApiKey = process.env.GEMINI_API_KEY || process.env.GOOGLE_API_KEY;
+                    break;
+                case 'qwen':
+                    finalApiKey = process.env.QWEN_API_KEY;
+                    break;
+            }
+        }
+        
+        if (!finalApiKey && (p.provider === 'openai' || !p.provider)) {
+             finalApiKey = apiKey;
+        }
+
+        return {
+            ...p,
+            apiKey: finalApiKey || apiKey
+        };
+    });
+}
+
 export async function POST(req: Request) {
   try {
     const session = await getSession();
@@ -36,35 +68,7 @@ export async function POST(req: Request) {
         if (!participants || !Array.isArray(participants)) {
             return NextResponse.json({ error: 'Invalid participants' }, { status: 400 });
         }
-        const enrichedParticipants = participants.map((p: any) => {
-            let finalApiKey = p.apiKey;
-            
-            if (finalApiKey === 'env' || finalApiKey === 'placeholder' || !finalApiKey) {
-                switch (p.provider) {
-                    case 'openai':
-                        finalApiKey = process.env.OPENAI_API_KEY;
-                        break;
-                    case 'anthropic':
-                        finalApiKey = process.env.ANTHROPIC_API_KEY;
-                        break;
-                    case 'gemini':
-                        finalApiKey = process.env.GEMINI_API_KEY || process.env.GOOGLE_API_KEY;
-                        break;
-                    case 'qwen':
-                        finalApiKey = process.env.QWEN_API_KEY;
-                        break;
-                }
-            }
-            
-            if (!finalApiKey && (p.provider === 'openai' || !p.provider)) {
-                 finalApiKey = apiKey;
-            }
-
-            return {
-                ...p,
-                apiKey: finalApiKey || apiKey
-            };
-        });
+        const enrichedParticipants = enrichParticipants(participants, apiKey);
 
         try {
             const result = await runDebate({ history: messages, participants: enrichedParticipants, topic });
@@ -80,9 +84,10 @@ export async function POST(req: Request) {
         if (!participants || !Array.isArray(participants)) {
             return NextResponse.json({ error: 'Invalid participants' }, { status: 400 });
         }
+        const enrichedParticipants = enrichParticipants(participants, apiKey);
 
         try {
-            const result = await runConference({ history: messages, participants });
+            const result = await runConference({ history: messages, participants: enrichedParticipants });
             return NextResponse.json(result);
         } catch (e) {
             console.error("Conference Error", e);

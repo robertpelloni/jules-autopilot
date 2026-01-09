@@ -30,7 +30,7 @@ import { Card, CardContent } from '@/components/ui/card';
 import { Message, Participant, DebateResult } from '@/lib/orchestration/types';
 import { DebateViewer } from '@/components/debate-viewer';
 
-interface DebateDialogProps {
+export interface DebateDialogProps {
   sessionId?: string;
   trigger?: React.ReactNode;
   onDebateStart?: () => void;
@@ -39,9 +39,10 @@ interface DebateDialogProps {
   initialTopic?: string;
   initialContext?: string;
   initialHistory?: Message[];
+  initialParticipants?: UIParticipant[];
 }
 
-interface UIParticipant extends Participant {
+export interface UIParticipant extends Participant {
   apiKeyKey: string;
   envFallback: string;
 }
@@ -80,6 +81,29 @@ const PROVIDER_OPTIONS: Record<string, {
 
 const DEFAULT_SYSTEM_PROMPT = "You are a helpful assistant participating in a debate.";
 
+const DEFAULT_PARTICIPANTS: UIParticipant[] = [
+  {
+    id: 'proposer',
+    name: 'Architect',
+    role: 'Solution Architect',
+    provider: 'openai',
+    model: 'gpt-4o',
+    apiKeyKey: 'openai_api_key',
+    envFallback: 'NEXT_PUBLIC_OPENAI_KEY',
+    systemPrompt: `Analyze the current codebase and proposed changes. Propose a robust architectural solution. Focus on scalability and maintainability.`
+  },
+  {
+    id: 'critic',
+    name: 'Security Engineer',
+    role: 'Security Reviewer',
+    provider: 'anthropic',
+    model: 'claude-3-5-sonnet-20240620',
+    apiKeyKey: 'anthropic_api_key',
+    envFallback: 'NEXT_PUBLIC_ANTHROPIC_KEY',
+    systemPrompt: `Critique the proposed solution from a security perspective. Identify potential vulnerabilities and suggest mitigations.`
+  }
+];
+
 export function DebateDialog({ 
   sessionId, 
   trigger, 
@@ -87,7 +111,8 @@ export function DebateDialog({
   open: controlledOpen, 
   onOpenChange: setControlledOpen,
   initialTopic = '',
-  initialHistory
+  initialHistory,
+  initialParticipants
 }: DebateDialogProps) {
   const { client } = useJules();
   const [internalOpen, setInternalOpen] = useState(false);
@@ -100,28 +125,7 @@ export function DebateDialog({
   const open = isControlled ? controlledOpen : internalOpen;
   const setOpen = isControlled ? setControlledOpen : setInternalOpen;
   
-  const [participants, setParticipants] = useState<UIParticipant[]>([
-    {
-      id: 'proposer',
-      name: 'Architect',
-      role: 'Solution Architect',
-      provider: 'openai',
-      model: 'gpt-4o',
-      apiKeyKey: 'openai_api_key',
-      envFallback: 'NEXT_PUBLIC_OPENAI_KEY',
-      systemPrompt: `Analyze the current codebase and proposed changes. Propose a robust architectural solution. Focus on scalability and maintainability.`
-    },
-    {
-      id: 'critic',
-      name: 'Security Engineer',
-      role: 'Security Reviewer',
-      provider: 'anthropic',
-      model: 'claude-3-5-sonnet-20240620',
-      apiKeyKey: 'anthropic_api_key',
-      envFallback: 'NEXT_PUBLIC_ANTHROPIC_KEY',
-      systemPrompt: `Critique the proposed solution from a security perspective. Identify potential vulnerabilities and suggest mitigations.`
-    }
-  ]);
+  const [participants, setParticipants] = useState<UIParticipant[]>(initialParticipants || DEFAULT_PARTICIPANTS);
 
   useEffect(() => {
     if (open) {
@@ -248,13 +252,19 @@ export function DebateDialog({
         let errorMessage = errorText;
         try {
             const errorJson = JSON.parse(errorText);
-            errorMessage = errorJson.error || errorText;
+            errorMessage = errorJson.error || errorJson.message || errorText;
         } catch (_) { }
         
         if (response.status === 401) {
             errorMessage = `Authentication failed: ${errorMessage}`;
+        } else if (response.status === 403) {
+            errorMessage = `Permission denied: ${errorMessage}`;
+        } else if (response.status === 404) {
+             errorMessage = `Resource not found: ${errorMessage}`;
         } else if (response.status === 429) {
             errorMessage = `Rate limit exceeded: ${errorMessage}`;
+        } else if (response.status === 500) {
+            errorMessage = `Server error: ${errorMessage}`;
         } else if (response.status === 504) {
             errorMessage = `Gateway Timeout: The debate took too long to complete.`;
         }

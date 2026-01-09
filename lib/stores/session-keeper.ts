@@ -55,10 +55,12 @@ interface SessionKeeperState {
   sessionStates: Record<string, SessionState>;
   stats: SessionKeeperStats;
   isLoading: boolean;
+  isPausedAll: boolean;
+  lastForcedCheckAt: number;
 
   // Actions
   loadConfig: () => Promise<void>;
-  setConfig: (config: SessionKeeperConfig) => void; // Added back for compatibility
+  setConfig: (config: SessionKeeperConfig) => void;
   saveConfig: (config: SessionKeeperConfig) => Promise<void>;
 
   loadLogs: () => Promise<void>;
@@ -66,10 +68,15 @@ interface SessionKeeperState {
   addDebate: (debate: DebateResult) => void;
   
   clearLogs: () => void;
+  refreshSessionStates: () => void;
 
   setStatusSummary: (summary: Partial<StatusSummary>) => void;
   updateSessionState: (sessionId: string, state: Partial<SessionState>) => void;
   incrementStat: (stat: keyof SessionKeeperStats) => void;
+  
+  setPausedAll: (isPaused: boolean) => void;
+  interruptAll: () => Promise<void>;
+  continueAll: () => Promise<void>;
 }
 
 const DEFAULT_CONFIG: SessionKeeperConfig = {
@@ -105,6 +112,8 @@ export const useSessionKeeperStore = create<SessionKeeperState>()(
       sessionStates: {},
       stats: { totalNudges: 0, totalApprovals: 0, totalDebates: 0 },
       isLoading: false,
+      isPausedAll: false,
+      lastForcedCheckAt: 0,
 
       loadConfig: async () => {
         set({ isLoading: true });
@@ -121,7 +130,7 @@ export const useSessionKeeperStore = create<SessionKeeperState>()(
         }
       },
 
-      setConfig: (config) => set({ config }), // Added back for compatibility
+      setConfig: (config) => set({ config }),
 
       saveConfig: async (config) => {
         set({ config, isLoading: true });
@@ -143,7 +152,6 @@ export const useSessionKeeperStore = create<SessionKeeperState>()(
           const res = await fetch('/api/logs/keeper');
           if (res.ok) {
             const dbLogs = await res.json();
-            // Map DB logs to store Logs
             const mappedLogs: Log[] = dbLogs.map((l: any) => ({
               id: l.id,
               time: new Date(l.timestamp).toLocaleTimeString(),
@@ -159,7 +167,6 @@ export const useSessionKeeperStore = create<SessionKeeperState>()(
       },
 
       addLog: async (message, type, details) => {
-        // Optimistic update
         const newLog: Log = {
           time: new Date().toLocaleTimeString(),
           message,
@@ -171,7 +178,6 @@ export const useSessionKeeperStore = create<SessionKeeperState>()(
           logs: [newLog, ...state.logs].slice(0, 100)
         }));
 
-        // Fire and forget persistence
         try {
           await fetch('/api/logs/keeper', {
             method: 'POST',
@@ -180,7 +186,7 @@ export const useSessionKeeperStore = create<SessionKeeperState>()(
               message,
               type,
               details,
-              sessionId: 'global' // simplified for now
+              sessionId: 'global'
             }),
           });
         } catch (error) {
@@ -189,10 +195,16 @@ export const useSessionKeeperStore = create<SessionKeeperState>()(
       },
 
       addDebate: (debate) => set((state) => ({
-        debates: [debate, ...state.debates].slice(0, 50) // Keep last 50 debates
+        debates: [debate, ...state.debates].slice(0, 50)
       })),
 
       clearLogs: () => set({ logs: [] }),
+
+      refreshSessionStates: () => {
+        const { addLog } = get();
+        set({ sessionStates: {}, lastForcedCheckAt: Date.now() });
+        addLog('Manual refresh: Resetting session states and forcing re-check.', 'info');
+      },
 
       setStatusSummary: (summary) => set((state) => ({
         statusSummary: { ...state.statusSummary, ...summary }
@@ -211,10 +223,28 @@ export const useSessionKeeperStore = create<SessionKeeperState>()(
       incrementStat: (stat) => set((state) => ({
         stats: { ...state.stats, [stat]: state.stats[stat] + 1 }
       })),
+
+      setPausedAll: (isPausedAll) => set({ isPausedAll }),
+
+      interruptAll: async () => {
+        const { addLog } = get();
+        set({ isPausedAll: true });
+        await addLog('Global Interrupt: All background processing paused.', 'info');
+      },
+
+      continueAll: async () => {
+        const { addLog } = get();
+        set({ isPausedAll: false });
+        await addLog('Global Continue: Background processing resumed.', 'info');
+      },
     }),
     {
       name: 'jules-session-keeper-store',
-      partialize: (state) => ({ stats: state.stats }), // Only persist stats locally now, config comes from DB
+      partialize: (state) => ({ 
+        stats: state.stats, 
+        isPausedAll: state.isPausedAll,
+        lastForcedCheckAt: state.lastForcedCheckAt 
+      }),
     }
   )
 );

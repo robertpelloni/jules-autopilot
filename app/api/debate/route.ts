@@ -20,7 +20,7 @@ export async function POST(req: NextRequest) {
         const enrichedParticipants = (participants as Participant[]).map((p) => {
             let finalApiKey = p.apiKey;
             
-            if (p.apiKey === 'env' || !p.apiKey) {
+            if (finalApiKey === 'env' || finalApiKey === 'placeholder' || !finalApiKey) {
                 switch (p.provider) {
                     case 'openai':
                         finalApiKey = process.env.OPENAI_API_KEY;

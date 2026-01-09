@@ -76,6 +76,11 @@ export function DebateViewer({ result }: { result: DebateResult }) {
                                 <Badge variant="outline" className="text-[9px] px-1.5 h-4 border-white/10 text-white/50">
                                   {turn.role || 'Participant'}
                                 </Badge>
+                                {turn.timestamp && (
+                                  <span className="text-[9px] text-zinc-600 font-mono ml-1">
+                                    {new Date(turn.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                                  </span>
+                                )}
                              </div>
                              {turn.usage && (
                                 <div className="text-[10px] text-zinc-600 font-mono">

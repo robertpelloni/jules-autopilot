@@ -22,6 +22,7 @@ export function SessionKeeperManager() {
   
   // Use granular selectors to prevent re-renders when other parts of the store (like statusSummary) change
   const config = useSessionKeeperStore(state => state.config);
+  const isPausedAll = useSessionKeeperStore(state => state.isPausedAll);
   const addLog = useSessionKeeperStore(state => state.addLog);
   const addDebate = useSessionKeeperStore(state => state.addDebate);
   const setStatusSummary = useSessionKeeperStore(state => state.setStatusSummary);
@@ -29,6 +30,7 @@ export function SessionKeeperManager() {
   const incrementStat = useSessionKeeperStore(state => state.incrementStat);
   const loadConfig = useSessionKeeperStore(state => state.loadConfig);
   const loadLogs = useSessionKeeperStore(state => state.loadLogs);
+  const lastForcedCheckAt = useSessionKeeperStore(state => state.lastForcedCheckAt);
 
   const intervalRef = useRef<NodeJS.Timeout | null>(null);
   const processingRef = useRef(false);
@@ -57,7 +59,14 @@ export function SessionKeeperManager() {
     }
 
     const runLoop = async () => {
-      if (processingRef.current) return;
+      if (processingRef.current || isPausedAll) {
+        if (isPausedAll) {
+          setStatusSummary({
+            lastAction: 'Global Pause Active',
+          });
+        }
+        return;
+      }
       processingRef.current = true;
       hasSwitchedRef.current = false;
 
@@ -111,14 +120,13 @@ export function SessionKeeperManager() {
                 }
 
                 if (isDebateOrConference && config.debateParticipants && config.debateParticipants.length > 0) {
-                    // Validate participants have API keys
-                    const validParticipants = config.debateParticipants.filter(p => p.apiKey && p.apiKey.trim().length > 0);
-                    
-                    if (validParticipants.length === 0) {
-                        throw new Error(`No valid participants for ${mode}. Please check API keys in Session Keeper settings.`);
-                    }
+                    // Allow participants with 'env', 'placeholder', or empty keys to be enriched by the server
+                    const participantsForApi = config.debateParticipants.map(p => ({
+                        ...p,
+                        apiKey: p.apiKey || 'env'
+                    }));
 
-                    addLog(`Convening ${mode === 'conference' ? 'Conference' : 'Council'} (${validParticipants.length} members)...`, 'info');
+                    addLog(`Convening ${mode === 'conference' ? 'Conference' : 'Council'} (${participantsForApi.length} members)...`, 'info');
 
                     // Prepare simple history for debate (stateless usually)
                     const history = sortedActivities.map((a: Activity) => ({
@@ -132,7 +140,8 @@ export function SessionKeeperManager() {
                         body: JSON.stringify({
                             action: mode,
                             messages: history,
-                            participants: validParticipants
+                            participants: participantsForApi,
+                            topic: `Session Keeper: ${session.title || 'Untitled'}`
                         })
                     });
 
@@ -158,7 +167,7 @@ export function SessionKeeperManager() {
                         addLog(`${mode === 'conference' ? 'Conference' : 'Council'} Result: "${messageToSend.substring(0, 30)}..."`, 'action');
                         incrementStat('totalDebates');
                     } else {
-                        const err = await response.json().catch(() => ({}));
+                        const err = await response.json().catch(() => ({ error: 'Unknown' }));
                         throw new Error(`${mode} failed: ${err.error || 'Unknown'}`);
                     }
 
@@ -441,7 +450,7 @@ This session has been handed off to ${newSession.id}. Marking as completed.`,
     return () => {
       if (intervalRef.current) clearInterval(intervalRef.current);
     };
-  }, [config, client, apiKey, addLog, setStatusSummary, incrementStat, updateSessionState]);
+  }, [config, isPausedAll, client, apiKey, addLog, setStatusSummary, incrementStat, updateSessionState, lastForcedCheckAt]);
 
   return null;
 }

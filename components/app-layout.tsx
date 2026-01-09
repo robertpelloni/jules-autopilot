@@ -17,7 +17,7 @@ import { ResizableHandle, ResizablePanel, ResizablePanelGroup } from "@/componen
 import { SessionKeeperManager } from "./session-keeper-manager";
 import { SessionKeeper } from "@/components/SessionKeeper";
 import { useSessionKeeperStore } from "@/lib/stores/session-keeper";
-import { DebateDialog } from './debate-dialog';
+import { DebateDialog, UIParticipant } from './debate-dialog';
 
 import { AppHeader } from "./layout/app-header";
 import { AppSidebar } from "./layout/app-sidebar";
@@ -88,6 +88,25 @@ export function AppLayout({ initialView }: AppLayoutProps) {
   const [debateOpen, setDebateOpen] = useState(false);
   const [debateTopic, setDebateTopic] = useState('');
   const [debateContext, setDebateContext] = useState('');
+
+  // Map session keeper participants to UI participants
+  const debateParticipants: UIParticipant[] | undefined = config.debateParticipants?.map(p => {
+    const provider = p.provider as 'openai' | 'anthropic' | 'gemini' | 'qwen';
+    const providerConfigs: Record<string, { apiKeyKey: string, envFallback: string }> = {
+      openai: { apiKeyKey: 'openai_api_key', envFallback: 'NEXT_PUBLIC_OPENAI_KEY' },
+      anthropic: { apiKeyKey: 'anthropic_api_key', envFallback: 'NEXT_PUBLIC_ANTHROPIC_KEY' },
+      gemini: { apiKeyKey: 'google_api_key', envFallback: 'NEXT_PUBLIC_GEMINI_KEY' },
+      qwen: { apiKeyKey: 'qwen_api_key', envFallback: 'NEXT_PUBLIC_QWEN_KEY' }
+    };
+    const providerConfig = providerConfigs[provider] || providerConfigs.openai;
+
+    return {
+      ...p,
+      provider,
+      apiKeyKey: providerConfig.apiKeyKey,
+      envFallback: providerConfig.envFallback
+    };
+  });
 
   const handleStartDebate = (topic?: string, context?: string) => {
       setDebateTopic(topic || '');
@@ -340,6 +359,7 @@ export function AppLayout({ initialView }: AppLayoutProps) {
           onOpenChange={setDebateOpen}
           initialTopic={debateTopic}
           initialContext={debateContext}
+          initialParticipants={debateParticipants}
           onDebateStart={() => setRefreshKey(prev => prev + 1)}
         />
       )}

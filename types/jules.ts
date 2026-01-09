@@ -116,9 +116,11 @@ export interface SessionKeeperConfig {
   resumePaused?: boolean;
   debateParticipants?: {
       id: string;
+      name: string;
       provider: string;
       model: string;
       apiKey: string;
       role: string;
+      systemPrompt: string;
   }[];
 }

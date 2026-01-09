@@ -102,7 +102,14 @@ export function SessionKeeperSettingsContent({
   };
 
   // New Participant State
-  const [newPart, setNewPart] = useState({ provider: 'openai', model: '', apiKey: '', role: 'Advisor' });
+  const [newPart, setNewPart] = useState({ 
+    name: 'Agent',
+    provider: 'openai', 
+    model: '', 
+    apiKey: '', 
+    role: 'Advisor',
+    systemPrompt: 'You are an expert advisor helping to guide the Jules AI agent. Analyze the session history and provide specific, actionable instructions.'
+  });
 
   const updateMessages = (sessionId: string, newMessages: string[]) => {
     if (sessionId === 'global') {
@@ -162,7 +169,14 @@ export function SessionKeeperSettingsContent({
               { ...newPart, id: crypto.randomUUID() }
           ]
       });
-      setNewPart({ provider: 'openai', model: '', apiKey: '', role: 'Advisor' });
+      setNewPart({ 
+        name: 'Agent',
+        provider: 'openai', 
+        model: '', 
+        apiKey: '', 
+        role: 'Advisor',
+        systemPrompt: 'You are an expert advisor helping to guide the Jules AI agent. Analyze the session history and provide specific, actionable instructions.'
+      });
   };
 
   const removeParticipant = (index: number) => {
@@ -384,6 +398,20 @@ export function SessionKeeperSettingsContent({
                       <div className="border-t border-white/10 pt-3 space-y-3">
                           <Label className="text-xs text-white/60 uppercase tracking-wider font-bold">Add Council Member</Label>
                           <div className="grid grid-cols-2 gap-2">
+                              <Input
+                                className="h-7 text-xs bg-black/50 border-white/10"
+                                placeholder="Name (e.g. Alice)"
+                                value={newPart.name}
+                                onChange={(e) => setNewPart({ ...newPart, name: e.target.value })}
+                              />
+                              <Input
+                                className="h-7 text-xs bg-black/50 border-white/10"
+                                placeholder="Role (e.g. Security)"
+                                value={newPart.role}
+                                onChange={(e) => setNewPart({ ...newPart, role: e.target.value })}
+                              />
+                          </div>
+                          <div className="grid grid-cols-2 gap-2">
                               <Select
                                 value={newPart.provider}
                                 onValueChange={(v) => setNewPart({ ...newPart, provider: v })}
@@ -398,33 +426,33 @@ export function SessionKeeperSettingsContent({
                               </Select>
                               <Input
                                 className="h-7 text-xs bg-black/50 border-white/10"
-                                placeholder="Role (e.g. Security)"
-                                value={newPart.role}
-                                onChange={(e) => setNewPart({ ...newPart, role: e.target.value })}
+                                placeholder="Model (e.g. gpt-4o)"
+                                value={newPart.model}
+                                onChange={(e) => setNewPart({ ...newPart, model: e.target.value })}
                               />
                           </div>
                           <Input
                             className="h-7 text-xs bg-black/50 border-white/10 font-mono"
                             type="password"
-                            placeholder="API Key"
+                            placeholder="API Key (empty for server-side key)"
                             value={newPart.apiKey}
                             onChange={(e) => setNewPart({ ...newPart, apiKey: e.target.value })}
                           />
-                          <div className="flex gap-2">
-                              <Input
-                                className="h-7 text-xs bg-black/50 border-white/10 flex-1"
-                                placeholder="Model (e.g. gpt-4o)"
-                                value={newPart.model}
-                                onChange={(e) => setNewPart({ ...newPart, model: e.target.value })}
-                              />
+                          <Textarea
+                            className="min-h-[60px] text-[10px] bg-black/50 border-white/10 text-white/80"
+                            placeholder="System Prompt / Instructions"
+                            value={newPart.systemPrompt}
+                            onChange={(e) => setNewPart({ ...newPart, systemPrompt: e.target.value })}
+                          />
+                          <div className="flex justify-end">
                               <Button
                                 size="sm"
                                 variant="secondary"
                                 className="h-7 text-xs"
                                 onClick={addParticipant}
-                                disabled={!newPart.apiKey || !newPart.model}
+                                disabled={!newPart.model || !newPart.name}
                               >
-                                <Plus className="h-3 w-3 mr-1" /> Add
+                                <Plus className="h-3 w-3 mr-1" /> Add to Council
                               </Button>
                           </div>
                       </div>
