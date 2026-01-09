@@ -7,7 +7,7 @@ import type { Session, Activity } from '@/types/jules';
 import type { KeeperSettings } from '@prisma/client';
 
 let isRunning = false;
-let checkTimeout: Timer | null = null;
+let checkTimeout: ReturnType<typeof setTimeout> | null = null;
 
 async function getJulesClient(settings: KeeperSettings) {
     const apiKey = settings.julesApiKey || process.env.JULES_API_KEY;
