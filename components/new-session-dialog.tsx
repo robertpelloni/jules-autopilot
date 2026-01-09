@@ -1,7 +1,9 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useJules } from '@/lib/jules/provider';
+import { useCloudDevStore } from '@/lib/stores/cloud-dev';
+import { type CloudDevProviderId } from '@/types/cloud-dev';
 import { Button } from '@/components/ui/button';
 import {
   Dialog,
@@ -22,6 +24,7 @@ import {
     SelectTrigger,
     SelectValue,
 } from "@/components/ui/select"
+import { ProviderSelector } from '@/components/provider-selector';
 import { Loader2, Plus } from 'lucide-react';
 import useSWR from 'swr';
 import { toast } from 'sonner';
@@ -41,39 +44,70 @@ interface NewSessionDialogProps {
 
 export function NewSessionDialog({ trigger, open: controlledOpen, onOpenChange: setControlledOpen, onSessionCreated, initialValues }: NewSessionDialogProps) {
     const { client } = useJules();
+    const { 
+        activeProviderId, 
+        setActiveProvider,
+        createSession: createCloudDevSession,
+        getConfiguredProviders,
+        initializeProviders 
+    } = useCloudDevStore();
+    
     const [internalOpen, setInternalOpen] = useState(false);
     const isControlled = controlledOpen !== undefined;
     const open = isControlled ? controlledOpen : internalOpen;
     const setOpen = isControlled ? setControlledOpen : setInternalOpen;
 
+    const [providerId, setProviderId] = useState<CloudDevProviderId>(activeProviderId);
     const [title, setTitle] = useState(initialValues?.title || '');
     const [sourceId, setSourceId] = useState(initialValues?.sourceId || '');
     const [prompt, setPrompt] = useState(initialValues?.prompt || '');
     const [loading, setLoading] = useState(false);
 
-    // Fetch available sources (repos)
+    const configuredProviders = getConfiguredProviders();
+    const useCloudDevApi = configuredProviders.includes(providerId) && providerId !== 'jules';
+
+    useEffect(() => {
+        initializeProviders();
+    }, [initializeProviders]);
+
+    // Fetch available sources (repos) - only for Jules provider
     const { data: sources, isLoading: sourcesLoading } = useSWR(
-        client && open ? 'sources' : null,
+        client && open && providerId === 'jules' ? 'sources' : null,
         () => client!.listSources()
     );
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
-        if (!client) return;
 
         try {
             setLoading(true);
             
-            // If sourceId is empty, default to 'global' or the first available source
-            // This handles cases where user just wants to start a quick task
-            const effectiveSourceId = sourceId || (sources && sources.length > 0 ? sources[0].id : 'global');
-
-            const session = await client.createSession(effectiveSourceId, prompt, title);
-            setOpen?.(false);
-            onSessionCreated?.(session.id);
-            toast.success('Session created successfully');
+            if (useCloudDevApi) {
+                setActiveProvider(providerId);
+                const session = await createCloudDevSession({
+                    title: title || 'New Session',
+                    prompt,
+                    repository: sourceId && sourceId !== 'global' ? {
+                        provider: 'github',
+                        owner: '',
+                        name: sourceId,
+                    } : undefined,
+                });
+                setOpen?.(false);
+                onSessionCreated?.(session.id);
+                toast.success(`Session created on ${providerId}`);
+            } else {
+                if (!client) {
+                    toast.error('Jules client not configured');
+                    return;
+                }
+                const effectiveSourceId = sourceId || (sources && sources.length > 0 ? sources[0].id : 'global');
+                const session = await client.createSession(effectiveSourceId, prompt, title);
+                setOpen?.(false);
+                onSessionCreated?.(session.id);
+                toast.success('Session created successfully');
+            }
             
-            // Reset form
             setTitle('');
             setPrompt('');
             setSourceId('');
@@ -104,10 +138,18 @@ export function NewSessionDialog({ trigger, open: controlledOpen, onOpenChange: 
                 </DialogHeader>
                 <form onSubmit={handleSubmit} className="space-y-4 py-4">
                     <div className="space-y-2">
+                        <Label htmlFor="provider">Provider</Label>
+                        <ProviderSelector
+                            value={providerId}
+                            onValueChange={setProviderId}
+                            showUnconfigured
+                        />
+                    </div>
+                    <div className="space-y-2">
                         <Label htmlFor="source">Repository</Label>
-                        <Select value={sourceId} onValueChange={setSourceId} disabled={sourcesLoading}>
+                        <Select value={sourceId} onValueChange={setSourceId} disabled={sourcesLoading || providerId !== 'jules'}>
                             <SelectTrigger className="bg-zinc-900 border-zinc-800">
-                                <SelectValue placeholder="Select a repository (Optional)" />
+                                <SelectValue placeholder={providerId !== 'jules' ? 'Configure in provider dashboard' : 'Select a repository (Optional)'} />
                             </SelectTrigger>
                             <SelectContent className="bg-zinc-900 border-zinc-800">
                                 <SelectItem value="global">Global (No specific repo)</SelectItem>
