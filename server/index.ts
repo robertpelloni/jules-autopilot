@@ -8,6 +8,8 @@ import { runCodeReview } from '../lib/orchestration/review';
 import { startDaemon, stopDaemon } from './daemon';
 import { prisma } from '../lib/prisma';
 import { JulesClient } from '../lib/jules/client';
+import type { DaemonEventType } from '@jules/shared';
+import { createDaemonEvent } from '@jules/shared';
 
 const app = new Hono();
 
@@ -25,8 +27,8 @@ export function broadcastToClients(message: object) {
     }
 }
 
-export function emitDaemonEvent(type: string, data: object) {
-    const message = { type, ...data, timestamp: Date.now() };
+export function emitDaemonEvent(type: DaemonEventType, data?: object) {
+    const message = createDaemonEvent(type, data);
     eventBus.emit('daemon', message);
     broadcastToClients(message);
 }

@@ -1,5 +1,5 @@
 {
-  "name": "server",
+  "name": "@jules/server",
   "module": "index.ts",
   "type": "module",
   "private": true,
@@ -12,6 +12,7 @@
     "typescript": "^5"
   },
   "dependencies": {
+    "@jules/shared": "workspace:*",
     "@hono/node-server": "^1.19.7",
     "axios": "^1.13.2",
     "hono": "^4.11.3",

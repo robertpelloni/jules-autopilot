@@ -2,15 +2,16 @@
 
 import { useEffect, useRef, useCallback } from 'react';
 import { useSessionKeeperStore, Log } from '@/lib/stores/session-keeper';
+import type {
+  DaemonEvent,
+  DaemonStatusPayload,
+  LogAddedPayload,
+  SessionNudgedPayload,
+  SessionApprovedPayload,
+} from '@jules/shared';
+import { WS_DEFAULTS } from '@jules/shared';
 
 const WS_URL = process.env.NEXT_PUBLIC_DAEMON_WS_URL || 'ws://localhost:8080/ws';
-const RECONNECT_DELAY = 3000;
-const MAX_RECONNECT_ATTEMPTS = 10;
-
-export interface DaemonEvent {
-  type: 'daemon_status' | 'log_added' | 'sessions_interrupted' | 'sessions_continued' | 'session_updated' | 'session_nudged' | 'session_approved';
-  data: any;
-}
 
 export function useDaemonWebSocket() {
   const wsRef = useRef<WebSocket | null>(null);
@@ -26,26 +27,31 @@ export function useDaemonWebSocket() {
       const message: DaemonEvent = JSON.parse(event.data);
       
       switch (message.type) {
-        case 'daemon_status':
+        case 'daemon_status': {
+          const payload = message.data as DaemonStatusPayload;
           setStatusSummary({
-            monitoringCount: message.data.sessionCount || 0,
+            monitoringCount: payload?.sessionCount || 0,
             lastAction: 'WS: ' + new Date().toLocaleTimeString(),
           });
           break;
+        }
 
-        case 'log_added':
-          const logData = message.data;
-          const newLog: Log = {
-            id: logData.id,
-            time: new Date(logData.createdAt || Date.now()).toLocaleTimeString(),
-            message: logData.message,
-            type: logData.type as Log['type'],
-            details: logData.metadata ? JSON.parse(logData.metadata) : undefined
-          };
-          useSessionKeeperStore.setState((state) => ({
-            logs: [newLog, ...state.logs].slice(0, 100)
-          }));
+        case 'log_added': {
+          const payload = message.data as LogAddedPayload;
+          if (payload?.log) {
+            const newLog: Log = {
+              id: String(payload.log.id),
+              time: new Date(payload.log.createdAt || Date.now()).toLocaleTimeString(),
+              message: payload.log.message,
+              type: payload.log.type as Log['type'],
+              details: payload.log.metadata ? JSON.parse(payload.log.metadata) : undefined
+            };
+            useSessionKeeperStore.setState((state) => ({
+              logs: [newLog, ...state.logs].slice(0, 100)
+            }));
+          }
           break;
+        }
 
         case 'sessions_interrupted':
           setPausedAll(true);
@@ -55,48 +61,53 @@ export function useDaemonWebSocket() {
           setPausedAll(false);
           break;
 
-        case 'session_updated':
+        case 'session_updated': {
+          const payload = message.data as { sessionId?: string };
           setStatusSummary({
-            lastAction: `Session ${message.data.sessionId?.slice(-6) || 'unknown'} updated`,
+            lastAction: `Session ${payload?.sessionId?.slice(-6) || 'unknown'} updated`,
           });
           break;
+        }
 
-        case 'session_nudged':
+        case 'session_nudged': {
+          const payload = message.data as SessionNudgedPayload;
           const nudgeLog: Log = {
             id: String(Date.now()),
             time: new Date().toLocaleTimeString(),
-            message: `Nudged session ${message.data.sessionId?.slice(0, 8)} (${message.data.inactiveMinutes}m inactive)`,
+            message: `Nudged session ${payload?.sessionId?.slice(0, 8)} (${payload?.inactiveMinutes ?? 0}m inactive)`,
             type: 'action',
-            details: { nudgeMessage: message.data.message }
+            details: { nudgeMessage: payload?.message }
           };
           useSessionKeeperStore.setState((state) => ({
             logs: [nudgeLog, ...state.logs].slice(0, 100)
           }));
           setStatusSummary({
-            lastAction: `Nudged ${message.data.sessionTitle || message.data.sessionId?.slice(0, 8)}`,
+            lastAction: `Nudged ${payload?.sessionTitle || payload?.sessionId?.slice(0, 8)}`,
           });
           break;
+        }
 
-        case 'session_approved':
+        case 'session_approved': {
+          const payload = message.data as SessionApprovedPayload;
           const approveLog: Log = {
             id: String(Date.now()),
             time: new Date().toLocaleTimeString(),
-            message: `Auto-approved plan for ${message.data.sessionId?.slice(0, 8)}`,
+            message: `Auto-approved plan for ${payload?.sessionId?.slice(0, 8)}`,
             type: 'action'
           };
           useSessionKeeperStore.setState((state) => ({
             logs: [approveLog, ...state.logs].slice(0, 100)
           }));
           setStatusSummary({
-            lastAction: `Approved ${message.data.sessionTitle || message.data.sessionId?.slice(0, 8)}`,
+            lastAction: `Approved ${payload?.sessionTitle || payload?.sessionId?.slice(0, 8)}`,
           });
           break;
+        }
 
         default:
-          console.log('[WS] Unknown event type:', message.type);
+          break;
       }
-    } catch (error) {
-      console.error('[WS] Failed to parse message:', error);
+    } catch {
     }
   }, [setStatusSummary, setPausedAll]);
 
@@ -109,7 +120,6 @@ export function useDaemonWebSocket() {
       const ws = new WebSocket(WS_URL);
 
       ws.onopen = () => {
-        console.log('[WS] Connected to daemon');
         reconnectAttemptsRef.current = 0;
         setStatusSummary({
           lastAction: 'WS Connected',
@@ -118,29 +128,24 @@ export function useDaemonWebSocket() {
 
       ws.onmessage = handleMessage;
 
-      ws.onclose = (event) => {
-        console.log('[WS] Disconnected:', event.code, event.reason);
+      ws.onclose = () => {
         wsRef.current = null;
 
-        if (config.isEnabled && reconnectAttemptsRef.current < MAX_RECONNECT_ATTEMPTS) {
+        if (config.isEnabled && reconnectAttemptsRef.current < WS_DEFAULTS.MAX_RECONNECT_ATTEMPTS) {
           reconnectAttemptsRef.current++;
-          console.log(`[WS] Reconnecting in ${RECONNECT_DELAY}ms (attempt ${reconnectAttemptsRef.current}/${MAX_RECONNECT_ATTEMPTS})`);
-          
-          reconnectTimeoutRef.current = setTimeout(connect, RECONNECT_DELAY);
-        } else if (reconnectAttemptsRef.current >= MAX_RECONNECT_ATTEMPTS) {
+          reconnectTimeoutRef.current = setTimeout(connect, WS_DEFAULTS.RECONNECT_DELAY);
+        } else if (reconnectAttemptsRef.current >= WS_DEFAULTS.MAX_RECONNECT_ATTEMPTS) {
           setStatusSummary({
             lastAction: 'WS: Max reconnect attempts reached',
           });
         }
       };
 
-      ws.onerror = (error) => {
-        console.error('[WS] Error:', error);
+      ws.onerror = () => {
       };
 
       wsRef.current = ws;
-    } catch (error) {
-      console.error('[WS] Failed to connect:', error);
+    } catch {
     }
   }, [config.isEnabled, handleMessage, setStatusSummary]);
 
@@ -161,8 +166,6 @@ export function useDaemonWebSocket() {
   const send = useCallback((message: object) => {
     if (wsRef.current?.readyState === WebSocket.OPEN) {
       wsRef.current.send(JSON.stringify(message));
-    } else {
-      console.warn('[WS] Cannot send message, not connected');
     }
   }, []);
 

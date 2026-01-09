@@ -1,4 +1,5 @@
 import { create } from 'zustand';
+import type { KeeperLog } from '@jules/shared';
 
 interface Session {
   id: string;
@@ -11,14 +12,7 @@ interface Session {
   lastActivityAt?: string;
 }
 
-interface LogEntry {
-  id: number;
-  sessionId: string;
-  type: 'info' | 'action' | 'error' | 'skip';
-  message: string;
-  metadata?: string;
-  createdAt: string;
-}
+type LogEntry = KeeperLog;
 
 interface DaemonStatus {
   isEnabled: boolean;

@@ -13,6 +13,7 @@
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
+    "@jules/shared": "workspace:*",
     "ink": "^5.2.0",
     "@inkjs/ui": "^2.0.0",
     "react": "^18.3.1",

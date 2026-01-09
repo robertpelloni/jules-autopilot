@@ -1,15 +1,17 @@
 import { useEffect, useRef, useCallback } from 'react';
 import { useAppStore } from './useAppState';
+import type {
+  DaemonEvent,
+  DaemonStatusPayload,
+  LogAddedPayload,
+  SessionsInterruptedPayload,
+  SessionsContinuedPayload,
+  SessionNudgedPayload,
+  SessionApprovedPayload,
+} from '@jules/shared';
+import { WS_DEFAULTS } from '@jules/shared';
 
 const WS_URL = process.env.JULES_WS_URL || 'ws://localhost:8080/ws';
-const RECONNECT_DELAY = 3000;
-const MAX_RECONNECT_ATTEMPTS = 10;
-
-interface DaemonEvent {
-  type: string;
-  timestamp?: number;
-  [key: string]: any;
-}
 
 export function useWebSocket() {
   const wsRef = useRef<WebSocket | null>(null);
@@ -25,76 +27,87 @@ export function useWebSocket() {
           useAppStore.setState({ isConnected: true, error: null });
           break;
 
-        case 'daemon_status':
+        case 'daemon_status': {
+          const payload = message.data as DaemonStatusPayload;
           useAppStore.setState(state => ({
             daemonStatus: state.daemonStatus ? {
               ...state.daemonStatus,
-              isEnabled: message.status === 'running',
+              isEnabled: payload?.status === 'running',
               lastCheck: new Date().toISOString()
             } : {
-              isEnabled: message.status === 'running',
+              isEnabled: payload?.status === 'running',
               lastCheck: new Date().toISOString(),
               logs: []
             }
           }));
           break;
+        }
 
-        case 'log_added':
-          const log = message.log;
-          if (log) {
+        case 'log_added': {
+          const payload = message.data as LogAddedPayload;
+          if (payload?.log) {
             useAppStore.setState(state => ({
-              logs: [log, ...state.logs].slice(0, 100)
+              logs: [payload.log, ...state.logs].slice(0, 100)
             }));
           }
           break;
+        }
 
-        case 'sessions_interrupted':
+        case 'sessions_interrupted': {
+          const payload = message.data as SessionsInterruptedPayload;
           useAppStore.setState(state => ({
             logs: [{
               id: Date.now(),
               sessionId: 'global',
               type: 'action' as const,
-              message: `Interrupted ${message.count} sessions`,
+              message: `Interrupted ${payload?.count ?? 0} sessions`,
               createdAt: new Date().toISOString()
             }, ...state.logs].slice(0, 100)
           }));
           break;
+        }
 
-        case 'sessions_continued':
+        case 'sessions_continued': {
+          const payload = message.data as SessionsContinuedPayload;
           useAppStore.setState(state => ({
             logs: [{
               id: Date.now(),
               sessionId: 'global',
               type: 'action' as const,
-              message: `Continued ${message.count} sessions`,
+              message: `Continued ${payload?.count ?? 0} sessions`,
               createdAt: new Date().toISOString()
             }, ...state.logs].slice(0, 100)
           }));
           break;
+        }
 
-        case 'session_nudged':
+        case 'session_nudged': {
+          const payload = message.data as SessionNudgedPayload;
           useAppStore.setState(state => ({
             logs: [{
               id: Date.now(),
-              sessionId: message.sessionId,
+              sessionId: payload?.sessionId ?? 'unknown',
               type: 'action' as const,
-              message: `Nudged ${message.sessionId?.slice(0, 8)} (${message.inactiveMinutes}m inactive)`,
+              message: `Nudged ${payload?.sessionId?.slice(0, 8) ?? '?'} (${payload?.inactiveMinutes ?? 0}m inactive)`,
               createdAt: new Date().toISOString()
             }, ...state.logs].slice(0, 100)
           }));
           break;
+        }
 
-        case 'session_approved':
+        case 'session_approved': {
+          const payload = message.data as SessionApprovedPayload;
           useAppStore.setState(state => ({
             logs: [{
               id: Date.now(),
-              sessionId: message.sessionId,
+              sessionId: payload?.sessionId ?? 'unknown',
               type: 'action' as const,
-              message: `Auto-approved plan for ${message.sessionId?.slice(0, 8)}`,
+              message: `Auto-approved plan for ${payload?.sessionId?.slice(0, 8) ?? '?'}`,
               createdAt: new Date().toISOString()
             }, ...state.logs].slice(0, 100)
           }));
           break;
+        }
 
         case 'pong':
           break;
@@ -125,9 +138,9 @@ export function useWebSocket() {
         wsRef.current = null;
         useAppStore.setState({ isConnected: false });
 
-        if (reconnectAttemptsRef.current < MAX_RECONNECT_ATTEMPTS) {
+        if (reconnectAttemptsRef.current < WS_DEFAULTS.MAX_RECONNECT_ATTEMPTS) {
           reconnectAttemptsRef.current++;
-          reconnectTimeoutRef.current = setTimeout(connect, RECONNECT_DELAY);
+          reconnectTimeoutRef.current = setTimeout(connect, WS_DEFAULTS.RECONNECT_DELAY);
         } else {
           useAppStore.setState({ error: 'Max reconnect attempts reached' });
         }
@@ -166,7 +179,7 @@ export function useWebSocket() {
   useEffect(() => {
     connect();
     
-    const pingInterval = setInterval(sendPing, 30000);
+    const pingInterval = setInterval(sendPing, WS_DEFAULTS.PING_INTERVAL);
 
     return () => {
       clearInterval(pingInterval);
