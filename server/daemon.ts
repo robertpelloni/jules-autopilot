@@ -3,6 +3,7 @@ import { JulesClient } from '../lib/jules/client';
 import { getProvider } from '../lib/orchestration/providers';
 import { runDebate } from '../lib/orchestration/debate';
 import { summarizeSession } from '../lib/orchestration/summarize';
+import { emitDaemonEvent } from './index';
 import type { Session, Activity } from '@/types/jules';
 import type { KeeperSettings } from '@prisma/client';
 
@@ -17,7 +18,7 @@ async function getJulesClient(settings: KeeperSettings) {
 
 async function addLog(message: string, type: 'info' | 'action' | 'error' | 'skip', sessionId: string = 'global', details?: any) {
     console.log(`[Daemon][${type.toUpperCase()}] ${message}`);
-    await prisma.keeperLog.create({
+    const log = await prisma.keeperLog.create({
         data: {
             message,
             type,
@@ -25,6 +26,9 @@ async function addLog(message: string, type: 'info' | 'action' | 'error' | 'skip
             metadata: details ? JSON.stringify(details) : null
         }
     });
+    
+    // Broadcast log to WebSocket clients
+    emitDaemonEvent('log_added', { log });
 }
 
 async function getSupervisorState(sessionId: string) {
@@ -136,6 +140,10 @@ export async function runLoop() {
                     if (settings.smartPilotEnabled) {
                         await addLog(`Auto-approving plan for ${session.id.substring(0, 8)}...`, 'action', session.id);
                         await client.approvePlan(session.id);
+                        emitDaemonEvent('session_approved', { 
+                            sessionId: session.id,
+                            sessionTitle: session.title
+                        });
                     }
                     continue;
                 }
@@ -195,6 +203,13 @@ export async function runLoop() {
                         sessionId: session.id,
                         content: messageToSend,
                         type: 'message'
+                    });
+                    
+                    emitDaemonEvent('session_nudged', { 
+                        sessionId: session.id,
+                        sessionTitle: session.title,
+                        inactiveMinutes: Math.round(diffMinutes),
+                        message: messageToSend
                     });
                 }
 

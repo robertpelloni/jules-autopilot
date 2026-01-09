@@ -8,7 +8,7 @@ const RECONNECT_DELAY = 3000;
 const MAX_RECONNECT_ATTEMPTS = 10;
 
 export interface DaemonEvent {
-  type: 'daemon_status' | 'log_added' | 'sessions_interrupted' | 'sessions_continued' | 'session_updated';
+  type: 'daemon_status' | 'log_added' | 'sessions_interrupted' | 'sessions_continued' | 'session_updated' | 'session_nudged' | 'session_approved';
   data: any;
 }
 
@@ -58,6 +58,37 @@ export function useDaemonWebSocket() {
         case 'session_updated':
           setStatusSummary({
             lastAction: `Session ${message.data.sessionId?.slice(-6) || 'unknown'} updated`,
+          });
+          break;
+
+        case 'session_nudged':
+          const nudgeLog: Log = {
+            id: String(Date.now()),
+            time: new Date().toLocaleTimeString(),
+            message: `Nudged session ${message.data.sessionId?.slice(0, 8)} (${message.data.inactiveMinutes}m inactive)`,
+            type: 'action',
+            details: { nudgeMessage: message.data.message }
+          };
+          useSessionKeeperStore.setState((state) => ({
+            logs: [nudgeLog, ...state.logs].slice(0, 100)
+          }));
+          setStatusSummary({
+            lastAction: `Nudged ${message.data.sessionTitle || message.data.sessionId?.slice(0, 8)}`,
+          });
+          break;
+
+        case 'session_approved':
+          const approveLog: Log = {
+            id: String(Date.now()),
+            time: new Date().toLocaleTimeString(),
+            message: `Auto-approved plan for ${message.data.sessionId?.slice(0, 8)}`,
+            type: 'action'
+          };
+          useSessionKeeperStore.setState((state) => ({
+            logs: [approveLog, ...state.logs].slice(0, 100)
+          }));
+          setStatusSummary({
+            lastAction: `Approved ${message.data.sessionTitle || message.data.sessionId?.slice(0, 8)}`,
           });
           break;
 

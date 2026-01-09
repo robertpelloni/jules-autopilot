@@ -3,12 +3,45 @@
 ## Overview
 Jules UI is a modern, developer-centric interface for interacting with Google's Jules AI agent. It provides a rich, interactive environment for managing coding sessions, visualizing progress, and collaborating with the AI.
 
-<<<<<<< HEAD
 ## Vision
 
 A powerful, self-hosted web application for managing Jules AI agent sessions with advanced developer tooling, including live code diffs, terminal output inspection, session analytics, and automated workflow orchestration.
 
-## Current Status (v1.1)
+## Key Features
+
+### 1. Session Management
+- **Create Session:** Start new sessions from a GitHub repository URL with an initial prompt.
+- **Session List:** View active, paused, and completed sessions. Support for archiving sessions.
+- **Kanban Board:** Visual drag-and-drop interface to manage session status (Active, Paused, Completed).
+
+### 2. Activity Feed
+- **Chat Interface:** Real-time messaging with Jules.
+- **Rich Content:** Markdown rendering, code blocks, and collapsible sections for detailed outputs.
+- **Artifacts:** Display generated code diffs, bash outputs, and media.
+- **Plan Approval:** Interactive approval flow for AI-generated plans.
+
+### 3. Code Visualization
+- **Diff Viewer:** Side-by-side or inline view of code changes.
+- **Terminal Output:** Integrated xterm.js terminal for viewing command execution logs.
+
+### 4. Automation & Intelligence (Session Keeper)
+- **Auto-Pilot:** Background monitoring of inactive sessions.
+- **Auto-Approval:** Configurable rules to automatically approve safe plans.
+- **Nudges:** Automated prompts to keep the agent on track.
+- **Multi-Agent Debate:** Council mode with multiple AI personas (Architect, Security Expert) to guide decisions.
+
+### 5. Analytics & Insights
+- **Dashboard:** Metrics on session success rates, average duration, and activity volume.
+- **Repository Stats:** Track most active repositories.
+- **Session Health:** Stalled session detection with visual badges.
+
+### 6. System Status
+- **Submodule Registry:** View status and versions of integrated submodules (e.g., SDK reference).
+- **Directory Map:** Visual guide to the project structure.
+
+---
+
+## Current Status (v0.8.0)
 
 ### ✅ Implemented Features
 
@@ -25,39 +58,7 @@ A powerful, self-hosted web application for managing Jules AI agent sessions wit
   - ✅ Sort by last activity (newest first)
   - ✅ Session title and timestamp display
   - ✅ Click to view session details
-=======
-## Key Features
 
-### 1. Session Management
-*   **Create Session:** Start new sessions from a GitHub repository URL with an initial prompt.
-*   **Session List:** View active, paused, and completed sessions. Support for archiving sessions.
-*   **Kanban Board:** Visual drag-and-drop interface to manage session status (Active, Paused, Completed).
-
-### 2. Activity Feed
-*   **Chat Interface:** Real-time messaging with Jules.
-*   **Rich Content:** Markdown rendering, code blocks, and collapsible sections for detailed outputs.
-*   **Artifacts:** Display generated code diffs, bash outputs, and media.
-*   **Plan Approval:** Interactive approval flow for AI-generated plans.
-
-### 3. Code Visualization
-*   **Diff Viewer:** Side-by-side or inline view of code changes.
-*   **Terminal Output:** Integrated xterm.js terminal for viewing command execution logs.
-
-### 4. Automation & Intelligence (Session Keeper)
-*   **Auto-Pilot:** Background monitoring of inactive sessions.
-*   **Auto-Approval:** Configurable rules to automatically approve safe plans.
-*   **Nudges:** Automated prompts to keep the agent on track.
->>>>>>> origin/jules-session-keeper-integration-11072096883725838253
-
-### 5. Analytics & Insights
-*   **Dashboard:** Metrics on session success rates, average duration, and activity volume.
-*   **Repository Stats:** Track most active repositories.
-
-### 6. System Status
-*   **Submodule Registry:** View status and versions of integrated submodules (e.g., SDK reference).
-*   **Directory Map:** Visual guide to the project structure.
-
-<<<<<<< HEAD
 - **ACTIVITY-001**: Send Messages to Session ([#5](https://github.com/sbhavani/jules-app/issues/5)) ✅ _Closed_
   - ✅ Text input with Enter/Shift+Enter support
   - ✅ Visual feedback during sending
@@ -145,12 +146,12 @@ A powerful, self-hosted web application for managing Jules AI agent sessions wit
   - ✅ Integrate a terminal within the Jules UI
   - ✅ Connection to local terminal server
   - ✅ Real-time output and command history
-  - ✅ ✅ **v1.1**: Fixed memory leak and lifecycle management issues.
+  - ✅ Fixed memory leak and lifecycle management issues
 
 </details>
 
 <details open>
-<summary><strong>⚡ Performance Optimizations (v1.1)</strong></summary>
+<summary><strong>Performance Optimizations (v1.1)</strong></summary>
 
 - **PERF-001**: Memoized Data Derivations
   - ✅ Memoized activity feed filtering and grouping logic.
@@ -171,35 +172,37 @@ A powerful, self-hosted web application for managing Jules AI agent sessions wit
 
 </details>
 
+<details open>
+<summary><strong>Infrastructure (v0.8.0)</strong></summary>
+
+- **INFRA-002**: Bun/Hono Backend Daemon
+  - ✅ Standalone server on port 8080
+  - ✅ Background session monitoring loop
+  - ✅ SQLite persistence via Prisma
+
+- **INFRA-003**: WebSocket Real-time Updates
+  - ✅ Native WebSocket support in Hono server
+  - ✅ Events: daemon_status, log_added, sessions_interrupted, sessions_continued
+  - ✅ Web UI migrated from polling to WebSocket
+
+- **INFRA-004**: Terminal UI (TUI)
+  - ✅ Ink-based CLI in apps/cli/
+  - ✅ Dashboard, Sessions, Logs, Settings screens
+  - ✅ Keyboard navigation (Ctrl+1-4, Q, Esc)
+
+</details>
+
+---
+
 ## MoSCoW Prioritization (Future Work)
 
 ### SHOULD HAVE (P1 - Next Release)
 
 - **SESSION-005**: Session Templates ([#14](https://github.com/sbhavani/jules-app/issues/14)) ✅ _Closed_
-  - ✅ Save and reuse common prompts as templates
-  - ✅ Template library/list view
-  - ✅ Create session from template
-
 - **SESSION-006**: Branch Selection Support ([#21](https://github.com/sbhavani/jules-app/issues/21)) ✅ _Closed_
-  - ✅ Specify starting branch in New Session dialog
-  - ✅ Support for non-main branches in API client
-  - ✅ Branch metadata display in session details
-
 - **SESSION-009**: Kanban Board View ([#31](https://github.com/sbhavani/jules-app/issues/31)) ✅ _Closed_
-  - ✅ 'Control Tower' for parallel sessions
-  - ✅ Status columns (Running, Waiting, Done)
-  - ✅ Quick actions
-
-- **SESSION-010: GitHub Issue Integration** ([#49](https://github.com/sbhavani/jules-app/issues/49)) ✅ _Closed_
-  - ✅ Select active GitHub issue in New Session dialog
-  - ✅ Pre-fill prompt with issue context
-  - ✅ Auto-suggest branch names
-
+- **SESSION-010**: GitHub Issue Integration ([#49](https://github.com/sbhavani/jules-app/issues/49)) ✅ _Closed_
 - **ANALYTICS-004**: Session Health Monitoring ([#33](https://github.com/sbhavani/jules-app/issues/33)) ✅ _Closed_
-  - ✅ Detect stalled agents (5m warning, 30m critical)
-  - ✅ Health scores (Visual badges)
-  - ✅ Dashboard metrics for stalled sessions
-
 - **NOTIF-001**: Error Notifications & Toast System ([#13](https://github.com/sbhavani/jules-app/issues/13)) ✅ _Closed_
 - **REFACTOR-001**: Layout Component Decoupling ([#44](https://github.com/sbhavani/jules-app/issues/44)) ✅ _Closed_
 - **PERF-004**: Reactive Data Fetching ([#45](https://github.com/sbhavani/jules-app/issues/45)) 🟡 _Open_
@@ -212,6 +215,8 @@ A powerful, self-hosted web application for managing Jules AI agent sessions wit
 - **THEME-001**: Semantic Theming System ([#48](https://github.com/sbhavani/jules-app/issues/48)) 🟡 _Open_
 - **EXT-001**: Modjules Library Integration ([#27](https://github.com/sbhavani/jules-app/issues/27)) 🟡 _Open_
 
+---
+
 ## Technical Architecture
 
 ### Frontend Stack
@@ -219,7 +224,19 @@ A powerful, self-hosted web application for managing Jules AI agent sessions wit
 - **Language**: TypeScript 5
 - **Styling**: Tailwind CSS 4
 - **UI Components**: shadcn/ui
-- **Terminal**: xterm.js (v1.1 fixes lifecycle management)
+- **Terminal**: xterm.js
+
+### Backend Stack
+- **Runtime**: Bun
+- **Framework**: Hono
+- **Database**: SQLite (Prisma ORM)
+- **Real-time**: Native WebSocket
+
+### CLI Stack
+- **Framework**: Ink 5 (React for CLI)
+- **State**: Zustand 5
+
+---
 
 ## GitHub Issue Tracker Summary
 
@@ -263,20 +280,8 @@ A powerful, self-hosted web application for managing Jules AI agent sessions wit
 | [#48](https://github.com/sbhavani/jules-app/issues/48) | THEME-001 | Refactor Theming System | 🟡 Open | P2 Nice to Have |
 
 **Summary Statistics:**
-- ✅ Closed: 21 issues (+1 optimization focus)
+- ✅ Closed: 21 issues
 - 🟡 Open: 15 issues
 - P0 Critical: 6 issues (6 closed, 0 open)
 - P1 Important: 13 issues (8 closed, 5 open)
 - P2 Nice to Have: 8 issues (2 closed, 6 open)
-- Feature requests: 10 issues (2 closed, 8 open)
-=======
-## Technical Stack
-*   **Frontend:** Next.js (App Router), React, Tailwind CSS, shadcn/ui.
-*   **State Management:** React Context + Hooks.
-*   **Deployment:** Docker Compose.
-
-## Future Roadmap
-*   Multi-agent debate orchestration.
-*   Enhanced artifact management (file browser).
-*   User authentication (OAuth).
->>>>>>> origin/jules-session-keeper-integration-11072096883725838253

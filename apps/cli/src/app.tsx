@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Box, Text, useInput, useApp } from 'ink';
 import { useAppStore } from './hooks/useAppState.js';
+import { useWebSocket } from './hooks/useWebSocket.js';
 import Dashboard from './screens/Dashboard.js';
 import SessionList from './screens/SessionList.js';
 import SessionDetail from './screens/SessionDetail.js';
@@ -14,6 +15,8 @@ export default function App() {
   const [screen, setScreen] = useState<Screen>('dashboard');
   const [selectedSessionId, setSelectedSessionId] = useState<string | null>(null);
   const { isConnected, error, connect } = useAppStore();
+  
+  const ws = useWebSocket();
 
   useEffect(() => {
     connect();
