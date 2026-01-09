@@ -21,15 +21,12 @@ import {
   Settings,
   BarChart3,
   MessageSquare,
-  Terminal as TerminalIcon,
   LayoutTemplate,
   Plus,
   Kanban,
   Activity as ActivityIcon,
   FolderTree,
   Search,
-  LayoutGrid,
-  Files,
   Scale
 } from "lucide-react";
 import { SessionList } from "@/components/session-list";
@@ -50,9 +47,6 @@ interface AppHeaderProps {
   refreshKey: number;
   selectedSession: Session | null;
   onSelectSession: (session: Session | string) => void;
-  terminalAvailable: boolean;
-  terminalOpen: boolean;
-  onToggleTerminal: () => void;
   isNewSessionOpen: boolean;
   setIsNewSessionOpen: (open: boolean) => void;
   newSessionInitialValues?: {
@@ -79,9 +73,6 @@ export function AppHeader({
   refreshKey,
   selectedSession,
   onSelectSession,
-  terminalAvailable,
-  terminalOpen,
-  onToggleTerminal,
   isNewSessionOpen,
   setIsNewSessionOpen,
   newSessionInitialValues,
@@ -308,23 +299,6 @@ export function AppHeader({
               System
             </span>
           </Button>
-
-          {terminalAvailable && (
-            <Button
-              variant="ghost"
-              size="sm"
-              className={`h-8 px-3 hover:bg-white/5 ${
-                terminalOpen ? "text-green-500" : "text-white/60"
-              }`}
-              onClick={onToggleTerminal}
-              title="Toggle Terminal (Ctrl+`)"
-            >
-              <TerminalIcon className="h-3.5 w-3.5 mr-1.5" />
-              <span className="text-[10px] font-mono uppercase tracking-wider">
-                Terminal
-              </span>
-            </Button>
-          )}
 
           <NewSessionDialog
             onSessionCreated={onSessionCreated}

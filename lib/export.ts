@@ -1,6 +1,59 @@
 import { Session, Activity } from "@/types/jules";
 import { Log } from "@/lib/stores/session-keeper";
 
+interface ImportedSessionData {
+  session: Session;
+  activities: Activity[];
+  exportedAt: string;
+  version: string;
+}
+
+interface ImportedLogsData {
+  logs: Log[];
+  exportedAt: string;
+  version: string;
+}
+
+export function importSessionFromJSON(file: File): Promise<ImportedSessionData> {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      try {
+        const data = JSON.parse(e.target?.result as string) as ImportedSessionData;
+        if (!data.session || !data.activities) {
+          reject(new Error('Invalid session export file: missing session or activities'));
+          return;
+        }
+        resolve(data);
+      } catch (err) {
+        reject(new Error(`Failed to parse JSON: ${err instanceof Error ? err.message : 'Unknown error'}`));
+      }
+    };
+    reader.onerror = () => reject(new Error('Failed to read file'));
+    reader.readAsText(file);
+  });
+}
+
+export function importSystemLogsFromJSON(file: File): Promise<ImportedLogsData> {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      try {
+        const data = JSON.parse(e.target?.result as string) as ImportedLogsData;
+        if (!data.logs || !Array.isArray(data.logs)) {
+          reject(new Error('Invalid logs export file: missing logs array'));
+          return;
+        }
+        resolve(data);
+      } catch (err) {
+        reject(new Error(`Failed to parse JSON: ${err instanceof Error ? err.message : 'Unknown error'}`));
+      }
+    };
+    reader.onerror = () => reject(new Error('Failed to read file'));
+    reader.readAsText(file);
+  });
+}
+
 export function exportSessionToJSON(session: Session, activities: Activity[]) {
   const data = {
     session,

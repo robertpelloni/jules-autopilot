@@ -4,8 +4,6 @@ import { useState, useCallback, useEffect } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useJules } from "@/lib/jules/provider";
 import type { Session, Activity, SessionTemplate, Artifact } from "@/types/jules";
-import { TerminalPanel } from "./terminal-panel";
-import { useTerminalAvailable } from "@/hooks/use-terminal-available";
 import {
   Dialog,
   DialogContent,
@@ -33,7 +31,6 @@ export function AppLayout({ initialView }: AppLayoutProps) {
   const { config, setConfig } = useSessionKeeperStore();
   const searchParams = useSearchParams();
   const router = useRouter();
-  const { isAvailable: terminalAvailable } = useTerminalAvailable();
   const [selectedSession, setSelectedSession] = useState<Session | null>(null);
   const [view, setView] = useState<'sessions' | 'analytics' | 'templates' | 'kanban' | 'debates' | 'board' | 'artifacts'>('sessions');
 
@@ -46,12 +43,6 @@ export function AppLayout({ initialView }: AppLayoutProps) {
   const [currentActivities, setCurrentActivities] = useState<Activity[]>([]);
   const [codeSidebarWidth, setCodeSidebarWidth] = useState(600);
   const [isResizing, setIsResizing] = useState(false);
-  const [terminalOpen, setTerminalOpen] = useState(() => {
-    if (typeof window !== 'undefined') {
-      return localStorage.getItem('terminal-open') === 'true';
-    }
-    return false;
-  });
 
   const [isNewSessionOpen, setIsNewSessionOpen] = useState(false);
   const [newSessionInitialValues, setNewSessionInitialValues] = useState<{
@@ -223,14 +214,6 @@ export function AppLayout({ initialView }: AppLayoutProps) {
     setSelectedSession(null);
   };
 
-  const handleToggleTerminal = useCallback(() => {
-    setTerminalOpen((prev) => {
-      const newValue = !prev;
-      localStorage.setItem('terminal-open', String(newValue));
-      return newValue;
-    });
-  }, []);
-
   const handleStartSessionFromTemplate = (template: SessionTemplate) => {
     setNewSessionInitialValues({
       prompt: template.prompt,
@@ -273,9 +256,6 @@ export function AppLayout({ initialView }: AppLayoutProps) {
         refreshKey={refreshKey}
         selectedSession={selectedSession}
         onSelectSession={handleSessionSelect}
-        terminalAvailable={terminalAvailable}
-        terminalOpen={terminalOpen}
-        onToggleTerminal={handleToggleTerminal}
         isNewSessionOpen={isNewSessionOpen}
         setIsNewSessionOpen={setIsNewSessionOpen}
         newSessionInitialValues={newSessionInitialValues}
@@ -342,15 +322,6 @@ export function AppLayout({ initialView }: AppLayoutProps) {
 
         </ResizablePanelGroup>
       </div>
-
-      {terminalAvailable && (
-        <TerminalPanel
-          sessionId={selectedSession?.id || 'global'}
-          repositoryPath=""
-          isOpen={terminalOpen}
-          onToggle={handleToggleTerminal}
-        />
-      )}
 
       {selectedSession && (
         <DebateDialog

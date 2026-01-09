@@ -4,6 +4,34 @@ import { runDebate, runConference } from '@/lib/orchestration/debate';
 import { runCodeReview } from '@/lib/orchestration/review';
 import { getSession } from '@/lib/session';
 
+const FALLBACK_PROVIDERS = ['openai', 'anthropic', 'gemini'] as const;
+const FALLBACK_MODELS: Record<string, string> = {
+  openai: 'gpt-4o',
+  anthropic: 'claude-sonnet-4-20250514',
+  gemini: 'gemini-2.0-flash',
+};
+
+function isRateLimitError(error: unknown): boolean {
+  if (error instanceof Error) {
+    const msg = error.message.toLowerCase();
+    return msg.includes('rate_limit') || msg.includes('quota') || msg.includes('429') || msg.includes('too many requests');
+  }
+  return false;
+}
+
+function getApiKeyForProvider(provider: string, fallbackKey?: string): string | undefined {
+  switch (provider) {
+    case 'openai':
+      return process.env.OPENAI_API_KEY || fallbackKey;
+    case 'anthropic':
+      return process.env.ANTHROPIC_API_KEY;
+    case 'gemini':
+      return process.env.GEMINI_API_KEY || process.env.GOOGLE_API_KEY;
+    default:
+      return fallbackKey;
+  }
+}
+
 function enrichParticipants(participants: any[], apiKey: string | undefined) {
     return participants.map((p: any) => {
         let finalApiKey = p.apiKey;
@@ -269,22 +297,48 @@ export async function POST(req: Request) {
       });
     }
 
-    // 7. Stateless Logic (Default Supervisor)
-    const p = getProvider(provider);
-    if (p) {
-        if (!apiKey) return NextResponse.json({ error: 'API Key required' }, { status: 400 });
-
-        try {
-            const result = await p.complete({
-                messages,
-                apiKey,
-                model,
-                systemPrompt: 'You are a project supervisor. Your goal is to keep the AI agent "Jules" on track. Read the conversation history. Identify if the agent is stuck, off-track, or needs guidance. If a session is stalled, failed, or completed but needs more work, provide a concise, direct instruction to reactivate it. Do not be conversational. Be directive but polite. Focus on the next task.'
-            });
-            return NextResponse.json({ content: result.content });
-        } catch (e) {
-             return NextResponse.json({ error: e instanceof Error ? e.message : 'Completion failed' }, { status: 500 });
+    // 7. Stateless Logic (Default Supervisor) with Provider Fallback
+    const primaryProvider = provider || 'openai';
+    const providersToTry = [primaryProvider, ...FALLBACK_PROVIDERS.filter(p => p !== primaryProvider)];
+    
+    let lastError: Error | null = null;
+    
+    for (const providerName of providersToTry) {
+      const p = getProvider(providerName);
+      if (!p) continue;
+      
+      const providerApiKey = getApiKeyForProvider(providerName, apiKey);
+      if (!providerApiKey) continue;
+      
+      const providerModel = providerName === primaryProvider ? model : FALLBACK_MODELS[providerName];
+      
+      try {
+        const result = await p.complete({
+          messages,
+          apiKey: providerApiKey,
+          model: providerModel,
+          systemPrompt: 'You are a project supervisor. Your goal is to keep the AI agent "Jules" on track. Read the conversation history. Identify if the agent is stuck, off-track, or needs guidance. If a session is stalled, failed, or completed but needs more work, provide a concise, direct instruction to reactivate it. Do not be conversational. Be directive but polite. Focus on the next task.'
+        });
+        
+        if (providerName !== primaryProvider) {
+          console.log(`[Supervisor API] Fallback to ${providerName} succeeded`);
         }
+        
+        return NextResponse.json({ content: result.content, provider: providerName });
+      } catch (e) {
+        lastError = e instanceof Error ? e : new Error(String(e));
+        
+        if (isRateLimitError(e)) {
+          console.log(`[Supervisor API] Rate limit hit on ${providerName}, trying fallback...`);
+          continue;
+        }
+        
+        return NextResponse.json({ error: lastError.message }, { status: 500 });
+      }
+    }
+
+    if (lastError) {
+      return NextResponse.json({ error: lastError.message }, { status: 500 });
     }
 
     return NextResponse.json({ error: 'Invalid provider or action' }, { status: 400 });

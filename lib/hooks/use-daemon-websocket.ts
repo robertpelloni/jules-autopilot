@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useRef, useCallback } from 'react';
+import { useEffect, useRef, useCallback, useState } from 'react';
 import { useSessionKeeperStore, Log } from '@/lib/stores/session-keeper';
 import type {
   DaemonEvent,
@@ -13,10 +13,18 @@ import { WS_DEFAULTS } from '@jules/shared';
 
 const WS_URL = process.env.NEXT_PUBLIC_DAEMON_WS_URL || 'ws://localhost:8080/ws';
 
+type ConnectionState = 'connecting' | 'connected' | 'disconnected' | 'reconnecting';
+
 export function useDaemonWebSocket() {
   const wsRef = useRef<WebSocket | null>(null);
   const reconnectAttemptsRef = useRef(0);
   const reconnectTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const pingIntervalRef = useRef<NodeJS.Timeout | null>(null);
+  const pongTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const lastPongRef = useRef<number>(Date.now());
+  
+  const [connectionState, setConnectionState] = useState<ConnectionState>('disconnected');
+  const [latency, setLatency] = useState<number | null>(null);
 
   const config = useSessionKeeperStore(state => state.config);
   const setStatusSummary = useSessionKeeperStore(state => state.setStatusSummary);
@@ -104,6 +112,19 @@ export function useDaemonWebSocket() {
           break;
         }
 
+        case 'pong': {
+          lastPongRef.current = Date.now();
+          if (pongTimeoutRef.current) {
+            clearTimeout(pongTimeoutRef.current);
+            pongTimeoutRef.current = null;
+          }
+          const pingTime = (message.data as { timestamp?: number })?.timestamp;
+          if (pingTime) {
+            setLatency(Date.now() - pingTime);
+          }
+          break;
+        }
+
         default:
           break;
       }
@@ -121,18 +142,46 @@ export function useDaemonWebSocket() {
 
       ws.onopen = () => {
         reconnectAttemptsRef.current = 0;
+        setConnectionState('connected');
+        lastPongRef.current = Date.now();
         setStatusSummary({
           lastAction: 'WS Connected',
         });
+        
+        pingIntervalRef.current = setInterval(() => {
+          if (wsRef.current?.readyState === WebSocket.OPEN) {
+            const pingTime = Date.now();
+            wsRef.current.send(JSON.stringify({ type: 'ping', timestamp: pingTime }));
+            
+            pongTimeoutRef.current = setTimeout(() => {
+              const timeSinceLastPong = Date.now() - lastPongRef.current;
+              if (timeSinceLastPong > WS_DEFAULTS.PING_INTERVAL * 2) {
+                setConnectionState('reconnecting');
+                wsRef.current?.close(4000, 'Ping timeout');
+              }
+            }, WS_DEFAULTS.PING_INTERVAL);
+          }
+        }, WS_DEFAULTS.PING_INTERVAL);
       };
 
       ws.onmessage = handleMessage;
 
       ws.onclose = () => {
         wsRef.current = null;
+        setConnectionState('disconnected');
+
+        if (pingIntervalRef.current) {
+          clearInterval(pingIntervalRef.current);
+          pingIntervalRef.current = null;
+        }
+        if (pongTimeoutRef.current) {
+          clearTimeout(pongTimeoutRef.current);
+          pongTimeoutRef.current = null;
+        }
 
         if (config.isEnabled && reconnectAttemptsRef.current < WS_DEFAULTS.MAX_RECONNECT_ATTEMPTS) {
           reconnectAttemptsRef.current++;
+          setConnectionState('reconnecting');
           reconnectTimeoutRef.current = setTimeout(connect, WS_DEFAULTS.RECONNECT_DELAY);
         } else if (reconnectAttemptsRef.current >= WS_DEFAULTS.MAX_RECONNECT_ATTEMPTS) {
           setStatusSummary({
@@ -155,11 +204,22 @@ export function useDaemonWebSocket() {
       reconnectTimeoutRef.current = null;
     }
     
+    if (pingIntervalRef.current) {
+      clearInterval(pingIntervalRef.current);
+      pingIntervalRef.current = null;
+    }
+    
+    if (pongTimeoutRef.current) {
+      clearTimeout(pongTimeoutRef.current);
+      pongTimeoutRef.current = null;
+    }
+    
     if (wsRef.current) {
       wsRef.current.close(1000, 'Client disconnect');
       wsRef.current = null;
     }
     
+    setConnectionState('disconnected');
     reconnectAttemptsRef.current = 0;
   }, []);
 
@@ -183,6 +243,8 @@ export function useDaemonWebSocket() {
 
   return {
     isConnected: wsRef.current?.readyState === WebSocket.OPEN,
+    connectionState,
+    latency,
     send,
     reconnect: connect,
   };

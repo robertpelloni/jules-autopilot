@@ -15,7 +15,7 @@ import {
 } from "@/components/ui/tooltip";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { CardSpotlight } from "@/components/ui/card-spotlight";
-import { formatDistanceToNow, isValid, parseISO, isToday } from "date-fns";
+import { formatDistanceToNow, isValid, parseISO, isToday, differenceInDays } from "date-fns";
 import { getArchivedSessions } from "@/lib/archive";
 import { cn } from "@/lib/utils";
 
@@ -110,10 +110,47 @@ export function SessionList({
       case "failed":
         return "bg-red-500";
       case "paused":
-        return "bg-yellow-500"; 
+        return "bg-yellow-500";
+      case "awaiting_approval":
+        return "bg-orange-500";
       default:
         return "bg-gray-500";
     }
+  };
+
+  const getStatusLabel = (status: string) => {
+    switch (status) {
+      case "active":
+      case "running":
+        return "Active";
+      case "completed":
+        return "Done";
+      case "failed":
+        return "Failed";
+      case "paused":
+        return "Paused";
+      case "awaiting_approval":
+        return "Pending";
+      default:
+        return status;
+    }
+  };
+
+  const getDaysOld = (dateString: string) => {
+    if (!dateString) return null;
+    try {
+      const date = parseISO(dateString);
+      if (!isValid(date)) return null;
+      return differenceInDays(new Date(), date);
+    } catch {
+      return null;
+    }
+  };
+
+  const getFirstTopic = (prompt: string | undefined, maxLength = 40) => {
+    if (!prompt) return null;
+    const firstLine = prompt.split('\n')[0].trim();
+    return firstLine.length <= maxLength ? firstLine : firstLine.slice(0, maxLength) + "..."
   };
 
   const getRepoShortName = (sourceId: string) => {
@@ -202,7 +239,12 @@ export function SessionList({
         </div>
         <ScrollArea className="flex-1 min-h-0">
           <div className="p-2 space-y-1">
-            {visibleSessions.map((session) => (
+            {visibleSessions.map((session) => {
+              const daysOld = getDaysOld(session.createdAt);
+              const displayDate = session.lastActivityAt || session.updatedAt || session.createdAt;
+              const firstTopic = getFirstTopic(session.prompt);
+              
+              return (
               <CardSpotlight
                 key={session.id}
                 radius={250}
@@ -224,9 +266,12 @@ export function SessionList({
                     }
                   }}
                 >
-                  <div
-                    className={`flex-shrink-0 mt-1 w-2 h-2 rounded-full ${getStatusColor(session.status)}`}
-                  />
+                  <div className="flex-shrink-0 mt-1 flex flex-col items-center gap-1">
+                    <div
+                      className={`w-2 h-2 rounded-full ${getStatusColor(session.status)}`}
+                      title={getStatusLabel(session.status)}
+                    />
+                  </div>
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-2 mb-0.5 w-full min-w-0">
                       <Tooltip>
@@ -243,19 +288,43 @@ export function SessionList({
                           <p>{session.title || "Untitled"}</p>
                         </TooltipContent>
                       </Tooltip>
+                      <Badge 
+                        className={`shrink-0 text-[8px] px-1 py-0 h-3.5 font-mono border-0 rounded-sm uppercase tracking-wider ${
+                          session.status === 'active' ? 'bg-blue-500/20 text-blue-400' :
+                          session.status === 'completed' ? 'bg-green-500/20 text-green-400' :
+                          session.status === 'failed' ? 'bg-red-500/20 text-red-400' :
+                          session.status === 'paused' ? 'bg-yellow-500/20 text-yellow-400' :
+                          session.status === 'awaiting_approval' ? 'bg-orange-500/20 text-orange-400' :
+                          'bg-white/10 text-white/70'
+                        }`}
+                      >
+                        {getStatusLabel(session.status)}
+                      </Badge>
+                    </div>
+                    
+                    {firstTopic && (
+                      <div className="text-[9px] text-white/50 leading-tight mb-1 truncate">
+                        {firstTopic}
+                      </div>
+                    )}
+                    
+                    <div className="flex items-center gap-2 text-[9px] text-white/40 leading-tight font-mono tracking-wide">
+                      <span>{formatDate(displayDate)}</span>
+                      {daysOld !== null && daysOld > 0 && (
+                        <span className={`${daysOld > 7 ? 'text-orange-400/60' : ''}`}>
+                          ({daysOld}d)
+                        </span>
+                      )}
                       {session.sourceId && (
-                        <Badge className="shrink-0 text-[9px] px-1.5 py-0 h-4 font-mono bg-white/10 text-white/70 hover:bg-white/20 border-0 rounded-sm uppercase tracking-wider">
+                        <Badge className="text-[8px] px-1 py-0 h-3.5 font-mono bg-white/5 text-white/50 hover:bg-white/10 border-0 rounded-sm">
                           {getRepoShortName(session.sourceId)}
                         </Badge>
                       )}
                     </div>
-                    <div className="text-[9px] text-white/40 leading-tight font-mono tracking-wide">
-                      {formatDate(session.createdAt)}
-                    </div>
                   </div>
                 </div>
               </CardSpotlight>
-            ))}
+            )})}
           </div>
         </ScrollArea>
 
