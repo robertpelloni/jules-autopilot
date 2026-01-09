@@ -1,23 +1,24 @@
 # Jules Autopilot - Product Vision
 
 **Author:** User (extracted from conversation 2026-01-09)
-**Version:** 0.8.3
+**Version:** 0.8.5
 
 ---
 
 ## Core Mission
 
-**Build the ultimate Jules UI with intelligent autopilot capabilities** that allows running millions of Jules sessions simultaneously, with automatic continuation powered by multi-model consensus—all while bypassing the sluggish official Google Jules website.
+**Build the ultimate cloud dev command center** that allows running millions of AI coding sessions simultaneously across **multiple providers** (Jules, Devin, Manus, OpenHands, etc.), with automatic continuation powered by multi-model consensus—all while bypassing the sluggish official interfaces.
 
 ### Why This Exists
 
 > "The Jules website blows and its really slow and takes forever to load and lags like heck so this is way better when it actually works"
 
-The official Jules interface is slow, laggy, and doesn't scale. This project provides:
-- **High-performance alternative UI** for Google's Jules AI agent
+The official AI coding agent interfaces are slow, laggy, and don't scale. This project provides:
+- **High-performance alternative UI** for multiple AI coding agents
 - **Autopilot mode** that keeps sessions moving without manual intervention
 - **Multi-model orchestration** for intelligent decision-making
-- **Massive parallelization** to leverage Google's free compute resources
+- **Massive parallelization** to leverage cloud compute resources
+- **Session portability** across different cloud dev providers
 
 ---
 
@@ -160,7 +161,7 @@ The AIOS base will integrate multiple sub-services, each potentially with their 
 
 ---
 
-## Current Implementation Status (v0.8.3)
+## Current Implementation Status (v0.8.5)
 
 ### ✅ Completed
 - [x] Session Keeper Daemon (Bun/Hono backend)
@@ -180,11 +181,21 @@ The AIOS base will integrate multiple sub-services, each potentially with their 
 - [x] Real-time WebSocket events (nudges, approvals, status)
 - [x] Ink TUI client (@jules/cli)
 - [x] Kanban view for sessions
+- [x] **Multi-Provider Cloud Dev Support** (v0.8.5)
+  - [x] Unified session types (`types/cloud-dev.ts`)
+  - [x] Base provider abstraction (`lib/cloud-dev/providers/base.ts`)
+  - [x] Jules provider implementation (`lib/cloud-dev/providers/jules.ts`)
+  - [x] Stub providers: Devin, Manus, OpenHands, GitHub Spark, Blocks, Claude Code, Codex
+  - [x] Provider registry with factory functions (`lib/cloud-dev/providers/index.ts`)
+  - [x] Session transfer service (`lib/cloud-dev/transfer.ts`)
+  - [x] Zustand store for multi-provider state (`lib/stores/cloud-dev.ts`)
 
 ### 📋 Planned
 - [ ] System tray manager (Tauri)
 - [ ] Plugin system for sub-service dashboards
 - [ ] Desktop notifications
+- [ ] Full provider implementations (Devin, Manus, OpenHands APIs)
+- [ ] Cross-provider session migration UI
 
 ---
 

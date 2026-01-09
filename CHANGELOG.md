@@ -2,6 +2,22 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.8.5] - 2026-01-09
+
+### Added
+- **Multi-Provider Cloud Dev Support:** Unified abstraction layer for managing AI coding sessions across multiple cloud dev providers.
+  - **Unified Types** (`types/cloud-dev.ts`): `CloudDevProviderId`, `UnifiedSession`, `UnifiedActivity`, `SessionTransferRequest`
+  - **Base Provider** (`lib/cloud-dev/providers/base.ts`): Abstract `BaseCloudDevProvider` class with `ProviderNotImplementedError`
+  - **Jules Provider** (`lib/cloud-dev/providers/jules.ts`): Full implementation wrapping existing `JulesClient`
+  - **Stub Providers**: Devin, Manus, OpenHands, GitHub Spark, Blocks, Claude Code, Codex (ready for future API integration)
+  - **Provider Registry** (`lib/cloud-dev/providers/index.ts`): Factory functions `createProvider()`, `createProviders()`, `getAvailableProviderIds()`
+  - **Session Transfer Service** (`lib/cloud-dev/transfer.ts`): `SessionTransferService` for migrating sessions between providers
+  - **Zustand Store** (`lib/stores/cloud-dev.ts`): Persistent state management for multi-provider sessions with `useCloudDevStore`
+
+### Changed
+- **Architecture:** Session IDs now use `"{providerId}:{providerSessionId}"` format for cross-provider identification
+- **Documentation:** Updated `docs/VISION.md` to reflect multi-provider mission and v0.8.5 status
+
 ## [0.8.0] - 2026-01-09
 
 ### Added
