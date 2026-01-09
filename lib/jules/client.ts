@@ -139,17 +139,24 @@ export class JulesAPIError extends Error {
   }
 }
 
-const API_BASE_URL = '/api/jules';
+const DEFAULT_API_BASE_URL = '/api/jules';
 
 export class JulesClient {
   private apiKey?: string;
+  private baseUrl: string;
 
-  constructor(apiKey?: string) {
+  constructor(apiKey?: string, baseUrl: string = DEFAULT_API_BASE_URL) {
     this.apiKey = apiKey;
+    this.baseUrl = baseUrl;
   }
 
   private async request<T>(endpoint: string, options: RequestInit = {}): Promise<T> {
-    const url = endpoint.startsWith(API_BASE_URL) ? endpoint : `${API_BASE_URL}${endpoint}`;
+    const url = endpoint.startsWith('http') 
+      ? endpoint 
+      : endpoint.startsWith(this.baseUrl) 
+        ? endpoint 
+        : `${this.baseUrl}${endpoint}`;
+
     
     try {
       const response = await fetch(url, {

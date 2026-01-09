@@ -351,6 +351,24 @@ export function ActivityFeed({ session, onArchive, showCodeDiffs, onToggleCodeDi
 
   const parentRef = useRef<HTMLDivElement>(null);
 
+  const filteredActivities = useMemo(() => activities.filter((activity) => {
+    if (activity.bashOutput || activity.diff || activity.media) return true;
+    const content = activity.content?.trim();
+    if (!content) return false;
+    const cleanContent = content.replace(/\s/g, '');
+    if (cleanContent === '{}' || cleanContent === '[]') return false;
+    if (content.startsWith('{') || content.startsWith('[')) {
+      try {
+        const parsed = JSON.parse(content);
+        if (typeof parsed === 'object' && parsed !== null) {
+          if (Array.isArray(parsed) && parsed.length === 0) return false;
+          if (!Array.isArray(parsed) && Object.keys(parsed).length === 0) return false;
+        }
+      } catch { }
+    }
+    return true;
+  }), [activities]);
+
   const groupedActivities = useMemo(() => {
     const grouped: Array<Activity | Activity[]> = [];
     let currentGroup: Activity[] | null = null;
@@ -412,24 +430,6 @@ export function ActivityFeed({ session, onArchive, showCodeDiffs, onToggleCodeDi
       default: return 'bg-gray-500';
     }
   };
-
-  const filteredActivities = useMemo(() => activities.filter((activity) => {
-    if (activity.bashOutput || activity.diff || activity.media) return true;
-    const content = activity.content?.trim();
-    if (!content) return false;
-    const cleanContent = content.replace(/\s/g, '');
-    if (cleanContent === '{}' || cleanContent === '[]') return false;
-    if (content.startsWith('{') || content.startsWith('[')) {
-      try {
-        const parsed = JSON.parse(content);
-        if (typeof parsed === 'object' && parsed !== null) {
-          if (Array.isArray(parsed) && parsed.length === 0) return false;
-          if (!Array.isArray(parsed) && Object.keys(parsed).length === 0) return false;
-        }
-      } catch { }
-    }
-    return true;
-  }), [activities]);
 
   const sessionDuration = session.createdAt ? Math.floor((new Date().getTime() - new Date(session.createdAt).getTime()) / 1000 / 60) : 0;
 

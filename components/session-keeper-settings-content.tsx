@@ -86,17 +86,19 @@ export function SessionKeeperSettingsContent({
       }
   };
 
-  const handleClearMemory = (sessionId: string) => {
+  const handleClearMemory = async (sessionId: string) => {
       if (propOnClearMemory) {
           propOnClearMemory(sessionId);
       } else {
-          const savedState = localStorage.getItem('jules_supervisor_state');
-          if (savedState) {
-              const state = JSON.parse(savedState);
-              if (state[sessionId]) {
-                  delete state[sessionId];
-                  localStorage.setItem('jules_supervisor_state', JSON.stringify(state));
-              }
+          try {
+              const response = await fetch('http://localhost:8080/api/supervisor/clear', {
+                  method: 'POST',
+                  headers: { 'Content-Type': 'application/json' },
+                  body: JSON.stringify({ sessionId })
+              });
+              if (!response.ok) throw new Error('Failed to clear memory');
+          } catch (err) {
+              console.error('Clear Memory Error:', err);
           }
       }
   };

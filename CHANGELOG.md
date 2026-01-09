@@ -2,15 +2,35 @@
 
 All notable changes to this project will be documented in this file.
 
-## [0.7.1] - 2026-01-08
+## [0.8.0] - 2026-01-09
 
 ### Added
--   **Dashboard:** Enhanced Submodule Dashboard to display git descriptions (tags) for better version tracking.
+- **Session Keeper Daemon:** Migrated background monitoring from client-side React polling to a persistent **Bun/Hono backend daemon** (`server/`). Sessions stay monitored even when the browser is closed.
+  - New endpoints: `/api/daemon/start`, `/api/daemon/stop`, `/api/daemon/status`
+  - New endpoint: `/api/supervisor/clear` for resetting supervisor state
+  - Daemon logs written to `KeeperLog` table in SQLite
+- **Prisma Schema:** Added `SupervisorState` model for persisting per-session supervisor state (replaces localStorage).
 
 ### Changed
--   **Submodules:** Updated all external submodules to their latest upstream versions.
--   **Maintenance:** Merged all pending feature branches (`palette`, `kanban`, `mobile-layout`, `copilot`) into `main` and resolved conflicts.
--   **Dependencies:** Regenerated `pnpm-lock.yaml` to resolve merge conflicts.
+- **Architecture:** Session Keeper now runs on `http://localhost:8080` (Bun server) with CORS enabled for frontend communication.
+- **Frontend:** `session-keeper-manager.tsx` reduced from 500+ lines to ~65 lines; now polls daemon status every 30s.
+- **Store:** `lib/stores/session-keeper.ts` updated to call Bun server API instead of managing local loop.
+- **Settings:** "Clear Memory" in settings now calls backend API instead of clearing localStorage.
+
+### Fixed
+- **Merge Conflict:** Resolved conflict in `copilot-instructions.md`.
+
+## [0.7.1] - 2026-01-09
+
+### Added
+- **Orchestration:** Implemented a **Risk-Scoring Engine** in `supervisor.ts` to evaluate agent plans based on complexity, side effects, and consensus.
+- **Observability:** Added **Throughput & Performance Metrics** (Nudges/hr, Token/sec, Risk Approval Rate) to the System Dashboard.
+- **Documentation:** Created a **Universal Library & Function Index** (`docs/LIBRARY_INDEX.md`) documenting all 11 submodules and core dependencies.
+- **UI:** Enhanced the **Submodule Dashboard** with feature tags, GitHub links, and directory structure explanations.
+
+### Changed
+- **Versioning:** Bumped project version to **0.7.1** across `package.json`, `VERSION.md`, and UI components.
+- **Activity Feed:** (Previous) Row virtualization implemented for high-scale session histories.
 
 ## [0.7.0] - 2026-01-08
 

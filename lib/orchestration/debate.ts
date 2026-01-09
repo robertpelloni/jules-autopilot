@@ -1,5 +1,6 @@
 import { Message, Participant, DebateResult, DebateRound, DebateTurn, DebateProgressEvent } from './types';
 import { getProvider, generateText } from './providers';
+import { calculateRiskScore, determineApprovalStatus } from './supervisor';
 
 export async function runDebate({ history, participants, rounds = 1, topic, onProgress }: {
     history: Message[];
@@ -8,7 +9,7 @@ export async function runDebate({ history, participants, rounds = 1, topic, onPr
     topic?: string;
     onProgress?: (event: DebateProgressEvent) => void;
 }): Promise<DebateResult> {
-
+    const startTime = Date.now();
     const currentHistory = [...history];
     const debateRounds: DebateRound[] = [];
     
@@ -172,8 +173,27 @@ export async function runDebate({ history, participants, rounds = 1, topic, onPr
         rounds: debateRounds,
         summary,
         history: currentHistory,
-        totalUsage
+        totalUsage,
+        durationMs: Date.now() - startTime
     };
+
+    // Calculate risk score and approval status
+    if (summaryParticipant) {
+        try {
+            const riskScore = await calculateRiskScore(
+                result,
+                summaryParticipant.provider,
+                summaryParticipant.apiKey || '',
+                summaryParticipant.model
+            );
+            result.riskScore = riskScore;
+            result.approvalStatus = determineApprovalStatus(riskScore);
+        } catch (e) {
+            console.error("Failed to calculate risk score:", e);
+            result.riskScore = 50;
+            result.approvalStatus = 'pending';
+        }
+    }
     
     onProgress?.({ type: 'complete', result });
 

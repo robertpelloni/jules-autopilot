@@ -34,12 +34,24 @@ model KeeperSettings {
   smartPilotEnabled         Boolean  @default(false)
   supervisorProvider        String   @default("openai")
   supervisorApiKey          String?
+  julesApiKey               String?
   supervisorModel           String   @default("gpt-4o")
   contextMessageCount       Int      @default(10)
+  resumePaused              Boolean  @default(false)
   updatedAt                 DateTime @updatedAt
 }
 
+model SupervisorState {
+  sessionId                      String   @id
+  lastProcessedActivityTimestamp String?
+  history                        String?  // JSON
+  openaiThreadId                 String?
+  openaiAssistantId              String?
+  updatedAt                      DateTime @updatedAt
+}
+
 model KeeperLog {
+
   id        String   @id @default(uuid())
   sessionId String
   type      String

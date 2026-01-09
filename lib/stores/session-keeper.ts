@@ -1,6 +1,7 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 import { SessionKeeperConfig } from '@/types/jules';
+import type { DebateResult as OrchestrationDebateResult } from '@/lib/orchestration/types';
 
 export interface Log {
   id?: string;
@@ -20,7 +21,7 @@ export interface DebateOpinion {
   error?: string;
 }
 
-export interface DebateResult {
+export interface DebateResult extends OrchestrationDebateResult {
   id: string;
   sessionId: string;
   timestamp: number;
@@ -102,6 +103,8 @@ const DEFAULT_CONFIG: SessionKeeperConfig = {
   debateParticipants: []
 };
 
+const BUN_SERVER_URL = 'http://localhost:8080';
+
 export const useSessionKeeperStore = create<SessionKeeperState>()(
   persist(
     (set, get) => ({
@@ -122,6 +125,21 @@ export const useSessionKeeperStore = create<SessionKeeperState>()(
           if (res.ok) {
             const config = await res.json();
             set({ config });
+            
+            const statusRes = await fetch(`${BUN_SERVER_URL}/api/daemon/status`);
+            if (statusRes.ok) {
+              const statusData = await statusRes.json();
+              set((state) => ({
+                config: { ...state.config, isEnabled: statusData.isEnabled },
+                logs: statusData.logs.map((l: any) => ({
+                  id: l.id,
+                  time: new Date(l.createdAt).toLocaleTimeString(),
+                  message: l.message,
+                  type: l.type,
+                  details: l.metadata ? JSON.parse(l.metadata) : undefined
+                }))
+              }));
+            }
           }
         } catch (error) {
           console.error('Failed to load keeper config:', error);
@@ -140,6 +158,10 @@ export const useSessionKeeperStore = create<SessionKeeperState>()(
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify(config),
           });
+
+          const endpoint = config.isEnabled ? '/api/daemon/start' : '/api/daemon/stop';
+          await fetch(`${BUN_SERVER_URL}${endpoint}`, { method: 'POST' });
+          
         } catch (error) {
           console.error('Failed to save keeper config:', error);
         } finally {
@@ -149,15 +171,15 @@ export const useSessionKeeperStore = create<SessionKeeperState>()(
 
       loadLogs: async () => {
         try {
-          const res = await fetch('/api/logs/keeper');
+          const res = await fetch(`${BUN_SERVER_URL}/api/daemon/status`);
           if (res.ok) {
-            const dbLogs = await res.json();
-            const mappedLogs: Log[] = dbLogs.map((l: any) => ({
+            const statusData = await res.json();
+            const mappedLogs: Log[] = statusData.logs.map((l: any) => ({
               id: l.id,
-              time: new Date(l.timestamp).toLocaleTimeString(),
+              time: new Date(l.createdAt).toLocaleTimeString(),
               message: l.message,
               type: l.type as Log['type'],
-              details: l.details ? JSON.parse(l.details) : undefined
+              details: l.metadata ? JSON.parse(l.metadata) : undefined
             }));
             set({ logs: mappedLogs });
           }
@@ -243,7 +265,8 @@ export const useSessionKeeperStore = create<SessionKeeperState>()(
       partialize: (state) => ({ 
         stats: state.stats, 
         isPausedAll: state.isPausedAll,
-        lastForcedCheckAt: state.lastForcedCheckAt 
+        lastForcedCheckAt: state.lastForcedCheckAt,
+        debates: state.debates
       }),
     }
   )

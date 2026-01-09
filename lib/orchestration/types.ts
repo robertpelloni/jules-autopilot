@@ -7,7 +7,7 @@ export interface Message {
 export interface Participant {
   id: string;
   name: string;
-  role: string; // e.g. "Proposer", "Reviewer"
+  role: string;
   systemPrompt: string;
   provider: 'openai' | 'anthropic' | 'gemini' | 'openai-assistants' | 'qwen';
   model: string;
@@ -27,7 +27,7 @@ export interface CompletionParams {
   systemPrompt?: string;
   temperature?: number;
   maxTokens?: number;
-  jsonMode?: boolean; // Added for structured output support
+  jsonMode?: boolean;
 }
 
 export interface CompletionResult {
@@ -76,6 +76,9 @@ export interface DebateResult {
     completion_tokens: number;
     total_tokens: number;
   };
+  riskScore?: number;
+  approvalStatus?: 'pending' | 'approved' | 'rejected' | 'flagged';
+  durationMs?: number;
 }
 
 export type DebateProgressEvent = 
