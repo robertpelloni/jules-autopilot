@@ -1,13 +1,35 @@
 import { Hono } from 'hono';
 import { serve } from '@hono/node-server';
 import { cors } from 'hono/cors';
+import { EventEmitter } from 'events';
 import { getProvider } from '../lib/orchestration/providers';
 import { runDebate, runConference } from '../lib/orchestration/debate';
 import { runCodeReview } from '../lib/orchestration/review';
 import { startDaemon, stopDaemon } from './daemon';
 import { prisma } from '../lib/prisma';
+import { JulesClient } from '../lib/jules/client';
 
 const app = new Hono();
+
+const eventBus = new EventEmitter();
+const wsClients = new Set<{ send: (data: string) => void }>();
+
+export function broadcastToClients(message: object) {
+    const payload = JSON.stringify(message);
+    for (const client of wsClients) {
+        try {
+            client.send(payload);
+        } catch {
+            wsClients.delete(client);
+        }
+    }
+}
+
+export function emitDaemonEvent(type: string, data: object) {
+    const message = { type, ...data, timestamp: Date.now() };
+    eventBus.emit('daemon', message);
+    broadcastToClients(message);
+}
 
 app.use('*', cors({
     origin: '*',
@@ -22,6 +44,13 @@ function enrichParticipants(participants: any[], apiKey?: string) {
     }));
 }
 
+async function getJulesClient() {
+    const settings = await prisma.keeperSettings.findUnique({ where: { id: 'default' } });
+    const apiKey = settings?.julesApiKey || process.env.JULES_API_KEY;
+    if (!apiKey) return null;
+    return new JulesClient(apiKey, 'https://jules.googleapis.com/v1alpha');
+}
+
 app.get('/api/daemon/status', async (c) => {
     try {
         const settings = await prisma.keeperSettings.findUnique({ where: { id: 'default' } });
@@ -33,7 +62,8 @@ app.get('/api/daemon/status', async (c) => {
         return c.json({
             isEnabled: settings?.isEnabled || false,
             lastCheck: new Date().toISOString(),
-            logs
+            logs,
+            wsClients: wsClients.size
         });
     } catch (e) {
         return c.json({ error: e instanceof Error ? e.message : 'Failed to get status' }, 500);
@@ -56,6 +86,7 @@ app.post('/api/daemon/start', async (c) => {
             }
         });
         startDaemon();
+        emitDaemonEvent('daemon_status', { status: 'running' });
         return c.json({ success: true });
     } catch (e) {
         return c.json({ error: e instanceof Error ? e.message : 'Failed to start daemon' }, 500);
@@ -69,9 +100,108 @@ app.post('/api/daemon/stop', async (c) => {
             data: { isEnabled: false }
         });
         stopDaemon();
+        emitDaemonEvent('daemon_status', { status: 'stopped' });
         return c.json({ success: true });
     } catch (e) {
         return c.json({ error: e instanceof Error ? e.message : 'Failed to stop daemon' }, 500);
+    }
+});
+
+app.post('/api/sessions/interrupt-all', async (c) => {
+    try {
+        const client = await getJulesClient();
+        if (!client) {
+            return c.json({ error: 'Jules API key not configured' }, 400);
+        }
+
+        const sessions = await client.listSessions();
+        const activeSessions = sessions.filter(s => 
+            s.status === 'active' || s.rawState === 'IN_PROGRESS' || s.rawState === 'PLANNING'
+        );
+
+        let interrupted = 0;
+        const errors: string[] = [];
+
+        for (const session of activeSessions) {
+            try {
+                await client.updateSession(session.id, { status: 'paused' });
+                interrupted++;
+                
+                await prisma.keeperLog.create({
+                    data: {
+                        message: `Interrupted session ${session.id.substring(0, 8)}`,
+                        type: 'action',
+                        sessionId: session.id
+                    }
+                });
+            } catch (err) {
+                errors.push(`${session.id}: ${err instanceof Error ? err.message : 'Unknown error'}`);
+            }
+        }
+
+        emitDaemonEvent('sessions_interrupted', { 
+            count: interrupted, 
+            total: activeSessions.length,
+            errors 
+        });
+
+        return c.json({ 
+            success: true, 
+            interrupted, 
+            total: activeSessions.length,
+            errors: errors.length > 0 ? errors : undefined
+        });
+    } catch (e) {
+        return c.json({ error: e instanceof Error ? e.message : 'Failed to interrupt sessions' }, 500);
+    }
+});
+
+app.post('/api/sessions/continue-all', async (c) => {
+    try {
+        const client = await getJulesClient();
+        if (!client) {
+            return c.json({ error: 'Jules API key not configured' }, 400);
+        }
+
+        const sessions = await client.listSessions();
+        const pausedSessions = sessions.filter(s => 
+            s.status === 'paused' || s.status === 'completed' || s.status === 'failed'
+        );
+
+        let continued = 0;
+        const errors: string[] = [];
+
+        for (const session of pausedSessions) {
+            try {
+                await client.resumeSession(session.id, 'Please continue working on this task.');
+                continued++;
+                
+                await prisma.keeperLog.create({
+                    data: {
+                        message: `Resumed session ${session.id.substring(0, 8)}`,
+                        type: 'action',
+                        sessionId: session.id
+                    }
+                });
+            } catch (err) {
+                errors.push(`${session.id}: ${err instanceof Error ? err.message : 'Unknown error'}`);
+            }
+        }
+
+        emitDaemonEvent('sessions_continued', { 
+            count: continued, 
+            total: pausedSessions.length,
+            errors 
+        });
+
+        return c.json({ 
+            success: true, 
+            continued, 
+            total: pausedSessions.length,
+            errors: errors.length > 0 ? errors : undefined
+        });
+    } catch (e) {
+        return c.json({ error: e instanceof Error ? e.message : 'Failed to continue sessions' }, 500);
     }
 });
 
@@ -178,8 +308,38 @@ prisma.keeperSettings.findUnique({ where: { id: 'default' } }).then(settings => 
 });
 
 console.log(`Bun/Hono Server running on port ${port}`);
+console.log(`WebSocket clients can connect to ws://localhost:${port}/ws`);
 
-serve({
-  fetch: app.fetch,
-  port
+const server = Bun.serve({
+    port,
+    fetch: app.fetch,
+    websocket: {
+        open(ws) {
+            wsClients.add(ws);
+            ws.send(JSON.stringify({ type: 'connected', timestamp: Date.now() }));
+            console.log(`WebSocket client connected (${wsClients.size} total)`);
+        },
+        message(ws, message) {
+            try {
+                const data = JSON.parse(message.toString());
+                if (data.type === 'ping') {
+                    ws.send(JSON.stringify({ type: 'pong', timestamp: Date.now() }));
+                }
+            } catch {
+                ws.send(JSON.stringify({ type: 'error', message: 'Invalid JSON' }));
+            }
+        },
+        close(ws) {
+            wsClients.delete(ws);
+            console.log(`WebSocket client disconnected (${wsClients.size} total)`);
+        }
+    }
+});
+
+app.get('/ws', (c) => {
+    const upgraded = server.upgrade(c.req.raw);
+    if (!upgraded) {
+        return c.text('WebSocket upgrade failed', 400);
+    }
+    return new Response(null, { status: 101 });
 });
