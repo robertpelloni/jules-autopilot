@@ -1,5 +1,5 @@
 generator client {
-  provider = "prisma-client-js"
+  provider        = "prisma-client-js"
   previewFeatures = ["driverAdapters"]
   binaryTargets   = ["native", "debian-openssl-3.0.x"]
 }
@@ -17,59 +17,58 @@ model SessionTemplate {
   title       String?
   isFavorite  Boolean  @default(false)
   isPrebuilt  Boolean  @default(false)
-  tags        String   // Stored as CSV string
+  tags        String // Stored as CSV string
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
 }
 
 model KeeperSettings {
-  id                        String   @id @default("default")
-  isEnabled                 Boolean  @default(false)
-  autoSwitch                Boolean  @default(false)
-  checkIntervalSeconds      Int      @default(60)
-  inactivityThresholdMinutes Int     @default(10)
-  activeWorkThresholdMinutes Int     @default(5)
-  messages                  String   // JSON
-  customMessages            String   // JSON
-  smartPilotEnabled         Boolean  @default(false)
-  supervisorProvider        String   @default("openai")
-  supervisorApiKey          String?
-  julesApiKey               String?
-  supervisorModel           String   @default("gpt-4o")
-  contextMessageCount       Int      @default(10)
-  resumePaused              Boolean  @default(false)
-  updatedAt                 DateTime @updatedAt
+  id                         String   @id @default("default")
+  isEnabled                  Boolean  @default(false)
+  autoSwitch                 Boolean  @default(false)
+  checkIntervalSeconds       Int      @default(60)
+  inactivityThresholdMinutes Int      @default(10)
+  activeWorkThresholdMinutes Int      @default(5)
+  messages                   String // JSON
+  customMessages             String // JSON
+  smartPilotEnabled          Boolean  @default(false)
+  supervisorProvider         String   @default("openai")
+  supervisorApiKey           String?
+  julesApiKey                String?
+  supervisorModel            String   @default("gpt-4o")
+  contextMessageCount        Int      @default(10)
+  resumePaused               Boolean  @default(false)
+  updatedAt                  DateTime @updatedAt
 }
 
 model SupervisorState {
   sessionId                      String   @id
   lastProcessedActivityTimestamp String?
-  history                        String?  // JSON
+  history                        String? // JSON
   openaiThreadId                 String?
   openaiAssistantId              String?
   updatedAt                      DateTime @updatedAt
 }
 
 model KeeperLog {
-
   id        String   @id @default(uuid())
   sessionId String
   type      String
   message   String
-  metadata  String?  // JSON
+  metadata  String? // JSON
   createdAt DateTime @default(now())
 }
 
 model Debate {
-  id        String   @id @default(uuid())
-  topic     String
-  summary   String?
-  rounds    String   // JSON: DebateRound[]
-  history   String   // JSON: Message[]
-  metadata  String?  // JSON: Extra context
-  promptTokens Int      @default(0)
-  completionTokens Int  @default(0)
-  totalTokens Int       @default(0)
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  id               String   @id @default(uuid())
+  topic            String
+  summary          String?
+  rounds           String // JSON: DebateRound[]
+  history          String // JSON: Message[]
+  metadata         String? // JSON: Extra context
+  promptTokens     Int      @default(0)
+  completionTokens Int      @default(0)
+  totalTokens      Int      @default(0)
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
 }
