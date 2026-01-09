@@ -23,21 +23,79 @@ The official Jules interface is slow, laggy, and doesn't scale. This project pro
 
 ## Architecture Philosophy
 
-### Long-Running Service + Web Dashboard + System Tray
+### Option C: Hono Backend + Ink CLI (Dual Interface)
 
-The system needs three layers:
+**Decision:** Build BOTH a web UI and a TUI, sharing the same backend.
 
-1. **Background Daemon** (Bun/Hono on port 8080)
-   - Runs independently of browser
-   - Monitors all Jules sessions continuously
-   - Triggers nudges, approvals, and debates autonomously
+```
+┌─────────────────────────────────────────────────────────────────┐
+│                      CLIENT LAYER (Pick One)                     │
+│  ┌─────────────────────────┐  ┌─────────────────────────────┐   │
+│  │   Web UI (Browser)      │  │   TUI (Terminal)            │   │
+│  │   Next.js + React       │  │   Bun + Ink (React for CLI) │   │
+│  │   http://localhost:3000 │  │   `jules-tui` command       │   │
+│  └───────────┬─────────────┘  └──────────────┬──────────────┘   │
+│              │                               │                   │
+│              └───────────┬───────────────────┘                   │
+│                          │ HTTP/WebSocket                        │
+│                          ▼                                       │
+│  ┌─────────────────────────────────────────────────────────────┐│
+│  │              Hono API Server (port 8080)                    ││
+│  │  • /api/daemon/* (start/stop/status)                        ││
+│  │  • /api/sessions/* (list/nudge/approve/interrupt)           ││
+│  │  • /api/supervisor/* (state/clear)                          ││
+│  │  • /api/debate/* (start/vote/resolve)                       ││
+│  │  • WebSocket for real-time updates                          ││
+│  └─────────────────────────────────────────────────────────────┘│
+│                          │                                       │
+│                          ▼                                       │
+│  ┌─────────────────────────────────────────────────────────────┐│
+│  │              Background Daemon Loop                         ││
+│  │  • Monitors Jules sessions via googleapis.com               ││
+│  │  • Auto-nudges, auto-approves, triggers debates             ││
+│  │  • Persists to SQLite (KeeperLog, SupervisorState)          ││
+│  └─────────────────────────────────────────────────────────────┘│
+└─────────────────────────────────────────────────────────────────┘
+```
 
-2. **Web Dashboard** (Next.js on port 3000)
-   - Fast, responsive UI for monitoring and control
+### Why Dual Interface?
+
+| Interface | Use Case | Benefits |
+|-----------|----------|----------|
+| **Web UI** | Dashboard monitoring, complex views (Kanban, debates) | Rich visualizations, mouse interaction, multiple tabs |
+| **TUI (Ink)** | Quick commands, SSH access, scripting | Fast startup, keyboard-driven, works over SSH, pipeable |
+
+### The "Mecha Suit" Concept
+
+The TUI is your **Mecha Suit**—a keyboard-driven cockpit for power users:
+- Same React mental model (Ink uses React for terminal)
+- Vim-style keybindings
+- Real-time session status in terminal
+- Quick actions without leaving the command line
+
+### Four Layers Total
+
+1. **Hono API Server** (Bun, port 8080)
+   - Stateless REST + WebSocket API
+   - Shared by both Web UI and TUI
+   - All business logic lives here
+
+2. **Background Daemon** (runs inside Hono server)
+   - Long-running monitoring loop
+   - Triggers autonomous actions
+   - Writes to SQLite
+
+3. **Web Dashboard** (Next.js, port 3000)
+   - Full-featured browser UI
    - Aggregates multiple service dashboards
-   - Real-time session status and logs
+   - Real-time via WebSocket
 
-3. **System Tray Manager** (Future: Tauri)
+4. **TUI Client** (Bun + Ink)
+   - `jules-tui` CLI command
+   - Connects to Hono API
+   - Terminal-native experience
+
+5. **System Tray Manager** (Future: Tauri)
    - Native desktop presence
    - Quick access to start/stop daemon
    - Notifications for important events
