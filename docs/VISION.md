@@ -1,7 +1,7 @@
 # Jules Autopilot - Product Vision
 
 **Author:** User (extracted from conversation 2026-01-09)
-**Version:** 0.8.0
+**Version:** 0.8.3
 
 ---
 
@@ -160,7 +160,7 @@ The AIOS base will integrate multiple sub-services, each potentially with their 
 
 ---
 
-## Current Implementation Status (v0.8.0)
+## Current Implementation Status (v0.8.3)
 
 ### ✅ Completed
 - [x] Session Keeper Daemon (Bun/Hono backend)
@@ -172,17 +172,19 @@ The AIOS base will integrate multiple sub-services, each potentially with their 
 - [x] Supervisor API with risk scoring
 - [x] Provider abstraction (OpenAI, Anthropic, Gemini, Qwen)
 - [x] SQLite persistence (KeeperLog, SupervisorState, Debate)
-
-### 🔄 In Progress
-- [ ] Full logs UI with download capability
-- [ ] Interrupt/Continue all sessions buttons
-- [ ] Auto-restart stalled sessions
-- [ ] Broadcast to multiple sessions
+- [x] Full logs UI with download capability (JSON/Markdown export)
+- [x] Interrupt/Continue all sessions buttons
+- [x] Auto-restart stalled sessions (via resumePaused setting)
+- [x] Broadcast to multiple sessions
+- [x] pnpm monorepo with @jules/shared package
+- [x] Real-time WebSocket events (nudges, approvals, status)
+- [x] Ink TUI client (@jules/cli)
+- [x] Kanban view for sessions
 
 ### 📋 Planned
-- [ ] Kanban view
 - [ ] System tray manager (Tauri)
 - [ ] Plugin system for sub-service dashboards
+- [ ] Desktop notifications
 
 ---
 
