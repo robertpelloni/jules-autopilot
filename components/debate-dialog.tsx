@@ -27,7 +27,8 @@ import { toast } from 'sonner';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Card, CardContent } from '@/components/ui/card';
 
-import { Message, Participant } from '@/lib/orchestration/types';
+import { Message, Participant, DebateResult } from '@/lib/orchestration/types';
+import { DebateViewer } from '@/components/debate-viewer';
 
 interface DebateDialogProps {
   sessionId?: string;
@@ -40,7 +41,6 @@ interface DebateDialogProps {
   initialHistory?: Message[];
 }
 
-// UI-specific extension of Participant to handle key retrieval
 interface UIParticipant extends Participant {
   apiKeyKey: string;
   envFallback: string;
@@ -94,6 +94,7 @@ export function DebateDialog({
   const [loading, setLoading] = useState(false);
   const [topic, setTopic] = useState(initialTopic);
   const [errorDetail, setErrorDetail] = useState<string | null>(null);
+  const [debateResult, setDebateResult] = useState<DebateResult | null>(null);
 
   const isControlled = controlledOpen !== undefined;
   const open = isControlled ? controlledOpen : internalOpen;
@@ -161,19 +162,18 @@ export function DebateDialog({
   const handleStartDebate = async () => {
     if (!client) return;
     
-    // Validation
     if (!topic.trim()) {
       setErrorDetail("Topic is required.");
       return;
     }
     if (participants.length < 2) {
       setErrorDetail("At least two participants are recommended for a debate.");
-      // We allow 1 for testing but warn
     }
 
     try {
       setLoading(true);
       setErrorDetail(null);
+      setDebateResult(null);
       toast.info('Starting debate session...');
 
       let messages: Message[] = [];
@@ -243,16 +243,14 @@ export function DebateDialog({
         })
       });
 
-
       if (!response.ok) {
         const errorText = await response.text();
         let errorMessage = errorText;
         try {
             const errorJson = JSON.parse(errorText);
             errorMessage = errorJson.error || errorText;
-        } catch (_) { /* ignore */ }
+        } catch (_) { }
         
-        // Enhance error message based on status code
         if (response.status === 401) {
             errorMessage = `Authentication failed: ${errorMessage}`;
         } else if (response.status === 429) {
@@ -264,7 +262,8 @@ export function DebateDialog({
         throw new Error(errorMessage);
       }
 
-      const result = await response.json();
+      const result: DebateResult = await response.json();
+      setDebateResult(result);
 
       if (sessionId) {
           await client.createActivity({
@@ -276,7 +275,6 @@ export function DebateDialog({
       }
 
       toast.success('Debate completed!');
-      if (setOpen) setOpen(false);
       onDebateStart?.();
 
     } catch (error) {
@@ -284,6 +282,7 @@ export function DebateDialog({
       const msg = error instanceof Error ? error.message : 'Unknown error';
       setErrorDetail(msg);
       toast.error(`Debate failed: ${msg}`);
+      setDebateResult(null);
     } finally {
       setLoading(false);
     }
@@ -303,6 +302,15 @@ export function DebateDialog({
         </DialogHeader>
         
         <ScrollArea className="flex-1 p-6">
+            {debateResult ? (
+                <div className="space-y-4">
+                   <div className="flex items-center justify-between">
+                      <h3 className="text-sm font-medium text-zinc-400">Debate Results</h3>
+                   </div>
+                   <DebateViewer result={debateResult} />
+                </div>
+            ) : (
+            <>
             {errorDetail && (
                 <div className="bg-red-900/30 border border-red-800 text-red-200 p-3 rounded text-sm mb-6 flex items-start gap-2">
                     <AlertCircle className="h-4 w-4 mt-0.5 shrink-0" />
@@ -377,7 +385,7 @@ export function DebateDialog({
                                                     <SelectTrigger className="h-8 bg-zinc-950 border-zinc-700 text-xs">
                                                         <SelectValue placeholder="Provider" />
                                                     </SelectTrigger>
-                                                    <SelectContent className="bg-zinc-900 border-zinc-800">
+                                                    <SelectContent className="bg-zinc-900 border-zinc-800 text-zinc-300">
                                                         {Object.entries(PROVIDER_OPTIONS).map(([key, config]) => (
                                                             <SelectItem key={key} value={key}>{config.label}</SelectItem>
                                                         ))}
@@ -393,9 +401,9 @@ export function DebateDialog({
                                                     <SelectTrigger className="h-8 bg-zinc-950 border-zinc-700 text-xs">
                                                         <SelectValue placeholder="Model" />
                                                     </SelectTrigger>
-                                                    <SelectContent className="bg-zinc-900 border-zinc-800">
-                                                        {PROVIDER_OPTIONS[p.provider]?.models.map((m) => (
-                                                            <SelectItem key={m} value={m}>{m}</SelectItem>
+                                                    <SelectContent className="bg-zinc-900 border-zinc-800 text-zinc-300">
+                                                        {(PROVIDER_OPTIONS[p.provider]?.models || []).map((m) => (
+                                                            <SelectItem key={m} value={m} className="focus:bg-zinc-800 focus:text-zinc-100">{m}</SelectItem>
                                                         ))}
                                                     </SelectContent>
                                                 </Select>
@@ -429,16 +437,25 @@ export function DebateDialog({
                 </div>
               </div>
             </div>
+            </>
+            )}
         </ScrollArea>
         
         <DialogFooter className="p-6 pt-4 border-t border-zinc-800 bg-zinc-950">
-          <Button variant="outline" onClick={() => setOpen(false)} disabled={loading} className="border-zinc-700 hover:bg-zinc-900 text-zinc-300">
+          <Button variant="outline" onClick={() => setOpen?.(false)} disabled={loading} className="border-zinc-700 hover:bg-zinc-900 text-zinc-300">
             Cancel
           </Button>
-          <Button type="submit" onClick={handleStartDebate} disabled={loading} className="bg-purple-600 hover:bg-purple-500 text-white">
-            {loading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-            {loading ? 'Debating...' : 'Start Debate'}
-          </Button>
+          {!debateResult && (
+            <Button type="submit" onClick={handleStartDebate} disabled={loading} className="bg-purple-600 hover:bg-purple-500 text-white">
+                {loading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                {loading ? 'Debating...' : 'Start Debate'}
+            </Button>
+          )}
+          {debateResult && (
+             <Button onClick={() => setOpen?.(false)} className="bg-zinc-800 hover:bg-zinc-700 text-white">
+                Close
+             </Button>
+          )}
         </DialogFooter>
       </DialogContent>
     </Dialog>

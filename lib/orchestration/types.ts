@@ -53,6 +53,11 @@ export interface DebateTurn {
   role: string;
   content: string;
   timestamp: string;
+  usage?: {
+    prompt_tokens: number;
+    completion_tokens: number;
+    total_tokens: number;
+  };
 }
 
 export interface DebateRound {
@@ -66,6 +71,11 @@ export interface DebateResult {
   summary?: string;
   history: Message[];
   metadata?: any;
+  totalUsage?: {
+    prompt_tokens: number;
+    completion_tokens: number;
+    total_tokens: number;
+  };
 }
 
 export type DebateProgressEvent = 

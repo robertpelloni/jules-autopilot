@@ -40,14 +40,14 @@
 ## Phase 5: Future
 - [ ] **User Accounts:** OAuth integration (Google/GitHub).
 - [ ] **Plugin System:** Allow custom tools for the agent.
-- [ ] **Advanced Analytics:** Token usage tracking and cost estimation per session.
+- [x] **Advanced Analytics:** Token usage tracking and cost estimation per session.
 
 ## 📅 Short Term (v0.7.x - v0.8.x)
 -   **Advanced Orchestration:**
     -   [x] Real implementations for `runCodeReview` using LLMs with structured output.
     -   [x] **Dynamic Multi-Agent Debate:** Configurable providers (OpenAI, Anthropic, Gemini, Qwen) and models.
     -   [x] **Debate Persistence:** Save full debate transcripts to database/memory.
-    -   [ ] **Debate "Spectator Mode":** Real-time streaming of debate thoughts to the UI.
+    -   [x] **Debate "Spectator Mode":** Real-time streaming of debate thoughts to the UI.
 
 ## 🔮 Long Term (Vision)
 -   **Jules Autonomous:**

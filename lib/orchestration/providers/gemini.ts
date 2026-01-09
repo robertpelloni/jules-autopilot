@@ -69,7 +69,14 @@ export const geminiProvider: ProviderInterface = {
     }
 
     const data = await response.json();
-      return { content: data.candidates?.[0]?.content?.parts?.[0]?.text || '' };
+      return { 
+        content: data.candidates?.[0]?.content?.parts?.[0]?.text || '',
+        usage: data.usageMetadata ? {
+            prompt_tokens: data.usageMetadata.promptTokenCount,
+            completion_tokens: data.usageMetadata.candidatesTokenCount,
+            total_tokens: data.usageMetadata.totalTokenCount
+        } : undefined
+      };
   },
 
   async listModels(apiKey: string): Promise<string[]> {

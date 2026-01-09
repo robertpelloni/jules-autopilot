@@ -3,6 +3,8 @@ import { runDebate } from '@/lib/orchestration/debate';
 import { Participant } from '@/lib/orchestration/types';
 import { prisma } from '@/lib/prisma';
 
+export const runtime = 'nodejs';
+
 export async function POST(req: NextRequest) {
     try {
         const body = await req.json();
@@ -56,6 +58,9 @@ export async function POST(req: NextRequest) {
                     rounds: JSON.stringify(result.rounds),
                     history: JSON.stringify(result.history),
                     metadata: metadata ? JSON.stringify(metadata) : null,
+                    promptTokens: result.totalUsage?.prompt_tokens || 0,
+                    completionTokens: result.totalUsage?.completion_tokens || 0,
+                    totalTokens: result.totalUsage?.total_tokens || 0,
                 }
             });
         } catch (dbError) {
@@ -63,8 +68,9 @@ export async function POST(req: NextRequest) {
         }
 
         return NextResponse.json(result);
+
     } catch (error) {
-        console.error('Debate failed:', error);
+        console.error('Debate request failed:', error);
         return NextResponse.json(
             { error: error instanceof Error ? error.message : 'Unknown error' },
             { status: 500 }

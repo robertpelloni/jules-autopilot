@@ -7,12 +7,45 @@ import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
+import { Coins, Zap } from 'lucide-react';
 
 export function DebateViewer({ result }: { result: DebateResult }) {
   if (!result || !result.rounds || !Array.isArray(result.rounds)) return null;
 
   return (
     <div className="space-y-4">
+      {result.totalUsage && (
+        <div className="grid grid-cols-3 gap-3 mb-2">
+            <Card className="bg-zinc-900/50 border-zinc-800 p-2 flex items-center gap-3">
+                <div className="h-8 w-8 rounded-full bg-blue-500/10 flex items-center justify-center">
+                    <Zap className="h-4 w-4 text-blue-400" />
+                </div>
+                <div>
+                    <div className="text-[10px] text-zinc-500 uppercase tracking-wider font-semibold">Prompt Tokens</div>
+                    <div className="text-sm font-mono text-zinc-200">{result.totalUsage.prompt_tokens.toLocaleString()}</div>
+                </div>
+            </Card>
+            <Card className="bg-zinc-900/50 border-zinc-800 p-2 flex items-center gap-3">
+                <div className="h-8 w-8 rounded-full bg-purple-500/10 flex items-center justify-center">
+                    <Zap className="h-4 w-4 text-purple-400" />
+                </div>
+                <div>
+                    <div className="text-[10px] text-zinc-500 uppercase tracking-wider font-semibold">Completion Tokens</div>
+                    <div className="text-sm font-mono text-zinc-200">{result.totalUsage.completion_tokens.toLocaleString()}</div>
+                </div>
+            </Card>
+            <Card className="bg-zinc-900/50 border-zinc-800 p-2 flex items-center gap-3">
+                <div className="h-8 w-8 rounded-full bg-green-500/10 flex items-center justify-center">
+                    <Coins className="h-4 w-4 text-green-400" />
+                </div>
+                <div>
+                    <div className="text-[10px] text-zinc-500 uppercase tracking-wider font-semibold">Total Tokens</div>
+                    <div className="text-sm font-mono text-zinc-200">{result.totalUsage.total_tokens.toLocaleString()}</div>
+                </div>
+            </Card>
+        </div>
+      )}
+
       <Card className="bg-zinc-950 border-purple-500/30">
         <CardHeader className="pb-2">
           <CardTitle className="text-sm font-semibold uppercase tracking-wider text-purple-400 flex items-center justify-between">
@@ -37,11 +70,18 @@ export function DebateViewer({ result }: { result: DebateResult }) {
                           </AvatarFallback>
                         </Avatar>
                         <div className="flex-1 space-y-1">
-                          <div className="flex items-center gap-2">
-                            <span className="text-xs font-bold text-white/90">{turn.participantName || 'Agent'}</span>
-                            <Badge variant="outline" className="text-[9px] px-1.5 h-4 border-white/10 text-white/50">
-                              {turn.role || 'Participant'}
-                            </Badge>
+                          <div className="flex items-center justify-between">
+                             <div className="flex items-center gap-2">
+                                <span className="text-xs font-bold text-white/90">{turn.participantName || 'Agent'}</span>
+                                <Badge variant="outline" className="text-[9px] px-1.5 h-4 border-white/10 text-white/50">
+                                  {turn.role || 'Participant'}
+                                </Badge>
+                             </div>
+                             {turn.usage && (
+                                <div className="text-[10px] text-zinc-600 font-mono">
+                                    {turn.usage.total_tokens} tokens
+                                </div>
+                             )}
                           </div>
                           <div className="prose prose-sm dark:prose-invert max-w-none text-xs leading-relaxed text-white/80">
                             <ReactMarkdown remarkPlugins={[remarkGfm]}>{turn.content}</ReactMarkdown>

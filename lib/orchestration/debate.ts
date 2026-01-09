@@ -12,6 +12,13 @@ export async function runDebate({ history, participants, rounds = 1, topic, onPr
     const currentHistory = [...history];
     const debateRounds: DebateRound[] = [];
     
+    // Initialize total usage
+    const totalUsage = {
+        prompt_tokens: 0,
+        completion_tokens: 0,
+        total_tokens: 0
+    };
+    
     onProgress?.({ type: 'start', topic, rounds });
 
     // We need a default API key/provider for the moderator/summarizer if not explicitly provided
@@ -51,6 +58,14 @@ export async function runDebate({ history, participants, rounds = 1, topic, onPr
                 });
 
                 const content = response.content;
+                
+                // Track usage
+                if (response.usage) {
+                    totalUsage.prompt_tokens += response.usage.prompt_tokens;
+                    totalUsage.completion_tokens += response.usage.completion_tokens;
+                    totalUsage.total_tokens += response.usage.total_tokens;
+                }
+
                 const msg: Message = {
                     role: 'assistant',
                     content: content,
@@ -68,7 +83,8 @@ export async function runDebate({ history, participants, rounds = 1, topic, onPr
                     participantName: p.name,
                     role: p.role,
                     content,
-                    timestamp: new Date().toISOString()
+                    timestamp: new Date().toISOString(),
+                    usage: response.usage
                 });
                 
                 onProgress?.({ type: 'turn_complete', participantId: p.id, content });
@@ -133,6 +149,13 @@ export async function runDebate({ history, participants, rounds = 1, topic, onPr
                     systemPrompt: moderatorPrompt 
                 });
                 
+                // Track summary usage
+                if (synthesis.usage) {
+                    totalUsage.prompt_tokens += synthesis.usage.prompt_tokens;
+                    totalUsage.completion_tokens += synthesis.usage.completion_tokens;
+                    totalUsage.total_tokens += synthesis.usage.total_tokens;
+                }
+                
                 summary = synthesis.content;
             }
 
@@ -148,7 +171,8 @@ export async function runDebate({ history, participants, rounds = 1, topic, onPr
         topic,
         rounds: debateRounds,
         summary,
-        history: currentHistory
+        history: currentHistory,
+        totalUsage
     };
     
     onProgress?.({ type: 'complete', result });

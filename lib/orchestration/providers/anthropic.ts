@@ -32,7 +32,14 @@ export const anthropicProvider: ProviderInterface = {
       }
 
       const data = await response.json();
-      return { content: data.content[0]?.text || '' };
+      return { 
+        content: data.content[0]?.text || '',
+        usage: data.usage ? {
+            prompt_tokens: data.usage.input_tokens,
+            completion_tokens: data.usage.output_tokens,
+            total_tokens: (data.usage.input_tokens || 0) + (data.usage.output_tokens || 0)
+        } : undefined
+      };
   },
 
   async listModels(apiKey: string): Promise<string[]> {

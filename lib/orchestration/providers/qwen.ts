@@ -53,7 +53,14 @@ export const qwenProvider: ProviderInterface = {
     }
 
     const data = await response.json();
-    return { content: data.output?.choices?.[0]?.message?.content || data.output?.text || '' };
+    return { 
+      content: data.output?.choices?.[0]?.message?.content || data.output?.text || '',
+      usage: data.usage ? {
+        prompt_tokens: data.usage.input_tokens,
+        completion_tokens: data.usage.output_tokens,
+        total_tokens: data.usage.total_tokens
+      } : undefined
+    };
   },
 
   async listModels(apiKey?: string): Promise<string[]> {
