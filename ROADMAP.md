@@ -37,10 +37,21 @@
 - [x] **Versioning System:** Single source of truth (VERSION.md) and strict changelog management.
 - [x] **Submodule Dashboard:** Real-time tracking of submodule versions and git status.
 
-## Phase 5: Future
+## Phase 5: Platform Extensions (In Progress)
 - [ ] **User Accounts:** OAuth integration (Google/GitHub).
 - [ ] **Plugin System:** Allow custom tools for the agent.
 - [x] **Advanced Analytics:** Token usage tracking and cost estimation per session.
+
+## Phase 6: Multi-Provider Cloud Dev (v0.8.5) ✨ NEW
+- [x] **Unified Provider Interface:** Abstract base class for all cloud dev providers.
+- [x] **Provider Registry:** Factory functions for dynamic provider instantiation.
+- [x] **Jules Provider:** Full implementation wrapping existing JulesClient.
+- [x] **Stub Providers:** Devin, Manus, OpenHands, GitHub Spark, Blocks, Claude Code, Codex.
+- [x] **Session Transfer Service:** Cross-provider session migration with context preservation.
+- [x] **Multi-Provider Store:** Zustand state management for sessions across providers.
+- [ ] **Provider API Integrations:** Implement full APIs for Devin, Manus, OpenHands.
+- [ ] **Cross-Provider UI:** Dashboard for managing sessions across all providers.
+- [ ] **Transfer Progress Tracking:** Real-time progress during session migrations.
 
 ## 📅 Short Term (v0.7.x - v0.8.x)
 -   **Advanced Orchestration:**
@@ -53,7 +64,49 @@
 -   **Jules Autonomous:**
     -   Self-hosting capability.
     -   Full repository management (auto-PR, auto-merge).
+-   **Provider Ecosystem:**
+    -   Support for 10+ cloud dev providers.
+    -   Unified billing and cost tracking across providers.
+    -   Automated provider selection based on task requirements.
 
 
 ## 🛠️ Infrastructure
 -   **CI/CD:** Automated testing pipeline for all submodules.
+
+---
+
+## Undocumented Features (Discovered)
+
+The following features exist in the codebase but were not previously documented:
+
+### Session Management
+- **Session Handoff:** Automatic archiving of sessions older than 30 days with summary continuation in new sessions.
+- **Smart Nudge System:** Context-aware prompts using conversation history analysis (not just random messages).
+- **Provider Fallback Chain:** Automatic fallback between LLM providers if primary fails.
+- **Memory Management:** Per-session supervisor state with conversation history persistence in SQLite.
+
+### Code Analysis
+- **Code Review Types:** Simple vs comprehensive reviews with different analysis depths.
+- **Risk Scoring:** Automated risk assessment for plan approval workflows.
+
+### Template System
+- **CSV Tag Storage:** Tags stored as comma-separated values in database.
+- **Favorite Marking:** Templates can be marked as favorites for quick access.
+- **Prebuilt Templates:** System-provided templates that cannot be deleted.
+
+### Terminal Integration
+- **Health Checks:** Terminal server `/health` endpoint for monitoring.
+- **Graceful Shutdown:** PTY process cleanup on client disconnect.
+- **Workspace Detection:** Automatic `/workspace` vs project root directory detection.
+- **API Key Inheritance:** Child processes inherit `JULES_API_KEY` environment variable.
+- **Concurrent Sessions:** Multiple terminal sessions per user with session isolation.
+
+### UI/UX
+- **Optimistic Updates:** UI updates before API confirmation for responsive feel.
+- **URL Synchronization:** Session selection synced with URL query parameters.
+- **Middleware Protection:** Route guarding with redirect to `/login` for unauthenticated users.
+
+### Architecture
+- **Anthropic Role Mapping:** 'system' messages converted to 'user' role for API compliance.
+- **Daemon Independence:** Background daemon runs separately from Next.js for reliability.
+- **Submodule Read-Only:** External submodules treated as read-only libraries.

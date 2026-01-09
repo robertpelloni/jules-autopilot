@@ -41,7 +41,7 @@ A powerful, self-hosted web application for managing Jules AI agent sessions wit
 
 ---
 
-## Current Status (v0.8.0)
+## Current Status (v0.8.5)
 
 ### ✅ Implemented Features
 
@@ -189,6 +189,48 @@ A powerful, self-hosted web application for managing Jules AI agent sessions wit
   - ✅ Ink-based CLI in apps/cli/
   - ✅ Dashboard, Sessions, Logs, Settings screens
   - ✅ Keyboard navigation (Ctrl+1-4, Q, Esc)
+
+</details>
+
+<details open>
+<summary><strong>Multi-Provider Cloud Dev (v0.8.5) ✨ NEW</strong></summary>
+
+- **CLOUD-001**: Unified Provider Interface
+  - ✅ Abstract `BaseCloudDevProvider` class with standard interface
+  - ✅ `ProviderNotImplementedError` for graceful degradation
+  - ✅ Unified session/activity types across all providers
+
+- **CLOUD-002**: Provider Registry & Factory
+  - ✅ `createProvider(providerId, apiKey)` factory function
+  - ✅ `createProviders(apiKeys)` batch creation
+  - ✅ `getAvailableProviderIds()` for discovery
+
+- **CLOUD-003**: Jules Provider Implementation
+  - ✅ Full implementation wrapping existing `JulesClient`
+  - ✅ Session CRUD operations
+  - ✅ Activity listing and creation
+  - ✅ Plan approval workflow
+
+- **CLOUD-004**: Stub Providers
+  - ✅ Devin (Cognition)
+  - ✅ Manus AI
+  - ✅ OpenHands (All Hands AI)
+  - ✅ GitHub Spark
+  - ✅ Blocks (Anthropic)
+  - ✅ Claude Code (Anthropic)
+  - ✅ Codex (OpenAI)
+
+- **CLOUD-005**: Session Transfer Service
+  - ✅ `SessionTransferService` class
+  - ✅ Cross-provider session migration
+  - ✅ Context preservation with continuation prompts
+  - ✅ Transfer capability validation
+
+- **CLOUD-006**: Multi-Provider State Management
+  - ✅ `useCloudDevStore` Zustand store
+  - ✅ Persistent API key storage per provider
+  - ✅ Unified session ID format: `{providerId}:{providerSessionId}`
+  - ✅ Cross-provider session aggregation
 
 </details>
 
