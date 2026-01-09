@@ -10,8 +10,7 @@ const getDbUrl = () => {
   if (process.env.DATABASE_URL && !process.env.DATABASE_URL.startsWith('file:./')) {
     return process.env.DATABASE_URL;
   }
-  // Use absolute path to prisma/dev.db from project root
-  const dbPath = path.resolve(__dirname, '..', 'prisma', 'dev.db');
+  const dbPath = path.join(process.cwd(), 'prisma', 'dev.db');
   return `file:${dbPath}`;
 };
 

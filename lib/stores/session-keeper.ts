@@ -251,13 +251,35 @@ export const useSessionKeeperStore = create<SessionKeeperState>()(
       interruptAll: async () => {
         const { addLog } = get();
         set({ isPausedAll: true });
-        await addLog('Global Interrupt: All background processing paused.', 'info');
+        try {
+          const res = await fetch(`${BUN_SERVER_URL}/api/sessions/interrupt-all`, { method: 'POST' });
+          if (res.ok) {
+            const data = await res.json();
+            await addLog(`Global Interrupt: ${data.interruptedCount} sessions paused.`, 'action');
+          } else {
+            await addLog('Global Interrupt: All background processing paused.', 'info');
+          }
+        } catch (error) {
+          console.error('Failed to interrupt all sessions:', error);
+          await addLog('Global Interrupt: All background processing paused (local only).', 'info');
+        }
       },
 
       continueAll: async () => {
         const { addLog } = get();
         set({ isPausedAll: false });
-        await addLog('Global Continue: Background processing resumed.', 'info');
+        try {
+          const res = await fetch(`${BUN_SERVER_URL}/api/sessions/continue-all`, { method: 'POST' });
+          if (res.ok) {
+            const data = await res.json();
+            await addLog(`Global Continue: ${data.continuedCount} sessions resumed.`, 'action');
+          } else {
+            await addLog('Global Continue: Background processing resumed.', 'info');
+          }
+        } catch (error) {
+          console.error('Failed to continue all sessions:', error);
+          await addLog('Global Continue: Background processing resumed (local only).', 'info');
+        }
       },
     }),
     {
