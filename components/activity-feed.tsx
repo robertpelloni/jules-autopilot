@@ -13,6 +13,7 @@ import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
 import { formatDistanceToNow, isValid, parseISO } from 'date-fns';
 import { Send, Archive, ArchiveRestore, Code, Terminal, ChevronDown, ChevronRight, Play, GitBranch, GitPullRequest, MoreVertical, Book, ArrowUp, ArrowDown, Download, Copy, Check, Loader2, Bell, Users, LayoutTemplate } from 'lucide-react';
+import { useVirtualizer } from '@tanstack/react-virtual';
 import { archiveSession, unarchiveSession, isSessionArchived } from '@/lib/archive';
 import { ActivityInput } from './activity-input';
 import { SessionHealthBadge } from './session-health-badge';
@@ -348,6 +349,38 @@ export function ActivityFeed({ session, onArchive, showCodeDiffs, onToggleCodeDi
     if (scrollContainer) scrollContainer.scrollTop = scrollContainer.scrollHeight;
   };
 
+  const parentRef = useRef<HTMLDivElement>(null);
+
+  const groupedActivities = useMemo(() => {
+    const grouped: Array<Activity | Activity[]> = [];
+    let currentGroup: Activity[] | null = null;
+
+    filteredActivities.forEach((activity, index) => {
+      const shouldGroup = activity.type === 'progress' && activity.role === 'agent';
+      const prevActivity = index > 0 ? filteredActivities[index - 1] : null;
+      const prevShouldGroup = prevActivity && prevActivity.type === 'progress' && prevActivity.role === 'agent';
+
+      if (shouldGroup) {
+        if (prevShouldGroup && currentGroup) currentGroup.push(activity);
+        else {
+          currentGroup = [activity];
+          grouped.push(currentGroup);
+        }
+      } else {
+        currentGroup = null;
+        grouped.push(activity);
+      }
+    });
+    return grouped;
+  }, [filteredActivities]);
+
+  const virtualizer = useVirtualizer({
+    count: groupedActivities.length,
+    getScrollElement: () => parentRef.current,
+    estimateSize: () => 100,
+    overscan: 5,
+  });
+
   const finalDiff = activities.filter(activity => activity.diff).slice(-1);
   const hasDiffs = finalDiff.length > 0;
   const outputBranch = session.branch || 'main';
@@ -573,9 +606,12 @@ export function ActivityFeed({ session, onArchive, showCodeDiffs, onToggleCodeDi
       )}
 
       <div className="flex-1 overflow-hidden relative group">
-        <ScrollArea className="h-full" ref={scrollAreaRef} id="activity-feed-scroll-area">
-          <div className="p-3 space-y-2.5">
-            {filteredActivities.length === 0 && !loading && !error && (
+        <ScrollArea className="h-full" ref={parentRef} id="activity-feed-scroll-area">
+          <div 
+            className="p-3 relative" 
+            style={{ height: `${virtualizer.getTotalSize()}px`, width: '100%' }}
+          >
+            {groupedActivities.length === 0 && !loading && !error && (
               <div className="flex items-center justify-center min-h-[200px]">
                 <div className="text-center space-y-2">
                   <p className="text-[10px] font-mono text-white/40 uppercase tracking-widest">No activities yet</p>
@@ -587,131 +623,125 @@ export function ActivityFeed({ session, onArchive, showCodeDiffs, onToggleCodeDi
                 </div>
               </div>
             )}
-            {(() => {
-              const grouped: Array<Activity | Activity[]> = [];
-              let currentGroup: Activity[] | null = null;
+            {virtualizer.getVirtualItems().map((virtualItem) => {
+              const item = groupedActivities[virtualItem.index];
+              if (!item) return null;
 
-              filteredActivities.forEach((activity, index) => {
-                const shouldGroup = activity.type === 'progress' && activity.role === 'agent';
-                const prevActivity = index > 0 ? filteredActivities[index - 1] : null;
-                const prevShouldGroup = prevActivity && prevActivity.type === 'progress' && prevActivity.role === 'agent';
+              return (
+                <div
+                  key={virtualItem.key}
+                  data-index={virtualItem.index}
+                  ref={virtualizer.measureElement}
+                  className="absolute top-0 left-0 w-full"
+                  style={{
+                    transform: `translateY(${virtualItem.start}px)`,
+                    paddingBottom: '10px'
+                  }}
+                >
+                  {Array.isArray(item) ? (() => {
+                    const firstActivity = item[0];
+                    const validItems = item.filter(a => formatContent(a.content, a.metadata) !== null);
+                    if (validItems.length === 0) return null;
 
-                if (shouldGroup) {
-                  if (prevShouldGroup && currentGroup) currentGroup.push(activity);
-                  else {
-                    currentGroup = [activity];
-                    grouped.push(currentGroup);
-                  }
-                } else {
-                  currentGroup = null;
-                  grouped.push(activity);
-                }
-              });
-
-              return grouped.map((item, groupIndex) => {
-                if (Array.isArray(item)) {
-                  const firstActivity = item[0];
-                  const validItems = item.filter(a => formatContent(a.content, a.metadata) !== null);
-                  if (validItems.length === 0) return null;
-
-                  return (
-                    <div key={`group-${groupIndex}`} className="flex gap-2.5">
-                      <Avatar className="h-6 w-6 shrink-0 mt-0.5 bg-zinc-900 border border-white/10">{getActivityIcon(firstActivity)}</Avatar>
-                      <Card className="flex-1 border-white/[0.08] bg-zinc-950/50">
-                        <CardContent className="p-3">
-                          <div className="flex items-center gap-2 mb-2">
-                            <Badge variant="outline" className="text-[9px] h-4 px-1.5 font-mono uppercase tracking-wider bg-yellow-500/90 border-transparent text-black font-bold">progress</Badge>
-                            <span className="text-[9px] font-mono text-white/40 tracking-wide">{validItems.length} updates</span>
-                          </div>
-                          <div className="space-y-2">
-                            {validItems.map((activity, idx) => (
-                              <div key={activity.id} className={idx > 0 ? 'pt-2 border-t border-white/[0.08]' : ''}>
-                                <div className="text-[11px] leading-relaxed text-white/90 break-words">{formatContent(activity.content, activity.metadata)}</div>
-                                {activity.bashOutput && (
-                                  <div className="mt-2 pt-2 border-t border-white/[0.05]">
-                                    <button
-                                      onClick={() => toggleBashOutput(activity.id)}
-                                      className="flex items-center gap-2 text-[9px] font-mono uppercase tracking-wider text-green-400 hover:text-green-300 transition-colors mb-2"
-                                    >
-                                      {expandedBashOutputs.has(activity.id) ? (
-                                        <ChevronDown className="h-3 w-3" />
-                                      ) : (
-                                        <ChevronRight className="h-3 w-3" />
-                                      )}
-                                      <Terminal className="h-3 w-3" />
-                                      <span>Command Output</span>
-                                    </button>
-                                    {expandedBashOutputs.has(activity.id) && (
-                                      <BashOutput output={activity.bashOutput} />
-                                    )}
-                                  </div>
-                                )}
-                              </div>
-                            ))}
-                          </div>
-                        </CardContent>
-                      </Card>
-                    </div>
-                  );
-                }
-
-                if (item.type === 'debate' && item.metadata?.debate) {
                     return (
-                        <div key={item.id} className={`flex gap-2.5 ${newActivityIds.has(item.id) ? 'animate-in fade-in slide-in-from-bottom-2 duration-500' : ''}`}>
-                            <Avatar className="h-6 w-6 shrink-0 mt-0.5 bg-zinc-900 border border-white/10">{getActivityIcon(item)}</Avatar>
-                            <div className="flex-1">
-                                <DebateViewer result={item.metadata.debate as any} />
+                      <div className="flex gap-2.5 px-3">
+                        <Avatar className="h-6 w-6 shrink-0 mt-0.5 bg-zinc-900 border border-white/10">{getActivityIcon(firstActivity)}</Avatar>
+                        <Card className="flex-1 border-white/[0.08] bg-zinc-950/50">
+                          <CardContent className="p-3">
+                            <div className="flex items-center gap-2 mb-2">
+                              <Badge variant="outline" className="text-[9px] h-4 px-1.5 font-mono uppercase tracking-wider bg-yellow-500/90 border-transparent text-black font-bold">progress</Badge>
+                              <span className="text-[9px] font-mono text-white/40 tracking-wide">{validItems.length} updates</span>
                             </div>
-                        </div>
+                            <div className="space-y-2">
+                              {validItems.map((activity, idx) => (
+                                <div key={activity.id} className={idx > 0 ? 'pt-2 border-t border-white/[0.08]' : ''}>
+                                  <div className="text-[11px] leading-relaxed text-white/90 break-words">{formatContent(activity.content, activity.metadata)}</div>
+                                  {activity.bashOutput && (
+                                    <div className="mt-2 pt-2 border-t border-white/[0.05]">
+                                      <button
+                                        onClick={() => toggleBashOutput(activity.id)}
+                                        className="flex items-center gap-2 text-[9px] font-mono uppercase tracking-wider text-green-400 hover:text-green-300 transition-colors mb-2"
+                                      >
+                                        {expandedBashOutputs.has(activity.id) ? (
+                                          <ChevronDown className="h-3 w-3" />
+                                        ) : (
+                                          <ChevronRight className="h-3 w-3" />
+                                        )}
+                                        <Terminal className="h-3 w-3" />
+                                        <span>Command Output</span>
+                                      </button>
+                                      {expandedBashOutputs.has(activity.id) && (
+                                        <BashOutput output={activity.bashOutput} />
+                                      )}
+                                    </div>
+                                  )}
+                                </div>
+                              ))}
+                            </div>
+                          </CardContent>
+                        </Card>
+                      </div>
                     );
-                }
+                  })() : (() => {
+                    const activity = item;
+                    if (activity.type === 'debate' && activity.metadata?.debate) {
+                        return (
+                            <div className={`flex gap-2.5 px-3 ${newActivityIds.has(activity.id) ? 'animate-in fade-in slide-in-from-bottom-2 duration-500' : ''}`}>
+                                <Avatar className="h-6 w-6 shrink-0 mt-0.5 bg-zinc-900 border border-white/10">{getActivityIcon(activity)}</Avatar>
+                                <div className="flex-1">
+                                    <DebateViewer result={activity.metadata.debate as any} />
+                                </div>
+                            </div>
+                        );
+                    }
 
-                const activity = item;
-                const contentNode = formatContent(activity.content, activity.metadata);
-                if (contentNode === null && !activity.media) return null;
-                const showApprove = !isArchived && activity.type === 'plan' && session.status === 'awaiting_approval';
+                    const contentNode = formatContent(activity.content, activity.metadata);
+                    if (contentNode === null && !activity.media) return null;
+                    const showApprove = !isArchived && activity.type === 'plan' && session.status === 'awaiting_approval';
 
-                return (
-                  <div key={activity.id} className={`flex gap-2.5 ${activity.role === 'user' ? 'flex-row-reverse' : ''} ${newActivityIds.has(activity.id) ? 'animate-in fade-in slide-in-from-bottom-2 duration-500' : ''}`}>
-                    <Avatar className="h-6 w-6 shrink-0 mt-0.5 bg-zinc-900 border border-white/10">{getActivityIcon(activity)}</Avatar>
-                    <Card className={`flex-1 border-white/[0.08] ${activity.role === 'user' ? 'bg-purple-950/20 border-purple-500/20' : 'bg-zinc-950/50'}`}>
-                      <CardContent className="p-3 group/card relative">
-                        <div className="flex items-center gap-2 mb-2">
-                          <Badge variant="outline" className={`text-[9px] h-4 px-1.5 font-mono uppercase tracking-wider ${getActivityTypeColor(activity.type)} border-transparent text-black font-bold`}>{activity.type}</Badge>
-                          <span className="text-[9px] font-mono text-white/40 tracking-wide">{formatDate(activity.createdAt)}</span>
-                          <Button variant="ghost" size="icon" className="h-4 w-4 ml-auto opacity-0 group-hover/card:opacity-100 transition-opacity" onClick={() => handleCopy(activity.content, activity.id)}>
-                            {copiedId === activity.id ? <Check className="h-3 w-3 text-green-500" /> : <Copy className="h-3 w-3 text-white/40" />}
-                          </Button>
-                        </div>
-                        {activity.media && activity.media.data && (
-                           <div className="mb-2 rounded overflow-hidden border border-white/10">
-                              <img src={`data:${activity.media.mimeType};base64,${activity.media.data}`} alt="Generated Artifact" className="max-w-full h-auto block" />
-                           </div>
-                        )}
-                        <div className="text-[11px] leading-relaxed text-white/90 break-words">{contentNode}</div>
-                        {activity.bashOutput && (
-                          <div className="mt-3 pt-3 border-t border-white/[0.08]">
-                            <button onClick={() => toggleBashOutput(activity.id)} className="flex items-center gap-2 text-[10px] font-mono uppercase tracking-wider text-green-400 hover:text-green-300 transition-colors mb-2">
-                              {expandedBashOutputs.has(activity.id) ? <ChevronDown className="h-3.5 w-3.5" /> : <ChevronRight className="h-3.5 w-3.5" />}
-                              <Terminal className="h-3.5 w-3.5" />
-                              <span>Command Output</span>
-                            </button>
-                            {expandedBashOutputs.has(activity.id) && <BashOutput output={activity.bashOutput} />}
-                          </div>
-                        )}
-                        {showApprove && (
-                          <div className="mt-3 pt-3 border-t border-white/[0.08]">
-                            <Button onClick={handleApprovePlan} disabled={approvingPlan} size="sm" className="h-7 px-3 text-[9px] font-mono uppercase tracking-widest bg-purple-600 hover:bg-purple-500 text-white border-0">
-                              {approvingPlan ? 'Approving...' : 'Approve Plan'}
-                            </Button>
-                          </div>
-                        )}
-                      </CardContent>
-                    </Card>
-                  </div>
-                );
-              });
-            })()}
+                    return (
+                      <div className={`flex gap-2.5 px-3 ${activity.role === 'user' ? 'flex-row-reverse' : ''} ${newActivityIds.has(activity.id) ? 'animate-in fade-in slide-in-from-bottom-2 duration-500' : ''}`}>
+                        <Avatar className="h-6 w-6 shrink-0 mt-0.5 bg-zinc-900 border border-white/10">{getActivityIcon(activity)}</Avatar>
+                        <Card className={`flex-1 border-white/[0.08] ${activity.role === 'user' ? 'bg-purple-950/20 border-purple-500/20' : 'bg-zinc-950/50'}`}>
+                          <CardContent className="p-3 group/card relative">
+                            <div className="flex items-center gap-2 mb-2">
+                              <Badge variant="outline" className={`text-[9px] h-4 px-1.5 font-mono uppercase tracking-wider ${getActivityTypeColor(activity.type)} border-transparent text-black font-bold`}>{activity.type}</Badge>
+                              <span className="text-[9px] font-mono text-white/40 tracking-wide">{formatDate(activity.createdAt)}</span>
+                              <Button variant="ghost" size="icon" className="h-4 w-4 ml-auto opacity-0 group-hover/card:opacity-100 transition-opacity" onClick={() => handleCopy(activity.content, activity.id)}>
+                                {copiedId === activity.id ? <Check className="h-3 w-3 text-green-500" /> : <Copy className="h-3 w-3 text-white/40" />}
+                              </Button>
+                            </div>
+                            {activity.media && activity.media.data && (
+                               <div className="mb-2 rounded overflow-hidden border border-white/10">
+                                  <img src={`data:${activity.media.mimeType};base64,${activity.media.data}`} alt="Generated Artifact" className="max-w-full h-auto block" />
+                               </div>
+                            )}
+                            <div className="text-[11px] leading-relaxed text-white/90 break-words">{contentNode}</div>
+                            {activity.bashOutput && (
+                              <div className="mt-3 pt-3 border-t border-white/[0.08]">
+                                <button onClick={() => toggleBashOutput(activity.id)} className="flex items-center gap-2 text-[10px] font-mono uppercase tracking-wider text-green-400 hover:text-green-300 transition-colors mb-2">
+                                  {expandedBashOutputs.has(activity.id) ? <ChevronDown className="h-3.5 w-3.5" /> : <ChevronRight className="h-3.5 w-3.5" />}
+                                  <Terminal className="h-3.5 w-3.5" />
+                                  <span>Command Output</span>
+                                </button>
+                                {expandedBashOutputs.has(activity.id) && <BashOutput output={activity.bashOutput} />}
+                              </div>
+                            )}
+                            {showApprove && (
+                              <div className="mt-3 pt-3 border-t border-white/[0.08]">
+                                <Button onClick={handleApprovePlan} disabled={approvingPlan} size="sm" className="h-7 px-3 text-[9px] font-mono uppercase tracking-widest bg-purple-600 hover:bg-purple-500 text-white border-0">
+                                  {approvingPlan ? 'Approving...' : 'Approve Plan'}
+                                </Button>
+                              </div>
+                            )}
+                          </CardContent>
+                        </Card>
+                      </div>
+                    );
+                  })()}
+                </div>
+              );
+            })}
           </div>
         </ScrollArea>
         <div className="absolute right-4 bottom-4 flex flex-col gap-2 opacity-0 group-hover:opacity-100 transition-opacity duration-200">
