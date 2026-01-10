@@ -30,6 +30,8 @@ import { Card, CardContent } from '@/components/ui/card';
 import { Message, Participant, DebateResult } from '@/lib/orchestration/types';
 import { DebateViewer } from '@/components/debate-viewer';
 
+const BUN_SERVER_URL = 'http://localhost:8080';
+
 export interface DebateDialogProps {
   sessionId?: string;
   trigger?: React.ReactNode;
@@ -236,7 +238,7 @@ export function DebateDialog({
         };
       });
 
-      const response = await fetch('/api/debate', {
+      const response = await fetch(`${BUN_SERVER_URL}/api/debate`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({

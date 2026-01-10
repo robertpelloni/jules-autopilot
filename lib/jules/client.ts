@@ -140,6 +140,7 @@ export class JulesAPIError extends Error {
 }
 
 const DEFAULT_API_BASE_URL = '/api/jules';
+const BUN_SERVER_URL = 'http://localhost:8080';
 
 export class JulesClient {
   private apiKey?: string;
@@ -691,25 +692,25 @@ export class JulesClient {
   }
 
   async listTemplates(): Promise<SessionTemplate[]> {
-    return this.fetchLocal<SessionTemplate[]>('/api/templates');
+    return this.fetchLocal<SessionTemplate[]>(`${BUN_SERVER_URL}/api/templates`);
   }
 
   async createTemplate(template: Omit<SessionTemplate, 'id' | 'createdAt' | 'updatedAt'>): Promise<SessionTemplate> {
-    return this.fetchLocal<SessionTemplate>('/api/templates', {
+    return this.fetchLocal<SessionTemplate>(`${BUN_SERVER_URL}/api/templates`, {
       method: 'POST',
       body: JSON.stringify(template),
     });
   }
 
   async updateTemplate(id: string, template: Partial<SessionTemplate>): Promise<SessionTemplate> {
-    return this.fetchLocal<SessionTemplate>(`/api/templates/${id}`, {
+    return this.fetchLocal<SessionTemplate>(`${BUN_SERVER_URL}/api/templates/${id}`, {
       method: 'PUT',
       body: JSON.stringify(template),
     });
   }
 
   async deleteTemplate(id: string): Promise<void> {
-    return this.fetchLocal<void>(`/api/templates/${id}`, {
+    return this.fetchLocal<void>(`${BUN_SERVER_URL}/api/templates/${id}`, {
       method: 'DELETE',
     });
   }

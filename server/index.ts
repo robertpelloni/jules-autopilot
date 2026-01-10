@@ -1,5 +1,4 @@
 import { Hono } from 'hono';
-import { serve } from '@hono/node-server';
 import { cors } from 'hono/cors';
 import { EventEmitter } from 'events';
 import { getProvider } from '../lib/orchestration/providers';
@@ -295,6 +294,317 @@ app.post('/api/supervisor/clear', async (c) => {
         return c.json({ success: true });
     } catch (e) {
         return c.json({ error: e instanceof Error ? e.message : 'Failed to clear memory' }, 500);
+    }
+});
+
+// ============================================================================
+// DEBATE ROUTES
+// ============================================================================
+
+app.post('/api/debate', async (c) => {
+    try {
+        const body = await c.req.json();
+        const { topic, rounds, participants, history, metadata } = body;
+
+        if (!topic || !participants || participants.length === 0) {
+            return c.json({ error: 'Missing required fields: topic, participants' }, 400);
+        }
+
+        const enrichedParticipants = participants.map((p: any) => {
+            let finalApiKey = p.apiKey;
+            if (finalApiKey === 'env' || finalApiKey === 'placeholder' || !finalApiKey) {
+                switch (p.provider) {
+                    case 'openai': finalApiKey = process.env.OPENAI_API_KEY; break;
+                    case 'anthropic': finalApiKey = process.env.ANTHROPIC_API_KEY; break;
+                    case 'gemini': finalApiKey = process.env.GEMINI_API_KEY || process.env.GOOGLE_API_KEY; break;
+                    case 'qwen': finalApiKey = process.env.QWEN_API_KEY; break;
+                }
+            }
+            return { ...p, apiKey: finalApiKey };
+        });
+
+        const result = await runDebate({
+            history: history || [],
+            participants: enrichedParticipants,
+            rounds: rounds || 1,
+            topic
+        });
+
+        try {
+            await prisma.debate.create({
+                data: {
+                    topic: result.topic || topic,
+                    summary: result.summary,
+                    rounds: JSON.stringify(result.rounds),
+                    history: JSON.stringify(result.history),
+                    metadata: metadata ? JSON.stringify(metadata) : null,
+                    promptTokens: result.totalUsage?.prompt_tokens || 0,
+                    completionTokens: result.totalUsage?.completion_tokens || 0,
+                    totalTokens: result.totalUsage?.total_tokens || 0,
+                }
+            });
+        } catch (dbError) {
+            console.error('Failed to persist debate:', dbError);
+        }
+
+        return c.json(result);
+    } catch (error) {
+        console.error('Debate request failed:', error);
+        return c.json({ error: error instanceof Error ? error.message : 'Unknown error' }, 500);
+    }
+});
+
+app.get('/api/debate/history', async (c) => {
+    try {
+        const debates = await prisma.debate.findMany({
+            orderBy: { createdAt: 'desc' },
+            select: { id: true, topic: true, summary: true, createdAt: true }
+        });
+        return c.json(debates);
+    } catch (error) {
+        return c.json({ error: 'Failed to fetch debates' }, 500);
+    }
+});
+
+app.post('/api/debate/history', async (c) => {
+    try {
+        const body = await c.req.json();
+        const { topic, summary, rounds, history, metadata } = body;
+
+        if (!topic || !rounds || !history) {
+            return c.json({ error: 'Missing required fields: topic, rounds, history' }, 400);
+        }
+
+        const debate = await prisma.debate.create({
+            data: {
+                topic,
+                summary,
+                rounds: JSON.stringify(rounds),
+                history: JSON.stringify(history),
+                metadata: metadata ? JSON.stringify(metadata) : null,
+            },
+        });
+        return c.json(debate);
+    } catch (error) {
+        return c.json({ error: 'Failed to save debate' }, 500);
+    }
+});
+
+app.get('/api/debate/:id', async (c) => {
+    try {
+        const id = c.req.param('id');
+        const debate = await prisma.debate.findUnique({ where: { id } });
+
+        if (!debate) return c.json({ error: 'Debate not found' }, 404);
+
+        return c.json({
+            ...debate,
+            rounds: typeof debate.rounds === 'string' ? JSON.parse(debate.rounds) : debate.rounds,
+            history: typeof debate.history === 'string' ? JSON.parse(debate.history) : debate.history,
+            metadata: debate.metadata && typeof debate.metadata === 'string' ? JSON.parse(debate.metadata) : debate.metadata,
+        });
+    } catch (error) {
+        return c.json({ error: 'Failed to fetch debate' }, 500);
+    }
+});
+
+app.delete('/api/debate/:id', async (c) => {
+    try {
+        const id = c.req.param('id');
+        await prisma.debate.delete({ where: { id } });
+        return c.json({ success: true });
+    } catch (error) {
+        return c.json({ error: 'Failed to delete debate' }, 500);
+    }
+});
+
+// ============================================================================
+// SETTINGS ROUTES
+// ============================================================================
+
+const DEFAULT_KEEPER_SETTINGS = {
+    isEnabled: false,
+    autoSwitch: false,
+    checkIntervalSeconds: 30,
+    inactivityThresholdMinutes: 1,
+    activeWorkThresholdMinutes: 30,
+    messages: [],
+    customMessages: {},
+    smartPilotEnabled: false,
+    supervisorProvider: 'openai',
+    supervisorApiKey: '',
+    supervisorModel: 'gpt-4o',
+    contextMessageCount: 10,
+};
+
+app.get('/api/settings/keeper', async (c) => {
+    try {
+        const settings = await prisma.keeperSettings.findUnique({ where: { id: 'default' } });
+        if (!settings) return c.json(DEFAULT_KEEPER_SETTINGS);
+
+        return c.json({
+            ...settings,
+            messages: JSON.parse(settings.messages),
+            customMessages: JSON.parse(settings.customMessages),
+        });
+    } catch (error) {
+        return c.json(DEFAULT_KEEPER_SETTINGS);
+    }
+});
+
+app.post('/api/settings/keeper', async (c) => {
+    try {
+        const body = await c.req.json();
+        const { messages, customMessages, ...rest } = body;
+
+        const settings = await prisma.keeperSettings.upsert({
+            where: { id: 'default' },
+            update: {
+                ...rest,
+                messages: JSON.stringify(messages || []),
+                customMessages: JSON.stringify(customMessages || {}),
+            },
+            create: {
+                ...rest,
+                id: 'default',
+                messages: JSON.stringify(messages || []),
+                customMessages: JSON.stringify(customMessages || {}),
+            }
+        });
+
+        return c.json({
+            ...settings,
+            messages: JSON.parse(settings.messages),
+            customMessages: JSON.parse(settings.customMessages),
+        });
+    } catch (error) {
+        return c.json({ error: 'Failed to save settings' }, 500);
+    }
+});
+
+// ============================================================================
+// LOGS ROUTES
+// ============================================================================
+
+app.get('/api/logs/keeper', async (c) => {
+    try {
+        const logs = await prisma.keeperLog.findMany({
+            orderBy: { createdAt: 'desc' },
+            take: 100
+        });
+        return c.json(logs);
+    } catch (error) {
+        return c.json({ error: 'Failed to fetch logs' }, 500);
+    }
+});
+
+app.post('/api/logs/keeper', async (c) => {
+    try {
+        const body = await c.req.json();
+        const log = await prisma.keeperLog.create({
+            data: {
+                sessionId: body.sessionId,
+                type: body.type,
+                message: body.message,
+                metadata: body.details ? JSON.stringify(body.details) : undefined,
+            }
+        });
+        return c.json(log);
+    } catch (error) {
+        return c.json({ error: 'Failed to create log' }, 500);
+    }
+});
+
+// ============================================================================
+// TEMPLATES ROUTES
+// ============================================================================
+
+const DEFAULT_TEMPLATES = [
+    { name: "Feature Implementation", description: "Implement a new feature with tests and documentation", prompt: "I want to implement a new feature. Please help me plan, write code, tests, and documentation.", isPrebuilt: true, tags: "feature,dev", isFavorite: true },
+    { name: "Bug Fix", description: "Analyze and fix a bug with regression tests", prompt: "I have a bug to fix. I will provide the details. Please help me reproduce, fix, and verify it.", isPrebuilt: true, tags: "bugfix,maintenance", isFavorite: true },
+    { name: "Code Review", description: "Review code for best practices and security", prompt: "Please review the following code or diff. Look for security issues, performance problems, and style violations.", isPrebuilt: true, tags: "review,quality", isFavorite: false },
+    { name: "Refactoring", description: "Refactor code to improve structure and maintainability", prompt: "I want to refactor some code. Help me improve its structure without changing behavior.", isPrebuilt: true, tags: "refactor,cleanup", isFavorite: false }
+];
+
+function formatTemplate(t: any) {
+    return {
+        ...t,
+        tags: t.tags ? t.tags.split(',') : [],
+        createdAt: t.createdAt instanceof Date ? t.createdAt.toISOString() : t.createdAt,
+        updatedAt: t.updatedAt instanceof Date ? t.updatedAt.toISOString() : t.updatedAt
+    };
+}
+
+app.get('/api/templates', async (c) => {
+    try {
+        let templates = await prisma.sessionTemplate.findMany({ orderBy: { updatedAt: 'desc' } });
+
+        if (templates.length === 0) {
+            for (const t of DEFAULT_TEMPLATES) {
+                await prisma.sessionTemplate.create({ data: t });
+            }
+            templates = await prisma.sessionTemplate.findMany({ orderBy: { updatedAt: 'desc' } });
+        }
+
+        return c.json(templates.map(formatTemplate));
+    } catch (error) {
+        return c.json({ error: 'Failed to fetch templates' }, 500);
+    }
+});
+
+app.post('/api/templates', async (c) => {
+    try {
+        const body = await c.req.json();
+        const { name, description, prompt, title, tags, isFavorite } = body;
+
+        const template = await prisma.sessionTemplate.create({
+            data: {
+                name,
+                description,
+                prompt,
+                title,
+                isFavorite: isFavorite || false,
+                tags: Array.isArray(tags) ? tags.join(',') : (tags || ''),
+            }
+        });
+
+        return c.json(formatTemplate(template));
+    } catch (error) {
+        return c.json({ error: 'Failed to create template' }, 500);
+    }
+});
+
+app.put('/api/templates/:id', async (c) => {
+    try {
+        const id = c.req.param('id');
+        const body = await c.req.json();
+        const { name, description, prompt, title, tags, isFavorite } = body;
+
+        const template = await prisma.sessionTemplate.update({
+            where: { id },
+            data: {
+                name,
+                description,
+                prompt,
+                title,
+                isFavorite,
+                tags: Array.isArray(tags) ? tags.join(',') : (tags || ''),
+            }
+        });
+
+        return c.json(formatTemplate(template));
+    } catch (error) {
+        return c.json({ error: 'Failed to update template' }, 500);
+    }
+});
+
+app.delete('/api/templates/:id', async (c) => {
+    try {
+        const id = c.req.param('id');
+        await prisma.sessionTemplate.delete({ where: { id } });
+        return c.json({ success: true });
+    } catch (error) {
+        return c.json({ error: 'Failed to delete template' }, 500);
     }
 });
 

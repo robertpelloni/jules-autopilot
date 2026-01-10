@@ -121,7 +121,7 @@ export const useSessionKeeperStore = create<SessionKeeperState>()(
       loadConfig: async () => {
         set({ isLoading: true });
         try {
-          const res = await fetch('/api/settings/keeper');
+          const res = await fetch(`${BUN_SERVER_URL}/api/settings/keeper`);
           if (res.ok) {
             const config = await res.json();
             set({ config });
@@ -153,7 +153,7 @@ export const useSessionKeeperStore = create<SessionKeeperState>()(
       saveConfig: async (config) => {
         set({ config, isLoading: true });
         try {
-          await fetch('/api/settings/keeper', {
+          await fetch(`${BUN_SERVER_URL}/api/settings/keeper`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify(config),
@@ -201,7 +201,7 @@ export const useSessionKeeperStore = create<SessionKeeperState>()(
         }));
 
         try {
-          await fetch('/api/logs/keeper', {
+          await fetch(`${BUN_SERVER_URL}/api/logs/keeper`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({

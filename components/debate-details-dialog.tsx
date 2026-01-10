@@ -11,6 +11,8 @@ import {
 import { DebateViewer } from '@/components/debate-viewer';
 import { DebateResult } from '@/lib/orchestration/types';
 import { Loader2, Download, Play } from 'lucide-react';
+
+const BUN_SERVER_URL = 'http://localhost:8080';
 import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
 
@@ -35,7 +37,7 @@ export function DebateDetailsDialog({
       const fetchDebate = async () => {
         try {
           setLoading(true);
-          const response = await fetch(`/api/debate/${debateId}`);
+          const response = await fetch(`${BUN_SERVER_URL}/api/debate/${debateId}`);
           if (!response.ok) {
             throw new Error('Failed to fetch debate details');
           }
