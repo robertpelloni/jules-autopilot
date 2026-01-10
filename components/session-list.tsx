@@ -2,22 +2,45 @@
 
 import { useEffect, useState, useCallback, useMemo } from "react";
 import { useJules } from "@/lib/jules/provider";
+import { useCloudDevStore } from "@/lib/stores/cloud-dev";
+import { CLOUD_DEV_PROVIDERS, type CloudDevProviderId } from "@/types/cloud-dev";
 import type { Session } from "@/types/jules";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Search, Loader2 } from "lucide-react";
+import { Search, Loader2, Sparkles, Bot, Brain, Code2, Github, Blocks, Filter } from "lucide-react";
 import {
   Tooltip,
   TooltipContent,
   TooltipProvider,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuCheckboxItem,
+  DropdownMenuTrigger,
+  DropdownMenuSeparator,
+  DropdownMenuLabel,
+} from "@/components/ui/dropdown-menu";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { CardSpotlight } from "@/components/ui/card-spotlight";
 import { formatDistanceToNow, isValid, parseISO, isToday, differenceInDays } from "date-fns";
 import { getArchivedSessions } from "@/lib/archive";
 import { cn } from "@/lib/utils";
+
+const PROVIDER_ICONS: Record<CloudDevProviderId, React.ReactNode> = {
+  jules: <Sparkles className="h-3 w-3" />,
+  devin: <Bot className="h-3 w-3" />,
+  manus: <Brain className="h-3 w-3" />,
+  openhands: <Code2 className="h-3 w-3" />,
+  'github-spark': <Github className="h-3 w-3" />,
+  blocks: <Blocks className="h-3 w-3" />,
+  'claude-code': <Code2 className="h-3 w-3" />,
+  codex: <Brain className="h-3 w-3" />,
+};
+
+type DisplaySession = Session & { providerId?: CloudDevProviderId };
 
 function truncateText(text: string, maxLength: number) {
   if (!text) return "";
@@ -29,19 +52,33 @@ interface SessionListProps {
   onSelectSession?: (sessionId: string | Session) => void;
   selectedSessionId?: string | null;
   className?: string;
+  showProviderFilter?: boolean;
 }
 
 export function SessionList({
   onSelectSession,
   selectedSessionId,
   className,
+  showProviderFilter = true,
 }: SessionListProps) {
   const { client, refreshTrigger } = useJules();
-  const [sessions, setSessions] = useState<Session[]>([]);
+  const { getConfiguredProviders, initializeProviders } = useCloudDevStore();
+  
+  const [sessions, setSessions] = useState<DisplaySession[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState("");
   const [archivedSessionIds, setArchivedSessionIds] = useState<Set<string>>(new Set());
+  const [selectedProviders, setSelectedProviders] = useState<Set<CloudDevProviderId>>(new Set(['jules']));
+
+  const configuredProviders = useMemo(() => {
+    const providers = getConfiguredProviders();
+    return providers.length > 0 ? providers : ['jules' as CloudDevProviderId];
+  }, [getConfiguredProviders]);
+
+  useEffect(() => {
+    initializeProviders();
+  }, [initializeProviders]);
 
   useEffect(() => {
     setArchivedSessionIds(getArchivedSessions());
@@ -65,14 +102,16 @@ export function SessionList({
       return;
     }
 
-    // Don't set loading to true on every poll to avoid flashing
     if (sessions.length === 0) setLoading(true);
     
     setError(null);
     try {
       const data = await client.listSessions();
-      // Sort by updatedAt desc like in local
-      setSessions(data.sort((a, b) => new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime()));
+      const sessionsWithProvider: DisplaySession[] = data.map(s => ({
+        ...s,
+        providerId: 'jules' as CloudDevProviderId,
+      }));
+      setSessions(sessionsWithProvider.sort((a, b) => new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime()));
     } catch (err) {
       console.error("Failed to load sessions:", err);
       if (err instanceof Error) {
@@ -93,10 +132,9 @@ export function SessionList({
     }
   }, [client, sessions.length]);
 
-  // Initial load and polling
   useEffect(() => {
     loadSessions();
-    const interval = setInterval(loadSessions, 10000); // Poll every 10s
+    const interval = setInterval(loadSessions, 10000);
     return () => clearInterval(interval);
   }, [loadSessions, refreshTrigger]);
 
@@ -162,13 +200,31 @@ export function SessionList({
     return sessions
       .filter((session) => !archivedSessionIds.has(session.id))
       .filter((session) => {
+        const providerId = session.providerId || 'jules';
+        return selectedProviders.has(providerId);
+      })
+      .filter((session) => {
         if (!searchQuery) return true;
         const query = searchQuery.toLowerCase();
         const title = (session.title || "").toLowerCase();
         const repo = (session.sourceId || "").toLowerCase();
         return title.includes(query) || repo.includes(query);
       });
-  }, [sessions, archivedSessionIds, searchQuery]);
+  }, [sessions, archivedSessionIds, searchQuery, selectedProviders]);
+
+  const toggleProvider = (providerId: CloudDevProviderId) => {
+    setSelectedProviders(prev => {
+      const next = new Set(prev);
+      if (next.has(providerId)) {
+        if (next.size > 1) {
+          next.delete(providerId);
+        }
+      } else {
+        next.add(providerId);
+      }
+      return next;
+    });
+  };
 
   if (loading && sessions.length === 0) {
     return (
@@ -199,14 +255,25 @@ export function SessionList({
 
   if (visibleSessions.length === 0 && !loading) {
     return (
-      <div className={cn("flex items-center justify-center p-6", className)}>
-        <p className="text-xs text-muted-foreground text-center leading-relaxed">
-          {searchQuery
-            ? "No sessions match your search."
-            : sessions.length === 0
-              ? "No sessions yet. Create one to get started!"
-              : "All sessions are archived."}
-        </p>
+      <div className={cn("flex flex-col h-full", className)}>
+        {showProviderFilter && configuredProviders.length > 1 && (
+          <div className="px-3 py-2 border-b border-white/[0.08] shrink-0">
+            <ProviderFilterDropdown
+              configuredProviders={configuredProviders}
+              selectedProviders={selectedProviders}
+              onToggle={toggleProvider}
+            />
+          </div>
+        )}
+        <div className="flex items-center justify-center p-6 flex-1">
+          <p className="text-xs text-muted-foreground text-center leading-relaxed">
+            {searchQuery
+              ? "No sessions match your search."
+              : sessions.length === 0
+                ? "No sessions yet. Create one to get started!"
+                : "All sessions are archived."}
+          </p>
+        </div>
       </div>
     );
   }
@@ -225,7 +292,7 @@ export function SessionList({
   return (
     <TooltipProvider>
       <div className={cn("h-full flex flex-col bg-zinc-950 overflow-hidden", className)}>
-        <div className="px-3 py-2 border-b border-white/[0.08] shrink-0">
+        <div className="px-3 py-2 border-b border-white/[0.08] shrink-0 space-y-2">
           <div className="relative">
             <Search className="absolute left-2 top-1/2 h-3 w-3 -translate-y-1/2 text-muted-foreground" />
             <Input
@@ -236,6 +303,13 @@ export function SessionList({
               onChange={(e) => setSearchQuery(e.target.value)}
             />
           </div>
+          {showProviderFilter && configuredProviders.length > 1 && (
+            <ProviderFilterDropdown
+              configuredProviders={configuredProviders}
+              selectedProviders={selectedProviders}
+              onToggle={toggleProvider}
+            />
+          )}
         </div>
         <ScrollArea className="flex-1 min-h-0">
           <div className="p-2 space-y-1">
@@ -243,6 +317,7 @@ export function SessionList({
               const daysOld = getDaysOld(session.createdAt);
               const displayDate = session.lastActivityAt || session.updatedAt || session.createdAt;
               const firstTopic = getFirstTopic(session.prompt);
+              const providerId = session.providerId || 'jules';
               
               return (
               <CardSpotlight
@@ -288,6 +363,21 @@ export function SessionList({
                           <p>{session.title || "Untitled"}</p>
                         </TooltipContent>
                       </Tooltip>
+                      {configuredProviders.length > 1 && (
+                        <Tooltip>
+                          <TooltipTrigger asChild>
+                            <div className={cn(
+                              "shrink-0 p-0.5 rounded",
+                              providerId === 'jules' ? 'text-purple-400' : 'text-white/60'
+                            )}>
+                              {PROVIDER_ICONS[providerId]}
+                            </div>
+                          </TooltipTrigger>
+                          <TooltipContent side="top" className="bg-zinc-900 border-white/10 text-white text-[10px] z-[60]">
+                            {CLOUD_DEV_PROVIDERS[providerId]?.name || providerId}
+                          </TooltipContent>
+                        </Tooltip>
+                      )}
                       <Badge 
                         className={`shrink-0 text-[8px] px-1 py-0 h-3.5 font-mono border-0 rounded-sm uppercase tracking-wider ${
                           session.status === 'active' ? 'bg-blue-500/20 text-blue-400' :
@@ -354,5 +444,54 @@ export function SessionList({
         </div>
       </div>
     </TooltipProvider>
+  );
+}
+
+interface ProviderFilterDropdownProps {
+  configuredProviders: CloudDevProviderId[];
+  selectedProviders: Set<CloudDevProviderId>;
+  onToggle: (providerId: CloudDevProviderId) => void;
+}
+
+function ProviderFilterDropdown({ configuredProviders, selectedProviders, onToggle }: ProviderFilterDropdownProps) {
+  const selectedCount = selectedProviders.size;
+  const totalCount = configuredProviders.length;
+
+  return (
+    <DropdownMenu>
+      <DropdownMenuTrigger asChild>
+        <Button variant="ghost" size="sm" className="h-6 px-2 text-[10px] text-white/60 hover:text-white hover:bg-white/10 w-full justify-between">
+          <div className="flex items-center gap-1.5">
+            <Filter className="h-3 w-3" />
+            <span>Providers</span>
+          </div>
+          <Badge variant="outline" className="text-[9px] px-1 py-0 h-4 border-white/20">
+            {selectedCount}/{totalCount}
+          </Badge>
+        </Button>
+      </DropdownMenuTrigger>
+      <DropdownMenuContent align="start" className="w-48 bg-zinc-900 border-white/10">
+        <DropdownMenuLabel className="text-[10px] text-white/50 uppercase tracking-wider">
+          Filter by Provider
+        </DropdownMenuLabel>
+        <DropdownMenuSeparator className="bg-white/10" />
+        {configuredProviders.map((providerId) => {
+          const config = CLOUD_DEV_PROVIDERS[providerId];
+          return (
+            <DropdownMenuCheckboxItem
+              key={providerId}
+              checked={selectedProviders.has(providerId)}
+              onCheckedChange={() => onToggle(providerId)}
+              className="text-xs cursor-pointer"
+            >
+              <div className="flex items-center gap-2">
+                <span className="text-white/60">{PROVIDER_ICONS[providerId]}</span>
+                <span>{config?.name || providerId}</span>
+              </div>
+            </DropdownMenuCheckboxItem>
+          );
+        })}
+      </DropdownMenuContent>
+    </DropdownMenu>
   );
 }

@@ -3,6 +3,8 @@
 import { useEffect, useState, useCallback, useRef, useMemo } from 'react';
 import useSWR from 'swr'; // Keeping for potential future use, though origin uses manual polling
 import { useJules } from '@/lib/jules/provider';
+import type { CloudDevProviderId } from '@/types/cloud-dev';
+import { CLOUD_DEV_PROVIDERS } from '@/types/cloud-dev';
 import type { Activity, Session, Artifact } from '@/types/jules';
 import { exportSessionToJSON, exportSessionToMarkdown } from '@/lib/export';
 import { useNotifications } from '@/hooks/use-notifications';
@@ -11,8 +13,9 @@ import { Badge } from '@/components/ui/badge';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { formatDistanceToNow, isValid, parseISO } from 'date-fns';
-import { Send, Archive, ArchiveRestore, Code, Terminal, ChevronDown, ChevronRight, Play, GitBranch, GitPullRequest, MoreVertical, Book, ArrowUp, ArrowDown, Download, Copy, Check, Loader2, Bell, Users, LayoutTemplate } from 'lucide-react';
+import { Send, Archive, ArchiveRestore, Code, Terminal, ChevronDown, ChevronRight, Play, GitBranch, GitPullRequest, MoreVertical, Book, ArrowUp, ArrowDown, Download, Copy, Check, Loader2, Bell, Users, LayoutTemplate, Sparkles, Bot, Cpu, Zap, Github, Blocks as BlocksIcon, MessageSquare, FileCode } from 'lucide-react';
 import { useVirtualizer } from '@tanstack/react-virtual';
 import { archiveSession, unarchiveSession, isSessionArchived } from '@/lib/archive';
 import { ActivityInput } from './activity-input';
@@ -47,8 +50,40 @@ interface ActivityFeedProps {
   onReviewArtifact?: (artifact: Artifact) => void;
 }
 
+const PROVIDER_ICONS: Record<CloudDevProviderId, React.ReactNode> = {
+  jules: <Sparkles className="h-3 w-3" />,
+  devin: <Bot className="h-3 w-3" />,
+  manus: <Cpu className="h-3 w-3" />,
+  openhands: <Zap className="h-3 w-3" />,
+  'github-spark': <Github className="h-3 w-3" />,
+  blocks: <BlocksIcon className="h-3 w-3" />,
+  'claude-code': <MessageSquare className="h-3 w-3" />,
+  codex: <FileCode className="h-3 w-3" />,
+};
+
+const PROVIDER_COLORS: Record<CloudDevProviderId, string> = {
+  jules: '#4285F4',
+  devin: '#00D4AA',
+  manus: '#FF6B35',
+  openhands: '#8B5CF6',
+  'github-spark': '#238636',
+  blocks: '#D97706',
+  'claude-code': '#D97706',
+  codex: '#10A37F',
+};
+
+function getProviderIdFromSessionId(sessionId: string): CloudDevProviderId {
+  const colonIndex = sessionId.indexOf(':');
+  if (colonIndex > 0) {
+    return sessionId.slice(0, colonIndex) as CloudDevProviderId;
+  }
+  return 'jules';
+}
+
 export function ActivityFeed({ session, onArchive, showCodeDiffs, onToggleCodeDiffs, onActivitiesChange, onStartDebate, onSaveTemplate, onReviewArtifact }: ActivityFeedProps) {
   const { client } = useJules();
+  const providerId = getProviderIdFromSessionId(session.id);
+  const providerConfig = CLOUD_DEV_PROVIDERS[providerId];
   const [sending, setSending] = useState(false);
   const [approvingPlan, setApprovingPlan] = useState(false);
   const [newActivityIds, setNewActivityIds] = useState<Set<string>>(new Set());
@@ -462,6 +497,10 @@ export function ActivityFeed({ session, onArchive, showCodeDiffs, onToggleCodeDi
           <div className="flex-1 min-w-0">
             <div className="flex items-center gap-2 mb-1.5">
               <h2 className="text-sm font-bold uppercase tracking-wide truncate text-white">{session.title}</h2>
+              <div className="flex items-center gap-1 px-1.5 py-0.5 text-[9px] font-mono font-bold uppercase tracking-wider rounded" style={{ backgroundColor: `${PROVIDER_COLORS[providerId]}20`, color: PROVIDER_COLORS[providerId] }}>
+                {PROVIDER_ICONS[providerId]}
+                <span>{providerConfig.name}</span>
+              </div>
               <div className={`flex items-center gap-1 px-2 py-0.5 text-[9px] font-mono font-bold uppercase tracking-wider ${statusInfo.bgColor} ${statusInfo.color}`}>
                 <span>{statusInfo.icon}</span>
                 <span>{statusInfo.label}</span>

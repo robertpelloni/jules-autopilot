@@ -10,9 +10,10 @@ interface SessionColumnProps {
   id: string;
   title: string;
   sessions: Session[];
+  showProvider?: boolean;
 }
 
-export function SessionColumn({ id, title, sessions }: SessionColumnProps) {
+export function SessionColumn({ id, title, sessions, showProvider }: SessionColumnProps) {
   const { setNodeRef } = useDroppable({ id });
 
   return (
@@ -21,7 +22,7 @@ export function SessionColumn({ id, title, sessions }: SessionColumnProps) {
       <SortableContext items={sessions.map((s) => s.id)} strategy={verticalListSortingStrategy}>
         <motion.div layout>
           {sessions.map((session) => (
-            <SessionCard key={session.id} session={session} />
+            <SessionCard key={session.id} session={session} showProvider={showProvider} />
           ))}
         </motion.div>
       </SortableContext>

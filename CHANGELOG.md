@@ -13,6 +13,15 @@ All notable changes to this project will be documented in this file.
   - **Provider Registry** (`lib/cloud-dev/providers/index.ts`): Factory functions `createProvider()`, `createProviders()`, `getAvailableProviderIds()`
   - **Session Transfer Service** (`lib/cloud-dev/transfer.ts`): `SessionTransferService` for migrating sessions between providers
   - **Zustand Store** (`lib/stores/cloud-dev.ts`): Persistent state management for multi-provider sessions with `useCloudDevStore`
+- **Multi-Provider UI Components:**
+  - **Provider Settings** (`components/cloud-dev-providers-settings.tsx`): API key management for all providers
+  - **Provider Selector** (`components/provider-selector.tsx`): Dropdown for selecting active provider
+  - **Settings Dialog**: New "Cloud Dev" tab for provider configuration
+  - **New Session Dialog**: Provider selection when creating sessions
+  - **Session List**: Provider filter dropdown and provider badges on session items
+  - **Session Card**: Optional provider badge display with provider-specific colors/icons
+  - **Activity Feed**: Provider badge in session header with color-coded icons
+  - **Session Board** (Kanban): Provider filter dropdown and badges in all columns
 
 ### Changed
 - **Architecture:** Session IDs now use `"{providerId}:{providerSessionId}"` format for cross-provider identification
