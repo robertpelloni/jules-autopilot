@@ -8,6 +8,8 @@ import { CLOUD_DEV_PROVIDERS } from '@/types/cloud-dev';
 import type { Activity, Session, Artifact } from '@/types/jules';
 import { exportSessionToJSON, exportSessionToMarkdown } from '@/lib/export';
 import { useNotifications } from '@/hooks/use-notifications';
+import { useDaemonEvent } from '@/lib/hooks/use-daemon-events';
+import type { ActivitiesUpdatedPayload } from '@jules/shared';
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { ScrollArea } from '@/components/ui/scroll-area';
@@ -222,11 +224,27 @@ export function ActivityFeed({ session, onArchive, showCodeDiffs, onToggleCodeDi
 
   useEffect(() => {
     loadActivities(true);
-    if (session.status === 'active' && !isArchived) {
-      const interval = setInterval(() => loadActivities(false), 5000);
-      return () => clearInterval(interval);
-    }
-  }, [session.id, session.status, isArchived, loadActivities]);
+  }, [session.id, loadActivities]);
+
+  useDaemonEvent<ActivitiesUpdatedPayload>(
+    'activities_updated',
+    (data) => {
+      if (data?.sessionId === session.id && !isArchived) {
+        loadActivities(false);
+      }
+    },
+    [session.id, isArchived, loadActivities]
+  );
+
+  useDaemonEvent<{ sessionId?: string }>(
+    'session_updated',
+    (data) => {
+      if (data?.sessionId === session.id && !isArchived) {
+        loadActivities(false);
+      }
+    },
+    [session.id, isArchived, loadActivities]
+  );
 
   useEffect(() => {
     onActivitiesChange(activities);

@@ -1,4 +1,4 @@
-export type DaemonEventType = 'connected' | 'daemon_status' | 'log_added' | 'sessions_interrupted' | 'sessions_continued' | 'session_updated' | 'session_nudged' | 'session_approved' | 'ping' | 'pong';
+export type DaemonEventType = 'connected' | 'daemon_status' | 'log_added' | 'sessions_interrupted' | 'sessions_continued' | 'session_updated' | 'session_nudged' | 'session_approved' | 'activities_updated' | 'sessions_list_updated' | 'ping' | 'pong';
 export interface DaemonEvent<T = unknown> {
     type: DaemonEventType;
     timestamp?: number;
@@ -31,6 +31,12 @@ export interface SessionNudgedPayload {
 export interface SessionApprovedPayload {
     sessionId: string;
     sessionTitle?: string;
+}
+export interface ActivitiesUpdatedPayload {
+    sessionId: string;
+}
+export interface SessionsListUpdatedPayload {
+    reason?: 'created' | 'deleted' | 'status_changed';
 }
 export type LogType = 'info' | 'action' | 'error' | 'warn' | 'skip';
 export interface KeeperLog {

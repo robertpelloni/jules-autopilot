@@ -126,6 +126,9 @@ export async function runLoop() {
                         type: "message"
                     });
 
+                    emitDaemonEvent('sessions_list_updated', { reason: 'created' });
+                    emitDaemonEvent('activities_updated', { sessionId: newSession.id });
+                    emitDaemonEvent('activities_updated', { sessionId: session.id });
                     await addLog(`Created new session ${newSession.id.substring(0, 8)} with handoff log.`, "action", session.id);
                     continue;
                 }
@@ -133,6 +136,8 @@ export async function runLoop() {
                 if (settings.resumePaused && (session.status === 'paused' || session.status === 'completed' || session.status === 'failed')) {
                     await addLog(`Resuming ${session.status} session ${session.id.substring(0, 8)}...`, 'action', session.id);
                     await client.resumeSession(session.id);
+                    emitDaemonEvent('session_updated', { sessionId: session.id });
+                    emitDaemonEvent('sessions_list_updated', { reason: 'status_changed' });
                     continue;
                 }
 
@@ -144,6 +149,8 @@ export async function runLoop() {
                             sessionId: session.id,
                             sessionTitle: session.title
                         });
+                        emitDaemonEvent('session_updated', { sessionId: session.id });
+                        emitDaemonEvent('sessions_list_updated', { reason: 'status_changed' });
                     }
                     continue;
                 }
@@ -205,6 +212,7 @@ export async function runLoop() {
                         type: 'message'
                     });
                     
+                    emitDaemonEvent('activities_updated', { sessionId: session.id });
                     emitDaemonEvent('session_nudged', { 
                         sessionId: session.id,
                         sessionTitle: session.title,

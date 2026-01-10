@@ -7,6 +7,8 @@ export type DaemonEventType =
   | 'session_updated'
   | 'session_nudged'
   | 'session_approved'
+  | 'activities_updated'
+  | 'sessions_list_updated'
   | 'ping'
   | 'pong';
 
@@ -49,6 +51,14 @@ export interface SessionNudgedPayload {
 export interface SessionApprovedPayload {
   sessionId: string;
   sessionTitle?: string;
+}
+
+export interface ActivitiesUpdatedPayload {
+  sessionId: string;
+}
+
+export interface SessionsListUpdatedPayload {
+  reason?: 'created' | 'deleted' | 'status_changed';
 }
 
 export type LogType = 'info' | 'action' | 'error' | 'warn' | 'skip';

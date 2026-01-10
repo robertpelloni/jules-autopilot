@@ -320,16 +320,11 @@ export async function POST(req: Request) {
           systemPrompt: 'You are a project supervisor. Your goal is to keep the AI agent "Jules" on track. Read the conversation history. Identify if the agent is stuck, off-track, or needs guidance. If a session is stalled, failed, or completed but needs more work, provide a concise, direct instruction to reactivate it. Do not be conversational. Be directive but polite. Focus on the next task.'
         });
         
-        if (providerName !== primaryProvider) {
-          console.log(`[Supervisor API] Fallback to ${providerName} succeeded`);
-        }
-        
         return NextResponse.json({ content: result.content, provider: providerName });
       } catch (e) {
         lastError = e instanceof Error ? e : new Error(String(e));
         
         if (isRateLimitError(e)) {
-          console.log(`[Supervisor API] Rate limit hit on ${providerName}, trying fallback...`);
           continue;
         }
         

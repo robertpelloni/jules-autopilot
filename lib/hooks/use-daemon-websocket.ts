@@ -10,6 +10,7 @@ import type {
   SessionApprovedPayload,
 } from '@jules/shared';
 import { WS_DEFAULTS } from '@jules/shared';
+import { emitDaemonEvent } from './use-daemon-events';
 
 const WS_URL = process.env.NEXT_PUBLIC_DAEMON_WS_URL || 'ws://localhost:8080/ws';
 
@@ -33,6 +34,8 @@ export function useDaemonWebSocket() {
   const handleMessage = useCallback((event: MessageEvent) => {
     try {
       const message: DaemonEvent = JSON.parse(event.data);
+      
+      emitDaemonEvent(message);
       
       switch (message.type) {
         case 'daemon_status': {

@@ -3,6 +3,8 @@
 import { useEffect, useState, useCallback, useMemo } from "react";
 import { useJules } from "@/lib/jules/provider";
 import { useCloudDevStore } from "@/lib/stores/cloud-dev";
+import { useDaemonEvent } from "@/lib/hooks/use-daemon-events";
+import type { SessionsListUpdatedPayload } from "@jules/shared";
 import { CLOUD_DEV_PROVIDERS, type CloudDevProviderId } from "@/types/cloud-dev";
 import type { Session } from "@/types/jules";
 import { Badge } from "@/components/ui/badge";
@@ -134,9 +136,23 @@ export function SessionList({
 
   useEffect(() => {
     loadSessions();
-    const interval = setInterval(loadSessions, 10000);
-    return () => clearInterval(interval);
   }, [loadSessions, refreshTrigger]);
+
+  useDaemonEvent<SessionsListUpdatedPayload>(
+    'sessions_list_updated',
+    () => {
+      loadSessions();
+    },
+    [loadSessions]
+  );
+
+  useDaemonEvent<{ sessionId?: string }>(
+    'session_updated',
+    () => {
+      loadSessions();
+    },
+    [loadSessions]
+  );
 
   const getStatusColor = (status: string) => {
     switch (status) {
