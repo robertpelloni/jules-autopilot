@@ -249,10 +249,10 @@ The TUI is your **Mecha Suit**—a keyboard-driven cockpit for power users:
 - **Automated provider selection** - Smart routing based on task requirements
 - **Provider health monitoring** - Automatic failover between providers
 
-### AIOS Integration
+### Borg Integration
 > "We want to wrap over all of those and somehow be compatible with all the frameworks they are using"
 
-Jules Autopilot is designed to integrate into the larger AIOS (AI Operating System) ecosystem:
+Jules Autopilot is designed to integrate into the larger Borg (AI Operating System) ecosystem:
 - Acts as a portal/aggregator for disparate webservers
 - Supports reverse proxy or iframe embedding
 - Maintains consistent UX across different backend frameworks

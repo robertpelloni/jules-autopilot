@@ -105,7 +105,7 @@ The TUI is your **Mecha Suit**—a keyboard-driven cockpit for power users:
 
 > "We want to wrap over all of those and somehow be compatible with all the frameworks they are using"
 
-The AIOS base will integrate multiple sub-services, each potentially with their own web dashboards. Jules Autopilot must:
+The Borg base will integrate multiple sub-services, each potentially with their own web dashboards. Jules Autopilot must:
 - Act as a portal/aggregator for disparate webservers
 - Support reverse proxy or iframe embedding
 - Maintain consistent UX across different backend frameworks
