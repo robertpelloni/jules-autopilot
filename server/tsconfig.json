@@ -8,7 +8,7 @@
     "jsx": "react-jsx",
     "allowJs": true,
     "baseUrl": ".",
-    "types": ["bun-types"],
+    "types": ["bun-types", "node"],
     "paths": {
       "@/*": ["..//*"]
     },
