@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-01-10T22:54:06.924Z",
+  "generatedAt": "2026-02-04T21:13:39.416Z",
   "submodules": [
     {
       "name": "antigravity-jules-orchestration",
@@ -8,7 +8,7 @@
       "commit": "e12e5a181be492d81ba4dfdbb299dd79cf21489b",
       "url": "https://github.com/Scarmonit/antigravity-jules-orchestration",
       "lastCommitDate": "2026-01-08 01:33:53 -0500",
-      "describe": "(v2.6.1-20-ge12e5a1)",
+      "describe": "(heads/main)",
       "status": "synced"
     },
     {
@@ -18,7 +18,7 @@
       "commit": "9f2fc14a41e8b604bdaf2d50ae6041cdc5507175",
       "url": "https://github.com/gemini-cli-extensions/jules",
       "lastCommitDate": "2025-10-30 09:11:17 -0400",
-      "describe": "(v0.1.0-3-g9f2fc14)",
+      "describe": "(heads/main)",
       "status": "synced"
     },
     {
@@ -68,7 +68,7 @@
       "commit": "de4a2bfd2449d7fedc7032ac01c1de4ec288e009",
       "url": "https://github.com/DiaAviLinden/Jules-system-prompt",
       "lastCommitDate": "2025-12-08 18:22:13 -0500",
-      "describe": "(v1.0.0-alpha-2-gde4a2bf)",
+      "describe": "(heads/add-details-md)",
       "status": "synced"
     },
     {
