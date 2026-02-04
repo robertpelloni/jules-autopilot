@@ -245,9 +245,7 @@ All notable changes to this project will be documented in this file.
 ## [v0.8.0] - 2024-10-24
 
 ### Added
--   **Bobcoin Wallet UI:** Added a wallet interface at `/wallet` to manage balance and transaction history.
--   **System Dashboard:** Enhanced `/system/internals` to include Bobcoin submodule status.
--   **Bobcoin Submodule:** Integrated `bobcoin` (Solana/Monero hybrid) as the core blockchain submodule.
+-   **System Dashboard:** Enhanced `/system/internals` to include submodule status.
 -   **Unified Instructions:** Created `INSTRUCTIONS.md` as the single source of truth for all agents.
 
 ### Fixed
