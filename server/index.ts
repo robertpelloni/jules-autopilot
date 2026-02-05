@@ -1,4 +1,3 @@
-/// <reference types="bun" />
 declare const Bun: any;
 
 import { Hono } from 'hono';
