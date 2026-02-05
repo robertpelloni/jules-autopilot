@@ -1,3 +1,4 @@
+/// <reference types="bun-types" />
 import { Hono } from 'hono';
 import { cors } from 'hono/cors';
 import { EventEmitter } from 'events';
