@@ -1,4 +1,5 @@
-/// <reference types="bun" />
+declare const Bun: any;
+
 import { Hono } from 'hono';
 import { cors } from 'hono/cors';
 import { EventEmitter } from 'events';
