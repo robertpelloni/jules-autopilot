@@ -1,7 +1,7 @@
 # Universal LLM Instructions
 
-**Version**: 1.2.0
-**Last Updated**: 2025-12-31
+**Version**: 2.0.0
+**Last Updated**: 2026-02-04
 
 This document is the **single source of truth** for all AI agents (Claude, Gemini, GPT, Copilot, etc.) working on the Jules UI project.
 
@@ -12,7 +12,15 @@ This document is the **single source of truth** for all AI agents (Claude, Gemin
     *   **Submodules**: Always run `git submodule update --init --recursive` when starting.
     *   **Commits**: Use semantic commit messages (e.g., `feat:`, `fix:`, `chore:`).
     *   **Versioning**: ALWAYS update `VERSION.md` as the source of truth, then run `npm run update-version` or `node scripts/update-version.js` to sync `package.json` and `lib/version.ts`.
+    *   **Feature Branches**: Merge local feature branches into `main` regularly.
 3.  **No Hallucinations**: Do not invent APIs. Check `lib/` and `types/` for existing code.
+4.  **Autonomy**:
+    *   Proceed with tasks autonomously.
+    *   Commit and push after each major step.
+    *   Do not pause for confirmation unless absolutely necessary.
+5.  **Documentation**:
+    *   Keep `ROADMAP.md` and `CHANGELOG.md` updated.
+    *   Document all new submodules in `docs/SUBMODULES.md` (or the System Dashboard).
 
 ## 📂 Project Structure
 
@@ -20,9 +28,11 @@ This document is the **single source of truth** for all AI agents (Claude, Gemin
 *   `components/` - React Components (Shadcn UI).
 *   `external/` - **Submodules** (Dependencies).
 *   `lib/` - Business Logic (Prisma, Jules Client, Utils).
+*   `packages/` - Monorepo workspace packages.
 *   `prisma/` - Database Schema.
 *   `public/` - Static Assets.
 *   `scripts/` - Maintenance and build scripts.
+*   `server/` - Standalone Bun/Hono server (Session Keeper Daemon).
 
 ## 📦 Submodules
 
@@ -32,13 +42,15 @@ This document is the **single source of truth** for all AI agents (Claude, Gemin
 | **MCP Servers** | `external/*-mcp` | Model Context Protocol integrations. |
 | **SDK** | `jules-sdk-reference` | Python SDK reference. |
 
-**Rule**: If you need to check a submodule version, look at `docs/SUBMODULES.md` or run `git submodule status`.
+**Rule**: If you need to check a submodule version, look at `app/system/internals` or run `git submodule status`.
 
 ## 🛠️ Development Standards
 
-*   **Stack**: Next.js 15, React 19, Tailwind CSS, Prisma (SQLite/LibSQL).
+*   **Stack**: Next.js 16, React 19, Tailwind CSS, Prisma (SQLite/LibSQL).
+*   **Package Manager**: **pnpm** (Workspace root).
 *   **State**: Zustand (`lib/stores`) for client state.
 *   **API**: Next.js Route Handlers (`app/api`).
+*   **Backend**: Bun + Hono (`server/`).
 *   **Styles**: Mobile-first, Dark Mode default.
 
 ## 📝 Changelog & Versioning

@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-02-04T21:13:39.416Z",
+  "generatedAt": "2026-02-06T05:39:25.726Z",
   "submodules": [
     {
       "name": "antigravity-jules-orchestration",
@@ -8,6 +8,7 @@
       "commit": "e12e5a181be492d81ba4dfdbb299dd79cf21489b",
       "url": "https://github.com/Scarmonit/antigravity-jules-orchestration",
       "lastCommitDate": "2026-01-08 01:33:53 -0500",
+      "buildNumber": 1,
       "describe": "(heads/main)",
       "status": "synced"
     },
@@ -18,6 +19,7 @@
       "commit": "9f2fc14a41e8b604bdaf2d50ae6041cdc5507175",
       "url": "https://github.com/gemini-cli-extensions/jules",
       "lastCommitDate": "2025-10-30 09:11:17 -0400",
+      "buildNumber": 1,
       "describe": "(heads/main)",
       "status": "synced"
     },
@@ -28,6 +30,7 @@
       "commit": "39b4251a78a9d159b77b97063213691557117fd8",
       "url": "https://github.com/samihalawa/google-jules-mcp",
       "lastCommitDate": "2025-12-04 14:47:05 +0100",
+      "buildNumber": 1,
       "describe": "(heads/main)",
       "status": "synced"
     },
@@ -38,6 +41,7 @@
       "commit": "bff7875eaa123cac6742b7cfc51005b95ba4d566",
       "url": "https://github.com/google-labs-code/jules-action",
       "lastCommitDate": "2025-12-13 14:42:23 -0800",
+      "buildNumber": 1,
       "describe": "(ai-assisted)",
       "status": "synced"
     },
@@ -48,6 +52,7 @@
       "commit": "0118486377fdb4cf20432b2c3e85a18aa01f984d",
       "url": "https://github.com/google-labs-code/jules-awesome-list",
       "lastCommitDate": "2025-05-20 21:01:03 -0700",
+      "buildNumber": 1,
       "describe": "(heads/main)",
       "status": "synced"
     },
@@ -58,6 +63,7 @@
       "commit": "577978905479f0a2e11712da155baef757663217",
       "url": "https://github.com/CodeAgentBridge/jules-mcp-server",
       "lastCommitDate": "2025-10-15 21:07:03 +0200",
+      "buildNumber": 1,
       "describe": "(v0.1.6)",
       "status": "synced"
     },
@@ -68,6 +74,7 @@
       "commit": "de4a2bfd2449d7fedc7032ac01c1de4ec288e009",
       "url": "https://github.com/DiaAviLinden/Jules-system-prompt",
       "lastCommitDate": "2025-12-08 18:22:13 -0500",
+      "buildNumber": 1,
       "describe": "(heads/add-details-md)",
       "status": "synced"
     },
@@ -78,6 +85,7 @@
       "commit": "f11d2ad87b31347ab5793058b44044ad586f7548",
       "url": "https://github.com/iHildy/jules-task-queue",
       "lastCommitDate": "2025-12-14 21:59:46 -0600",
+      "buildNumber": 1,
       "describe": "(heads/main)",
       "status": "synced"
     },
@@ -88,6 +96,7 @@
       "commit": "db115769c46afa4031877e6eac2cbc54684a6a14",
       "url": "https://github.com/GatienBoquet/jules_mcp",
       "lastCommitDate": "2025-10-04 23:25:46 -0400",
+      "buildNumber": 1,
       "describe": "(heads/main)",
       "status": "synced"
     },
@@ -98,6 +107,7 @@
       "commit": "51685d61ec9d9e3ea523ef410c22bea1e8a15274",
       "url": "https://github.com/AsyncFuncAI/jules-agent-sdk-python",
       "lastCommitDate": "2025-10-04 15:49:11 -0500",
+      "buildNumber": 1,
       "describe": "(heads/main)",
       "status": "synced"
     }
