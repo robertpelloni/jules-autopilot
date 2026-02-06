@@ -1,7 +1,7 @@
 {
   "name": "jules-ui",
   "description": "The modern, developer-first interface for Google's Jules AI agent. Features live code diffs, interactive terminal outputs, analytics, and a streamlined dark mode experience.",
-  "version": "0.8.1",
+  "version": "0.8.6",
   "keywords": [
     "jules-ai",
     "google-jules",
@@ -14,6 +14,11 @@
     "dashboard"
   ],
   "private": true,
+  "workspaces": [
+    "apps/*",
+    "packages/*",
+    "server"
+  ],
   "scripts": {
     "dev": "concurrently -n \"TERMINAL,NEXT\" -c \"blue,magenta\" \"npm:terminal:start\" \"next dev\"",
     "dev:e2e": "concurrently -n \"TERMINAL,NEXT\" -c \"blue,magenta\" \"npm:terminal:start\" \"next dev -p 3005\"",
@@ -32,13 +37,13 @@
     "postinstall": "npx prisma generate --schema=prisma/schema.prisma"
   },
   "dependencies": {
-    "@jules/shared": "workspace:*",
     "@dnd-kit/core": "^6.3.1",
     "@dnd-kit/modifiers": "^9.0.0",
     "@dnd-kit/sortable": "^10.0.0",
     "@dnd-kit/utilities": "^3.2.2",
     "@hono/node-server": "^1.19.7",
     "@hookform/resolvers": "^3.1.0",
+    "@jules/shared": "workspace:*",
     "@libsql/client": "^0.6.0",
     "@prisma/adapter-libsql": "^5.19.1",
     "@radix-ui/react-accordion": "^1.2.12",
@@ -97,6 +102,7 @@
     "@testing-library/jest-dom": "^6.9.1",
     "@testing-library/react": "^16.3.1",
     "@testing-library/user-event": "^14.6.1",
+    "@types/bun": "^1.3.8",
     "@types/jest": "^30.0.0",
     "@types/node": "^25.0.3",
     "@types/react": "^19.2.7",
