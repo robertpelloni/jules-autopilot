@@ -7,21 +7,27 @@ const globalForPrisma = global as unknown as { prisma: PrismaClient };
 import path from 'path';
 
 const getDbUrl = () => {
-  if (process.env.DATABASE_URL && !process.env.DATABASE_URL.startsWith('file:./')) {
+  if (process.env.DATABASE_URL) {
     return process.env.DATABASE_URL;
   }
   const dbPath = path.join(process.cwd(), 'prisma', 'dev.db');
   return `file:${dbPath}`;
 };
 
-const libsql = createClient({
-  url: getDbUrl(),
-  authToken: process.env.TURSO_AUTH_TOKEN
-})
+const url = getDbUrl();
+const isRemote = url.startsWith('libsql://') || url.startsWith('https://') || url.startsWith('wss://');
 
-// @ts-ignore
-const adapter = new PrismaLibSQL(libsql)
+let adapter;
 
-export const prisma = globalForPrisma.prisma || new PrismaClient({ adapter })
+if (isRemote) {
+  const libsql = createClient({
+    url,
+    authToken: process.env.TURSO_AUTH_TOKEN
+  });
+  // @ts-ignore
+  adapter = new PrismaLibSQL(libsql);
+}
+
+export const prisma = globalForPrisma.prisma || new PrismaClient(adapter ? { adapter } : {});
 
 if (process.env.NODE_ENV !== 'production') globalForPrisma.prisma = prisma;
