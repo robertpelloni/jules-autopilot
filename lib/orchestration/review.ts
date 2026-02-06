@@ -1,4 +1,4 @@
-import { LLMProvider, Message, CompletionResult } from './types';
+import type { LLMProvider, Message, CompletionResult } from './types';
 
 export interface ReviewPersona {
     role: string;
