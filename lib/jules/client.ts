@@ -264,7 +264,7 @@ export class JulesClient {
       // Extract repo name from source field (e.g., "sources/github/owner/repo")
       const sourcePath = source.source || source.name || "";
       const match = sourcePath.match(/sources\/github\/(.+)/);
-      const repoPath = match ? match[1] : sourcePath;
+      const repoPath = (match ? match[1] : sourcePath) || "Unknown Source";
 
       return {
         id: sourcePath, // Keep full path for API calls
@@ -490,9 +490,11 @@ export class JulesClient {
       const artifacts = activity.progressUpdated.artifacts || [];
       if (artifacts.length > 0) {
           const artifact = artifacts[0];
-          diff = artifact.changeSet?.gitPatch?.unidiffPatch || artifact.changeSet?.unidiffPatch;
-          bashOutput = artifact.bashOutput?.output;
-          media = artifact.media;
+          if (artifact) {
+              diff = artifact.changeSet?.gitPatch?.unidiffPatch || artifact.changeSet?.unidiffPatch;
+              bashOutput = artifact.bashOutput?.output;
+              media = artifact.media;
+          }
       }
     } else if (activity.sessionCompleted) {
       type = 'result';
