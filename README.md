@@ -36,10 +36,13 @@ Run just the Next.js app without the terminal server:
 # Clone and install
 git clone <your-repo-url>
 cd jules-ui
-npm install
+
+# Install dependencies (pnpm recommended for workspace support)
+npm install -g pnpm
+pnpm install
 
 # Start development server
-npm run dev
+pnpm run dev
 ```
 
 Open [http://localhost:3000](http://localhost:3000) - the Terminal button will be visible but show setup instructions when clicked.
@@ -125,11 +128,16 @@ _Analytics Dashboard - Track session success rates, duration, and activity volum
 
 ## 🔧 Development
 
+This project uses a **monorepo workspace** structure (configured for `pnpm` and `bun`).
+- `packages/shared`: Shared types and utilities.
+- `app/`: Main Next.js application.
+- `server/`: Backend services.
+
 ```bash
-npm run dev      # Start dev server
-npm run build    # Build for production
-npm run lint     # Run linter
-npm test         # Run tests
+pnpm run dev      # Start dev server (frontend + terminal)
+pnpm run build    # Build all workspaces
+pnpm run lint     # Run linter
+pnpm test         # Run tests
 ```
 
 ### SDK Reference

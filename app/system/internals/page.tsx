@@ -62,14 +62,18 @@ export default function SystemInternalsPage() {
                              </div>
                          </div>
 
-                         <div className="grid grid-cols-2 gap-2 pt-2 border-t border-white/5">
-                             <div className="flex items-center gap-2 text-xs text-zinc-400">
+                         <div className="grid grid-cols-3 gap-2 pt-2 border-t border-white/5">
+                             <div className="flex items-center gap-2 text-xs text-zinc-400" title="Commit Hash">
                                  <GitCommit className="h-3 w-3" />
-                                 <span className="font-mono text-[10px]">{sub.hash?.substring(0, 8)}</span>
+                                 <span className="font-mono text-[10px]">{sub.commit?.substring(0, 7)}</span>
                              </div>
-                             <div className="flex items-center gap-2 text-xs text-zinc-400">
+                             <div className="flex items-center gap-2 text-xs text-zinc-400" title="Build Number">
+                                 <ShieldCheck className="h-3 w-3" />
+                                 <span className="font-mono text-[10px]">v{sub.buildNumber || 0}</span>
+                             </div>
+                             <div className="flex items-center gap-2 text-xs text-zinc-400" title="Last Updated">
                                  <Clock className="h-3 w-3" />
-                                 <span className="text-[10px]">{sub.lastUpdate}</span>
+                                 <span className="text-[10px] truncate">{new Date(sub.lastCommitDate || sub.lastUpdate).toLocaleDateString()}</span>
                              </div>
                          </div>
                       </div>

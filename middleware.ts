@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 import type { NextRequest } from 'next/server';
-import { decrypt } from '@/lib/session';
+import { decrypt } from '@/lib/session-utils';
 
 export async function middleware(req: NextRequest) {
   // Define public routes

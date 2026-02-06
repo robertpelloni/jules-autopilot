@@ -2,6 +2,18 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.8.6] - 2026-02-04
+
+### Added
+- **Unified Documentation**: Created `LLM_INSTRUCTIONS.md` as the single source of truth for all agents.
+- **Enhanced System Dashboard**: Updated submodule tracking to include Build Number, Commit Hash, and detailed status.
+- **Build Infrastructure**: Migrated CI to `pnpm` and added workspace support for Bun compatibility.
+- **Backend Fixes**: Resolved TypeScript errors in the Session Keeper Daemon (`server/`).
+
+### Changed
+- **Versioning**: Bumped version to 0.8.6 across `package.json`, `VERSION.md`, and `lib/version.ts`.
+- **Documentation**: Consolidated old documentation into `docs/archive/` and updated `README.md`.
+
 ## [0.8.5] - 2026-01-09
 
 ### Added
@@ -245,9 +257,7 @@ All notable changes to this project will be documented in this file.
 ## [v0.8.0] - 2024-10-24
 
 ### Added
--   **Bobcoin Wallet UI:** Added a wallet interface at `/wallet` to manage balance and transaction history.
--   **System Dashboard:** Enhanced `/system/internals` to include Bobcoin submodule status.
--   **Bobcoin Submodule:** Integrated `bobcoin` (Solana/Monero hybrid) as the core blockchain submodule.
+-   **System Dashboard:** Enhanced `/system/internals` to include submodule status.
 -   **Unified Instructions:** Created `INSTRUCTIONS.md` as the single source of truth for all agents.
 
 ### Fixed
