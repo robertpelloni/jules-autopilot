@@ -34,14 +34,14 @@ if (isRemote) {
   adapter = new PrismaLibSQL(libsql);
 }
 
-const prismaConfig = adapter ? { adapter } : {
-  datasources: {
-    db: {
-      url: url
-    }
-  }
-};
-
-export const prisma = globalForPrisma.prisma || new PrismaClient(prismaConfig);
+export const prisma = globalForPrisma.prisma || (adapter
+  ? new PrismaClient({ adapter })
+  : new PrismaClient({
+      datasources: {
+        db: {
+          url: url
+        }
+      }
+    }));
 
 if (process.env.NODE_ENV !== 'production') globalForPrisma.prisma = prisma;
