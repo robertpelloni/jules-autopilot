@@ -1,4 +1,4 @@
-import { ProviderInterface, Message } from '../types';
+import type { ProviderInterface, Message } from '../types';
 import { openaiProvider } from './openai';
 import { anthropicProvider } from './anthropic';
 import { geminiProvider } from './gemini';
