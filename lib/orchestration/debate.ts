@@ -1,4 +1,4 @@
-import { Message, Participant, DebateResult, DebateRound, DebateTurn, DebateProgressEvent } from './types';
+import type { Message, Participant, DebateResult, DebateRound, DebateTurn, DebateProgressEvent } from './types';
 import { getProvider, generateText } from './providers';
 import { calculateRiskScore, determineApprovalStatus } from './supervisor';
 

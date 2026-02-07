@@ -35,6 +35,7 @@ try {
     let url = '';
     let branch = 'HEAD';
     let name = path.basename(pathStr);
+    let buildNumber = 0;
 
     try {
         // Try to get the actual commit date of the submodule
@@ -56,6 +57,12 @@ try {
                const branchOutput = execSync(`git rev-parse --abbrev-ref HEAD`, { cwd: submodulePath, encoding: 'utf8' });
                branch = branchOutput.trim();
             } catch (e) {}
+
+            // Calculate Build Number (Commit Count)
+            try {
+               const countOutput = execSync(`git rev-list --count HEAD`, { cwd: submodulePath, encoding: 'utf8' });
+               buildNumber = parseInt(countOutput.trim(), 10);
+            } catch (e) {}
         }
     } catch (e) {
         console.warn(`Could not get details for submodule ${pathStr}:`, e.message);
@@ -68,6 +75,7 @@ try {
       commit: commit,
       url: url,
       lastCommitDate: lastUpdated,
+      buildNumber: buildNumber,
       describe: describe || 'N/A',
       status: status
     };
