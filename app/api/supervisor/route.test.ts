@@ -27,9 +27,8 @@ jest.mock('@/lib/orchestration/summarize', () => ({
 
 import { getSession } from '@/lib/session';
 import { getProvider } from '@/lib/orchestration/providers';
-import { runDebate, runConference } from '@/lib/orchestration/debate';
+import { runDebate } from '@/lib/orchestration/debate';
 import { runCodeReview } from '@/lib/orchestration/review';
-import * as SummarizeModule from '@/lib/orchestration/summarize';
 
 describe('Supervisor API', () => {
   const mockApiKey = 'test-api-key';
@@ -44,7 +43,7 @@ describe('Supervisor API', () => {
     jest.restoreAllMocks();
   });
 
-  const createRequest = (body: any) => {
+  const createRequest = (body: Record<string, unknown>) => {
     return new Request('http://localhost:3000/api/supervisor', {
       method: 'POST',
       body: JSON.stringify(body),

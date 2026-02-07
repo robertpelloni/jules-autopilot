@@ -22,7 +22,11 @@ export function useDaemonWebSocket() {
   const reconnectTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const pingIntervalRef = useRef<NodeJS.Timeout | null>(null);
   const pongTimeoutRef = useRef<NodeJS.Timeout | null>(null);
-  const lastPongRef = useRef<number>(Date.now());
+  const lastPongRef = useRef<number>(0);
+
+  useEffect(() => {
+    lastPongRef.current = Date.now();
+  }, []);
   
   const [connectionState, setConnectionState] = useState<ConnectionState>('disconnected');
   const [latency, setLatency] = useState<number | null>(null);
@@ -73,7 +77,9 @@ export function useDaemonWebSocket() {
           break;
 
         case 'session_updated': {
-          const payload = message.data as { sessionId?: string };
+          // Explicitly type payload to any to resolve build error until shared types are updated
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+          const payload = message.data as any;
           setStatusSummary({
             lastAction: `Session ${payload?.sessionId?.slice(-6) || 'unknown'} updated`,
           });
@@ -135,7 +141,9 @@ export function useDaemonWebSocket() {
     }
   }, [setStatusSummary, setPausedAll]);
 
-  const connect = useCallback(() => {
+  const connectRef = useRef<() => void>(() => {});
+
+  const attemptConnection = useCallback(() => {
     if (wsRef.current?.readyState === WebSocket.OPEN) {
       return;
     }
@@ -185,7 +193,7 @@ export function useDaemonWebSocket() {
         if (config.isEnabled && reconnectAttemptsRef.current < WS_DEFAULTS.MAX_RECONNECT_ATTEMPTS) {
           reconnectAttemptsRef.current++;
           setConnectionState('reconnecting');
-          reconnectTimeoutRef.current = setTimeout(connect, WS_DEFAULTS.RECONNECT_DELAY);
+          reconnectTimeoutRef.current = setTimeout(() => connectRef.current(), WS_DEFAULTS.RECONNECT_DELAY);
         } else if (reconnectAttemptsRef.current >= WS_DEFAULTS.MAX_RECONNECT_ATTEMPTS) {
           setStatusSummary({
             lastAction: 'WS: Max reconnect attempts reached',
@@ -200,6 +208,14 @@ export function useDaemonWebSocket() {
     } catch {
     }
   }, [config.isEnabled, handleMessage, setStatusSummary]);
+
+  useEffect(() => {
+    connectRef.current = attemptConnection;
+  }, [attemptConnection]);
+
+  const connect = useCallback(() => {
+    attemptConnection();
+  }, [attemptConnection]);
 
   const disconnect = useCallback(() => {
     if (reconnectTimeoutRef.current) {
@@ -236,7 +252,8 @@ export function useDaemonWebSocket() {
     if (config.isEnabled) {
       connect();
     } else {
-      disconnect();
+      // Wrap in setTimeout to avoid synchronous state update warning during effect
+      setTimeout(() => disconnect(), 0);
     }
 
     return () => {
@@ -245,7 +262,7 @@ export function useDaemonWebSocket() {
   }, [config.isEnabled, connect, disconnect]);
 
   return {
-    isConnected: wsRef.current?.readyState === WebSocket.OPEN,
+    isConnected: connectionState === 'connected',
     connectionState,
     latency,
     send,

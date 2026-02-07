@@ -106,13 +106,6 @@ export function ProvidersDashboard() {
     initializeProviders();
   }, [initializeProviders]);
 
-  useEffect(() => {
-    if (configuredProviders.length > 0) {
-      fetchAllSessions();
-      checkAllHealth();
-    }
-  }, [configuredProviders.length]);
-
   const checkAllHealth = async () => {
     setIsCheckingHealth(true);
     const newHealthStates: ProviderHealthState = {};
@@ -135,6 +128,13 @@ export function ProvidersDashboard() {
     setHealthStates(newHealthStates);
     setIsCheckingHealth(false);
   };
+
+  useEffect(() => {
+    if (configuredProviders.length > 0) {
+      fetchAllSessions();
+      checkAllHealth();
+    }
+  }, [configuredProviders.length]);
 
   const getSessionCountByProvider = (providerId: CloudDevProviderId) => {
     return sessions.filter((s) => s.providerId === providerId).length;
