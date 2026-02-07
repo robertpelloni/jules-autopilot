@@ -38,7 +38,7 @@ Clicking on a session card opens the **Activity Feed**. This is a real-time log 
 For a high-level project management view, switch to the **Kanban Board**.
 - **Columns:** Sessions are organized by status: Active, Paused, Completed, Failed.
 - **Filtering:** Filter sessions by repository or provider.
-- **Beta Feature:** Status changes made here are currently local-only.
+- **Live Updates:** Drag and drop sessions to update their status. Changes are persisted automatically.
 
 ---
 
