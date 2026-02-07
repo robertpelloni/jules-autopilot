@@ -1,6 +1,4 @@
 import { PrismaClient } from '@prisma/client';
-import { PrismaLibSQL } from '@prisma/adapter-libsql';
-import { createClient } from '@libsql/client';
 
 const globalForPrisma = global as unknown as { prisma: PrismaClient };
 
@@ -26,11 +24,17 @@ const isRemote = url.startsWith('libsql://') || url.startsWith('https://') || ur
 let adapter;
 
 if (isRemote) {
+  // Use require for dynamic import to prevent bundling issues on Vercel
+  // when falling back to SQLite
+  // eslint-disable-next-line @typescript-eslint/no-require-imports
+  const { PrismaLibSQL } = require('@prisma/adapter-libsql');
+  // eslint-disable-next-line @typescript-eslint/no-require-imports
+  const { createClient } = require('@libsql/client');
+
   const libsql = createClient({
     url,
     authToken: process.env.TURSO_AUTH_TOKEN
   });
-  // @ts-ignore
   adapter = new PrismaLibSQL(libsql);
 }
 

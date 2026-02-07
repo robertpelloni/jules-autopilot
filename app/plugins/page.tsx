@@ -6,6 +6,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Search, Plug, Download, Star, Check, Zap, Globe, ShieldCheck, Box, Trash2 } from "lucide-react";
+import { ContextHelp } from "@/components/context-help";
 import Link from 'next/link';
 import { toast } from "sonner";
 
@@ -45,7 +46,7 @@ export default function PluginsPage() {
       localStorage.setItem('jules-installed-plugins', JSON.stringify(Array.from(newSet)));
       setProcessingId(null);
       toast.success("Plugin installed successfully");
-    }, 1000);
+    }, 1500);
   };
 
   const handleUninstall = (id: string) => {

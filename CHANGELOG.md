@@ -9,6 +9,7 @@ All notable changes to this project will be documented in this file.
 - **Enhanced System Dashboard**: Updated submodule tracking to include Build Number, Commit Hash, and detailed status.
 - **Build Infrastructure**: Migrated CI to `pnpm` and added workspace support for Bun compatibility.
 - **Backend Fixes**: Resolved TypeScript errors in the Session Keeper Daemon (`server/`).
+- **Deployment**: Hardened Vercel configuration for serverless runtime stability.
 
 ### Changed
 - **Versioning**: Bumped version to 0.8.6 across `package.json`, `VERSION.md`, and `lib/version.ts`.
