@@ -8,13 +8,13 @@ export async function GET() {
     const rootDir = process.cwd();
     const gitmodulesPath = path.join(rootDir, '.gitmodules');
 
-    let submodules: any[] = [];
+    const submodules: Record<string, string>[] = [];
 
     if (fs.existsSync(gitmodulesPath)) {
        const gitmodulesContent = fs.readFileSync(gitmodulesPath, 'utf-8');
        const lines = gitmodulesContent.split('\n');
 
-       let currentSubmodule: any = {};
+       let currentSubmodule: Record<string, string> = {};
 
        for (const line of lines) {
            if (line.trim().startsWith('[submodule')) {
