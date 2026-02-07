@@ -13,6 +13,7 @@ import remarkGfm from 'remark-gfm';
 import { getDocContent } from "@/lib/docs";
 import { TaskQueueDashboard } from "@/components/submodules/task-queue-dashboard";
 import { McpServerDashboard } from "@/components/submodules/mcp-server-dashboard";
+import { TerminalStream } from "@/components/submodules/terminal-stream";
 
 // Define the shape of submodule data matching submodules.json
 interface Submodule {
@@ -244,7 +245,7 @@ export default async function SubmoduleDetailPage({ params }: { params: Promise<
                       <BookOpen className="h-12 w-12 text-white/10 mb-4" />
                       <h3 className="text-lg font-medium text-white mb-2">No Documentation Found</h3>
                       <p className="text-white/40 text-sm max-w-md">
-                        We couldn't find specific documentation linked to this submodule in the registry.
+                        We couldn&apos;t find specific documentation linked to this submodule in the registry.
                       </p>
                    </CardContent>
                 </Card>
@@ -252,15 +253,19 @@ export default async function SubmoduleDetailPage({ params }: { params: Promise<
           </TabsContent>
 
           <TabsContent value="logs" className="mt-6">
-            <Card className="bg-zinc-950 border-white/10">
-               <CardContent className="p-8 flex flex-col items-center justify-center text-center">
-                  <Activity className="h-12 w-12 text-white/10 mb-4" />
-                  <h3 className="text-lg font-medium text-white mb-2">No Live Logs</h3>
-                  <p className="text-white/40 text-sm max-w-md">
-                    This submodule is not currently emitting live logs to the dashboard.
-                  </p>
-               </CardContent>
-            </Card>
+            {submodule.name === 'gemini-cli-jules' ? (
+                <TerminalStream agentName={submodule.name} />
+            ) : (
+                <Card className="bg-zinc-950 border-white/10">
+                   <CardContent className="p-8 flex flex-col items-center justify-center text-center">
+                      <Activity className="h-12 w-12 text-white/10 mb-4" />
+                      <h3 className="text-lg font-medium text-white mb-2">No Live Logs</h3>
+                      <p className="text-white/40 text-sm max-w-md">
+                        This submodule is not currently emitting live logs to the dashboard.
+                      </p>
+                   </CardContent>
+                </Card>
+            )}
           </TabsContent>
         </Tabs>
       </div>

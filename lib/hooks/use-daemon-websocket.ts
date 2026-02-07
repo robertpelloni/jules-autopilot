@@ -77,7 +77,9 @@ export function useDaemonWebSocket() {
           break;
 
         case 'session_updated': {
-          const payload = message.data as { sessionId?: string };
+          // Explicitly type payload to any to resolve build error until shared types are updated
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+          const payload = message.data as any;
           setStatusSummary({
             lastAction: `Session ${payload?.sessionId?.slice(-6) || 'unknown'} updated`,
           });
