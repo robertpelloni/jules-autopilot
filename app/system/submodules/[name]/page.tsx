@@ -47,7 +47,7 @@ const getSubmoduleFeatures = (name: string) => {
 };
 
 export async function generateStaticParams() {
-  const submodules = (submoduleInfo as any).submodules as Submodule[];
+  const submodules = (submoduleInfo as { submodules: Submodule[] }).submodules;
   return submodules.map((s) => ({
     name: s.name,
   }));
@@ -55,7 +55,7 @@ export async function generateStaticParams() {
 
 export default async function SubmoduleDetailPage({ params }: { params: Promise<{ name: string }> }) {
   const { name } = await params;
-  const submodules = (submoduleInfo as any).submodules as Submodule[];
+  const submodules = (submoduleInfo as { submodules: Submodule[] }).submodules;
   const submodule = submodules.find((s) => s.name === name);
 
   if (!submodule) {

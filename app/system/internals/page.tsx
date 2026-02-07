@@ -6,8 +6,18 @@ import { Badge } from '@/components/ui/badge';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { GitBranch, GitCommit, Folder, Clock, ShieldCheck, Box } from 'lucide-react';
 
+interface SubmoduleInfo {
+  path: string;
+  status: string;
+  url?: string;
+  commit?: string;
+  buildNumber?: number;
+  lastCommitDate?: string;
+  lastUpdate?: string;
+}
+
 export default function SystemInternalsPage() {
-  const [submodules, setSubmodules] = useState<any[]>([]);
+  const [submodules, setSubmodules] = useState<SubmoduleInfo[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {

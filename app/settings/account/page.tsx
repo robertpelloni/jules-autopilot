@@ -86,7 +86,7 @@ export default function AccountSettingsPage() {
               </div>
               <p className="text-xs text-white/40 flex items-center gap-1.5 mt-2">
                  <AlertTriangle className="h-3 w-3 text-yellow-500" />
-                 Stored securely in your browser's local storage. Never sent to our servers except for authentication.
+                 Stored securely in your browser&apos;s local storage. Never sent to our servers except for authentication.
               </p>
            </div>
         </CardContent>
