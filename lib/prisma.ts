@@ -1,4 +1,4 @@
-import { PrismaClient } from '@prisma/client';
+import type { PrismaClient } from '@prisma/client';
 
 const globalForPrisma = global as unknown as { prisma: PrismaClient };
 
@@ -38,14 +38,35 @@ if (isRemote) {
   adapter = new PrismaLibSQL(libsql);
 }
 
-export const prisma = globalForPrisma.prisma || (adapter
-  ? new PrismaClient({ adapter })
-  : new PrismaClient({
-      datasources: {
-        db: {
-          url: url
+let prismaClient: PrismaClient;
+
+try {
+  // Use dynamic require for PrismaClient to prevent module load failures
+  // eslint-disable-next-line @typescript-eslint/no-require-imports
+  const { PrismaClient } = require('@prisma/client');
+
+  prismaClient = globalForPrisma.prisma || (adapter
+    ? new PrismaClient({ adapter })
+    : new PrismaClient({
+        datasources: {
+          db: {
+            url: url
+          }
         }
-      }
-    }));
+      }));
+} catch (e) {
+  console.error('Failed to initialize Prisma Client:', e);
+  // Return a proxy that throws on any access to prevent crash loop but allow module load
+  prismaClient = new Proxy({} as PrismaClient, {
+    get: (_, prop) => {
+      if (prop === 'then') return undefined; // Promise safety
+      return () => {
+        throw new Error('Database initialization failed. Check server logs.');
+      };
+    }
+  });
+}
+
+export const prisma = prismaClient;
 
 if (process.env.NODE_ENV !== 'production') globalForPrisma.prisma = prisma;
