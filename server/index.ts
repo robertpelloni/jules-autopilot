@@ -3,7 +3,7 @@ declare const Bun: any;
 import { Hono } from 'hono';
 import { cors } from 'hono/cors';
 import { EventEmitter } from 'events';
-import { getProvider } from '../lib/orchestration/providers';
+import { getProvider } from '../lib/orchestration/providers/index';
 import { runDebate, runConference } from '../lib/orchestration/debate';
 import { runCodeReview } from '../lib/orchestration/review';
 import { startDaemon, stopDaemon } from './daemon';
@@ -621,39 +621,55 @@ prisma.keeperSettings.findUnique({ where: { id: 'default' } }).then(settings => 
     console.error("Failed to check auto-start settings:", err);
 });
 
-console.log(`Bun/Hono Server running on port ${port}`);
-console.log(`WebSocket clients can connect to ws://localhost:${port}/ws`);
+console.log(`Server starting on port ${port}`);
 
-const server = Bun.serve({
-    port,
-    fetch: app.fetch,
-    websocket: {
-        open(ws: any) {
-            wsClients.add(ws);
-            ws.send(JSON.stringify({ type: 'connected', timestamp: Date.now() }));
-            console.log(`WebSocket client connected (${wsClients.size} total)`);
-        },
-        message(ws: any, message: any) {
-            try {
-                const data = JSON.parse(message.toString());
-                if (data.type === 'ping') {
-                    ws.send(JSON.stringify({ type: 'pong', timestamp: Date.now() }));
+if (typeof Bun !== 'undefined') {
+    console.log(`Using Bun Runtime`);
+    console.log(`WebSocket clients can connect to ws://localhost:${port}/ws`);
+
+    const server = Bun.serve({
+        port,
+        fetch: app.fetch,
+        websocket: {
+            open(ws: any) {
+                wsClients.add(ws);
+                ws.send(JSON.stringify({ type: 'connected', timestamp: Date.now() }));
+                console.log(`WebSocket client connected (${wsClients.size} total)`);
+            },
+            message(ws: any, message: any) {
+                try {
+                    const data = JSON.parse(message.toString());
+                    if (data.type === 'ping') {
+                        ws.send(JSON.stringify({ type: 'pong', timestamp: Date.now() }));
+                    }
+                } catch {
+                    ws.send(JSON.stringify({ type: 'error', message: 'Invalid JSON' }));
                 }
-            } catch {
-                ws.send(JSON.stringify({ type: 'error', message: 'Invalid JSON' }));
+            },
+            close(ws: any) {
+                wsClients.delete(ws);
+                console.log(`WebSocket client disconnected (${wsClients.size} total)`);
             }
-        },
-        close(ws: any) {
-            wsClients.delete(ws);
-            console.log(`WebSocket client disconnected (${wsClients.size} total)`);
         }
-    }
-});
+    });
 
-app.get('/ws', (c) => {
-    const upgraded = server.upgrade(c.req.raw);
-    if (!upgraded) {
-        return c.text('WebSocket upgrade failed', 400);
-    }
-    return new Response(null, { status: 101 });
-});
+    app.get('/ws', (c) => {
+        const upgraded = server.upgrade(c.req.raw);
+        if (!upgraded) {
+            return c.text('WebSocket upgrade failed', 400);
+        }
+        return new Response(null, { status: 101 });
+    });
+} else {
+    console.log(`Using Node.js Runtime (via @hono/node-server)`);
+    // Dynamic import to avoid bundling issues in Bun-only environments if not properly tree-shaken
+    import('@hono/node-server').then(({ serve }) => {
+        serve({
+            fetch: app.fetch,
+            port
+        });
+        console.log(`Node.js server listening on port ${port}`);
+    }).catch(err => {
+        console.error("Failed to start Node.js server:", err);
+    });
+}
