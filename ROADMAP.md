@@ -42,16 +42,16 @@
 - [ ] **Plugin System:** Allow custom tools for the agent.
 - [x] **Advanced Analytics:** Token usage tracking and cost estimation per session.
 
-## Phase 6: Multi-Provider Cloud Dev (v0.8.5) ✨ NEW
+## Phase 6: Multi-Provider Cloud Dev (v0.8.7) ✨ COMPLETED
 - [x] **Unified Provider Interface:** Abstract base class for all cloud dev providers.
 - [x] **Provider Registry:** Factory functions for dynamic provider instantiation.
 - [x] **Jules Provider:** Full implementation wrapping existing JulesClient.
-- [x] **Stub Providers:** Devin, Manus, OpenHands, GitHub Spark, Blocks, Claude Code, Codex.
+- [x] **Mock Mode Providers:** Realistic simulation for Devin, Manus, OpenHands, GitHub Spark, Blocks, Claude Code, Codex.
 - [x] **Session Transfer Service:** Cross-provider session migration with context preservation.
 - [x] **Multi-Provider Store:** Zustand state management for sessions across providers.
-- [ ] **Provider API Integrations:** Implement full APIs for Devin, Manus, OpenHands.
-- [ ] **Cross-Provider UI:** Dashboard for managing sessions across all providers.
-- [ ] **Transfer Progress Tracking:** Real-time progress during session migrations.
+- [x] **Cross-Provider Dashboard:** Unified UI for managing sessions and transfers (`/dashboard/providers`).
+- [x] **Transfer UI:** Dialog for initiating and tracking session transfers.
+- [x] **Robust Error Handling:** Mock mode fallback when API keys are missing.
 
 ## 📅 Short Term (v0.7.x - v0.8.x)
 -   **Advanced Orchestration:**

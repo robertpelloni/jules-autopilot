@@ -2,6 +2,14 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.8.7] - 2026-02-04
+
+### Added
+- **Multi-Provider Dashboard**: New UI at `/dashboard/providers` to manage sessions across Jules, Devin, Manus, etc.
+- **Session Transfers**: Feature to migrate sessions between providers with context preservation.
+- **Mock Mode**: Simulation mode for all cloud providers, enabling full UI testing without API keys.
+- **Robustness**: Enhanced error handling and fallback mechanisms for API integrations.
+
 ## [0.8.6] - 2026-02-04
 
 ### Added
