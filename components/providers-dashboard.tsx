@@ -43,6 +43,7 @@ import {
 import { cn } from '@/lib/utils';
 import Link from 'next/link';
 import { formatDistanceToNow } from 'date-fns';
+import { TransferSessionDialog } from './transfer-session-dialog';
 
 const PROVIDER_ICONS: Record<CloudDevProviderId, React.ReactNode> = {
   jules: <Sparkles className="h-5 w-5" />,
@@ -476,6 +477,9 @@ function SessionRow({ session }: { session: UnifiedSession }) {
               : formatDistanceToNow(new Date(session.updatedAt), { addSuffix: true })}
           </span>
         </div>
+      </TableCell>
+      <TableCell>
+        <TransferSessionDialog session={session} />
       </TableCell>
     </TableRow>
   );
