@@ -8,6 +8,11 @@ jest.mock('./providers', () => ({
   generateText: jest.fn(),
 }));
 
+jest.mock('./supervisor', () => ({
+  calculateRiskScore: jest.fn().mockResolvedValue(50),
+  determineApprovalStatus: jest.fn().mockReturnValue('pending'),
+}));
+
 describe('Debate Orchestration', () => {
   const mockParticipants = [
     { id: '1', name: 'P1', role: 'Role1', systemPrompt: 'Prompt1', provider: 'openai', model: 'gpt-4', apiKey: 'key' },

@@ -1,7 +1,9 @@
+declare const Bun: any;
+
 import { Hono } from 'hono';
 import { cors } from 'hono/cors';
 import { EventEmitter } from 'events';
-import { getProvider } from '../lib/orchestration/providers';
+import { getProvider } from '../lib/orchestration/providers/index';
 import { runDebate, runConference } from '../lib/orchestration/debate';
 import { runCodeReview } from '../lib/orchestration/review';
 import { startDaemon, stopDaemon } from './daemon';
@@ -626,12 +628,12 @@ const server = Bun.serve({
     port,
     fetch: app.fetch,
     websocket: {
-        open(ws) {
+        open(ws: any) {
             wsClients.add(ws);
             ws.send(JSON.stringify({ type: 'connected', timestamp: Date.now() }));
             console.log(`WebSocket client connected (${wsClients.size} total)`);
         },
-        message(ws, message) {
+        message(ws: any, message: any) {
             try {
                 const data = JSON.parse(message.toString());
                 if (data.type === 'ping') {
@@ -641,7 +643,7 @@ const server = Bun.serve({
                 ws.send(JSON.stringify({ type: 'error', message: 'Invalid JSON' }));
             }
         },
-        close(ws) {
+        close(ws: any) {
             wsClients.delete(ws);
             console.log(`WebSocket client disconnected (${wsClients.size} total)`);
         }

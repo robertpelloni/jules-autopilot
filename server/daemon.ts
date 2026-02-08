@@ -1,6 +1,6 @@
 import { prisma } from '../lib/prisma';
 import { JulesClient } from '../lib/jules/client';
-import { getProvider } from '../lib/orchestration/providers';
+import { getProvider } from '../lib/orchestration/providers/index';
 import { runDebate } from '../lib/orchestration/debate';
 import { summarizeSession } from '../lib/orchestration/summarize';
 import { emitDaemonEvent } from './index';
