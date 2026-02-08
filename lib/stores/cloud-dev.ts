@@ -1,5 +1,5 @@
 import { create } from 'zustand';
-import { persist } from 'zustand/middleware';
+import { persist, createJSONStorage } from 'zustand/middleware';
 import type {
   CloudDevProviderId,
   CloudDevProviderConfig,
@@ -313,11 +313,22 @@ export const useCloudDevStore = create<CloudDevState>()(
     }),
     {
       name: 'jules-cloud-dev-store',
+      storage: createJSONStorage(() => {
+        if (typeof window !== 'undefined') {
+          return localStorage;
+        }
+        return {
+          getItem: () => null,
+          setItem: () => {},
+          removeItem: () => {},
+        };
+      }),
       partialize: (state) => ({
         activeProviderId: state.activeProviderId,
         apiKeys: state.apiKeys,
         transfers: state.transfers.slice(0, 50),
       }),
+      skipHydration: true,
     }
   )
 );
