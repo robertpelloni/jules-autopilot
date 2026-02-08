@@ -38,7 +38,10 @@ export function TemplatesPage({ onStartSession }: TemplatesPageProps) {
   }, [client]);
 
   useEffect(() => {
-    loadTemplates();
+    const fetchTemplates = async () => {
+      await loadTemplates();
+    };
+    fetchTemplates();
   }, [loadTemplates]);
 
   const handleDelete = async (id: string) => {
