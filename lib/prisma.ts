@@ -1,4 +1,4 @@
-import { PrismaClient } from '@prisma/client';
+import type { PrismaClient } from '@prisma/client';
 
 const globalForPrisma = global as unknown as { prisma: PrismaClient };
 
@@ -41,6 +41,10 @@ if (isRemote) {
 let prismaClient: PrismaClient;
 
 try {
+  // Use dynamic require for PrismaClient to prevent module load failures
+  // eslint-disable-next-line @typescript-eslint/no-require-imports
+  const { PrismaClient } = require('@prisma/client');
+
   prismaClient = globalForPrisma.prisma || (adapter
     ? new PrismaClient({ adapter })
     : new PrismaClient({
