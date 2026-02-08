@@ -1,15 +1,8 @@
-# Claude Assistant Guidelines
+# Claude Instructions
 
-**IMPORTANT**: Please refer to [LLM_INSTRUCTIONS.md](./LLM_INSTRUCTIONS.md) for the master set of instructions, coding standards, and versioning protocols.
+**See `LLM_INSTRUCTIONS.md` for the single source of truth.**
 
-## Model: Claude
-- **Strengths**: Complex reasoning, large context window, architectural design.
-- **Role**: Deep Refactoring & System Architecture.
-- **Protocol**:
-  - Always review `LLM_INSTRUCTIONS.md` first.
-  - Use `Artifacts` for substantial code generation.
-  - Verify submodule compatibility before major changes.
-
-## Specific Instructions for Claude
--   Prioritize concise, high-density code explanations.
--   When refactoring, always check for existing tests and update them.
+## Specific Directives
+- Focus on architectural correctness and deep refactoring.
+- Use `Artifacts` for long code blocks.
+- Adhere to the "Universal LLM Instructions" at all times.
