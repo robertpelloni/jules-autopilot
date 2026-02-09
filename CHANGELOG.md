@@ -2,6 +2,12 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.8.8] - 2026-02-09
+
+### Fixed
+- **Build**: Merged feature branch `fix-vercel-workspace-build-9959688198539623479` into `main` to resolve Vercel build issues and workspace configuration.
+- **Submodules**: Synchronized and initialized all project submodules.
+
 ## [0.8.7] - 2026-02-04
 
 ### Added
