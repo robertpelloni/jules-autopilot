@@ -26,18 +26,30 @@
 
 ## 🚀 Quick Start
 
-**Prerequisites:** Node.js 18+, Jules API key from [jules.google.com](https://jules.google.com), and a connected GitHub repository.
+**Prerequisites:** Node.js 18+ (Node 20+ recommended), `pnpm` (required for workspaces), Jules API key.
 
-### Option 1: Standalone Mode
+### Option 1: Vercel Deployment
 
-Run just the Next.js app without the terminal server:
+Click the button below to deploy your own instance of Jules UI to Vercel:
+
+[![Deploy with Vercel](https://vercel.com/button)](https://vercel.com/new/clone?repository-url=https%3A%2F%2Fgithub.com%2Frobertpelloni%2Fjules-autopilot)
+
+**Environment Variables:**
+- `JULES_API_KEY`: Your Jules API key.
+- `OPENAI_API_KEY` (Optional): For Council Debate mode.
+- `ANTHROPIC_API_KEY` (Optional): For Claude-based analysis.
+
+### Option 2: Local Development
+
+Run the full stack locally:
 
 ```bash
 # Clone and install
 git clone <your-repo-url>
 cd jules-ui
 
-# Install dependencies (pnpm recommended for workspace support)
+# Install dependencies
+# Note: We use pnpm workspaces.
 npm install -g pnpm
 pnpm install
 
@@ -45,56 +57,17 @@ pnpm install
 pnpm run dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) - the Terminal button will be visible but show setup instructions when clicked.
+Open [http://localhost:3000](http://localhost:3000).
 
-**To hide the Terminal button completely**, add to `.env.local`:
+### Option 3: Docker Compose
 
-```bash
-NEXT_PUBLIC_DISABLE_TERMINAL=true
-```
-
-### Option 2: With Docker Compose (Recommended)
-
-Run both the Next.js app AND the terminal server together:
+Run the app and terminal server in containers:
 
 ```bash
-# Clone and install
-git clone <your-repo-url>
-cd jules-ui
-
-# Configure your repository path (optional)
-cp deploy/.env.local.example .env.local
-# Edit .env.local and set REPO_PATH=/path/to/your/repo
-
-# (Optional) Configure custom base image for terminal
-# export TERMINAL_BASE_IMAGE=ubuntu:22.04
-
-# Start all services (frontend + terminal server)
 docker-compose -f deploy/docker-compose.yml up
 ```
 
-Open [http://localhost:3002](http://localhost:3002) - the Terminal will connect automatically.
-
-**Note:** Uses port 3002 to avoid conflicts with other services (like Dokploy on 3000).
-
-### Option 3: Run Services Independently
-
-Run the terminal server and Next.js app separately (useful for development):
-
-```bash
-# Terminal 1: Start the terminal server
-cd terminal-server
-npm install
-npm start
-
-# Terminal 2: Start the Next.js app
-npm install
-npm run dev
-```
-
-Open [http://localhost:3000](http://localhost:3000) - the Terminal will connect to the server on port 8080.
-
-**Note:** Your Jules API key is stored securely in browser localStorage. See [docs/TERMINAL.md](docs/TERMINAL.md) for detailed terminal setup and usage.
+Open [http://localhost:3002](http://localhost:3002).
 
 ## 🤖 Auto-Pilot (Session Keeper)
 
@@ -107,45 +80,32 @@ The **Session Keeper** is a background utility that ensures your Jules sessions 
 
 Access these settings via the **Gear Icon** in the top right or the **Logs** panel at the bottom of the screen.
 
-## 📸 More Screenshots
+## 🛠️ Architecture
 
-![Integrated Terminal](public/assets/jules-terminal.png)
-_Integrated Terminal - Full web-based terminal with real-time command execution and output_
+This project is a **monorepo workspace** using `pnpm` and `bun`.
 
-![Dashboard View](public/assets/dashboard-screenshot.png)
-_Analytics Dashboard - Track session success rates, duration, and activity volume_
+*   `packages/shared`: Shared types, utilities, and core orchestration logic. Built with `tsc` for cross-package usage.
+*   `app/`: Main Next.js application (Frontend + API Routes). Deployed to Vercel or Docker.
+*   `server/`: Backend services (Session Keeper Daemon). Supports both Node.js (via `@hono/node-server`) and Bun runtimes.
+*   `terminal-server/`: Dedicated WebSocket server for the integrated terminal.
 
-## 🛠️ Tech Stack
+### Deployment Notes
 
-**Frontend:** [Next.js 16](https://nextjs.org/), [TypeScript](https://www.typescriptlang.org/), [Tailwind CSS](https://tailwindcss.com/), [shadcn/ui](https://ui.shadcn.com/), [xterm.js](https://xtermjs.org/)
-
-**Terminal Server:** [Node.js](https://nodejs.org/), [Socket.io](https://socket.io/), [node-pty](https://github.com/microsoft/node-pty)
-
-- **Base Image:** `python:3.11-slim-bookworm` (Configurable)
-- **Pre-installed Tools:** `gemini-cli`, `python3`, `git`, `bash`
-
-**Infrastructure:** [Docker](https://www.docker.com/), [Docker Compose](https://docs.docker.com/compose/)
+- **Vercel:** The project is optimized for Vercel Serverless Functions. The `postinstall` script automatically builds the `@jules/shared` workspace to ensure dependencies are available.
+- **Node vs Bun:** While optimized for Bun locally, the server logic includes runtime detection to fallback to standard Node.js on Vercel seamlessly.
 
 ## 🔧 Development
 
-This project uses a **monorepo workspace** structure (configured for `pnpm` and `bun`).
-- `packages/shared`: Shared types and utilities.
-- `app/`: Main Next.js application.
-- `server/`: Backend services.
-
 ```bash
 pnpm run dev      # Start dev server (frontend + terminal)
-pnpm run build    # Build all workspaces
+pnpm run build    # Build all workspaces (shared, app, cli)
 pnpm run lint     # Run linter
-pnpm test         # Run tests
+pnpm test         # Run tests (Jest)
 ```
-
-### SDK Reference
-The project includes the official Python SDK as a reference submodule at `jules-sdk-reference`. This is used to ensure the TypeScript client implementation (`lib/jules/client.ts`) remains compliant with the official API models and logic.
 
 ## 📚 API Integration
 
-Integrates with Jules API (`https://jules.googleapis.com/v1alpha`) for session management, activity streaming, and real-time updates. See [developers.google.com/jules/api](https://developers.google.com/jules/api) for full documentation.
+Integrates with Jules API (`https://jules.googleapis.com/v1alpha`) for session management, activity streaming, and real-time updates.
 
 ## 🤝 Contributing
 
