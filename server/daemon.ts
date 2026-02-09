@@ -1,8 +1,8 @@
 import { prisma } from '../lib/prisma.ts';
 import { JulesClient } from '../lib/jules/client.ts';
-import { getProvider } from '../lib/orchestration/providers/index.ts';
-import { runDebate } from '../lib/orchestration/debate.ts';
-import { summarizeSession } from '../lib/orchestration/summarize.ts';
+import { getProvider } from '@jules/shared';
+import { runDebate } from '@jules/shared';
+import { summarizeSession } from '@jules/shared';
 import { emitDaemonEvent } from './index.ts';
 import type { Session, Activity } from '@/types/jules';
 import type { KeeperSettings } from '@prisma/client';

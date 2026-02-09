@@ -3,9 +3,9 @@ declare const Bun: any;
 import { Hono } from 'hono';
 import { cors } from 'hono/cors';
 import { EventEmitter } from 'events';
-import { getProvider } from '../lib/orchestration/providers/index.ts';
-import { runDebate, runConference } from '../lib/orchestration/debate.ts';
-import { runCodeReview } from '../lib/orchestration/review.ts';
+import { getProvider } from '@jules/shared';
+import { runDebate, runConference } from '@jules/shared';
+import { runCodeReview } from '@jules/shared';
 import { startDaemon, stopDaemon } from './daemon.ts';
 import { prisma } from '../lib/prisma.ts';
 import { JulesClient } from '../lib/jules/client.ts';
@@ -249,7 +249,7 @@ app.post('/api/supervisor', async (c) => {
             if (!messages || messages.length === 0) {
                 return c.json({ error: "No messages to summarize" }, 400);
             }
-            const { summarizeSession } = await import('../lib/orchestration/summarize');
+            const { summarizeSession } = await import('@jules/shared');
             const summary = await summarizeSession(messages, provider || "openai", apiKey || "", model || "gpt-4o");
             return c.json({ content: summary });
         }
