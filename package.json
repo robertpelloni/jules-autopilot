@@ -34,7 +34,7 @@
     "test": "jest",
     "test:e2e": "playwright test",
     "typecheck": "tsc --noEmit && pnpm --filter @jules/shared typecheck && pnpm --filter @jules/cli typecheck",
-    "postinstall": "npx prisma generate --schema=prisma/schema.prisma"
+    "postinstall": "pnpm run build:shared && npx prisma generate --schema=prisma/schema.prisma"
   },
   "dependencies": {
     "@dnd-kit/core": "^6.3.1",
