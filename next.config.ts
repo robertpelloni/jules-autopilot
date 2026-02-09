@@ -2,7 +2,12 @@ import type { NextConfig } from "next";
 import fs from 'fs';
 import path from 'path';
 
-const version = fs.readFileSync(path.join(process.cwd(), 'VERSION.md'), 'utf8').trim();
+let version = '0.0.0';
+try {
+  version = fs.readFileSync(path.join(process.cwd(), 'VERSION.md'), 'utf8').trim();
+} catch (e) {
+  console.warn('Failed to read VERSION.md, defaulting to 0.0.0');
+}
 
 const nextConfig: NextConfig = {
   output: 'standalone',

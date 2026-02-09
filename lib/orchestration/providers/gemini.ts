@@ -1,4 +1,4 @@
-import { CompletionParams, CompletionResult, ProviderInterface } from '../types';
+import type { CompletionParams, CompletionResult, ProviderInterface } from '../types';
 
 interface GeminiModel {
   name: string;
