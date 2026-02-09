@@ -34,6 +34,7 @@ import { NewSessionDialog } from "@/components/new-session-dialog";
 import { BroadcastDialog } from "@/components/broadcast-dialog";
 import { SettingsDialog } from "@/components/settings-dialog";
 import { ModeToggle } from "@/components/mode-toggle";
+import { ContextHelp } from "@/components/context-help";
 import { Session } from "@/types/jules";
 import { useRouter } from "next/navigation";
 
@@ -320,6 +321,8 @@ export function AppHeader({
           <BroadcastDialog sessions={openSessions} />
 
           <ModeToggle />
+
+          <ContextHelp topic={view} className="h-8 w-8 text-white/60 hover:text-white" />
 
           {/* Global Settings Dialog (Controlled) */}
           <SettingsDialog
