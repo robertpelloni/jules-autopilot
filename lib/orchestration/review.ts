@@ -1,4 +1,4 @@
-import { LLMProvider, Message, CompletionResult } from './types';
+import type { LLMProvider, Message, CompletionResult } from './types';
 
 export interface ReviewPersona {
     role: string;
@@ -73,7 +73,7 @@ export async function runCodeReview(request: ReviewRequest): Promise<string | Re
              // Extract owner/repo/number from URL
              // e.g. https://github.com/owner/repo/pull/123
              const match = request.prUrl.match(/github\.com\/([^/]+)\/([^/]+)\/pull\/(\d+)/);
-             if (match) {
+             if (match && match[1] && match[2] && match[3]) {
                  const [_, owner, repo, numberStr] = match;
                  const number = parseInt(numberStr, 10);
                  
