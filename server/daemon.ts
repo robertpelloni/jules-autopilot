@@ -1,9 +1,9 @@
-import { prisma } from '../lib/prisma';
-import { JulesClient } from '../lib/jules/client';
-import { getProvider } from '../lib/orchestration/providers/index';
-import { runDebate } from '../lib/orchestration/debate';
-import { summarizeSession } from '../lib/orchestration/summarize';
-import { emitDaemonEvent } from './index';
+import { prisma } from '../lib/prisma.ts';
+import { JulesClient } from '../lib/jules/client.ts';
+import { getProvider } from '../lib/orchestration/providers/index.ts';
+import { runDebate } from '../lib/orchestration/debate.ts';
+import { summarizeSession } from '../lib/orchestration/summarize.ts';
+import { emitDaemonEvent } from './index.ts';
 import type { Session, Activity } from '@/types/jules';
 import type { KeeperSettings } from '@prisma/client';
 

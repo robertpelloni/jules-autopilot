@@ -3,12 +3,12 @@ declare const Bun: any;
 import { Hono } from 'hono';
 import { cors } from 'hono/cors';
 import { EventEmitter } from 'events';
-import { getProvider } from '../lib/orchestration/providers/index';
-import { runDebate, runConference } from '../lib/orchestration/debate';
-import { runCodeReview } from '../lib/orchestration/review';
-import { startDaemon, stopDaemon } from './daemon';
-import { prisma } from '../lib/prisma';
-import { JulesClient } from '../lib/jules/client';
+import { getProvider } from '../lib/orchestration/providers/index.ts';
+import { runDebate, runConference } from '../lib/orchestration/debate.ts';
+import { runCodeReview } from '../lib/orchestration/review.ts';
+import { startDaemon, stopDaemon } from './daemon.ts';
+import { prisma } from '../lib/prisma.ts';
+import { JulesClient } from '../lib/jules/client.ts';
 import type { DaemonEventType } from '@jules/shared';
 import { createDaemonEvent } from '@jules/shared';
 
