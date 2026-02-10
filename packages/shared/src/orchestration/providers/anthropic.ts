@@ -1,4 +1,4 @@
-import type { CompletionParams, CompletionResult, ProviderInterface } from '../types';
+import type { CompletionParams, CompletionResult, ProviderInterface } from '../types.js';
 
 export const anthropicProvider: ProviderInterface = {
   id: 'anthropic',

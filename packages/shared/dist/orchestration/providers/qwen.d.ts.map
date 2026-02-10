@@ -1,1 +1,1 @@
-{"version":3,"file":"qwen.d.ts","sourceRoot":"","sources":["../../../src/orchestration/providers/qwen.ts"],"names":[],"mappings":"AAAA,OAAO,KAAK,EAAsC,iBAAiB,EAAE,MAAM,UAAU,CAAC;AAItF,eAAO,MAAM,YAAY,EAAE,iBAgE1B,CAAC"}
+{"version":3,"file":"qwen.d.ts","sourceRoot":"","sources":["../../../src/orchestration/providers/qwen.ts"],"names":[],"mappings":"AAAA,OAAO,KAAK,EAAsC,iBAAiB,EAAE,MAAM,aAAa,CAAC;AAIzF,eAAO,MAAM,YAAY,EAAE,iBAgE1B,CAAC"}
