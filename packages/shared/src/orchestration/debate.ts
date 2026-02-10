@@ -1,6 +1,6 @@
-import type { Message, Participant, DebateResult, DebateRound, DebateTurn, DebateProgressEvent } from './types';
-import { getProvider, generateText } from './providers';
-import { calculateRiskScore, determineApprovalStatus } from './supervisor';
+import type { Message, Participant, DebateResult, DebateRound, DebateTurn, DebateProgressEvent } from './types.js';
+import { getProvider, generateText } from './providers/index.js';
+import { calculateRiskScore, determineApprovalStatus } from './supervisor.js';
 
 export async function runDebate({ history, participants, rounds = 1, topic, onProgress }: {
     history: Message[];

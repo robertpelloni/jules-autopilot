@@ -1,4 +1,4 @@
-import type { Message, Participant, DebateResult, DebateProgressEvent } from './types';
+import type { Message, Participant, DebateResult, DebateProgressEvent } from './types.js';
 export declare function runDebate({ history, participants, rounds, topic, onProgress }: {
     history: Message[];
     participants: Participant[];

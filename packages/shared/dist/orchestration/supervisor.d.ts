@@ -1,4 +1,4 @@
-import type { DebateResult } from './types';
+import type { DebateResult } from './types.js';
 export declare function calculateRiskScore(result: DebateResult, provider: string, apiKey: string, model: string): Promise<number>;
 /**
  * Decides whether a debate result should be automatically approved.

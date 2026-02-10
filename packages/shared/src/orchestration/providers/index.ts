@@ -1,8 +1,8 @@
-import type { ProviderInterface, Message } from '../types';
-import { openaiProvider } from './openai';
-import { anthropicProvider } from './anthropic';
-import { geminiProvider } from './gemini';
-import { qwenProvider } from './qwen';
+import type { ProviderInterface, Message } from '../types.js';
+import { openaiProvider } from './openai.js';
+import { anthropicProvider } from './anthropic.js';
+import { geminiProvider } from './gemini.js';
+import { qwenProvider } from './qwen.js';
 
 export const providers: Record<string, ProviderInterface> = {
   openai: openaiProvider,
