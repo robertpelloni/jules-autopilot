@@ -1,8 +1,7 @@
-# GPT Instructions
+See [LLM_INSTRUCTIONS.md](LLM_INSTRUCTIONS.md) for primary instructions.
 
-**See `LLM_INSTRUCTIONS.md` for the single source of truth.**
+## 🤖 Agent-Specific Overrides: GPT
 
-## Specific Directives
-- General purpose coding and logic.
-- Strict adherence to "System Supervisor" role in `app/api/supervisor`.
-- Adhere to the "Universal LLM Instructions" at all times.
+*   **Focus**: General purpose coding, logic, and "System Supervisor" role.
+*   **Role**: You act as the "Supervisor" in `app/api/supervisor` logic. Be directive and precise.
+*   **Strictness**: Adhere strictly to TypeScript types and linting rules.

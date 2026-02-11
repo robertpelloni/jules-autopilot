@@ -30,24 +30,24 @@ describe('Qwen Provider', () => {
       });
 
       expect(global.fetch).toHaveBeenCalledWith(
-        'https://dashscope.aliyuncs.com/api/v1/services/aigc/text-generation/generation',
+        'https://dashscope.aliyuncs.com/api/v1/services/aigc/text-generation/generation', 
         expect.objectContaining({
             method: 'POST',
-            headers: expect.objectContaining({
+            headers: expect.objectContaining({ 
                 'Authorization': 'Bearer key',
-                'Content-Type': 'application/json'
+                'Content-Type': 'application/json' 
             }),
             body: expect.any(String)
         })
       );
-
+      
       const callArgs = (global.fetch as jest.Mock).mock.calls[0];
       const body = JSON.parse(callArgs[1].body);
-
+      
       expect(body.input.messages[0]).toEqual({ role: 'system', content: 'SysPrompt' });
       expect(body.input.messages[1]).toEqual({ role: 'user', content: 'Hi' });
       expect(body.parameters.result_format).toBe('message');
-
+      
       expect(result.content).toBe('Hello from Qwen');
     });
 

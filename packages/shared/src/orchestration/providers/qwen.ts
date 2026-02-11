@@ -12,9 +12,9 @@ export const qwenProvider: ProviderInterface = {
         if (role !== 'user' && role !== 'system' && role !== 'assistant') {
             role = 'assistant';
         }
-
+        
         const msg: any = { role, content: m.content };
-
+        
         if (m.name) {
              const sanitized = m.name.replace(/[^a-zA-Z0-9_-]/g, '_');
              if (sanitized) msg.name = sanitized;
@@ -41,7 +41,7 @@ export const qwenProvider: ProviderInterface = {
         },
         parameters: {
             // result_format: 'message' is often needed for chat-like output structure from Qwen (Necessary API config)
-            result_format: 'message',
+            result_format: 'message', 
             max_tokens: params.maxTokens
         }
       })
@@ -53,7 +53,7 @@ export const qwenProvider: ProviderInterface = {
     }
 
     const data = await response.json();
-    return {
+    return { 
       content: data.output?.choices?.[0]?.message?.content || data.output?.text || '',
       usage: data.usage ? {
         prompt_tokens: data.usage.input_tokens,

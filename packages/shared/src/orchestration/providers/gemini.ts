@@ -10,11 +10,11 @@ export const geminiProvider: ProviderInterface = {
   async complete(params: CompletionParams): Promise<CompletionResult> {
     const { messages, apiKey, model, systemPrompt } = params;
     let modelToUse = model || 'gemini-1.5-flash';
-
+    
     if (modelToUse.startsWith('models/')) {
         modelToUse = modelToUse.replace('models/', '');
     }
-
+    
     const url = `https://generativelanguage.googleapis.com/v1beta/models/${modelToUse}:generateContent?key=${apiKey}`;
 
     let response;
@@ -37,9 +37,9 @@ export const geminiProvider: ProviderInterface = {
                     parts: [{ text: m.content }]
                 };
             }),
-            generationConfig: {
+            generationConfig: { 
                 maxOutputTokens: params.maxTokens || 300,
-                responseMimeType: params.jsonMode ? "application/json" : undefined
+                responseMimeType: params.jsonMode ? "application/json" : undefined 
             }
           }),
         });
@@ -69,7 +69,7 @@ export const geminiProvider: ProviderInterface = {
     }
 
     const data = await response.json();
-      return {
+      return { 
         content: data.candidates?.[0]?.content?.parts?.[0]?.text || '',
         usage: data.usageMetadata ? {
             prompt_tokens: data.usageMetadata.promptTokenCount,

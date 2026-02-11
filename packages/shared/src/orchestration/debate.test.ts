@@ -42,7 +42,7 @@ describe('Debate Orchestration', () => {
 
       // 2 participants * 1 round + 1 summary = 3 calls
       expect(mockProvider.complete).toHaveBeenCalledTimes(3);
-
+      
       // Moderator summary uses provider.complete directly in the implementation,
       // so generateText should NOT be called.
       // However, if the implementation changed to use generateText, this test would need update.

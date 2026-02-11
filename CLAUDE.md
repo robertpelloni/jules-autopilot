@@ -1,8 +1,7 @@
-# Claude Instructions
+See [LLM_INSTRUCTIONS.md](LLM_INSTRUCTIONS.md) for primary instructions.
 
-**See `LLM_INSTRUCTIONS.md` for the single source of truth.**
+## 🤖 Agent-Specific Overrides: Claude
 
-## Specific Directives
-- Focus on architectural correctness and deep refactoring.
-- Use `Artifacts` for long code blocks.
-- Adhere to the "Universal LLM Instructions" at all times.
+*   **Focus**: Architectural correctness and deep refactoring.
+*   **Artifacts**: Use Artifacts for long code blocks and detailed explanations.
+*   **Reasoning**: Think step-by-step for complex logic (e.g., Council Debate orchestration).

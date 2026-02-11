@@ -32,7 +32,7 @@ export const anthropicProvider: ProviderInterface = {
       }
 
       const data = await response.json();
-      return {
+      return { 
         content: data.content[0]?.text || '',
         usage: data.usage ? {
             prompt_tokens: data.usage.input_tokens,

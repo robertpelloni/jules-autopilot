@@ -30,7 +30,7 @@ describe('Gemini Provider', () => {
       });
 
       expect(global.fetch).toHaveBeenCalledWith(
-        expect.stringContaining('gemini-1.5-flash:generateContent'),
+        expect.stringContaining('gemini-1.5-flash:generateContent'), 
         expect.objectContaining({
             method: 'POST',
             body: expect.stringContaining('"systemInstruction":{"parts":[{"text":"SysPrompt"}]}')
@@ -99,7 +99,7 @@ describe('Gemini Provider', () => {
             models: [
                 { name: 'models/gemini-1.5-flash', supportedGenerationMethods: ['generateContent'] },
                 { name: 'models/gemini-pro-vision', supportedGenerationMethods: ['generateContent'] },
-                { name: 'models/embedding-001', supportedGenerationMethods: ['embedContent'] }
+                { name: 'models/embedding-001', supportedGenerationMethods: ['embedContent'] } 
             ]
         })
       });

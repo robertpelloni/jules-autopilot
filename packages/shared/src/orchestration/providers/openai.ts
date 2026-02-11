@@ -13,12 +13,12 @@ export const openaiProvider: ProviderInterface = {
         }
 
         const msg: any = { role, content: m.content };
-
+        
         if (m.name) {
             const sanitized = m.name.replace(/[^a-zA-Z0-9_-]/g, '_');
             if (sanitized) msg.name = sanitized;
         }
-
+        
         return msg;
     });
 
@@ -46,7 +46,7 @@ export const openaiProvider: ProviderInterface = {
     }
 
     const data = await response.json();
-    return {
+    return { 
       content: data.choices[0]?.message?.content || '',
       usage: data.usage ? {
         prompt_tokens: data.usage.prompt_tokens,
