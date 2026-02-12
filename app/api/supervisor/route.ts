@@ -32,8 +32,18 @@ function getApiKeyForProvider(provider: string, fallbackKey?: string): string | 
   }
 }
 
-function enrichParticipants(participants: any[], apiKey: string | undefined) {
-    return participants.map((p: any) => {
+interface Participant {
+  id: string;
+  name: string;
+  role: string;
+  provider: string;
+  model: string;
+  apiKey?: string;
+  systemPrompt?: string;
+}
+
+function enrichParticipants(participants: Participant[], apiKey: string | undefined) {
+    return participants.map((p) => {
         let finalApiKey = p.apiKey;
         
         if (finalApiKey === 'env' || finalApiKey === 'placeholder' || !finalApiKey) {

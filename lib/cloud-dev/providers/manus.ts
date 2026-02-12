@@ -3,6 +3,7 @@ import type {
   UnifiedSession,
   UnifiedActivity,
   CreateCloudDevSessionRequest,
+  ProviderHealth,
 } from '@/types/cloud-dev';
 
 export class ManusProvider extends BaseCloudDevProvider {
@@ -10,15 +11,43 @@ export class ManusProvider extends BaseCloudDevProvider {
     super('manus', apiKey);
   }
 
+  private mockSessions: UnifiedSession[] = [
+    {
+      id: 'manus:mock-alpha',
+      providerId: 'manus',
+      providerSessionId: 'mock-alpha',
+      title: 'Write Unit Tests',
+      status: 'paused',
+      createdAt: new Date(Date.now() - 7200000).toISOString(),
+      updatedAt: new Date(Date.now() - 3600000).toISOString(),
+      lastActivityAt: new Date(Date.now() - 3600000).toISOString(),
+      url: 'https://manus.ai/session/alpha',
+      repository: { owner: 'robertpelloni', name: 'jules-ui', url: 'https://github.com/robertpelloni/jules-ui' }
+    }
+  ];
+
   async listSessions(): Promise<UnifiedSession[]> {
+    if (this.isMock) {
+        return this.mockSessions;
+    }
     throw new ProviderNotImplementedError('manus', 'listSessions');
   }
 
-  async getSession(_sessionId: string): Promise<UnifiedSession | null> {
+  async getHealth(): Promise<ProviderHealth> {
+      if (this.isMock) {
+          return { status: 'healthy', latencyMs: 120, lastChecked: new Date().toISOString() };
+      }
+      return super.getHealth();
+  }
+
+  async getSession(sessionId: string): Promise<UnifiedSession | null> {
+    if (this.isMock) {
+        return this.mockSessions.find(s => s.id === sessionId || s.providerSessionId === sessionId) || null;
+    }
     throw new ProviderNotImplementedError('manus', 'getSession');
   }
 
-  async createSession(_request: CreateCloudDevSessionRequest): Promise<UnifiedSession> {
+  async createSession(request: CreateCloudDevSessionRequest): Promise<UnifiedSession> {
     throw new ProviderNotImplementedError('manus', 'createSession');
   }
 

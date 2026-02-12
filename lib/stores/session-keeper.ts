@@ -1,5 +1,5 @@
 import { create } from 'zustand';
-import { persist } from 'zustand/middleware';
+import { persist, createJSONStorage } from 'zustand/middleware';
 import { SessionKeeperConfig } from '@/types/jules';
 import type { DebateResult as OrchestrationDebateResult } from '@/lib/orchestration/types';
 
@@ -284,12 +284,23 @@ export const useSessionKeeperStore = create<SessionKeeperState>()(
     }),
     {
       name: 'jules-session-keeper-store',
+      storage: createJSONStorage(() => {
+        if (typeof window !== 'undefined') {
+          return localStorage;
+        }
+        return {
+          getItem: () => null,
+          setItem: () => {},
+          removeItem: () => {},
+        };
+      }),
       partialize: (state) => ({ 
         stats: state.stats, 
         isPausedAll: state.isPausedAll,
         lastForcedCheckAt: state.lastForcedCheckAt,
         debates: state.debates
       }),
+      skipHydration: true,
     }
   )
 );

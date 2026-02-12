@@ -15,10 +15,15 @@ export abstract class BaseCloudDevProvider implements CloudDevProviderInterface 
   config: CloudDevProviderConfig;
   protected apiKey?: string;
   protected baseUrl: string;
+  protected isMock: boolean;
 
   constructor(id: CloudDevProviderId, apiKey?: string) {
     this.id = id;
     const providerDef = CLOUD_DEV_PROVIDERS[id];
+    // Enable if API key is present OR if we force mock mode (e.g. for demo)
+    // For now, we infer mock mode if apiKey is 'mock'
+    this.isMock = apiKey === 'mock';
+
     this.config = {
       ...providerDef,
       isEnabled: !!apiKey,

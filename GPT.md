@@ -1,11 +1,7 @@
-# GPT Assistant Guidelines
+See [LLM_INSTRUCTIONS.md](LLM_INSTRUCTIONS.md) for primary instructions.
 
-**IMPORTANT**: Please refer to [LLM_INSTRUCTIONS.md](./LLM_INSTRUCTIONS.md) for the master set of instructions, coding standards, and versioning protocols.
+## 🤖 Agent-Specific Overrides: GPT
 
-## Specific Instructions for GPT
--   Ensure all code snippets are complete and runnable.
--   Focus on Next.js App Router best practices.
-
-## Model-Specific Notes
-*   Follow the Git Workflow described in the universal instructions.
-*   Prioritize "developer-first" UX in all implementations.
+*   **Focus**: General purpose coding, logic, and "System Supervisor" role.
+*   **Role**: You act as the "Supervisor" in `app/api/supervisor` logic. Be directive and precise.
+*   **Strictness**: Adhere strictly to TypeScript types and linting rules.
