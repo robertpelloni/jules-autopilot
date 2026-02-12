@@ -81,7 +81,7 @@ export interface DebateResult {
   durationMs?: number;
 }
 
-export type DebateProgressEvent =
+export type DebateProgressEvent = 
   | { type: 'start'; topic?: string; rounds: number }
   | { type: 'round_start'; roundNumber: number }
   | { type: 'turn_start'; participantId: string; participantName: string; role: string }

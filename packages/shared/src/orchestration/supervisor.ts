@@ -1,5 +1,5 @@
-import { generateText } from './providers/index';
-import type { Message, DebateResult } from './types';
+import { generateText } from './providers/index.js';
+import type { Message, DebateResult } from './types.js';
 
 export async function calculateRiskScore(
   result: DebateResult,
@@ -14,7 +14,7 @@ export async function calculateRiskScore(
 
     Debate Topic: ${result.topic}
     Summary: ${result.summary}
-
+    
     Consider:
     1. Scope of changes.
     2. Potential for regressions.
@@ -31,7 +31,7 @@ export async function calculateRiskScore(
       model,
       messages: [{ role: 'user', content: prompt }]
     });
-
+    
     const score = parseInt(response.trim());
     return isNaN(score) ? 50 : Math.min(Math.max(score, 0), 100);
   } catch (error) {

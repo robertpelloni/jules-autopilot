@@ -1,4 +1,4 @@
-import type { CompletionParams, CompletionResult, ProviderInterface } from '../types';
+import type { CompletionParams, CompletionResult, ProviderInterface } from '../types.js';
 
 export const anthropicProvider: ProviderInterface = {
   id: 'anthropic',
@@ -32,7 +32,7 @@ export const anthropicProvider: ProviderInterface = {
       }
 
       const data = await response.json();
-      return {
+      return { 
         content: data.content[0]?.text || '',
         usage: data.usage ? {
             prompt_tokens: data.usage.input_tokens,

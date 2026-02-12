@@ -1,5 +1,5 @@
 export async function summarizeSession(history, provider, apiKey, model) {
-    const { generateText } = await import('./providers');
+    const { generateText } = await import('./providers/index.js');
     const systemPrompt = `You are an expert Technical Project Manager and Archivist.
   Your goal is to create a structured "Handoff Document" from a conversation history.
   This document must enable a new agent instance to pick up exactly where the previous one left off without losing context.

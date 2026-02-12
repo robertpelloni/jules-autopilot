@@ -1,8 +1,7 @@
-# Gemini Instructions
+See [LLM_INSTRUCTIONS.md](LLM_INSTRUCTIONS.md) for primary instructions.
 
-**See `LLM_INSTRUCTIONS.md` for the single source of truth.**
+## 🤖 Agent-Specific Overrides: Gemini
 
-## Specific Directives
-- Optimize for speed and concise answers.
-- Check for Google-specific integrations in `external/google-jules-mcp`.
-- Adhere to the "Universal LLM Instructions" at all times.
+*   **Focus**: Speed and concise answers.
+*   **Integration**: Check for Google-specific integrations (Gemini API, Google Workspace).
+*   **Context**: You have a large context window; use it to analyze multiple files at once.

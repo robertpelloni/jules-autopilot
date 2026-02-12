@@ -1,10 +1,7 @@
-# Agent Instructions
+See [LLM_INSTRUCTIONS.md](LLM_INSTRUCTIONS.md) for primary instructions.
 
-**See `LLM_INSTRUCTIONS.md` for the single source of truth.**
+## 🤖 Agent-Specific Overrides: Generic Agents
 
-This file serves as a pointer. All agents must follow the protocols defined in `LLM_INSTRUCTIONS.md`.
-
-## Quick Links
-- **Protocol**: `LLM_INSTRUCTIONS.md`
-- **Roadmap**: `ROADMAP.md`
-- **Changelog**: `CHANGELOG.md`
+*   **Protocol**: Follow standard Git workflow (Commit often, Pull regularly).
+*   **Safety**: Do not delete files without verification.
+*   **Autonomy**: Proceed with tasks autonomously until blocked.

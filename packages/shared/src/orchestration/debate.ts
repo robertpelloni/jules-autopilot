@@ -1,6 +1,6 @@
-import type { Message, Participant, DebateResult, DebateRound, DebateTurn, DebateProgressEvent } from './types';
-import { getProvider, generateText } from './providers';
-import { calculateRiskScore, determineApprovalStatus } from './supervisor';
+import type { Message, Participant, DebateResult, DebateRound, DebateTurn, DebateProgressEvent } from './types.js';
+import { getProvider, generateText } from './providers/index.js';
+import { calculateRiskScore, determineApprovalStatus } from './supervisor.js';
 
 export async function runDebate({ history, participants, rounds = 1, topic, onProgress }: {
     history: Message[];
@@ -12,14 +12,14 @@ export async function runDebate({ history, participants, rounds = 1, topic, onPr
     const startTime = Date.now();
     const currentHistory = [...history];
     const debateRounds: DebateRound[] = [];
-
+    
     // Initialize total usage
     const totalUsage = {
         prompt_tokens: 0,
         completion_tokens: 0,
         total_tokens: 0
     };
-
+    
     onProgress?.({ type: 'start', topic, rounds });
 
     // We need a default API key/provider for the moderator/summarizer if not explicitly provided
@@ -59,7 +59,7 @@ export async function runDebate({ history, participants, rounds = 1, topic, onPr
                 });
 
                 const content = response.content;
-
+                
                 // Track usage
                 if (response.usage) {
                     totalUsage.prompt_tokens += response.usage.prompt_tokens;
@@ -76,7 +76,7 @@ export async function runDebate({ history, participants, rounds = 1, topic, onPr
                 // Add to history so next participant sees it
                 currentHistory.push({
                     role: 'assistant',
-                    content: `[${p.name} (${p.role})]: ${content}`
+                    content: `[${p.name} (${p.role})]: ${content}` 
                 });
 
                 turns.push({
@@ -87,7 +87,7 @@ export async function runDebate({ history, participants, rounds = 1, topic, onPr
                     timestamp: new Date().toISOString(),
                     usage: response.usage
                 });
-
+                
                 onProgress?.({ type: 'turn_complete', participantId: p.id, content });
 
             } catch (err) {
@@ -108,14 +108,14 @@ export async function runDebate({ history, participants, rounds = 1, topic, onPr
             roundNumber: i + 1,
             turns
         });
-
+        
         onProgress?.({ type: 'round_complete', roundNumber: i + 1, turns });
     }
 
     // --- Consensus / Summary Phase ---
     onProgress?.({ type: 'summary_start' });
     let summary = `Debate completed (${rounds} round${rounds > 1 ? 's' : ''}).`;
-
+    
     // Use the primary participant for summary, but check if we have a valid provider first.
     // If not, try to find ANY valid provider from the participants list.
     const summaryParticipant = participants.find(p => getProvider(p.provider)) || primaryParticipant;
@@ -129,12 +129,12 @@ export async function runDebate({ history, participants, rounds = 1, topic, onPr
             } else {
                 const moderatorPrompt = `You are the Moderator and Judge of this technical debate.
                 ${topic ? `Topic: ${topic}` : ''}
-
+                
                 Review the debate history above.
                 1. Summarize the key arguments from each participant.
                 2. Identify areas of consensus and disagreement.
                 3. Provide a final conclusion or recommendation based on the strongest arguments.
-
+                
                 Format: Markdown.`;
 
                 // We pass the full history including the new debate turns
@@ -147,16 +147,16 @@ export async function runDebate({ history, participants, rounds = 1, topic, onPr
                     model: summaryParticipant.model,
                     apiKey: summaryParticipant.apiKey,
                     // valid system prompt if the provider supports separate system arg
-                    systemPrompt: moderatorPrompt
+                    systemPrompt: moderatorPrompt 
                 });
-
+                
                 // Track summary usage
                 if (synthesis.usage) {
                     totalUsage.prompt_tokens += synthesis.usage.prompt_tokens;
                     totalUsage.completion_tokens += synthesis.usage.completion_tokens;
                     totalUsage.total_tokens += synthesis.usage.total_tokens;
                 }
-
+                
                 summary = synthesis.content;
             }
 
@@ -165,7 +165,7 @@ export async function runDebate({ history, participants, rounds = 1, topic, onPr
             summary += " (Auto-summary generation failed)";
         }
     }
-
+    
     onProgress?.({ type: 'summary_complete', summary });
 
     const result: DebateResult = {
@@ -194,7 +194,7 @@ export async function runDebate({ history, participants, rounds = 1, topic, onPr
             result.approvalStatus = 'pending';
         }
     }
-
+    
     onProgress?.({ type: 'complete', result });
 
     return result;
@@ -216,3 +216,4 @@ export async function runConference({ history, participants, onProgress }: {
         onProgress
     });
 }
+

@@ -78,7 +78,7 @@ describe('Code Review Orchestration', () => {
         mockProvider.complete.mockResolvedValue({ content: 'Invalid JSON' });
 
         const result = await runCodeReview({ ...defaultRequest, outputFormat: 'json' });
-
+        
         // Assert using type casting since we know the shape of the fallback object
         expect(result).toEqual(expect.objectContaining({
             score: 0,
@@ -89,14 +89,14 @@ describe('Code Review Orchestration', () => {
 
     it('should support custom personas in comprehensive review', async () => {
         mockProvider.complete.mockResolvedValue({ content: 'Custom review' });
-
+        
         const customPersonas = [
             { role: 'Database Expert', prompt: 'Check SQL' },
             { role: 'UI Expert', prompt: 'Check CSS' }
         ];
 
-        const result = await runCodeReview({
-            ...defaultRequest,
+        const result = await runCodeReview({ 
+            ...defaultRequest, 
             reviewType: 'comprehensive',
             customPersonas
         });

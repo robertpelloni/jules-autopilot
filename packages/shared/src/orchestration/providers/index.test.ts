@@ -16,7 +16,7 @@ const mockAnthropic: ProviderInterface = {
 };
 
 // We need to re-mock the modules completely for the test file to pick up the changes
-// Since Jest mocks are hoisted, we define the mocks using the variables declared above
+// Since Jest mocks are hoisted, we define the mocks using the variables declared above 
 // but we need to ensure they are accessible.
 // However, variables inside `describe` or top-level `const` might not be accessible inside `jest.mock` factory.
 // The safe pattern is to define the mock implementation inside the factory or use `jest.fn()` directly.

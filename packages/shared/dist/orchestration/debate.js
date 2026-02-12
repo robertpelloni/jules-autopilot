@@ -1,5 +1,5 @@
-import { getProvider } from './providers';
-import { calculateRiskScore, determineApprovalStatus } from './supervisor';
+import { getProvider } from './providers/index.js';
+import { calculateRiskScore, determineApprovalStatus } from './supervisor.js';
 export async function runDebate({ history, participants, rounds = 1, topic, onProgress }) {
     const startTime = Date.now();
     const currentHistory = [...history];

@@ -4,9 +4,16 @@ All notable changes to this project will be documented in this file.
 
 ## [0.8.8] - 2026-02-09
 
-### Fixed
-- **Build**: Merged feature branch `fix-vercel-workspace-build-9959688198539623479` into `main` to resolve Vercel build issues and workspace configuration.
-- **Submodules**: Synchronized and initialized all project submodules.
+### Added
+- **Analytics Dashboard**: Implemented real-time statistics fetching for sessions, activity volume, and code churn metrics in `components/analytics-dashboard.tsx`.
+- **System Dashboard**: Enhanced `/system/internals` to display detailed submodule status (build number, commit hash, date) and project directory structure.
+- **Documentation**: Comprehensive rewrite of `README.md` and `VISION.md`. Refactored agent instructions (`AGENTS.md`, etc.) to reference a single source of truth (`LLM_INSTRUCTIONS.md`).
+
+### Changed
+- **Architecture**: Moved core orchestration logic (`lib/orchestration`) to a dedicated workspace package (`@jules/shared`) to resolve Vercel serverless deployment issues.
+- **Vercel Support**: Updated `server/index.ts` to detect runtime environments (`Bun` vs `Node.js`) and use the appropriate server adapter (`@hono/node-server`), fixing crashes on Vercel.
+- **Build System**: Updated `package.json` scripts to strictly build `@jules/shared` in `postinstall` to ensure dependencies are available for Vercel builds.
+- **Cleanup**: Removed legacy code and resolved all known "ERR_MODULE_NOT_FOUND" issues by enforcing explicit `.js` extensions in shared package imports.
 
 ## [0.8.7] - 2026-02-04
 

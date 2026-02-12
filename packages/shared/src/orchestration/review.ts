@@ -35,9 +35,9 @@ export interface ReviewResult {
 }
 
 export async function runCodeReview(request: ReviewRequest): Promise<string | ReviewResult> {
-    const { getProvider } = await import('./providers/index');
+    const { getProvider } = await import('./providers/index.js');
     const provider = getProvider(request.provider);
-
+    
     if (!provider) {
         throw new Error(`Provider ${request.provider} not found`);
     }
@@ -69,14 +69,14 @@ export async function runCodeReview(request: ReviewRequest): Promise<string | Re
          try {
              const { Octokit } = await import('octokit');
              const octokit = new Octokit({ auth: request.githubToken });
-
+             
              // Extract owner/repo/number from URL
              // e.g. https://github.com/owner/repo/pull/123
              const match = request.prUrl.match(/github\.com\/([^/]+)\/([^/]+)\/pull\/(\d+)/);
              if (match && match[1] && match[2] && match[3]) {
                  const [_, owner, repo, numberStr] = match;
                  const number = parseInt(numberStr, 10);
-
+                 
                  const body = `## 🕵️ Jules Code Review
 **Score: ${result.score}/100**
 
@@ -106,7 +106,7 @@ _Automated review by Jules AI_`;
 
 async function runStructuredReview(request: ReviewRequest, provider: any): Promise<ReviewResult> {
     const systemPrompt = `You are an expert code reviewer. Analyze the code and provide a structured JSON response.
-
+    
     Response Format (JSON):
     {
         "summary": "Brief overall summary of the code quality and main issues",
@@ -121,7 +121,7 @@ async function runStructuredReview(request: ReviewRequest, provider: any): Promi
             }
         ]
     }
-
+    
     Focus on:
     1. Correctness and logic bugs
     2. Security vulnerabilities
