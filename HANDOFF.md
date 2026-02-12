@@ -25,6 +25,7 @@ We have successfully resolved critical Vercel deployment issues by refactoring t
 *   **`LLM_INSTRUCTIONS.md`:** The Single Source of Truth for all AI agents.
 *   **`VISION.md`:** A new, detailed vision document outlining the "Engineering Command Center" philosophy.
 *   **`README.md`:** Rewrite to reflect the current feature set (Session Keeper, Council Debate, Analytics) and deployment options.
+*   **`docs/ARCHITECTURAL_ANALYSIS.md`:** Comprehensive system overview and data flow documentation.
 
 ## ⚠️ Known State & Next Steps
 
@@ -38,4 +39,4 @@ We have successfully resolved critical Vercel deployment issues by refactoring t
 2.  **Feature Implementation:** The "Council Debate" UI works but could be enhanced with better visualization of the "winning" argument.
 3.  **Authentication:** Currently uses local storage or simple env vars. Future roadmap includes robust auth (NextAuth/Clerk).
 
-**Git Branch:** `main` (Merged `fix-vercel-server-imports`)
+**Git Branch:** `main`
