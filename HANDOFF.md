@@ -371,6 +371,10 @@ The following P0/P2-aligned changes were implemented after the initial baseline 
         - `Shift+R` now bypasses the `R` cooldown guard in `components/broadcast-dialog.tsx`, enabling immediate operator refresh during cooldown windows.
         - Inline recovered-mode shortcut hint updated to explicitly document both paths (`R` and `Shift+R`).
 
+    39. **Force-refresh toast rate limiting**
+        - Added dedicated toast cooldown for `Shift+R` feedback in `components/broadcast-dialog.tsx` (`3s`).
+        - Prevents force-refresh notification spam during rapid repeated `Shift+R` usage while retaining immediate refresh behavior.
+
 ## Immediate next actions (for next model)
 
 1. Execute `TODO.md` P0 items first (version truth + API ownership + doc harmonization).
