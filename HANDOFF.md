@@ -363,6 +363,14 @@ The following P0/P2-aligned changes were implemented after the initial baseline 
         - Standard `R` continues to respect cooldown, while `Shift+R` allows immediate operator-triggered refresh during cooldown windows.
         - Inline shortcut hint now documents both actions for discoverability.
 
+    37. **Force-refresh feedback signal**
+        - Added explicit operator feedback for `Shift+R` in `components/broadcast-dialog.tsx` via lightweight `Force refresh triggered.` toast.
+        - Standard `R` hotkey remains silent to avoid notification noise; only forced bypass events surface the feedback toast.
+
+    38. **Force-refresh hotkey behavior finalized**
+        - `Shift+R` now bypasses the `R` cooldown guard in `components/broadcast-dialog.tsx`, enabling immediate operator refresh during cooldown windows.
+        - Inline recovered-mode shortcut hint updated to explicitly document both paths (`R` and `Shift+R`).
+
 ## Immediate next actions (for next model)
 
 1. Execute `TODO.md` P0 items first (version truth + API ownership + doc harmonization).

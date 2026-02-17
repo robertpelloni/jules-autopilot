@@ -77,6 +77,7 @@ const AUTO_REFRESH_RECOVERED_STORAGE_KEY = "jules.broadcast.recovered.autoRefres
 const AUTO_REFRESH_RECOVERED_INTERVAL_STORAGE_KEY = "jules.broadcast.recovered.autoRefreshIntervalMs";
 const AUTO_REFRESH_INTERVAL_OPTIONS = [15000, 30000, 60000] as const;
 const HOTKEY_REFRESH_COOLDOWN_MS = 1500;
+const FORCE_REFRESH_TOAST_COOLDOWN_MS = 3000;
 
 export function BroadcastDialog({ sessions }: BroadcastDialogProps) {
   const { client, triggerRefresh } = useJules();
@@ -100,6 +101,7 @@ export function BroadcastDialog({ sessions }: BroadcastDialogProps) {
   const [nextAutoRefreshAt, setNextAutoRefreshAt] = useState<number | null>(null);
   const [hotkeyRefreshCooldownUntil, setHotkeyRefreshCooldownUntil] = useState<number | null>(null);
   const lastHotkeyRefreshAtRef = useRef<number>(0);
+  const lastForceRefreshToastAtRef = useRef<number>(0);
 
   // Use all provided sessions regardless of status, assuming the parent filters for "open" (unarchived) sessions
   const targetSessions = sessions;
@@ -603,7 +605,8 @@ export function BroadcastDialog({ sessions }: BroadcastDialogProps) {
       event.preventDefault();
       lastHotkeyRefreshAtRef.current = now;
       setHotkeyRefreshCooldownUntil(now + HOTKEY_REFRESH_COOLDOWN_MS);
-      if (isForceRefreshShortcut) {
+      if (isForceRefreshShortcut && now - lastForceRefreshToastAtRef.current >= FORCE_REFRESH_TOAST_COOLDOWN_MS) {
+        lastForceRefreshToastAtRef.current = now;
         toast.info("Force refresh triggered.");
       }
       void handleRefreshRecoveredAvailability({ silent: true });
