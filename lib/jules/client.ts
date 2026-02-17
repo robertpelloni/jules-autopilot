@@ -140,7 +140,6 @@ export class JulesAPIError extends Error {
 }
 
 const DEFAULT_API_BASE_URL = '/api/jules';
-const BUN_SERVER_URL = 'http://localhost:8080';
 
 export class JulesClient {
   private apiKey?: string;
@@ -149,6 +148,13 @@ export class JulesClient {
   constructor(apiKey?: string, baseUrl: string = DEFAULT_API_BASE_URL) {
     this.apiKey = apiKey;
     this.baseUrl = baseUrl;
+  }
+
+  private normalizeSessionId(sessionId: string): string {
+    if (sessionId.startsWith('sessions/')) {
+      return sessionId.slice('sessions/'.length);
+    }
+    return sessionId;
   }
 
   private async request<T>(endpoint: string, options: RequestInit = {}): Promise<T> {
@@ -366,7 +372,8 @@ export class JulesClient {
   }
 
   async getSession(id: string): Promise<Session> {
-    const response = await this.request<ApiSession>(`/sessions/${id}`);
+    const normalizedId = this.normalizeSessionId(id);
+    const response = await this.request<ApiSession>(`/sessions/${normalizedId}`);
     return this.transformSession(response);
   }
 
@@ -406,6 +413,7 @@ export class JulesClient {
   }
 
   async updateSession(sessionId: string, updates: Partial<Session>): Promise<Session> {
+    const normalizedSessionId = this.normalizeSessionId(sessionId);
     const body: Record<string, any> = {};
     const updateMaskParts: string[] = [];
 
@@ -437,7 +445,7 @@ export class JulesClient {
     const updateMask = updateMaskParts.join(',');
 
     try {
-      const response = await this.request<ApiSession>(`/sessions/${sessionId}?updateMask=${updateMask}`, {
+      const response = await this.request<ApiSession>(`/sessions/${normalizedSessionId}?updateMask=${updateMask}`, {
         method: 'PATCH',
         body: JSON.stringify(body),
       });
@@ -449,12 +457,18 @@ export class JulesClient {
   }
 
   async listActivities(sessionId: string, limit: number = 1000, offset: number = 0): Promise<Activity[]> {
-    const endpoint = `/sessions/${sessionId}/activities?pageSize=${limit}&pageToken=${offset}`; // Using pagination parameters that align more with typical Google APIs, adjust if backend expects offset
-    // Note: The backend seems to return { activities: [...] } or just [...] depending on endpoint. 
-    // Assuming standard response wrapper
-    const response = await this.request<{ activities: ApiActivity[] }>(endpoint);
+    const normalizedSessionId = this.normalizeSessionId(sessionId);
+    const params = new URLSearchParams();
+    params.set('pageSize', String(limit));
+    if (offset > 0) {
+      params.set('pageToken', String(offset));
+    }
+
+    const endpoint = `/sessions/${normalizedSessionId}/activities?${params.toString()}`;
+    const response = await this.request<{ activities?: ApiActivity[] } | ApiActivity[]>(endpoint);
+    const activityList = Array.isArray(response) ? response : (response.activities || []);
     
-    return (response.activities || []).map(a => this.transformActivity(a, sessionId));
+    return activityList.map(a => this.transformActivity(a, normalizedSessionId));
   }
 
   private transformActivity(activity: ApiActivity, sessionId: string): Activity {
@@ -517,6 +531,7 @@ export class JulesClient {
   }
 
   async createActivity(params: { sessionId: string; content: string; type?: string; metadata?: any; role?: 'user' | 'agent' }): Promise<Activity> {
+    const normalizedSessionId = this.normalizeSessionId(params.sessionId);
     // Check if the content implies a specific action (like a slash command or special instruction)
     // or if we should use the sendMessage endpoint which is more robust for agent interaction.
     
@@ -532,7 +547,7 @@ export class JulesClient {
     try {
         if (params.type === 'message' || !params.type) {
             // Try the direct action endpoint first as it's more specific for "sending a message to the agent"
-            const response = await this.request<ApiActivity>(`/sessions/${params.sessionId}:sendMessage`, {
+          const response = await this.request<ApiActivity>(`/sessions/${normalizedSessionId}:sendMessage`, {
                 method: 'POST',
                 body: JSON.stringify({
                     message: params.content 
@@ -544,7 +559,7 @@ export class JulesClient {
                     // Safest bet based on JS usage in grep is 'message'.
                 }),
             });
-            return this.transformActivity(response, params.sessionId);
+              return this.transformActivity(response, normalizedSessionId);
         } else {
              // For other types like 'result' or explicit role setting, we use the manual creation if supported
              // OR we mock the return object if the backend doesn't support creating arbitrary activities directly.
@@ -568,12 +583,12 @@ export class JulesClient {
                  body.userMessage = { message: params.content };
             }
 
-            const response = await this.request<ApiActivity>(`/sessions/${params.sessionId}/activities`, {
+            const response = await this.request<ApiActivity>(`/sessions/${normalizedSessionId}/activities`, {
                 method: 'POST',
                 body: JSON.stringify(body),
             });
     
-            return this.transformActivity(response, params.sessionId);
+            return this.transformActivity(response, normalizedSessionId);
         }
 
     } catch (e) {
@@ -586,18 +601,19 @@ export class JulesClient {
             }
         };
 
-        const response = await this.request<ApiActivity>(`/sessions/${params.sessionId}/activities`, {
+        const response = await this.request<ApiActivity>(`/sessions/${normalizedSessionId}/activities`, {
             method: 'POST',
             body: JSON.stringify(body),
         });
 
-        return this.transformActivity(response, params.sessionId);
+        return this.transformActivity(response, normalizedSessionId);
     }
   }
 
   async listArtifacts(sessionId: string): Promise<Artifact[]> {
     const artifacts: Artifact[] = [];
-    let pageToken: string | undefined;
+      const normalizedSessionId = this.normalizeSessionId(sessionId);
+      let pageToken: string | undefined;
     const limit = 50;
 
     try {
@@ -607,10 +623,10 @@ export class JulesClient {
         if (pageToken) params.set("pageToken", pageToken);
 
         const response = await this.request<{ activities?: ApiActivity[], nextPageToken?: string }>(
-            `/sessions/${sessionId}/activities?${params.toString()}`
+          `/sessions/${normalizedSessionId}/activities?${params.toString()}`
         );
         
-        const activities = (response.activities || []).map(a => this.transformActivity(a, sessionId));
+        const activities = (response.activities || []).map(a => this.transformActivity(a, normalizedSessionId));
 
         for (const activity of activities) {
             const rawActivity = activity.metadata as ApiActivity | undefined;
@@ -664,11 +680,13 @@ export class JulesClient {
   }
 
   async getArtifact(sessionId: string, artifactId: string): Promise<Artifact> {
-    return this.request<Artifact>(`/sessions/${sessionId}/artifacts/${artifactId}`);
+    const normalizedSessionId = this.normalizeSessionId(sessionId);
+    return this.request<Artifact>(`/sessions/${normalizedSessionId}/artifacts/${artifactId}`);
   }
 
   async approvePlan(sessionId: string): Promise<void> {
-    return this.request<void>(`/sessions/${sessionId}:approvePlan`, {
+    const normalizedSessionId = this.normalizeSessionId(sessionId);
+    return this.request<void>(`/sessions/${normalizedSessionId}:approvePlan`, {
       method: 'POST',
     });
   }
@@ -694,25 +712,25 @@ export class JulesClient {
   }
 
   async listTemplates(): Promise<SessionTemplate[]> {
-    return this.fetchLocal<SessionTemplate[]>(`${BUN_SERVER_URL}/api/templates`);
+    return this.fetchLocal<SessionTemplate[]>('/api/templates');
   }
 
   async createTemplate(template: Omit<SessionTemplate, 'id' | 'createdAt' | 'updatedAt'>): Promise<SessionTemplate> {
-    return this.fetchLocal<SessionTemplate>(`${BUN_SERVER_URL}/api/templates`, {
+    return this.fetchLocal<SessionTemplate>('/api/templates', {
       method: 'POST',
       body: JSON.stringify(template),
     });
   }
 
   async updateTemplate(id: string, template: Partial<SessionTemplate>): Promise<SessionTemplate> {
-    return this.fetchLocal<SessionTemplate>(`${BUN_SERVER_URL}/api/templates/${id}`, {
+    return this.fetchLocal<SessionTemplate>(`/api/templates/${id}`, {
       method: 'PUT',
       body: JSON.stringify(template),
     });
   }
 
   async deleteTemplate(id: string): Promise<void> {
-    return this.fetchLocal<void>(`${BUN_SERVER_URL}/api/templates/${id}`, {
+    return this.fetchLocal<void>(`/api/templates/${id}`, {
       method: 'DELETE',
     });
   }

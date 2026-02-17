@@ -20,8 +20,6 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 
-const BUN_SERVER_URL = 'http://localhost:8080';
-
 interface StoredDebate {
     id: string;
     topic: string;
@@ -64,7 +62,7 @@ export function DebateHistoryList() {
         
         try {
             setIsDeleting(true);
-            const res = await fetch(`${BUN_SERVER_URL}/api/debate/${deleteId}`, {
+            const res = await fetch(`/api/debate/${deleteId}`, {
                 method: 'DELETE',
             });
 
@@ -86,7 +84,7 @@ export function DebateHistoryList() {
     useEffect(() => {
         const fetchDebates = async () => {
             try {
-                const res = await fetch(`${BUN_SERVER_URL}/api/debate/history`);
+                const res = await fetch('/api/debate/history');
                 if (res.ok) {
                     const data = await res.json();
                     setDebates(data);

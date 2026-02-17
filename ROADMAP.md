@@ -1,112 +1,77 @@
 # Roadmap
 
-## 🚀 Active Development
--   [x] **Core UI/UX:** Session Board, Activity Feed, Artifact Browser.
--   [x] **Session Keeper:** Auto-pilot, "Nudge" system, server-side persistence.
--   [x] **Multi-Agent Debate:** Basic implementation with mock/API supervisor.
--   [x] **Submodules:**
-    -   [x] `jules-agent-sdk-python`
+## Status baseline (audited 2026-02-16)
 
+This roadmap has been re-baselined against the current code and docs state. Prior entries that were marked complete but are actually mock-only, partial, or not fully wired are now reflected accurately.
 
-## Phase 2: Enhanced Interactions (Completed)
-- [x] Code Diff Viewer
-- [x] Terminal Output Rendering
-- [x] Session Keeper (Auto-Pilot)
-- [x] Session Kanban Board
-- [x] System Status Dashboard
-- [x] **Memory Manager**: Context compaction and repo-level memory storage.
-- [x] **Code Churn Analytics**: Visualizing code additions and deletions over time.
-- [x] **Session Health Monitoring**: Health badges and stalled session detection.
-- [x] **Broadcast Messages**: Send messages to all open sessions simultaneously.
-- [x] **Terminal Integration Polish**: Secure API key injection into the integrated terminal environment.
+## ✅ Solidly implemented foundations
 
-## Phase 3: Advanced Features (Completed)
-- [x] **Multi-Agent Debate:** Orchestrate debates between Supervisor and Worker agents.
-- [x] **Deep Code Analysis:** Parallel code audits (Security, Performance, Maintainability) with Structured Scorecards.
-- [x] **Artifact Management:** Artifact Browser with list and preview.
-- [x] **Session Templates:** Save and reuse session configurations.
-- [x] **Council Debate Visualization**: Visualizing the multi-agent debate process in the UI.
-- [x] **GitHub Issue Integration**: Integration with GitHub Issues for new sessions.
+- Session lifecycle UI and activity feed core loop (`components/session-list.tsx`, `components/activity-feed.tsx`, `lib/jules/client.ts`)
+- Session Keeper daemon + persisted settings/logs (`server/daemon.ts`, `server/index.ts`, `app/api/settings/keeper/route.ts`)
+- Debate + code review orchestration endpoints and persistence (`app/api/debate/*`, `app/api/review/route.ts`, `prisma/schema.prisma`)
+- HTTP-only cookie auth flow for primary app access (`lib/session.ts`, `middleware.ts`, `app/login/page.tsx`)
+- Templates CRUD data model and API (`app/api/templates/*`, `prisma/schema.prisma`)
+- System status/submodule introspection API (`app/api/system/status/route.ts`, `app/api/system/submodules/route.ts`)
 
-## Phase 4: Production Readiness (Completed)
-- [x] **Secure Authentication:** Replace client-side API Key storage with HTTP-only cookies and Middleware.
-- [x] **Docker Optimization:** Multi-stage builds and smaller images.
-- [x] **CI/CD Pipeline:** Automated testing and build checks.
-- [x] **E2E Testing:** Comprehensive Playwright suite.
-- [x] **Hierarchical Documentation:** Structured AGENTS.md and centralized knowledge base.
-- [x] **Versioning System:** Single source of truth (VERSION.md) and strict changelog management.
-- [x] **Submodule Dashboard:** Real-time tracking of submodule versions and git status.
+## 🟡 Partially implemented / requires wiring
 
-## Phase 5: Platform Extensions (In Progress)
-- [ ] **User Accounts:** OAuth integration (Google/GitHub).
-- [ ] **Plugin System:** Allow custom tools for the agent.
-- [x] **Advanced Analytics:** Token usage tracking and cost estimation per session.
+### Multi-provider cloud dev
+- Unified types/store/provider registry are present.
+- Reality: only `jules` provider is materially implemented; others are stub/mock or throw `ProviderNotImplementedError`.
+- Gaps:
+  - Full provider APIs for `devin`, `manus`, `openhands`, `github-spark`, `blocks`, `claude-code`, `codex`
+  - Real transfer progress lifecycle (currently coarse status + local state)
+  - Robust provider health checks and retries
 
-## Phase 6: Multi-Provider Cloud Dev (v0.8.7) ✨ COMPLETED
-- [x] **Unified Provider Interface:** Abstract base class for all cloud dev providers.
-- [x] **Provider Registry:** Factory functions for dynamic provider instantiation.
-- [x] **Jules Provider:** Full implementation wrapping existing JulesClient.
-- [x] **Mock Mode Providers:** Realistic simulation for Devin, Manus, OpenHands, GitHub Spark, Blocks, Claude Code, Codex.
-- [x] **Session Transfer Service:** Cross-provider session migration with context preservation.
-- [x] **Multi-Provider Store:** Zustand state management for sessions across providers.
-- [x] **Cross-Provider Dashboard:** Unified UI for managing sessions and transfers (`/dashboard/providers`).
-- [x] **Transfer UI:** Dialog for initiating and tracking session transfers.
-- [x] **Robust Error Handling:** Mock mode fallback when API keys are missing.
+### Plugin system
+- `/plugins` exists, but uses static plugin cards + localStorage install toggles.
+- No backend plugin registry, loading, sandboxing, manifest spec, permission model, or execution runtime.
 
-## 📅 Short Term (v0.7.x - v0.8.x)
--   **Advanced Orchestration:**
-    -   [x] Real implementations for `runCodeReview` using LLMs with structured output.
-    -   [x] **Dynamic Multi-Agent Debate:** Configurable providers (OpenAI, Anthropic, Gemini, Qwen) and models.
-    -   [x] **Debate Persistence:** Save full debate transcripts to database/memory.
-    -   [x] **Debate "Spectator Mode":** Real-time streaming of debate thoughts to the UI.
+### Submodule dashboards
+- System views exist, but several submodule detail actions are explicit placeholders.
+- `TaskQueueDashboard`, `McpServerDashboard`, and `TerminalStream` components currently use mock/demo datasets rather than live integrations.
 
-## 🔮 Long Term (Vision)
--   **Jules Autonomous:**
-    -   Self-hosting capability.
-    -   Full repository management (auto-PR, auto-merge).
--   **Provider Ecosystem:**
-    -   Support for 10+ cloud dev providers.
-    -   Unified billing and cost tracking across providers.
-    -   Automated provider selection based on task requirements.
+### Templates + memory + settings split-brain
+- Next API routes and daemon routes both provide overlapping functionality (`templates`, `debate`, `settings`, `logs`).
+- Client uses `http://localhost:8080` for template calls via `JulesClient`, bypassing equivalent Next routes.
+- Requires a single source of truth and transport strategy.
 
+### Auth/account UX consistency
+- Core auth is cookie-based.
+- Account page copy still describes browser localStorage for API key storage, which is outdated/misleading in current architecture.
 
-## 🛠️ Infrastructure
--   **CI/CD:** Automated testing pipeline for all submodules.
+## ❌ Not implemented (but planned/claimed previously)
 
----
+- OAuth/multi-user accounts and workspace-level isolation
+- Production plugin ecosystem
+- Full real-time event architecture replacing polling in major surfaces
+- Comprehensive E2E coverage (current Playwright set is limited)
+- Unified cost/billing tracking across providers
+- Conference-mode dedicated UI flow (backend action exists, no first-class UX)
 
-## Undocumented Features (Discovered)
+## Priority execution plan
 
-The following features exist in the codebase but were not previously documented:
+### Phase A — Truth and consistency (immediate)
+1. Unify docs with code reality (this update + follow-up doc harmonization).
+2. Resolve version drift (`VERSION*` vs `package.json` mismatch).
+3. Consolidate duplicated API surfaces (Next vs daemon ownership).
 
-### Session Management
-- **Session Handoff:** Automatic archiving of sessions older than 30 days with summary continuation in new sessions.
-- **Smart Nudge System:** Context-aware prompts using conversation history analysis (not just random messages).
-- **Provider Fallback Chain:** Automatic fallback between LLM providers if primary fails.
-- **Memory Management:** Per-session supervisor state with conversation history persistence in SQLite.
+### Phase B — Product integrity
+1. Replace mock-only dashboards with live data pipelines or clearly mark as preview-only.
+2. Complete at least one non-Jules provider end-to-end to validate abstraction.
+3. Harden auth messaging and remove stale localStorage-sensitive guidance.
 
-### Code Analysis
-- **Code Review Types:** Simple vs comprehensive reviews with different analysis depths.
-- **Risk Scoring:** Automated risk assessment for plan approval workflows.
+### Phase C — Scale and reliability
+1. Expand automated tests (API + integration + E2E critical paths).
+2. Improve realtime/event architecture where polling is still heavy.
+3. Add formal API contracts and operational health checks.
 
-### Template System
-- **CSV Tag Storage:** Tags stored as comma-separated values in database.
-- **Favorite Marking:** Templates can be marked as favorites for quick access.
-- **Prebuilt Templates:** System-provided templates that cannot be deleted.
+### Phase D — Vision features
+1. OAuth/multi-user support.
+2. Plugin runtime + permissions model.
+3. Full provider ecosystem maturity and auto-routing policies.
 
-### Terminal Integration
-- **Health Checks:** Terminal server `/health` endpoint for monitoring.
-- **Graceful Shutdown:** PTY process cleanup on client disconnect.
-- **Workspace Detection:** Automatic `/workspace` vs project root directory detection.
-- **API Key Inheritance:** Child processes inherit `JULES_API_KEY` environment variable.
-- **Concurrent Sessions:** Multiple terminal sessions per user with session isolation.
+## Notes
 
-### UI/UX
-- **Optimistic Updates:** UI updates before API confirmation for responsive feel.
-- **URL Synchronization:** Session selection synced with URL query parameters.
-- **Middleware Protection:** Route guarding with redirect to `/login` for unauthenticated users.
-
-### Architecture
-- **Anthropic Role Mapping:** 'system' messages converted to 'user' role for API compliance.
-- **Daemon Independence:** Background daemon runs separately from Next.js for reliability.
-- **Submodule Read-Only:** External submodules treated as read-only libraries.
+- Detailed, ordered implementation backlog lives in `TODO.md`.
+- Detailed audit methodology/findings and evidence references live in `HANDOFF.md`.

@@ -11,8 +11,9 @@ import type {
 } from '@jules/shared';
 import { WS_DEFAULTS } from '@jules/shared';
 import { emitDaemonEvent } from './use-daemon-events';
+import { DAEMON_WS_URL } from '@/lib/config/daemon';
 
-const WS_URL = process.env.NEXT_PUBLIC_DAEMON_WS_URL || 'ws://localhost:8080/ws';
+const WS_URL = DAEMON_WS_URL;
 
 type ConnectionState = 'connecting' | 'connected' | 'disconnected' | 'reconnecting';
 

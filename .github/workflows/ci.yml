@@ -7,7 +7,27 @@ on:
     branches: ["main"]
 
 jobs:
+  version:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          submodules: recursive
+      - uses: pnpm/action-setup@v3
+        with:
+          version: 9
+      - name: Use Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: "pnpm"
+      - name: Install dependencies
+        run: pnpm install
+      - name: Check version sync
+        run: pnpm run check-version
+
   lint:
+    needs: [version]
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -27,6 +47,7 @@ jobs:
         run: pnpm run lint
 
   test:
+    needs: [version]
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -46,7 +67,7 @@ jobs:
         run: pnpm test
 
   build:
-    needs: [lint, test]
+    needs: [version, lint, test]
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4

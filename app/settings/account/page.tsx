@@ -6,20 +6,28 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useJules } from "@/lib/jules/provider";
-import { Check, Eye, EyeOff, Save, User, Shield, AlertTriangle } from "lucide-react";
+import { Check, Eye, EyeOff, Save, Shield, AlertTriangle } from "lucide-react";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { ContextHelp } from "@/components/context-help";
 
 export default function AccountSettingsPage() {
-  const { apiKey, setApiKey } = useJules();
-  const [keyInput, setKeyInput] = useState(apiKey || '');
+  const { apiKey, setApiKey, clearApiKey } = useJules();
+  const [keyInput, setKeyInput] = useState('');
   const [showKey, setShowKey] = useState(false);
   const [saved, setSaved] = useState(false);
+  const [isSaving, setIsSaving] = useState(false);
+  const hasConfiguredKey = apiKey !== null;
 
-  const handleSave = () => {
-    setApiKey(keyInput);
+  const handleSave = async () => {
+    if (!keyInput.trim()) {
+      return;
+    }
+    setIsSaving(true);
+    await setApiKey(keyInput.trim());
+    setKeyInput('');
     setSaved(true);
     setTimeout(() => setSaved(false), 2000);
+    setIsSaving(false);
   };
 
   return (
@@ -73,7 +81,7 @@ export default function AccountSettingsPage() {
                    value={keyInput}
                    onChange={(e) => setKeyInput(e.target.value)}
                    className="bg-zinc-900 border-white/10 pr-10 font-mono text-sm"
-                   placeholder="Enter your Jules API Key"
+                   placeholder={hasConfiguredKey ? "A Jules API key is already configured. Enter a new key to replace it." : "Enter your Jules API Key"}
                  />
                  <Button
                    variant="ghost"
@@ -86,12 +94,21 @@ export default function AccountSettingsPage() {
               </div>
               <p className="text-xs text-white/40 flex items-center gap-1.5 mt-2">
                  <AlertTriangle className="h-3 w-3 text-yellow-500" />
-                 Stored securely in your browser&apos;s local storage. Never sent to our servers except for authentication.
+                 API keys are submitted to the auth API and stored in a server-side session (HTTP-only cookie). They are not persisted in this page&apos;s local storage.
               </p>
            </div>
         </CardContent>
-        <CardFooter className="bg-white/5 border-t border-white/10 flex justify-end p-4">
-           <Button onClick={handleSave} disabled={saved} className="bg-purple-600 hover:bg-purple-500 text-white transition-all w-32">
+        <CardFooter className="bg-white/5 border-t border-white/10 flex justify-end gap-2 p-4">
+           {hasConfiguredKey && (
+             <Button
+               variant="outline"
+               className="border-red-500/30 text-red-300 hover:bg-red-500/10"
+               onClick={clearApiKey}
+             >
+               Clear Session
+             </Button>
+           )}
+           <Button onClick={handleSave} disabled={saved || isSaving || !keyInput.trim()} className="bg-purple-600 hover:bg-purple-500 text-white transition-all w-36">
               {saved ? (
                   <>
                     <Check className="h-4 w-4 mr-2" />
@@ -100,7 +117,7 @@ export default function AccountSettingsPage() {
               ) : (
                   <>
                     <Save className="h-4 w-4 mr-2" />
-                    Save Changes
+                    {isSaving ? 'Saving...' : 'Save Changes'}
                   </>
               )}
            </Button>

@@ -91,7 +91,7 @@ export function SessionKeeperSettingsContent({
           propOnClearMemory(sessionId);
       } else {
           try {
-              const response = await fetch('http://localhost:8080/api/supervisor/clear', {
+                const response = await fetch('/api/supervisor/clear', {
                   method: 'POST',
                   headers: { 'Content-Type': 'application/json' },
                   body: JSON.stringify({ sessionId })

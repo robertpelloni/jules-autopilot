@@ -6,11 +6,12 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Terminal, Play, Pause, RefreshCw, Maximize2, Trash2 } from "lucide-react";
 import { ScrollArea } from "@/components/ui/scroll-area";
+import { DAEMON_WS_URL } from '@/lib/config/daemon';
 
 // Mock data generator for terminal logs
 const MOCK_LOGS = [
   "[info] Initializing gemini-cli-jules v0.4.2...",
-  "[info] Connected to MCP server at ws://localhost:8080",
+  `[info] Connected to MCP server at ${DAEMON_WS_URL}`,
   "[info] Loaded 12 tools successfully.",
   "[debug] Checking for pending tasks...",
   "[info] No pending tasks found. Waiting for input.",

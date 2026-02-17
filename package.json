@@ -1,7 +1,7 @@
 {
   "name": "jules-ui",
   "description": "The modern, developer-first interface for Google's Jules AI agent. Features live code diffs, interactive terminal outputs, analytics, and a streamlined dark mode experience.",
-  "version": "0.8.7",
+  "version": "0.8.8",
   "keywords": [
     "jules-ai",
     "google-jules",
@@ -23,6 +23,8 @@
     "dev": "concurrently -n \"TERMINAL,NEXT\" -c \"blue,magenta\" \"npm:terminal:start\" \"next dev\"",
     "dev:e2e": "concurrently -n \"TERMINAL,NEXT\" -c \"blue,magenta\" \"npm:terminal:start\" \"next dev -p 3005\"",
     "terminal:start": "cd terminal-server && node server.js",
+    "check-version": "node scripts/check-version-sync.js",
+    "update-version": "node scripts/update-version.js",
     "prebuild": "node scripts/get-submodule-info.js",
     "build": "pnpm run build:shared && npx prisma generate --schema=prisma/schema.prisma && next build",
     "build:shared": "pnpm --filter @jules/shared build",
