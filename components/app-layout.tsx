@@ -212,6 +212,7 @@ export function AppLayout({ initialView }: AppLayoutProps) {
   const handleLogout = () => {
     clearApiKey();
     setSelectedSession(null);
+    // Note: Actual sign out is handled in AppHeader by next-auth
   };
 
   const handleStartSessionFromTemplate = (template: SessionTemplate) => {

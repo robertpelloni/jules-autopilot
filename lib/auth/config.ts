@@ -3,9 +3,12 @@ import { PrismaAdapter } from '@auth/prisma-adapter';
 import { prisma } from '@/lib/prisma';
 import Credentials from 'next-auth/providers/credentials';
 import Github from 'next-auth/providers/github';
+import { authConfig } from './auth.config';
 
 export const { handlers, auth, signIn, signOut } = NextAuth({
+  ...authConfig,
   adapter: PrismaAdapter(prisma),
+  session: { strategy: 'jwt' }, // Force JWT for credentials/database hybrid
   providers: [
     Github({
         clientId: process.env.GITHUB_ID,
@@ -17,12 +20,8 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
         password: { label: 'Password', type: 'password' },
       },
       authorize: async (credentials) => {
-        // Simple single-user password check for self-hosting
-        // In a real app, hash this or check DB.
         const validPassword = process.env.AUTH_PASSWORD;
-        if (!validPassword) {
-            return null; // Auth disabled or misconfigured
-        }
+        if (!validPassword) return null;
 
         if (credentials.password === validPassword) {
             return { id: '1', name: 'Admin', email: 'admin@local' };
@@ -31,12 +30,4 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
       },
     }),
   ],
-  pages: {
-    signIn: '/login',
-  },
-  callbacks: {
-      async session({ session, user }) {
-          return session;
-      }
-  }
 });

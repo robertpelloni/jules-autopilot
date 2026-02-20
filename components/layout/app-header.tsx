@@ -27,7 +27,8 @@ import {
   Activity as ActivityIcon,
   FolderTree,
   Search,
-  Scale
+  Scale,
+  User
 } from "lucide-react";
 import { SessionList } from "@/components/session-list";
 import { NewSessionDialog } from "@/components/new-session-dialog";
@@ -37,6 +38,7 @@ import { ModeToggle } from "@/components/mode-toggle";
 import { ContextHelp } from "@/components/context-help";
 import { Session } from "@/types/jules";
 import { useRouter } from "next/navigation";
+import { signOut } from "next-auth/react";
 
 interface AppHeaderProps {
   view: 'sessions' | 'analytics' | 'templates' | 'kanban' | 'board' | 'artifacts' | 'debates';
@@ -62,7 +64,6 @@ interface AppHeaderProps {
   setIsSettingsOpen: (open: boolean) => void;
   isLogPanelOpen: boolean;
   setIsLogPanelOpen: (open: boolean) => void;
-  onLogout: () => void;
 }
 
 export function AppHeader({
@@ -83,11 +84,14 @@ export function AppHeader({
   setIsSettingsOpen,
   isLogPanelOpen,
   setIsLogPanelOpen,
-  onLogout,
 }: AppHeaderProps) {
   const router = useRouter();
   const { client } = useJules();
   const [openSessions, setOpenSessions] = useState<Session[]>([]);
+
+  const handleLogout = async () => {
+      await signOut({ callbackUrl: '/login' });
+  };
 
   // Load all sessions for broadcast
   useEffect(() => {
@@ -369,7 +373,7 @@ export function AppHeader({
               <DropdownMenuSeparator className="bg-white/10" />
 
               <DropdownMenuItem
-                onClick={onLogout}
+                onClick={handleLogout}
                 className="hover:bg-white/5 text-white/80"
               >
                 <LogOut className="mr-2 h-3.5 w-3.5" />
