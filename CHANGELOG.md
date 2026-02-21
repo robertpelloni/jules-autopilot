@@ -2,6 +2,19 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.8.9] - 2026-02-09
+
+### Added
+- **Authentication**: Implemented secure authentication with **NextAuth.js (v5)**.
+    - Added GitHub OAuth and Credential providers.
+    - Protected dashboard routes with Edge-compatible middleware.
+    - Introduced a login page (`/login`) and logout functionality.
+- **Server-Side Analytics**: Migrated analytics aggregation to `/api/analytics` for better performance and scalability.
+
+### Changed
+- **Documentation**: Updated `README.md`, `VISION.md`, and `ARCHITECTURAL_ANALYSIS.md` to reflect the new authentication architecture.
+- **UI**: Added a "Sign Out" option to the settings dropdown in the App Header.
+
 ## [0.8.8] - 2026-02-09
 
 ### Added
