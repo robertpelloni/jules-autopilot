@@ -30,177 +30,44 @@ export function AnalyticsDashboard() {
 
   const [dateRange, setDateRange] = useState('30');
 
-  const fetcher = useCallback(async () => {
-    if (!client) return { sessions: [], sources: [], activities: [] };
-
-    const [sessionsData, sourcesData] = await Promise.all([
-      client.listSessions(),
-      client.listSources()
-    ]);
-
-    // Fetch activities for the most recent 20 sessions to avoid rate limits
-    // Sort sessions by updated date desc
-    const sortedSessions = [...sessionsData].sort((a, b) =>
-      new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime()
-    ).slice(0, 20);
-
-    const activitiesPromises = sortedSessions.map(session =>
-      client.listActivities(session.id).catch(() => [] as Activity[])
-    );
-
-    const activitiesResults = await Promise.all(activitiesPromises);
-    const allActivities = activitiesResults.flat();
-    
-    return { sessions: sessionsData, sources: sourcesData, activities: allActivities };
-  }, [client]);
+  const fetcher = useCallback(async (url: string) => {
+    const res = await fetch(url);
+    if (!res.ok) throw new Error('Failed to fetch analytics');
+    return res.json();
+  }, []);
 
   const { data, error, mutate, isLoading, isValidating } = useSWR(
-    client ? 'analytics' : null,
+    `/api/analytics?days=${dateRange}`,
     fetcher,
     {
-      refreshInterval: 60000, // 1 minute
+      refreshInterval: 60000,
       revalidateOnFocus: false,
     }
   );
-
-  const { sessions, sources, activities } = data || { sessions: [], sources: [], activities: [] };
 
   const handleRefresh = () => {
     mutate();
   };
 
-  const filteredData = useMemo(() => {
-    const cutoffDate = subDays(new Date(), parseInt(dateRange));
-
-    const filteredSessions = sessions.filter(session =>
-      isAfter(parseISO(session.createdAt), cutoffDate)
-    );
-
-    // Filter activities that belong to the filtered sessions
-    const sessionIds = new Set(filteredSessions.map(s => s.id));
-    const filteredActivities = activities.filter(a => sessionIds.has(a.sessionId));
-
-    return { sessions: filteredSessions, activities: filteredActivities };
-  }, [sessions, activities, dateRange]);
-
   const stats = useMemo(() => {
-    const { sessions: currentSessions, activities: currentActivities } = filteredData;
-
-    const totalSessions = currentSessions.length;
-    const activeSessions = currentSessions.filter(s => s.status === 'active').length;
-    const completedSessions = currentSessions.filter(s => s.status === 'completed').length;
-    const failedSessions = currentSessions.filter(s => s.status === 'failed').length;
-
-    const stalledSessions = currentSessions.filter(s => {
-      const health = calculateSessionHealth(s);
-      return health.status === 'stalled' || health.status === 'critical';
-    }).length;
-
-    // Success rate
-    const finishedSessions = completedSessions + failedSessions;
-    const successRate = finishedSessions > 0
-      ? Math.round((completedSessions / finishedSessions) * 100)
-      : 0;
-
-    // Average duration (minutes)
-    const durations = currentSessions.map(s =>
-      differenceInMinutes(parseISO(s.updatedAt), parseISO(s.createdAt))
-    );
-    const avgDuration = durations.length > 0
-      ? Math.round(durations.reduce((a, b) => a + b, 0) / durations.length)
-      : 0;
-
-    // Activity breakdown
-    const activityTypes = currentActivities.reduce((acc, curr) => {
-      acc[curr.type] = (acc[curr.type] || 0) + 1;
-      return acc;
-    }, {} as Record<string, number>);
-
-    const activityData = Object.entries(activityTypes).map(([name, value]) => ({
-      name: name.charAt(0).toUpperCase() + name.slice(1),
-      value
-    }));
-
-    // Repository usage
-    const repoCounts = currentSessions.reduce((acc, curr) => {
-      const source = sources.find(s =>
-        s.id === curr.sourceId ||
-        s.id.endsWith(curr.sourceId) ||
-        s.name === curr.sourceId
-      );
-      const name = source ? source.name : (curr.sourceId || 'Unknown');
-      acc[name] = (acc[name] || 0) + 1;
-      return acc;
-    }, {} as Record<string, number>);
-
-    const repoData = Object.entries(repoCounts)
-      .map(([name, value]) => ({ name, value }))
-      .sort((a, b) => b.value - a.value)
-      .slice(0, 5);
-
-    // Timeline
-    const timelineMap = new Map<string, number>();
-    currentSessions.forEach(s => {
-       const d = startOfDay(parseISO(s.createdAt)).toISOString();
-       timelineMap.set(d, (timelineMap.get(d) || 0) + 1);
-    });
-
-    const timelineDataSorted = Array.from(timelineMap.entries())
-      .sort((a, b) => a[0].localeCompare(b[0]))
-      .map(([isoDate, count]) => ({
-        date: format(parseISO(isoDate), 'MMM dd'),
-        count
-      }));
-
-    // Code Impact Metrics
-    let totalAdditions = 0;
-    let totalDeletions = 0;
-    let totalFilesChanged = 0;
-    const churnMap = new Map<string, { additions: number, deletions: number }>();
-
-    currentActivities.forEach(activity => {
-      if (activity.diff) {
-        const stats = calculateDiffStats(activity.diff);
-        totalAdditions += stats.additions;
-        totalDeletions += stats.deletions;
-        totalFilesChanged += stats.filesChanged;
-
-        const isoDate = startOfDay(parseISO(activity.createdAt)).toISOString();
-        const current = churnMap.get(isoDate) || { additions: 0, deletions: 0 };
-        churnMap.set(isoDate, {
-            additions: current.additions + stats.additions,
-            deletions: current.deletions + stats.deletions
-        });
-      }
-    });
-
-    const churnData = Array.from(churnMap.entries())
-      .sort((a, b) => a[0].localeCompare(b[0]))
-      .map(([isoDate, data]) => ({
-        date: format(parseISO(isoDate), 'MMM dd'),
-        additions: data.additions,
-        deletions: data.deletions
-      }));
+    if (!data) return null;
 
     return {
-      totalSessions,
-      activeSessions,
-      completedSessions,
-      stalledSessions,
-      successRate,
-      avgDuration,
-      activityData,
-      repoData,
-      timelineData: timelineDataSorted,
-      churnData,
-      codeImpact: {
-        additions: totalAdditions,
-        deletions: totalDeletions,
-        filesChanged: totalFilesChanged,
-        netChange: totalAdditions - totalDeletions
-      }
+      ...data.stats,
+      // Format dates for charts
+      timelineData: data.timelineData.map((d: any) => ({
+        ...d,
+        date: format(parseISO(d.date), 'MMM dd')
+      })),
+      repoData: data.repoData,
+      // Default empty/mock data for churn/activity if not provided by server yet
+      activityData: data.activityData || [],
+      churnData: data.churnData || [],
+      codeImpact: data.codeImpact || { additions: 0, deletions: 0, filesChanged: 0, netChange: 0 },
+      // Merge keeper stats if available
+      keeperStats: data.keeperStats || keeperStats
     };
-  }, [filteredData, sources]);
+  }, [data, keeperStats]);
 
   if (isLoading) {
     return (

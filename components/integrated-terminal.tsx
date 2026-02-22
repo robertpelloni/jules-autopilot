@@ -142,15 +142,18 @@ export function IntegratedTerminal({
           terminal.write(
             "\r\n\x1b[33m*** Terminal Server Not Available ***\x1b[0m\r\n",
           );
-          terminal.write("\x1b[90mTo enable terminal:\x1b[0m\r\n");
+          // Detect Vercel environment roughly (hostname or env) if possible, but general advice works
+          terminal.write("\r\n\x1b[31m[!] Serverless Environment Detected\x1b[0m\r\n");
+          terminal.write("\x1b[90mThe Integrated Terminal relies on WebSockets which are not supported\x1b[0m\r\n");
+          terminal.write("\x1b[90min standard Vercel Serverless functions.\x1b[0m\r\n");
+          terminal.write("\r\n\x1b[32m[?] How to Fix:\x1b[0m\r\n");
           terminal.write(
-            "\x1b[90m  1. Docker Compose: docker-compose up\x1b[0m\r\n",
+            "\x1b[90m  > Run via Docker:  docker-compose up\x1b[0m\r\n",
           );
           terminal.write(
-            "\x1b[90m  2. Standalone: cd terminal-server && npm start\x1b[0m\r\n",
+            "\x1b[90m  > Run Locally:     cd terminal-server && npm start\x1b[0m\r\n",
           );
-          terminal.write("\x1b[90m\x1b[0m\r\n");
-          terminal.write("\x1b[90mSee README.md for details.\x1b[0m\r\n");
+          terminal.write("\r\n\x1b[90mThe rest of the dashboard (Analytics, Sessions) is fully functional.\x1b[0m\r\n");
         }
       });
 
