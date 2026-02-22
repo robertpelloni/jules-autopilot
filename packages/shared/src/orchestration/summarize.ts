@@ -1,5 +1,5 @@
 export async function summarizeSession(history: { role: string; content: string }[], provider: string, apiKey: string, model: string): Promise<string> {
-  const { generateText } = await import('./providers/index.js');
+  const { generateText } = await import('./providers/index');
   
   const systemPrompt = `You are an expert Technical Project Manager and Archivist. 
   Your goal is to create a structured "Handoff Document" from a conversation history. 

@@ -1,4 +1,4 @@
-import { generateText } from './providers/index.js';
+import { generateText } from './providers/index';
 export async function calculateRiskScore(result, provider, apiKey, model) {
     const prompt = `
     Analyze the following debate result and provide a risk score between 0 and 100.

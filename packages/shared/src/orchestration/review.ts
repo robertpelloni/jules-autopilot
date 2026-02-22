@@ -35,7 +35,7 @@ export interface ReviewResult {
 }
 
 export async function runCodeReview(request: ReviewRequest): Promise<string | ReviewResult> {
-    const { getProvider } = await import('./providers/index.js');
+    const { getProvider } = await import('./providers/index');
     const provider = getProvider(request.provider);
     
     if (!provider) {

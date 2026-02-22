@@ -23,9 +23,9 @@ interface LiveSubmoduleStatus {
 }
 
 export default function SystemDashboard() {
-  const { submodules: buildSubmodules, generatedAt } = (submodulesData as unknown as { 
+  const { submodules: buildSubmodules, generatedAt } = (submodulesData as unknown as {
     submodules: { name: string; path: string; commit: string; describe: string; lastCommitDate: string }[],
-    generatedAt: string 
+    generatedAt: string
   });
 
   const { stats, debates } = useSessionKeeperStore();
@@ -42,7 +42,7 @@ export default function SystemDashboard() {
         fetch('/api/system/status'),
         client?.listSessions() || Promise.resolve([])
       ]);
-      
+
       const statusData = await statusRes.json();
       if (statusData.submodules) {
         setLiveStatus(statusData.submodules);
@@ -62,7 +62,7 @@ export default function SystemDashboard() {
   const getStatusBadge = (path: string) => {
     const live = liveStatus.find(s => s.path === path);
     if (!live) return <Badge variant="outline" className="text-white/40 border-white/10">Unknown</Badge>;
-    
+
     if (live.status === 'synced') {
       return <Badge variant="outline" className="text-green-400 border-green-500/20 bg-green-500/10 gap-1"><CheckCircle2 className="h-3 w-3" /> Synced</Badge>;
     }
@@ -76,8 +76,8 @@ export default function SystemDashboard() {
   const totalNudges = stats.totalNudges || 0;
   const totalApprovals = stats.totalApprovals || 0;
   const activeSessionsCount = sessions.filter((s: Session) => s.status === 'active').length;
-  const completionRate = sessions.length > 0 
-    ? Math.round((sessions.filter((s: Session) => s.status === 'completed').length / sessions.length) * 100) 
+  const completionRate = sessions.length > 0
+    ? Math.round((sessions.filter((s: Session) => s.status === 'completed').length / sessions.length) * 100)
     : 0;
 
   const approvalRate = stats.totalDebates > 0
@@ -85,17 +85,17 @@ export default function SystemDashboard() {
     : 94; // Fallback to 94% if no debates yet for visual consistency
 
   const performanceMetrics = useMemo(() => {
-    const validDebates = debates.filter(d => d.durationMs && d.durationMs > 0);
-    
+    const validDebates = debates.filter(d => (d as any).durationMs && (d as any).durationMs > 0);
+
     if (validDebates.length === 0) {
       return { avgTPS: 0, avgResponseTime: 0, totalTokens: 0 };
     }
 
-    const totalTokens = validDebates.reduce((acc, d) => acc + (d.totalUsage?.total_tokens || 0), 0);
-    const totalDuration = validDebates.reduce((acc, d) => acc + (d.durationMs || 0), 0);
-    
+    const totalTokens = validDebates.reduce((acc, d) => acc + ((d as any).totalUsage?.total_tokens || 0), 0);
+    const totalDuration = validDebates.reduce((acc, d) => acc + ((d as any).durationMs || 0), 0);
+
     const avgTPS = calculateTPS(totalTokens, totalDuration);
-    const avgResponseTime = calculateAvgResponseTime(validDebates.map(d => d.durationMs || 0));
+    const avgResponseTime = calculateAvgResponseTime(validDebates.map(d => (d as any).durationMs || 0));
 
     return { avgTPS, avgResponseTime, totalTokens };
   }, [debates]);

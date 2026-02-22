@@ -1,5 +1,5 @@
-import { generateText } from './providers/index.js';
-import type { Message, DebateResult } from './types.js';
+import { generateText } from './providers/index';
+import type { Message, DebateResult } from './types';
 
 export async function calculateRiskScore(
   result: DebateResult,

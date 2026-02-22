@@ -15,7 +15,7 @@ import {
 import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Checkbox } from '@/components/ui/checkbox';
+
 import { Textarea } from '@/components/ui/textarea';
 import { Loader2, ArrowRight } from 'lucide-react';
 import { toast } from 'sonner';
@@ -106,10 +106,12 @@ export function TransferSessionDialog({ session, trigger }: TransferSessionDialo
           </div>
 
           <div className="flex items-center space-x-2">
-            <Checkbox
+            <input
+              type="checkbox"
               id="continue-state"
               checked={continueState}
-              onCheckedChange={(c) => setContinueState(!!c)}
+              onChange={(e) => setContinueState(e.target.checked)}
+              className="h-4 w-4 rounded border-gray-300 text-purple-600 focus:ring-purple-600"
             />
             <Label htmlFor="continue-state" className="text-sm font-normal">
               Continue from last state

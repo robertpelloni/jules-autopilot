@@ -12,7 +12,7 @@
  * - Codex Web (OpenAI)
  */
 
-export type CloudDevProviderId = 
+export type CloudDevProviderId =
   | 'jules'
   | 'devin'
   | 'manus'
@@ -51,7 +51,7 @@ export interface CloudDevCapabilities {
   supportedLanguages: string[];
 }
 
-export type UnifiedSessionStatus = 
+export type UnifiedSessionStatus =
   | 'active'
   | 'completed'
   | 'failed'
@@ -64,11 +64,11 @@ export interface UnifiedSession {
   id: string;
   providerId: CloudDevProviderId;
   providerSessionId: string;
-  
+
   title: string;
   prompt?: string;
   status: UnifiedSessionStatus;
-  
+
   repository?: {
     provider: 'github' | 'gitlab' | 'bitbucket' | 'local';
     owner: string;
@@ -76,14 +76,14 @@ export interface UnifiedSession {
     branch?: string;
     url?: string;
   };
-  
+
   createdAt: string;
   updatedAt: string;
   lastActivityAt?: string;
-  
+
   summary?: string;
   outputs?: UnifiedSessionOutput[];
-  
+
   metadata?: {
     providerSpecific?: Record<string, unknown>;
     cost?: {
@@ -97,7 +97,7 @@ export interface UnifiedSession {
       executionDurationMs?: number;
     };
   };
-  
+
   transferHistory?: SessionTransfer[];
 }
 
@@ -113,16 +113,16 @@ export interface UnifiedActivity {
   id: string;
   sessionId: string;
   providerId: CloudDevProviderId;
-  
+
   type: 'message' | 'plan' | 'progress' | 'result' | 'error' | 'tool_use' | 'code_edit';
   role: 'user' | 'agent' | 'system';
   content: string;
-  
+
   diff?: string;
   bashOutput?: string;
   media?: { data: string; mimeType: string };
   toolCalls?: ToolCall[];
-  
+
   createdAt: string;
   metadata?: Record<string, unknown>;
 }
@@ -168,26 +168,26 @@ export interface SessionTransferRequest {
 export interface CloudDevProviderInterface {
   id: CloudDevProviderId;
   config: CloudDevProviderConfig;
-  
+
   listSessions(): Promise<UnifiedSession[]>;
   getSession(sessionId: string): Promise<UnifiedSession | null>;
   createSession(request: CreateCloudDevSessionRequest): Promise<UnifiedSession>;
   updateSession(sessionId: string, updates: Partial<UnifiedSession>): Promise<UnifiedSession>;
   deleteSession(sessionId: string): Promise<void>;
-  
+
   pauseSession(sessionId: string): Promise<void>;
   resumeSession(sessionId: string, message?: string): Promise<void>;
   cancelSession(sessionId: string): Promise<void>;
-  
+
   listActivities(sessionId: string): Promise<UnifiedActivity[]>;
   sendMessage(sessionId: string, content: string): Promise<UnifiedActivity>;
-  
+
   approvePlan?(sessionId: string): Promise<void>;
   rejectPlan?(sessionId: string, reason?: string): Promise<void>;
-  
+
   exportSession(sessionId: string): Promise<SessionExportData>;
   importSession?(data: SessionExportData): Promise<UnifiedSession>;
-  
+
   getHealth(): Promise<ProviderHealth>;
 }
 
@@ -269,7 +269,7 @@ export const CLOUD_DEV_PROVIDERS: Record<CloudDevProviderId, Omit<CloudDevProvid
     },
     status: 'active',
   },
-  
+
   devin: {
     id: 'devin',
     name: 'Devin',
@@ -293,7 +293,7 @@ export const CLOUD_DEV_PROVIDERS: Record<CloudDevProviderId, Omit<CloudDevProvid
     },
     status: 'active',
   },
-  
+
   manus: {
     id: 'manus',
     name: 'Manus',
@@ -317,7 +317,7 @@ export const CLOUD_DEV_PROVIDERS: Record<CloudDevProviderId, Omit<CloudDevProvid
     },
     status: 'beta',
   },
-  
+
   openhands: {
     id: 'openhands',
     name: 'OpenHands',
@@ -341,7 +341,7 @@ export const CLOUD_DEV_PROVIDERS: Record<CloudDevProviderId, Omit<CloudDevProvid
     },
     status: 'active',
   },
-  
+
   'github-spark': {
     id: 'github-spark',
     name: 'GitHub Spark',
@@ -365,7 +365,7 @@ export const CLOUD_DEV_PROVIDERS: Record<CloudDevProviderId, Omit<CloudDevProvid
     },
     status: 'beta',
   },
-  
+
   blocks: {
     id: 'blocks',
     name: 'Blocks',
@@ -389,7 +389,7 @@ export const CLOUD_DEV_PROVIDERS: Record<CloudDevProviderId, Omit<CloudDevProvid
     },
     status: 'beta',
   },
-  
+
   'claude-code': {
     id: 'claude-code',
     name: 'Claude Code',
@@ -413,7 +413,7 @@ export const CLOUD_DEV_PROVIDERS: Record<CloudDevProviderId, Omit<CloudDevProvid
     },
     status: 'coming_soon',
   },
-  
+
   codex: {
     id: 'codex',
     name: 'Codex',

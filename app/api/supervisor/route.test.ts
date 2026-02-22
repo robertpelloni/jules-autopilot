@@ -5,17 +5,17 @@ import { POST } from './route';
 jest.mock('@/lib/session', () => ({
   getSession: jest.fn(),
 }));
-jest.mock('@/lib/orchestration/providers', () => ({
+jest.mock('@jules/shared', () => ({
   getProvider: jest.fn(),
 }));
-jest.mock('@/lib/orchestration/debate', () => ({
+jest.mock('@jules/shared', () => ({
   runDebate: jest.fn(),
   runConference: jest.fn(),
 }));
-jest.mock('@/lib/orchestration/review', () => ({
+jest.mock('@jules/shared', () => ({
   runCodeReview: jest.fn(),
 }));
-jest.mock('@/lib/orchestration/summarize', () => ({
+jest.mock('@jules/shared', () => ({
   summarizeSession: jest.fn(),
 }));
 
@@ -26,9 +26,9 @@ jest.mock('@/lib/orchestration/summarize', () => ({
 // but let's try standard mock first.
 
 import { getSession } from '@/lib/session';
-import { getProvider } from '@/lib/orchestration/providers';
-import { runDebate } from '@/lib/orchestration/debate';
-import { runCodeReview } from '@/lib/orchestration/review';
+import { getProvider } from '@jules/shared';
+import { runDebate } from '@jules/shared';
+import { runCodeReview } from '@jules/shared';
 
 describe('Supervisor API', () => {
   const mockApiKey = 'test-api-key';

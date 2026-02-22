@@ -1,5 +1,5 @@
 export async function runCodeReview(request) {
-    const { getProvider } = await import('./providers/index.js');
+    const { getProvider } = await import('./providers/index');
     const provider = getProvider(request.provider);
     if (!provider) {
         throw new Error(`Provider ${request.provider} not found`);

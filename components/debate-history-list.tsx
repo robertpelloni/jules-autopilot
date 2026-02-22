@@ -6,7 +6,7 @@ import { ScrollArea } from '@/components/ui/scroll-area';
 import { Badge } from '@/components/ui/badge';
 import { Loader2, MessageSquare, Calendar, Trash2 } from 'lucide-react';
 import { format } from 'date-fns';
-import { DebateResult, Message } from '@/lib/orchestration/types';
+import { DebateResult, Message } from '@jules/shared';
 import { DebateDetailsDialog } from './debate-details-dialog';
 import { Button } from '@/components/ui/button';
 import { toast } from 'sonner';

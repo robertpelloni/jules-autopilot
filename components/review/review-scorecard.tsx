@@ -3,7 +3,7 @@ import { Badge } from "@/components/ui/badge";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { AlertCircle, CheckCircle, Info, XCircle } from "lucide-react";
 import { Progress } from "@/components/ui/progress";
-import { ReviewResult, ReviewIssue } from "@/lib/orchestration/review";
+import { ReviewResult, ReviewIssue } from "@jules/shared";
 
 interface ReviewScorecardProps {
     result: ReviewResult;

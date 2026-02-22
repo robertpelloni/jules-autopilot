@@ -9,7 +9,7 @@ import {
   DialogDescription,
 } from '@/components/ui/dialog';
 import { DebateViewer } from '@/components/debate-viewer';
-import { DebateResult } from '@/lib/orchestration/types';
+import { DebateResult } from '@jules/shared';
 import { Loader2, Download, Play } from 'lucide-react';
 import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';

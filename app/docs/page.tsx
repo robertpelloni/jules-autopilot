@@ -1,4 +1,4 @@
-import { DOCS_CONFIG } from '@/lib/docs';
+import { DOCS_CONFIG } from '@/lib/docs-config';
 import Link from 'next/link';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { ArrowRight } from 'lucide-react';

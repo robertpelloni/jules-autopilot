@@ -1,6 +1,6 @@
 'use client';
 
-import { DebateResult } from '@/lib/orchestration/types';
+import { DebateResult } from '@jules/shared';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';

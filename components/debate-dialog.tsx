@@ -27,7 +27,7 @@ import { toast } from 'sonner';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Card, CardContent } from '@/components/ui/card';
 
-import { Message, Participant, DebateResult } from '@/lib/orchestration/types';
+import { Message, Participant, DebateResult } from '@jules/shared';
 import { DebateViewer } from '@/components/debate-viewer';
 
 export interface DebateDialogProps {

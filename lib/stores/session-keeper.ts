@@ -1,7 +1,7 @@
 import { create } from 'zustand';
 import { persist, createJSONStorage } from 'zustand/middleware';
 import { SessionKeeperConfig } from '@/types/jules';
-import type { DebateResult as OrchestrationDebateResult } from '@/lib/orchestration/types';
+import type { DebateResult as OrchestrationDebateResult } from '@jules/shared';
 import { DAEMON_HTTP_BASE_URL } from '@/lib/config/daemon';
 
 export interface Log {

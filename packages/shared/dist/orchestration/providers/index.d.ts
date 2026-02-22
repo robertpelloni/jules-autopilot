@@ -1,4 +1,4 @@
-import type { ProviderInterface } from '../types.js';
+import type { ProviderInterface } from '../types';
 export declare const providers: Record<string, ProviderInterface>;
 export declare function getProvider(name: string): ProviderInterface | undefined;
 export declare function generateText({ provider, apiKey, model, messages }: {

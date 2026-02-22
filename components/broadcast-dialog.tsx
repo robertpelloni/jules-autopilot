@@ -732,7 +732,7 @@ export function BroadcastDialog({ sessions }: BroadcastDialogProps) {
                 <span>{progress}%</span>
               </div>
               <div className="h-1 w-full bg-zinc-800 rounded-full overflow-hidden">
-                <div 
+                <div
                   className="h-full bg-purple-500 transition-all duration-300"
                   style={{ width: `${progress}%` }}
                 />
@@ -873,7 +873,7 @@ export function BroadcastDialog({ sessions }: BroadcastDialogProps) {
           )}
           {!sending && !deliveryReport && lastFailedSessionIds.length > 0 && (
             <Button
-              onClick={handleRefreshRecoveredAvailability}
+              onClick={() => handleRefreshRecoveredAvailability()}
               disabled={sending || isBackgroundRetrying || refreshingRecoveredAvailability}
               variant="outline"
               className="border-white/20 text-white/80 hover:bg-white/10"
@@ -946,8 +946,8 @@ export function BroadcastDialog({ sessions }: BroadcastDialogProps) {
               )}
             </Button>
           )}
-          <Button 
-            onClick={handleSend} 
+          <Button
+            onClick={handleSend}
             disabled={sending || isBackgroundRetrying || !message.trim() || targetSessions.length === 0}
             className="bg-purple-600 hover:bg-purple-500 text-white"
           >

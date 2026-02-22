@@ -1,7 +1,7 @@
-import { openaiProvider } from './openai.js';
-import { anthropicProvider } from './anthropic.js';
-import { geminiProvider } from './gemini.js';
-import { qwenProvider } from './qwen.js';
+import { openaiProvider } from './openai';
+import { anthropicProvider } from './anthropic';
+import { geminiProvider } from './gemini';
+import { qwenProvider } from './qwen';
 export const providers = {
     openai: openaiProvider,
     anthropic: anthropicProvider,

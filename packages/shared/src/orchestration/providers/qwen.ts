@@ -1,4 +1,4 @@
-import type { CompletionParams, CompletionResult, ProviderInterface } from '../types.js';
+import type { CompletionParams, CompletionResult, ProviderInterface } from '../types';
 
 const QWEN_ENDPOINT = 'https://dashscope.aliyuncs.com/api/v1/services/aigc/text-generation/generation';
 

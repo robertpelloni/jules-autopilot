@@ -1,4 +1,4 @@
-import type { CompletionParams, CompletionResult, ProviderInterface } from '../types.js';
+import type { CompletionParams, CompletionResult, ProviderInterface } from '../types';
 
 export const openaiProvider: ProviderInterface = {
   id: 'openai',

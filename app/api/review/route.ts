@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { runCodeReview, ReviewRequest } from '@/lib/orchestration/review';
+import { runCodeReview, ReviewRequest } from '@jules/shared';
 
 export async function POST(req: NextRequest) {
     try {

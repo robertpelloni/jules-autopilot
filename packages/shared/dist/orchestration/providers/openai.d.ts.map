@@ -1,1 +1,1 @@
-{"version":3,"file":"openai.d.ts","sourceRoot":"","sources":["../../../src/orchestration/providers/openai.ts"],"names":[],"mappings":"AAAA,OAAO,KAAK,EAAsC,iBAAiB,EAAE,MAAM,aAAa,CAAC;AAEzF,eAAO,MAAM,cAAc,EAAE,iBAgE5B,CAAC"}
+{"version":3,"file":"openai.d.ts","sourceRoot":"","sources":["../../../src/orchestration/providers/openai.ts"],"names":[],"mappings":"AAAA,OAAO,KAAK,EAAsC,iBAAiB,EAAE,MAAM,UAAU,CAAC;AAEtF,eAAO,MAAM,cAAc,EAAE,iBAgE5B,CAAC"}

@@ -1,4 +1,4 @@
-import { generateText } from '../orchestration/providers';
+import { generateText } from '@jules/shared';
 import { Activity } from '@/types/jules';
 
 export interface MemoryFile {
@@ -15,7 +15,7 @@ export async function compactSessionHistory(
   activities: Activity[],
   config: { provider: string; apiKey: string; model: string }
 ): Promise<MemoryFile> {
-  
+
   // 1. Filter and Format Activities
   // We only care about user/agent messages, not intermediate tool outputs usually, 
   // unless we want a very detailed log. For memory, high level is better.

@@ -3,10 +3,10 @@
  */
 import { POST } from './route';
 import { NextRequest } from 'next/server';
-import { runCodeReview } from '@/lib/orchestration/review';
+import { runCodeReview } from '@jules/shared';
 
 // Mock the review library
-jest.mock('@/lib/orchestration/review', () => ({
+jest.mock('@jules/shared', () => ({
     runCodeReview: jest.fn()
 }));
 

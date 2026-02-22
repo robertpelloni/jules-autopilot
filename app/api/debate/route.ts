@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { runDebate } from '@/lib/orchestration/debate';
-import { Participant } from '@/lib/orchestration/types';
+import { runDebate } from '@jules/shared';
+import { Participant } from '@jules/shared';
 import { prisma } from '@/lib/prisma';
 
 export const runtime = 'nodejs';
@@ -19,7 +19,7 @@ export async function POST(req: NextRequest) {
 
         const enrichedParticipants = (participants as Participant[]).map((p) => {
             let finalApiKey = p.apiKey;
-            
+
             if (finalApiKey === 'env' || finalApiKey === 'placeholder' || !finalApiKey) {
                 switch (p.provider) {
                     case 'openai':
@@ -36,7 +36,7 @@ export async function POST(req: NextRequest) {
                         break;
                 }
             }
-            
+
             return {
                 ...p,
                 apiKey: finalApiKey
