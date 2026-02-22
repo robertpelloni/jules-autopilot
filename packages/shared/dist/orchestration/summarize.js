@@ -1,22 +1,22 @@
 export async function summarizeSession(history, provider, apiKey, model) {
     const { generateText } = await import('./providers/index.js');
-    const systemPrompt = `You are an expert Technical Project Manager and Archivist.
-  Your goal is to create a structured "Handoff Document" from a conversation history.
+    const systemPrompt = `You are an expert Technical Project Manager and Archivist. 
+  Your goal is to create a structured "Handoff Document" from a conversation history. 
   This document must enable a new agent instance to pick up exactly where the previous one left off without losing context.
-
+  
   Output Format (Markdown):
   ## Executive Summary
   (1-2 sentences on what this session was about)
-
+  
   ## Key Decisions
   - (List technical or product decisions made)
-
+  
   ## Completed Tasks
   - (List items that were successfully finished)
-
+  
   ## Pending Tasks & Next Steps
   - (CRITICAL: List exactly what needs to be done next. Be specific.)
-
+  
   ## Technical Context
   - (List important file paths, variable names, API endpoints, or constraints discovered during the session)
   `;

@@ -63,7 +63,7 @@ _Automated review by Jules AI_`;
 }
 async function runStructuredReview(request, provider) {
     const systemPrompt = `You are an expert code reviewer. Analyze the code and provide a structured JSON response.
-
+    
     Response Format (JSON):
     {
         "summary": "Brief overall summary of the code quality and main issues",
@@ -78,7 +78,7 @@ async function runStructuredReview(request, provider) {
             }
         ]
     }
-
+    
     Focus on:
     1. Correctness and logic bugs
     2. Security vulnerabilities

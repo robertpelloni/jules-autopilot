@@ -104,12 +104,12 @@ export async function runDebate({ history, participants, rounds = 1, topic, onPr
             else {
                 const moderatorPrompt = `You are the Moderator and Judge of this technical debate.
                 ${topic ? `Topic: ${topic}` : ''}
-
+                
                 Review the debate history above.
                 1. Summarize the key arguments from each participant.
                 2. Identify areas of consensus and disagreement.
                 3. Provide a final conclusion or recommendation based on the strongest arguments.
-
+                
                 Format: Markdown.`;
                 // We pass the full history including the new debate turns
                 const synthesis = await provider.complete({

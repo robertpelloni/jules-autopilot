@@ -7,7 +7,7 @@ export async function calculateRiskScore(result, provider, apiKey, model) {
 
     Debate Topic: ${result.topic}
     Summary: ${result.summary}
-
+    
     Consider:
     1. Scope of changes.
     2. Potential for regressions.
