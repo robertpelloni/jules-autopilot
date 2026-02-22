@@ -2,6 +2,15 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.8.9] - 2026-02-22
+
+### Changed
+- **System Sync Protocol**: Comprehensive system synchronization and documentation overhaul.
+- **Unified Intructions**: Consolidated AI instructions (`CLAUDE.md`, etc.) to reference `LLM_INSTRUCTIONS.md`.
+- **Vision and Memory**: Overhauled `VISION.md`, created `MEMORY.md` for coding patterns, and unified `DEPLOY.md`.
+- **Roadmap Audit**: Baselined the roadmap and TODO to prioritize the replacement of mock dashboards.
+- **Git State**: Synced all git submodules and upstream repositories.
+
 ## [0.8.8] - 2026-02-09
 
 ### Added

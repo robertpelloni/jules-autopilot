@@ -57,9 +57,11 @@ This roadmap has been re-baselined against the current code and docs state. Prio
 3. Consolidate duplicated API surfaces (Next vs daemon ownership).
 
 ### Phase B — Product integrity
-1. Replace mock-only dashboards with live data pipelines or clearly mark as preview-only.
-2. Complete at least one non-Jules provider end-to-end to validate abstraction.
-3. Harden auth messaging and remove stale localStorage-sensitive guidance.
+1. Complete `TaskQueueDashboard` (currently static placeholder).
+2. Complete `McpServerDashboard` (currently mock data).
+3. Complete `TerminalStream` to use real `xterm.js` backend websockets.
+4. Complete at least one non-Jules provider (e.g., `devin`, `manus`) end-to-end to validate abstraction.
+5. Harden auth messaging and remove stale localStorage-sensitive guidance.
 
 ### Phase C — Scale and reliability
 1. Expand automated tests (API + integration + E2E critical paths).

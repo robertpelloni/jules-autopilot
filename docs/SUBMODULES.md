@@ -1,34 +1,29 @@
-# Jules UI - Submodule Dashboard
+# Submodule Directory
 
-This document provides a real-time overview of all submodules integrated into the Jules UI project.
+This project (`jules-autopilot`, a.k.a Jules UI) acts as the aggregator and command center for a multi-agent ecosystem. These agents and their orchestrations are linked into this repository as git submodules.
 
-## Directory Structure
+All submodules are located in the `external/` directory, except for `jules-sdk-reference`.
 
-The project follows a strict directory layout:
+| Submodule Name | Path | Description |
+| :--- | :--- | :--- |
+| **Antigravity Orchestration** | `external/antigravity-jules-orchestration` | High-level orchestration for Antigravity (Browser automation) and Jules workflows. Acts as the `agent.scarmonit.com` bridge logic. |
+| **Gemini CLI** | `external/gemini-cli-jules` | Command Line Interface extensions for invoking and managing Gemini agents. |
+| **Google Jules MCP** | `external/google-jules-mcp` | Specific Google integrations for the Model Context Protocol (MCP). |
+| **Jules Action** | `external/jules-action` | GitHub Action integration for automating Jules tasks within CI/CD pipelines. |
+| **Jules Awesome List** | `external/jules-awesome-list` | Curated list of awesome tools, integrations, and resources for the Jules ecosystem. |
+| **Jules MCP Server (Node)** | `external/jules-mcp-server` | Standard Node.js implementation of the Model Context Protocol for Jules. |
+| **Jules MCP (Python)** | `external/jules_mcp` | Python implementation of the Model Context Protocol for Jules. |
+| **Jules System Prompt** | `external/jules-system-prompt` | The core, optimized system prompts and overarching instruction sets used to initialize the agents. |
+| **Jules Task Queue** | `external/jules-task-queue` | The enterprise-grade background queue (often Vercel/Firebase deployed) designed to circumvent the 3-concurrent task limit of Jules AI. |
+| **Jules SDK Reference** | `jules-sdk-reference` | The primary Python SDK reference for interacting programmatically with Jules. |
 
-*   **`app/`**: Next.js App Router pages and API routes.
-*   **`components/`**: React components (UI, Layout, Features).
-*   **`lib/`**: Core utilities, database clients, and business logic.
-*   **`external/`**: **ALL** Git submodules are located here. This isolates external dependencies from the main application code.
-*   **`jules-sdk-reference/`**: Specific SDK reference submodule (sometimes at root for legacy reasons, check path).
+## Updating Submodules
 
-## Submodule Status (Generated: 2025-12-30)
+When instructed to update submodules, agents must run the following from the root:
+```bash
+git submodule update --remote --merge
+```
+After verifying changes, add and commit the updated pointers in the main repository.
 
-| Submodule | Path | Version/Commit | Branch |
-| :--- | :--- | :--- | :--- |
-| **antigravity-jules-orchestration** | `external/antigravity-jules-orchestration` | `71f92ab` (v2.6.1-11) | `HEAD` |
-| **gemini-cli-jules** | `external/gemini-cli-jules` | `9f2fc14` (v0.1.0-3) | `HEAD` |
-| **google-jules-mcp** | `external/google-jules-mcp` | `39b4251` | `main` |
-| **jules-action** | `external/jules-action` | `bff7875` | `ai-assisted` |
-| **jules-awesome-list** | `external/jules-awesome-list` | `0118486` | `main` |
-| **jules-mcp-server** | `external/jules-mcp-server` | `5779789` (v0.1.6) | `HEAD` |
-| **jules-system-prompt** | `external/jules-system-prompt` | `de4a2bf` (v1.0.0-alpha-2) | `HEAD` |
-| **jules-task-queue** | `external/jules-task-queue` | `f11d2ad` | `main` |
-| **jules_mcp** | `external/jules_mcp` | `db11576` | `main` |
-| **jules-sdk-reference** | `jules-sdk-reference` | `51685d6` | `main` |
-
-## Integration Notes
-
-*   **Orchestration**: The `antigravity` module is used for complex multi-agent flows (Debates).
-*   **MCP**: Multiple MCP servers (`google-jules-mcp`, `jules-mcp-server`) are included to test Model Context Protocol compatibility.
-*   **SDK**: The `jules-sdk-reference` is a Python reference implementation often used for cross-checking logic.
+## Submodule Architecture within the UI
+Currently, the UI aggregates status signals from these submodules. Future phases (`ROADMAP.md` Phase 4) intend to build proper management dashboards to install, start, and monitor these local submodules directly from the browser via the Bun Daemon.
