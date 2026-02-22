@@ -72,3 +72,27 @@ model Debate {
   createdAt        DateTime @default(now())
   updatedAt        DateTime @updatedAt
 }
+
+model PluginManifest {
+  id           String   @id // e.g., 'jira-integration'
+  name         String
+  description  String
+  author       String
+  version      String   @default("1.0.0")
+  capabilities String   // JSON array e.g., ["filesystem", "network"]
+  configSchema String?  // Optional JSON schema for keys/secrets
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+  
+  installations InstalledPlugin[]
+}
+
+model InstalledPlugin {
+  id          String   @id @default(uuid())
+  pluginId    String
+  config      String?  // JSON map of user-configured properties
+  isEnabled   Boolean  @default(true)
+  installedAt DateTime @default(now())
+  
+  plugin      PluginManifest @relation(fields: [pluginId], references: [id])
+}
