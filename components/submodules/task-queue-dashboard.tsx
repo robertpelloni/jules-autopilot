@@ -39,7 +39,7 @@ export function TaskQueueDashboard() {
   const [isRunning, setIsRunning] = useState(true);
 
   const getStatusBadge = (status: string) => {
-    switch(status) {
+    switch (status) {
       case 'completed':
         return <Badge variant="outline" className="bg-green-500/10 text-green-400 border-green-500/20 hover:bg-green-500/20">Completed</Badge>;
       case 'running':
@@ -54,7 +54,7 @@ export function TaskQueueDashboard() {
   };
 
   const getPriorityColor = (priority: string) => {
-    switch(priority) {
+    switch (priority) {
       case 'high': return 'text-red-400';
       case 'medium': return 'text-yellow-400';
       case 'low': return 'text-blue-400';
@@ -67,7 +67,7 @@ export function TaskQueueDashboard() {
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
         <Card className="bg-zinc-950 border-white/10">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium text-white/60">Queue Status</CardTitle>
+            <CardTitle className="text-sm font-medium text-white/60 flex items-center gap-2">Queue Status <Badge variant="outline" className="bg-yellow-500/10 text-yellow-500 border-0 px-1 text-[8px] h-4">PREVIEW</Badge></CardTitle>
             <Activity className={`h-4 w-4 ${isRunning ? 'text-green-400' : 'text-yellow-400'}`} />
           </CardHeader>
           <CardContent>
@@ -77,7 +77,7 @@ export function TaskQueueDashboard() {
         </Card>
         <Card className="bg-zinc-950 border-white/10">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium text-white/60">Pending Tasks</CardTitle>
+            <CardTitle className="text-sm font-medium text-white/60 flex items-center gap-2">Pending Tasks <Badge variant="outline" className="bg-yellow-500/10 text-yellow-500 border-0 px-1 text-[8px] h-4">PREVIEW</Badge></CardTitle>
             <Layers className="h-4 w-4 text-purple-400" />
           </CardHeader>
           <CardContent>
@@ -87,7 +87,7 @@ export function TaskQueueDashboard() {
         </Card>
         <Card className="bg-zinc-950 border-white/10">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium text-white/60">Success Rate</CardTitle>
+            <CardTitle className="text-sm font-medium text-white/60 flex items-center gap-2">Success Rate <Badge variant="outline" className="bg-yellow-500/10 text-yellow-500 border-0 px-1 text-[8px] h-4">PREVIEW</Badge></CardTitle>
             <CheckCircle2 className="h-4 w-4 text-green-400" />
           </CardHeader>
           <CardContent>
@@ -97,7 +97,7 @@ export function TaskQueueDashboard() {
         </Card>
         <Card className="bg-zinc-950 border-white/10">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium text-white/60">Throughput</CardTitle>
+            <CardTitle className="text-sm font-medium text-white/60 flex items-center gap-2">Throughput <Badge variant="outline" className="bg-yellow-500/10 text-yellow-500 border-0 px-1 text-[8px] h-4">PREVIEW</Badge></CardTitle>
             <Clock className="h-4 w-4 text-blue-400" />
           </CardHeader>
           <CardContent>
@@ -109,63 +109,66 @@ export function TaskQueueDashboard() {
 
       <Card className="bg-zinc-950 border-white/10">
         <CardHeader className="flex flex-row items-center justify-between pb-2">
-            <div className="space-y-1">
-                <CardTitle className="text-lg font-medium text-white">Task List</CardTitle>
-                <CardDescription className="text-white/40 text-xs">Real-time view of task execution and status.</CardDescription>
-            </div>
+          <div className="space-y-1">
             <div className="flex items-center gap-2">
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => setIsRunning(!isRunning)}
-                  className="h-8 text-xs border-white/10 hover:bg-white/5 bg-transparent"
-                >
-                    {isRunning ? <Pause className="h-3 w-3 mr-2" /> : <Play className="h-3 w-3 mr-2" />}
-                    {isRunning ? 'Pause Queue' : 'Resume Queue'}
-                </Button>
-                <Button
-                  variant="outline"
-                  size="icon"
-                  className="h-8 w-8 border-white/10 hover:bg-white/5 bg-transparent"
-                  onClick={() => setTasks([...tasks])} // Mock refresh
-                >
-                    <RefreshCw className="h-3 w-3" />
-                </Button>
+              <CardTitle className="text-lg font-medium text-white">Task List</CardTitle>
+              <Badge variant="outline" className="bg-yellow-500/10 text-yellow-400 border-yellow-500/20 text-[10px] h-5">PREVIEW MODE</Badge>
             </div>
+            <CardDescription className="text-white/40 text-xs">Simulated task queue. Backend integration ETA: Q3.</CardDescription>
+          </div>
+          <div className="flex items-center gap-2">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => setIsRunning(!isRunning)}
+              className="h-8 text-xs border-white/10 hover:bg-white/5 bg-transparent"
+            >
+              {isRunning ? <Pause className="h-3 w-3 mr-2" /> : <Play className="h-3 w-3 mr-2" />}
+              {isRunning ? 'Pause Queue' : 'Resume Queue'}
+            </Button>
+            <Button
+              variant="outline"
+              size="icon"
+              className="h-8 w-8 border-white/10 hover:bg-white/5 bg-transparent"
+              onClick={() => setTasks([...tasks])} // Mock refresh
+            >
+              <RefreshCw className="h-3 w-3" />
+            </Button>
+          </div>
         </CardHeader>
         <CardContent>
-            <div className="rounded-md border border-white/10">
-              <Table>
-                  <TableHeader>
-                      <TableRow className="border-white/10 hover:bg-white/5">
-                          <TableHead className="text-white/60 h-10 text-xs uppercase tracking-wider">Task ID</TableHead>
-                          <TableHead className="text-white/60 h-10 text-xs uppercase tracking-wider">Type</TableHead>
-                          <TableHead className="text-white/60 h-10 text-xs uppercase tracking-wider">Status</TableHead>
-                          <TableHead className="text-white/60 h-10 text-xs uppercase tracking-wider">Priority</TableHead>
-                          <TableHead className="text-white/60 h-10 text-xs uppercase tracking-wider">Created</TableHead>
-                          <TableHead className="text-white/60 h-10 text-xs uppercase tracking-wider">Duration</TableHead>
-                          <TableHead className="text-white/60 h-10 text-xs uppercase tracking-wider text-right">Actions</TableHead>
-                      </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                      {tasks.map((task) => (
-                          <TableRow key={task.id} className="border-white/10 hover:bg-white/5">
-                              <TableCell className="font-mono text-white/80 text-xs">{task.id}</TableCell>
-                              <TableCell className="text-white/80 text-xs font-medium">{task.type}</TableCell>
-                              <TableCell className="py-2">{getStatusBadge(task.status)}</TableCell>
-                              <TableCell className={`capitalize font-bold text-xs ${getPriorityColor(task.priority)}`}>{task.priority}</TableCell>
-                              <TableCell className="text-white/60 text-xs">{task.created}</TableCell>
-                              <TableCell className="text-white/60 font-mono text-xs">{task.duration}</TableCell>
-                              <TableCell className="text-right py-2">
-                                  <Button variant="ghost" size="icon" className="h-6 w-6 hover:bg-white/10 text-white/40 hover:text-red-400">
-                                      <Trash2 className="h-3 w-3" />
-                                  </Button>
-                              </TableCell>
-                          </TableRow>
-                      ))}
-                  </TableBody>
-              </Table>
-            </div>
+          <div className="rounded-md border border-white/10">
+            <Table>
+              <TableHeader>
+                <TableRow className="border-white/10 hover:bg-white/5">
+                  <TableHead className="text-white/60 h-10 text-xs uppercase tracking-wider">Task ID</TableHead>
+                  <TableHead className="text-white/60 h-10 text-xs uppercase tracking-wider">Type</TableHead>
+                  <TableHead className="text-white/60 h-10 text-xs uppercase tracking-wider">Status</TableHead>
+                  <TableHead className="text-white/60 h-10 text-xs uppercase tracking-wider">Priority</TableHead>
+                  <TableHead className="text-white/60 h-10 text-xs uppercase tracking-wider">Created</TableHead>
+                  <TableHead className="text-white/60 h-10 text-xs uppercase tracking-wider">Duration</TableHead>
+                  <TableHead className="text-white/60 h-10 text-xs uppercase tracking-wider text-right">Actions</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {tasks.map((task) => (
+                  <TableRow key={task.id} className="border-white/10 hover:bg-white/5">
+                    <TableCell className="font-mono text-white/80 text-xs">{task.id}</TableCell>
+                    <TableCell className="text-white/80 text-xs font-medium">{task.type}</TableCell>
+                    <TableCell className="py-2">{getStatusBadge(task.status)}</TableCell>
+                    <TableCell className={`capitalize font-bold text-xs ${getPriorityColor(task.priority)}`}>{task.priority}</TableCell>
+                    <TableCell className="text-white/60 text-xs">{task.created}</TableCell>
+                    <TableCell className="text-white/60 font-mono text-xs">{task.duration}</TableCell>
+                    <TableCell className="text-right py-2">
+                      <Button variant="ghost" size="icon" className="h-6 w-6 hover:bg-white/10 text-white/40 hover:text-red-400">
+                        <Trash2 className="h-3 w-3" />
+                      </Button>
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          </div>
         </CardContent>
       </Card>
     </div>

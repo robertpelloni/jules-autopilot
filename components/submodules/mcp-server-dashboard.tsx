@@ -28,7 +28,7 @@ export function McpServerDashboard() {
   );
 
   const getCategoryIcon = (category: string) => {
-    switch(category) {
+    switch (category) {
       case 'FileSystem': return <FileCode className="h-4 w-4 text-blue-400" />;
       case 'Terminal': return <Terminal className="h-4 w-4 text-green-400" />;
       case 'Browser': return <Globe className="h-4 w-4 text-orange-400" />;
@@ -43,7 +43,7 @@ export function McpServerDashboard() {
       <div className="grid gap-4 md:grid-cols-3">
         <Card className="bg-zinc-950 border-white/10">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium text-white/60">Server Status</CardTitle>
+            <CardTitle className="text-sm font-medium text-white/60 flex items-center gap-2">Server Status <Badge variant="outline" className="bg-yellow-500/10 text-yellow-500 border-0 px-1 text-[8px] h-4">PREVIEW</Badge></CardTitle>
             <Server className="h-4 w-4 text-green-400 animate-pulse" />
           </CardHeader>
           <CardContent>
@@ -53,7 +53,7 @@ export function McpServerDashboard() {
         </Card>
         <Card className="bg-zinc-950 border-white/10">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium text-white/60">Active Tools</CardTitle>
+            <CardTitle className="text-sm font-medium text-white/60 flex items-center gap-2">Active Tools <Badge variant="outline" className="bg-yellow-500/10 text-yellow-500 border-0 px-1 text-[8px] h-4">PREVIEW</Badge></CardTitle>
             <Zap className="h-4 w-4 text-yellow-400" />
           </CardHeader>
           <CardContent>
@@ -63,7 +63,7 @@ export function McpServerDashboard() {
         </Card>
         <Card className="bg-zinc-950 border-white/10">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium text-white/60">Security Level</CardTitle>
+            <CardTitle className="text-sm font-medium text-white/60 flex items-center gap-2">Security Level <Badge variant="outline" className="bg-yellow-500/10 text-yellow-500 border-0 px-1 text-[8px] h-4">PREVIEW</Badge></CardTitle>
             <ShieldCheck className="h-4 w-4 text-purple-400" />
           </CardHeader>
           <CardContent>
@@ -75,9 +75,12 @@ export function McpServerDashboard() {
 
       <Card className="bg-zinc-950 border-white/10">
         <CardHeader className="flex flex-col md:flex-row md:items-center justify-between gap-4">
-          <div>
-            <CardTitle className="text-lg font-medium text-white">Tools Registry</CardTitle>
-            <CardDescription className="text-white/40">Available capabilities exposed via MCP.</CardDescription>
+          <div className="space-y-1">
+            <div className="flex items-center gap-2">
+              <CardTitle className="text-lg font-medium text-white">Tools Registry</CardTitle>
+              <Badge variant="outline" className="bg-yellow-500/10 text-yellow-400 border-yellow-500/20 text-[10px] h-5">PREVIEW MODE</Badge>
+            </div>
+            <CardDescription className="text-white/40 text-xs">Simulated MCP registry. Dynamic MCP connections ETA: Q3.</CardDescription>
           </div>
           <div className="relative w-full md:w-64">
             <Search className="absolute left-2 top-2.5 h-4 w-4 text-white/40" />
