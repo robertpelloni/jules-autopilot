@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { updateTransferSchema } from '@/lib/schemas/transfers';
 import { z } from 'zod';
+import { handleInternalError, handleZodError, createErrorResponse } from '@/lib/api/error';
 
 export async function GET(
     req: Request,

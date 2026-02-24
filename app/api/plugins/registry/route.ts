@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { PluginRegistryItem } from '@/lib/schemas/plugins';
+import { handleInternalError } from '@/lib/api/error';
 
 const SEED_PLUGINS = [
     {
@@ -98,10 +99,6 @@ export async function GET() {
 
         return NextResponse.json({ plugins: registryItems });
     } catch (error) {
-        console.error('[Plugins API] Failed to fetch registry:', error);
-        return NextResponse.json(
-            { error: 'Internal server error while fetching plugin registry' },
-            { status: 500 }
-        );
+        return handleInternalError(req, error);
     }
 }
