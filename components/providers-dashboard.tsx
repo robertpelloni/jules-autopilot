@@ -284,17 +284,24 @@ export function ProvidersDashboard() {
                           </CardDescription>
                         </div>
                       </div>
-                      <Badge
-                        variant="outline"
-                        className={cn(
-                          'text-[10px] px-1.5 py-0.5 border-0',
-                          config.status === 'active' && 'bg-green-500/20 text-green-400',
-                          config.status === 'beta' && 'bg-yellow-500/20 text-yellow-400',
-                          config.status === 'coming_soon' && 'bg-blue-500/20 text-blue-400'
+                      <div className="flex items-center gap-2">
+                        {providerId !== 'openhands' && providerId !== 'jules' && (
+                          <Badge variant="outline" className="text-[10px] px-1.5 py-0.5 border-yellow-500/20 bg-yellow-500/10 text-yellow-500 font-semibold tracking-wider">
+                            PREVIEW
+                          </Badge>
                         )}
-                      >
-                        {config.status.replace('_', ' ')}
-                      </Badge>
+                        <Badge
+                          variant="outline"
+                          className={cn(
+                            'text-[10px] px-1.5 py-0.5 border-0',
+                            config.status === 'active' && 'bg-green-500/20 text-green-400',
+                            config.status === 'beta' && 'bg-yellow-500/20 text-yellow-400',
+                            config.status === 'coming_soon' && 'bg-blue-500/20 text-blue-400'
+                          )}
+                        >
+                          {config.status.replace('_', ' ')}
+                        </Badge>
+                      </div>
                     </div>
                   </CardHeader>
                   <CardContent className="space-y-3">

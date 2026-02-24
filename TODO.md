@@ -84,11 +84,11 @@ Acceptance criteria:
 
 ### 6) Provider framework maturity (non-Jules providers)
 
-- [ ] For each provider (`devin`, `manus`, `openhands`, `github-spark`, `blocks`, `claude-code`, `codex`):
-  - [ ] Implement `createSession`, `getSessionStatus`, `sendMessage`, `listSessions`, `terminateSession`.
-  - [ ] Add provider-specific error mapping and retry strategy.
-  - [ ] Add configuration validation + health check.
-- [ ] Keep mock mode opt-in and visibly labeled.
+- [x] For each provider (`devin`, `manus`, `openhands`, `github-spark`, `blocks`, `claude-code`, `codex`):
+  - [x] Implement `createSession`, `getSessionStatus`, `sendMessage`, `listSessions`, `terminateSession`.
+  - [x] Add provider-specific error mapping and retry strategy.
+  - [x] Add configuration validation + health check.
+- [x] Keep mock mode opt-in and visibly labeled.
 
 Acceptance criteria:
 - At least one non-Jules provider reaches end-to-end production-ready status first.

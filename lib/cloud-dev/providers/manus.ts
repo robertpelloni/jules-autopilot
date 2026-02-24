@@ -10,6 +10,7 @@ import type {
 export class ManusProvider extends BaseCloudDevProvider {
   constructor(apiKey?: string) {
     super('manus', apiKey);
+    console.warn('[ManusProvider] Running in Mock/Preview mode. This provider is not yet production-ready.');
   }
 
   private mockSessions: UnifiedSession[] = [
@@ -63,9 +64,9 @@ export class ManusProvider extends BaseCloudDevProvider {
 
   async updateSession(sessionId: string, updates: Partial<UnifiedSession>): Promise<UnifiedSession> {
     if (this.isMock) {
-        const session = await this.getSession(sessionId);
-        if (!session) throw new Error('Session not found');
-        return { ...session, ...updates };
+      const session = await this.getSession(sessionId);
+      if (!session) throw new Error('Session not found');
+      return { ...session, ...updates };
     }
     throw new ProviderNotImplementedError('manus', 'updateSession');
   }

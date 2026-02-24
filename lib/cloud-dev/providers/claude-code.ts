@@ -9,6 +9,7 @@ import type {
 export class ClaudeCodeProvider extends BaseCloudDevProvider {
   constructor(apiKey?: string) {
     super('claude-code', apiKey);
+    console.warn('[ClaudeCodeProvider] Running in Mock/Preview mode. This provider is not yet production-ready.');
   }
 
   async listSessions(): Promise<UnifiedSession[]> {
@@ -36,8 +37,8 @@ export class ClaudeCodeProvider extends BaseCloudDevProvider {
 
   async updateSession(_sessionId: string, _updates: Partial<UnifiedSession>): Promise<UnifiedSession> {
     if (this.isMock) {
-        const session = { id: _sessionId, providerId: 'claude-code' as const, providerSessionId: _sessionId, title: 'Mock', status: 'active' as const, createdAt: '', updatedAt: '' };
-        return { ...session, ..._updates };
+      const session = { id: _sessionId, providerId: 'claude-code' as const, providerSessionId: _sessionId, title: 'Mock', status: 'active' as const, createdAt: '', updatedAt: '' };
+      return { ...session, ..._updates };
     }
     throw new ProviderNotImplementedError('claude-code', 'updateSession');
   }

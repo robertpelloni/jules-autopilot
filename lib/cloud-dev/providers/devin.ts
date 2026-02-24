@@ -10,6 +10,7 @@ import type {
 export class DevinProvider extends BaseCloudDevProvider {
   constructor(apiKey?: string) {
     super('devin', apiKey);
+    console.warn('[DevinProvider] Running in Mock/Preview mode. This provider is not yet production-ready.');
   }
 
   private mockSessions: UnifiedSession[] = [
@@ -41,41 +42,41 @@ export class DevinProvider extends BaseCloudDevProvider {
 
   async listSessions(): Promise<UnifiedSession[]> {
     if (this.isMock) {
-        return this.mockSessions;
+      return this.mockSessions;
     }
     throw new ProviderNotImplementedError('devin', 'listSessions');
   }
 
   async getHealth(): Promise<ProviderHealth> {
-      if (this.isMock) {
-          return { status: 'healthy', latencyMs: 50, lastChecked: new Date().toISOString() };
-      }
-      return super.getHealth();
+    if (this.isMock) {
+      return { status: 'healthy', latencyMs: 50, lastChecked: new Date().toISOString() };
+    }
+    return super.getHealth();
   }
 
   async getSession(sessionId: string): Promise<UnifiedSession | null> {
     if (this.isMock) {
-        return this.mockSessions.find(s => s.id === sessionId || s.providerSessionId === sessionId) || null;
+      return this.mockSessions.find(s => s.id === sessionId || s.providerSessionId === sessionId) || null;
     }
     throw new ProviderNotImplementedError('devin', 'getSession');
   }
 
   async createSession(request: CreateCloudDevSessionRequest): Promise<UnifiedSession> {
     if (this.isMock) {
-        const newSession: UnifiedSession = {
-            id: `devin:mock-${Date.now()}`,
-            providerId: 'devin',
-            providerSessionId: `mock-${Date.now()}`,
-            title: request.title || 'New Devin Session',
-            status: 'active',
-            createdAt: new Date().toISOString(),
-            updatedAt: new Date().toISOString(),
-            lastActivityAt: new Date().toISOString(),
-            url: `https://preview.devin.ai/mock-${Date.now()}`,
-            repository: request.repositoryUrl ? { owner: 'mock', name: 'repo', url: request.repositoryUrl } : undefined
-        };
-        this.mockSessions.unshift(newSession);
-        return newSession;
+      const newSession: UnifiedSession = {
+        id: `devin:mock-${Date.now()}`,
+        providerId: 'devin',
+        providerSessionId: `mock-${Date.now()}`,
+        title: request.title || 'New Devin Session',
+        status: 'active',
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
+        lastActivityAt: new Date().toISOString(),
+        url: `https://preview.devin.ai/mock-${Date.now()}`,
+        repository: request.repositoryUrl ? { owner: 'mock', name: 'repo', url: request.repositoryUrl } : undefined
+      };
+      this.mockSessions.unshift(newSession);
+      return newSession;
     }
     throw new ProviderNotImplementedError('devin', 'createSession');
   }
@@ -102,27 +103,27 @@ export class DevinProvider extends BaseCloudDevProvider {
 
   async listActivities(sessionId: string): Promise<UnifiedActivity[]> {
     if (this.isMock) {
-        // Return some dummy activities
-        return [
-            {
-                id: 'act-1',
-                sessionId: sessionId,
-                providerId: 'devin',
-                type: 'message',
-                role: 'assistant',
-                content: 'I am analyzing the codebase...',
-                createdAt: new Date(Date.now() - 300000).toISOString(),
-            },
-            {
-                id: 'act-2',
-                sessionId: sessionId,
-                providerId: 'devin',
-                type: 'command',
-                content: 'npm install',
-                metadata: { exitCode: 0 },
-                createdAt: new Date(Date.now() - 200000).toISOString(),
-            }
-        ];
+      // Return some dummy activities
+      return [
+        {
+          id: 'act-1',
+          sessionId: sessionId,
+          providerId: 'devin',
+          type: 'message',
+          role: 'assistant',
+          content: 'I am analyzing the codebase...',
+          createdAt: new Date(Date.now() - 300000).toISOString(),
+        },
+        {
+          id: 'act-2',
+          sessionId: sessionId,
+          providerId: 'devin',
+          type: 'command',
+          content: 'npm install',
+          metadata: { exitCode: 0 },
+          createdAt: new Date(Date.now() - 200000).toISOString(),
+        }
+      ];
     }
     throw new ProviderNotImplementedError('devin', 'listActivities');
   }
