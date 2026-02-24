@@ -6,6 +6,7 @@ import type {
   SessionExportData,
   UnifiedSession,
 } from '@/types/cloud-dev';
+import { fetchJson } from '@/lib/api/client';
 
 export class SessionTransferService {
   private providers: Map<CloudDevProviderId, CloudDevProviderInterface>;
@@ -39,7 +40,7 @@ export class SessionTransferService {
     };
 
     try {
-      const res = await fetch('/api/transfers', {
+      const dbTransfer = await fetchJson<{ id: string }>('/api/transfers', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -48,14 +49,10 @@ export class SessionTransferService {
           targetProvider: request.targetProvider,
         }),
       });
-      if (res.ok) {
-        const data = await res.json();
-        dbTransferId = data.id;
-        transfer.id = dbTransferId;
-        this.activeTransfers.set(transfer.id, transfer);
-      } else {
-        throw new Error('Failed to create transfer record in database');
-      }
+
+      dbTransferId = dbTransfer.id;
+      transfer.id = dbTransferId;
+      this.activeTransfers.set(transfer.id, transfer);
     } catch (dbError) {
       console.warn('Backend transfer creation failed, falling back to local-only tracking:', dbError);
       this.activeTransfers.set(transfer.id, transfer);
@@ -67,7 +64,7 @@ export class SessionTransferService {
     ) => {
       if (!dbTransferId) return;
       try {
-        await fetch(`/api/transfers/${dbTransferId}`, {
+        await fetchJson(`/api/transfers/${dbTransferId}`, {
           method: 'PATCH',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ status, ...updates }),

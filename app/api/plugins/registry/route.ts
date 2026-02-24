@@ -54,7 +54,7 @@ const SEED_PLUGINS = [
     }
 ];
 
-export async function GET() {
+export async function GET(req: Request) {
     try {
         // 1. Check if registry is empty. If so, seed it.
         const count = await prisma.pluginManifest.count();

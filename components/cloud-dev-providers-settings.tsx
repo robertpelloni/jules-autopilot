@@ -7,11 +7,11 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Badge } from '@/components/ui/badge';
-import { 
-  Check, 
-  X, 
-  Eye, 
-  EyeOff, 
+import {
+  Check,
+  X,
+  Eye,
+  EyeOff,
   ExternalLink,
   Loader2,
   Cloud,
@@ -24,6 +24,7 @@ import {
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
+import { AlertTriangle } from 'lucide-react';
 
 const PROVIDER_ICONS: Record<CloudDevProviderId, React.ReactNode> = {
   jules: <Sparkles className="h-4 w-4" />,
@@ -99,9 +100,9 @@ function ProviderKeyInput({ providerId, currentKey, onSave, onClear }: ProviderK
           </div>
         </div>
         {config.website && (
-          <a 
-            href={config.website} 
-            target="_blank" 
+          <a
+            href={config.website}
+            target="_blank"
             rel="noopener noreferrer"
             className="text-white/40 hover:text-white/60 transition-colors"
           >
@@ -132,8 +133,8 @@ function ProviderKeyInput({ providerId, currentKey, onSave, onClear }: ProviderK
             </button>
           </div>
           {isDirty && value && (
-            <Button 
-              size="sm" 
+            <Button
+              size="sm"
               onClick={handleSave}
               disabled={isSaving || config.status === 'coming_soon'}
               className="bg-purple-600 hover:bg-purple-500"
@@ -142,8 +143,8 @@ function ProviderKeyInput({ providerId, currentKey, onSave, onClear }: ProviderK
             </Button>
           )}
           {hasKey && !isDirty && (
-            <Button 
-              size="sm" 
+            <Button
+              size="sm"
               variant="ghost"
               onClick={handleClear}
               className="text-red-400 hover:text-red-300 hover:bg-red-500/10"
@@ -152,7 +153,7 @@ function ProviderKeyInput({ providerId, currentKey, onSave, onClear }: ProviderK
             </Button>
           )}
         </div>
-        
+
         <div className="flex flex-wrap gap-1.5 mt-2">
           {config.capabilities.supportsGitHub && (
             <Badge variant="outline" className="text-[10px] px-1.5 py-0 bg-white/5">GitHub</Badge>
@@ -178,7 +179,7 @@ function ProviderKeyInput({ providerId, currentKey, onSave, onClear }: ProviderK
 export function CloudDevProvidersSettings() {
   const { apiKeys, setApiKey, initializeProviders, getConfiguredProviders } = useCloudDevStore();
   const [localKeys, setLocalKeys] = useState<CloudDevApiKeys>({});
-  
+
   // Initialize local state from store
   useEffect(() => {
     setLocalKeys(apiKeys);
@@ -202,11 +203,11 @@ export function CloudDevProvidersSettings() {
   const activeProvidersList = Object.entries(CLOUD_DEV_PROVIDERS)
     .filter(([, config]) => config.status === 'active')
     .map(([id]) => id as CloudDevProviderId);
-  
+
   const betaProvidersList = Object.entries(CLOUD_DEV_PROVIDERS)
     .filter(([, config]) => config.status === 'beta')
     .map(([id]) => id as CloudDevProviderId);
-  
+
   const comingSoonProvidersList = Object.entries(CLOUD_DEV_PROVIDERS)
     .filter(([, config]) => config.status === 'coming_soon')
     .map(([id]) => id as CloudDevProviderId);
@@ -224,9 +225,17 @@ export function CloudDevProvidersSettings() {
         </Badge>
       </div>
 
-      <p className="text-xs text-white/50">
-        Connect your AI coding agent accounts to manage sessions across multiple providers from a single dashboard.
-      </p>
+      <div className="space-y-2">
+        <p className="text-xs text-white/50">
+          Connect your AI coding agent accounts to manage sessions across multiple providers from a single dashboard.
+        </p>
+        <div className="flex items-start gap-2 bg-yellow-500/10 border border-yellow-500/20 rounded-md p-3">
+          <AlertTriangle className="h-4 w-4 text-yellow-500 shrink-0 mt-0.5" />
+          <p className="text-xs text-yellow-200/70">
+            <strong>Security Notice:</strong> These provider credentials are stored strictly in your browser&apos;s local storage. They are not encrypted at rest and are never sent to our servers except to execute language model requests.
+          </p>
+        </div>
+      </div>
 
       {/* Active Providers */}
       {activeProvidersList.length > 0 && (

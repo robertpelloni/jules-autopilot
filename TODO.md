@@ -110,9 +110,9 @@ Acceptance criteria:
 
 ### 8) Auth/account consistency cleanup
 
-- [ ] Remove stale API-key localStorage guidance where not architecturally true.
-- [ ] Clearly separate “session auth” vs “provider credential configuration” in UI copy.
-- [ ] Validate secure handling for any remaining key material.
+- [x] Remove stale API-key localStorage guidance where not architecturally true.
+- [x] Clearly separate “session auth” vs “provider credential configuration” in UI copy.
+- [x] Validate secure handling for any remaining key material.
 
 Acceptance criteria:
 - No contradictory auth/credential messaging in UI/docs.
@@ -122,9 +122,9 @@ Acceptance criteria:
 
 ### 9) Standardized error contracts
 
-- [ ] Define shared error response shape for all APIs.
-- [ ] Normalize status codes and error payloads.
-- [ ] Add UI error handling adapters so surfaces present consistent failure states.
+- [x] Define shared error response shape for all APIs.
+- [x] Normalize status codes and error payloads.
+- [x] Add UI error handling adapters so surfaces present consistent failure states.
 
 Acceptance criteria:
 - Frontend components consume one error contract.
@@ -134,9 +134,9 @@ Acceptance criteria:
 
 ### 10) Observability and diagnostics baseline
 
-- [ ] Add request IDs/correlation IDs across Next + daemon requests.
-- [ ] Add structured logs for provider calls, debate flow, template CRUD, keeper actions.
-- [ ] Expose operator-friendly diagnostics endpoint/set.
+- [x] Add request IDs/correlation IDs across Next + daemon requests.
+- [x] Add structured logs for provider calls, debate flow, template CRUD, keeper actions.
+- [x] Expose operator-friendly diagnostics endpoint/set.
 
 Acceptance criteria:
 - Core flows are traceable across boundaries.

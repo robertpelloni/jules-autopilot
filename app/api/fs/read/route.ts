@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import fs from 'fs/promises';
 import path from 'path';
+import { createErrorResponse, handleInternalError } from '@/lib/api/error';
 
 export async function GET(req: NextRequest) {
   try {
@@ -8,7 +9,7 @@ export async function GET(req: NextRequest) {
     const filePath = searchParams.get('path');
 
     if (!filePath) {
-        return NextResponse.json({ error: 'Path is required' }, { status: 400 });
+      return createErrorResponse(req, 'BAD_REQUEST', 'Path is required', 400);
     }
 
     const basePath = process.cwd();
@@ -16,16 +17,13 @@ export async function GET(req: NextRequest) {
 
     // Security check: ensure we don't break out of the project root
     if (!fullPath.startsWith(basePath)) {
-        return NextResponse.json({ error: 'Access denied' }, { status: 403 });
+      return createErrorResponse(req, 'FORBIDDEN', 'Access denied', 403);
     }
 
     const content = await fs.readFile(fullPath, 'utf-8');
 
     return NextResponse.json({ content });
   } catch (error) {
-    return NextResponse.json(
-      { error: error instanceof Error ? error.message : 'Unknown error' },
-      { status: 500 }
-    );
+    return handleInternalError(req, error);
   }
 }

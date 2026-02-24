@@ -1,8 +1,9 @@
 import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import type { SessionTemplate } from '@prisma/client';
+import { handleInternalError } from '@/lib/api/error';
 
-export async function GET() {
+export async function GET(req: Request) {
   try {
     let templates = await prisma.sessionTemplate.findMany({
       orderBy: { updatedAt: 'desc' }
@@ -55,15 +56,15 @@ export async function GET() {
     }
 
     const formatted = templates.map((t: SessionTemplate) => ({
-        ...t,
-        tags: t.tags ? t.tags.split(',') : [],
-        createdAt: t.createdAt.toISOString(),
-        updatedAt: t.updatedAt.toISOString()
+      ...t,
+      tags: t.tags ? t.tags.split(',') : [],
+      createdAt: t.createdAt.toISOString(),
+      updatedAt: t.updatedAt.toISOString()
     }));
 
     return NextResponse.json(formatted);
   } catch (error) {
-    return NextResponse.json({ error: 'Failed to fetch templates' }, { status: 500 });
+    return handleInternalError(req, error);
   }
 }
 
@@ -84,12 +85,12 @@ export async function POST(req: Request) {
     });
 
     return NextResponse.json({
-        ...template,
-        tags: template.tags ? template.tags.split(',') : [],
-        createdAt: template.createdAt.toISOString(),
-        updatedAt: template.updatedAt.toISOString()
+      ...template,
+      tags: template.tags ? template.tags.split(',') : [],
+      createdAt: template.createdAt.toISOString(),
+      updatedAt: template.updatedAt.toISOString()
     });
   } catch (error) {
-    return NextResponse.json({ error: 'Failed to create template' }, { status: 500 });
+    return handleInternalError(req, error);
   }
 }

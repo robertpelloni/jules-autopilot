@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
+import { createErrorResponse, handleInternalError } from '@/lib/api/error';
 
 export async function GET(
   req: NextRequest,
@@ -14,10 +15,7 @@ export async function GET(
     });
 
     if (!debate) {
-      return NextResponse.json(
-        { error: 'Debate not found' },
-        { status: 404 }
-      );
+      return createErrorResponse(req, 'NOT_FOUND', 'Debate not found', 404);
     }
 
     const formattedDebate = {
@@ -29,11 +27,7 @@ export async function GET(
 
     return NextResponse.json(formattedDebate);
   } catch (error) {
-    console.error('Failed to fetch debate:', error);
-    return NextResponse.json(
-      { error: 'Failed to fetch debate' },
-      { status: 500 }
-    );
+    return handleInternalError(req, error);
   }
 }
 
@@ -51,10 +45,6 @@ export async function DELETE(
 
     return NextResponse.json({ success: true });
   } catch (error) {
-    console.error('Failed to delete debate:', error);
-    return NextResponse.json(
-      { error: 'Failed to delete debate' },
-      { status: 500 }
-    );
+    return handleInternalError(req, error);
   }
 }

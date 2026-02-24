@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { compactSessionHistory } from '@/lib/memory/compaction';
 import fs from 'fs/promises';
 import path from 'path';
+import { createErrorResponse, handleInternalError } from '@/lib/api/error';
 
 export async function POST(req: NextRequest) {
   try {
@@ -11,7 +12,7 @@ export async function POST(req: NextRequest) {
     if (action === 'compact') {
       const { activities, config } = body;
       if (!activities || !config) {
-        return NextResponse.json({ error: 'Missing activities or config' }, { status: 400 });
+        return createErrorResponse(req, 'BAD_REQUEST', 'Missing activities or config', 400);
       }
 
       const memory = await compactSessionHistory(activities, config);
@@ -21,7 +22,7 @@ export async function POST(req: NextRequest) {
     if (action === 'save') {
       const { memory, filename } = body;
       if (!memory || !filename) {
-        return NextResponse.json({ error: 'Missing memory or filename' }, { status: 400 });
+        return createErrorResponse(req, 'BAD_REQUEST', 'Missing memory or filename', 400);
       }
 
       // Ensure .jules/memories exists
@@ -33,34 +34,33 @@ export async function POST(req: NextRequest) {
 
       return NextResponse.json({ success: true, path: filePath });
     }
-    
+
     if (action === 'list') {
-        const memoriesDir = path.join(process.cwd(), '.jules', 'memories');
-        try {
-            await fs.access(memoriesDir);
-            const files = await fs.readdir(memoriesDir);
-            const memories = [];
-            for (const file of files) {
-                if (file.endsWith('.json')) {
-                    const content = await fs.readFile(path.join(memoriesDir, file), 'utf-8');
-                    try {
-                        memories.push({ filename: file, ...JSON.parse(content) });
-                    } catch (e) {
-                        console.error(`Failed to parse memory file ${file}`, e);
-                    }
-                }
+      const memoriesDir = path.join(process.cwd(), '.jules', 'memories');
+      try {
+        await fs.access(memoriesDir);
+        const files = await fs.readdir(memoriesDir);
+        const memories = [];
+        for (const file of files) {
+          if (file.endsWith('.json')) {
+            const content = await fs.readFile(path.join(memoriesDir, file), 'utf-8');
+            try {
+              memories.push({ filename: file, ...JSON.parse(content) });
+            } catch (e) {
+              console.error(`Failed to parse memory file ${file}`, e);
             }
-            return NextResponse.json({ memories });
-        } catch (e) {
-            return NextResponse.json({ memories: [] });
+          }
         }
+        return NextResponse.json({ memories });
+      } catch (e) {
+        return NextResponse.json({ memories: [] });
+      }
     }
 
-    return NextResponse.json({ error: 'Invalid action' }, { status: 400 });
+    return createErrorResponse(req, 'BAD_REQUEST', 'Invalid action', 400);
 
   } catch (error) {
-    console.error('Memory API Error:', error);
-    return NextResponse.json({ error: error instanceof Error ? error.message : 'Unknown error' }, { status: 500 });
+    return handleInternalError(req, error);
   }
 }
 
@@ -70,21 +70,21 @@ export async function DELETE(req: NextRequest) {
     const filename = searchParams.get('filename');
 
     if (!filename) {
-      return NextResponse.json({ error: 'Missing filename' }, { status: 400 });
+      return createErrorResponse(req, 'BAD_REQUEST', 'Missing filename', 400);
     }
 
     // Security check: prevent directory traversal
     if (filename.includes('..') || filename.includes('/') || filename.includes('\\')) {
-        return NextResponse.json({ error: 'Invalid filename' }, { status: 400 });
+      return createErrorResponse(req, 'BAD_REQUEST', 'Invalid filename', 400);
     }
 
     const memoriesDir = path.join(process.cwd(), '.jules', 'memories');
     const filePath = path.join(memoriesDir, filename);
 
     try {
-        await fs.access(filePath);
+      await fs.access(filePath);
     } catch {
-        return NextResponse.json({ error: 'File not found' }, { status: 404 });
+      return createErrorResponse(req, 'NOT_FOUND', 'File not found', 404);
     }
 
     await fs.unlink(filePath);
@@ -92,8 +92,7 @@ export async function DELETE(req: NextRequest) {
     return NextResponse.json({ success: true });
 
   } catch (error) {
-    console.error('Memory Delete Error:', error);
-    return NextResponse.json({ error: error instanceof Error ? error.message : 'Unknown error' }, { status: 500 });
+    return handleInternalError(req, error);
   }
 }
 
