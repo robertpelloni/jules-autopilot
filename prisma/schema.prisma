@@ -96,3 +96,16 @@ model InstalledPlugin {
   
   plugin      PluginManifest @relation(fields: [pluginId], references: [id])
 }
+
+model SessionTransfer {
+  id               String   @id @default(uuid())
+  sourceProvider   String
+  sourceSessionId  String
+  targetProvider   String
+  targetSessionId  String?
+  status           String   @default("queued") // queued, preparing, exporting, importing, ready, failed
+  transferredItems String   @default("{\"activities\": 0, \"files\": 0}") // JSON
+  errorReason      String?
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+}

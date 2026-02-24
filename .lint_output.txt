@@ -1,0 +1,515 @@
+
+> jules-ui@0.8.9 lint C:\Users\hyper\workspace\jules-autopilot
+> eslint
+
+
+C:\Users\hyper\workspace\jules-autopilot\app\api\analytics\route.ts
+  103:11  warning  'recentSessions' is assigned a value but never used  @typescript-eslint/no-unused-vars
+
+C:\Users\hyper\workspace\jules-autopilot\app\api\auth\login\route.ts
+  11:12  warning  'e' is defined but never used  @typescript-eslint/no-unused-vars
+
+C:\Users\hyper\workspace\jules-autopilot\app\api\debate\history\route.ts
+  37:27  warning  'req' is defined but never used  @typescript-eslint/no-unused-vars
+
+C:\Users\hyper\workspace\jules-autopilot\app\api\logs\keeper\route.ts
+  11:12  warning  'error' is defined but never used  @typescript-eslint/no-unused-vars
+  28:12  warning  'error' is defined but never used  @typescript-eslint/no-unused-vars
+
+C:\Users\hyper\workspace\jules-autopilot\app\api\memory\route.ts
+  54:18  warning  'e' is defined but never used  @typescript-eslint/no-unused-vars
+
+C:\Users\hyper\workspace\jules-autopilot\app\api\plugins\[id]\route.ts
+  89:21  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+
+C:\Users\hyper\workspace\jules-autopilot\app\api\settings\keeper\route.ts
+  35:12  warning  'error' is defined but never used  @typescript-eslint/no-unused-vars
+  65:12  warning  'error' is defined but never used  @typescript-eslint/no-unused-vars
+
+C:\Users\hyper\workspace\jules-autopilot\app\api\supervisor\clear\route.ts
+  14:12  warning  'error' is defined but never used  @typescript-eslint/no-unused-vars
+
+C:\Users\hyper\workspace\jules-autopilot\app\api\system\status\route.ts
+   4:8   warning  'path' is defined but never used        @typescript-eslint/no-unused-vars
+  22:14  warning  '_' is assigned a value but never used  @typescript-eslint/no-unused-vars
+
+C:\Users\hyper\workspace\jules-autopilot\app\api\system\submodules\route.ts
+  20:12  warning  'error' is defined but never used  @typescript-eslint/no-unused-vars
+
+C:\Users\hyper\workspace\jules-autopilot\app\api\templates\[id]\route.ts
+  28:12  warning  'error' is defined but never used  @typescript-eslint/no-unused-vars
+  40:12  warning  'error' is defined but never used  @typescript-eslint/no-unused-vars
+
+C:\Users\hyper\workspace\jules-autopilot\app\api\templates\route.ts
+  65:12  warning  'error' is defined but never used  @typescript-eslint/no-unused-vars
+  92:12  warning  'error' is defined but never used  @typescript-eslint/no-unused-vars
+
+C:\Users\hyper\workspace\jules-autopilot\app\docs\page.tsx
+  3:16  warning  'CardContent' is defined but never used  @typescript-eslint/no-unused-vars
+
+C:\Users\hyper\workspace\jules-autopilot\app\plugins\page.tsx
+  8:34  warning  'Star' is defined but never used         @typescript-eslint/no-unused-vars
+  8:52  warning  'Globe' is defined but never used        @typescript-eslint/no-unused-vars
+  9:10  warning  'ContextHelp' is defined but never used  @typescript-eslint/no-unused-vars
+
+C:\Users\hyper\workspace\jules-autopilot\app\settings\account\page.tsx
+  10:34  warning  'AvatarImage' is defined but never used  @typescript-eslint/no-unused-vars
+
+C:\Users\hyper\workspace\jules-autopilot\app\settings\page.tsx
+  2:10  warning  'Badge' is defined but never used  @typescript-eslint/no-unused-vars
+
+C:\Users\hyper\workspace\jules-autopilot\app\system\internals\page.tsx
+  7:10  warning  'GitBranch' is defined but never used  @typescript-eslint/no-unused-vars
+
+C:\Users\hyper\workspace\jules-autopilot\app\system\page.tsx
+  60:6   warning  React Hook useEffect has a missing dependency: 'fetchStatus'. Either include it or remove the dependency array  react-hooks/exhaustive-deps
+  88:52  error    Unexpected any. Specify a different type                                                                        @typescript-eslint/no-explicit-any
+  88:77  error    Unexpected any. Specify a different type                                                                        @typescript-eslint/no-explicit-any
+  94:70  error    Unexpected any. Specify a different type                                                                        @typescript-eslint/no-explicit-any
+  95:72  error    Unexpected any. Specify a different type                                                                        @typescript-eslint/no-explicit-any
+  98:82  error    Unexpected any. Specify a different type                                                                        @typescript-eslint/no-explicit-any
+
+C:\Users\hyper\workspace\jules-autopilot\app\system\submodules\[name]\page.tsx
+  5:52  warning  'CardDescription' is defined but never used  @typescript-eslint/no-unused-vars
+
+C:\Users\hyper\workspace\jules-autopilot\apps\cli\src\app.tsx
+  19:9  warning  'ws' is assigned a value but never used                                                                     @typescript-eslint/no-unused-vars
+  23:6  warning  React Hook useEffect has a missing dependency: 'connect'. Either include it or remove the dependency array  react-hooks/exhaustive-deps
+
+C:\Users\hyper\workspace\jules-autopilot\apps\cli\src\hooks\useWebSocket.ts
+  143:52  error  Error: Cannot access variable before it is declared
+
+`connect` is accessed before it is declared, which prevents the earlier access from updating when this value changes over time.
+
+C:\Users\hyper\workspace\jules-autopilot\apps\cli\src\hooks\useWebSocket.ts:143:52
+  141 |         if (reconnectAttemptsRef.current < WS_DEFAULTS.MAX_RECONNECT_ATTEMPTS) {
+  142 |           reconnectAttemptsRef.current++;
+> 143 |           reconnectTimeoutRef.current = setTimeout(connect, WS_DEFAULTS.RECONNECT_DELAY);
+      |                                                    ^^^^^^^ `connect` accessed before it is declared
+  144 |         } else {
+  145 |           useAppStore.setState({ error: 'Max reconnect attempts reached' });
+  146 |         }
+
+C:\Users\hyper\workspace\jules-autopilot\apps\cli\src\hooks\useWebSocket.ts:122:3
+  120 |   }, []);
+  121 |
+> 122 |   const connect = useCallback(() => {
+      |   ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+> 123 |     if (wsRef.current?.readyState === WebSocket.OPEN) {
+      | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+> 124 |       return;
+      ΓÇª
+      | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+> 156 |     }
+      | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+> 157 |   }, [handleMessage]);
+      | ^^^^^^^^^^^^^^^^^^^^^^^ `connect` is declared here
+  158 |
+  159 |   const disconnect = useCallback(() => {
+  160 |     if (reconnectTimeoutRef.current) {  react-hooks/immutability
+
+C:\Users\hyper\workspace\jules-autopilot\apps\cli\src\screens\Dashboard.tsx
+   9:37  warning  'onNavigate' is defined but never used                                                                            @typescript-eslint/no-unused-vars
+  23:6   warning  React Hook useEffect has a missing dependency: 'refreshStatus'. Either include it or remove the dependency array  react-hooks/exhaustive-deps
+  25:20  warning  'key' is defined but never used                                                                                   @typescript-eslint/no-unused-vars
+
+C:\Users\hyper\workspace\jules-autopilot\apps\cli\src\screens\Logs.tsx
+  9:32  warning  'onNavigate' is defined but never used  @typescript-eslint/no-unused-vars
+
+C:\Users\hyper\workspace\jules-autopilot\apps\cli\src\screens\SessionList.tsx
+  10:49  warning  'onNavigate' is defined but never used  @typescript-eslint/no-unused-vars
+
+C:\Users\hyper\workspace\jules-autopilot\apps\cli\src\screens\Settings.tsx
+  9:36  warning  'onNavigate' is defined but never used  @typescript-eslint/no-unused-vars
+
+C:\Users\hyper\workspace\jules-autopilot\components\SessionKeeper.tsx
+   3:31  warning  'useRef' is defined but never used                       @typescript-eslint/no-unused-vars
+   6:30  warning  'Check' is defined but never used                        @typescript-eslint/no-unused-vars
+   6:47  warning  'Users' is defined but never used                        @typescript-eslint/no-unused-vars
+  11:10  warning  'getArchivedSessions' is defined but never used          @typescript-eslint/no-unused-vars
+  14:10  warning  'SessionKeeperConfig' is defined but never used          @typescript-eslint/no-unused-vars
+  18:15  warning  'Session' is defined but never used                      @typescript-eslint/no-unused-vars
+  21:11  warning  'SupervisorState' is defined but never used              @typescript-eslint/no-unused-vars
+  32:9   warning  'router' is assigned a value but never used              @typescript-eslint/no-unused-vars
+  39:20  warning  'setStatusSummary' is assigned a value but never used    @typescript-eslint/no-unused-vars
+  40:5   warning  'sessionStates' is assigned a value but never used       @typescript-eslint/no-unused-vars
+  40:20  warning  'updateSessionState' is assigned a value but never used  @typescript-eslint/no-unused-vars
+
+C:\Users\hyper\workspace\jules-autopilot\components\activity-feed.tsx
+    4:8    warning  'useSWR' is defined but never used                                                                                                                                                                                                                                                       @typescript-eslint/no-unused-vars
+   18:10   warning  'Tooltip' is defined but never used                                                                                                                                                                                                                                                      @typescript-eslint/no-unused-vars
+   18:19   warning  'TooltipContent' is defined but never used                                                                                                                                                                                                                                               @typescript-eslint/no-unused-vars
+   18:35   warning  'TooltipProvider' is defined but never used                                                                                                                                                                                                                                              @typescript-eslint/no-unused-vars
+   18:52   warning  'TooltipTrigger' is defined but never used                                                                                                                                                                                                                                               @typescript-eslint/no-unused-vars
+   20:10   warning  'Send' is defined but never used                                                                                                                                                                                                                                                         @typescript-eslint/no-unused-vars
+   30:10   warning  'DebateDialog' is defined but never used                                                                                                                                                                                                                                                 @typescript-eslint/no-unused-vars
+   85:137  warning  'onReviewArtifact' is defined but never used                                                                                                                                                                                                                                             @typescript-eslint/no-unused-vars
+   92:9    warning  'scrollAreaRef' is assigned a value but never used                                                                                                                                                                                                                                       @typescript-eslint/no-unused-vars
+   96:9    warning  'prevIdsRef' is assigned a value but never used                                                                                                                                                                                                                                          @typescript-eslint/no-unused-vars
+   97:10   warning  'localError' is assigned a value but never used                                                                                                                                                                                                                                          @typescript-eslint/no-unused-vars
+  755:87   error    Unexpected any. Specify a different type                                                                                                                                                                                                                                                 @typescript-eslint/no-explicit-any
+  779:35   warning  Using `<img>` could result in slower LCP and higher bandwidth. Consider using `<Image />` from `next/image` or a custom image loader to automatically optimize images. This may incur additional usage or cost from your provider. See: https://nextjs.org/docs/messages/no-img-element  @next/next/no-img-element
+
+C:\Users\hyper\workspace\jules-autopilot\components\activity-input.tsx
+  3:28  warning  'useEffect' is defined but never used  @typescript-eslint/no-unused-vars
+
+C:\Users\hyper\workspace\jules-autopilot\components\activity-item.tsx
+  138:21  warning  Using `<img>` could result in slower LCP and higher bandwidth. Consider using `<Image />` from `next/image` or a custom image loader to automatically optimize images. This may incur additional usage or cost from your provider. See: https://nextjs.org/docs/messages/no-img-element  @next/next/no-img-element
+
+C:\Users\hyper\workspace\jules-autopilot\components\analytics-dashboard.tsx
+   7:15  warning  'Session' is defined but never used                 @typescript-eslint/no-unused-vars
+   7:24  warning  'Source' is defined but never used                  @typescript-eslint/no-unused-vars
+   7:32  warning  'Activity' is defined but never used                @typescript-eslint/no-unused-vars
+   8:10  warning  'calculateSessionHealth' is defined but never used  @typescript-eslint/no-unused-vars
+   9:10  warning  'calculateDiffStats' is defined but never used      @typescript-eslint/no-unused-vars
+  19:18  warning  'subDays' is defined but never used                 @typescript-eslint/no-unused-vars
+  19:27  warning  'isAfter' is defined but never used                 @typescript-eslint/no-unused-vars
+  19:46  warning  'differenceInMinutes' is defined but never used     @typescript-eslint/no-unused-vars
+  19:67  warning  'startOfDay' is defined but never used              @typescript-eslint/no-unused-vars
+  20:67  warning  'MessageSquare' is defined but never used           @typescript-eslint/no-unused-vars
+  23:11  warning  'client' is assigned a value but never used         @typescript-eslint/no-unused-vars
+  39:17  warning  'error' is assigned a value but never used          @typescript-eslint/no-unused-vars
+  58:47  error    Unexpected any. Specify a different type            @typescript-eslint/no-explicit-any
+
+C:\Users\hyper\workspace\jules-autopilot\components\app-layout.tsx
+   29:29  warning  'initialView' is defined but never used                                                                             @typescript-eslint/no-unused-vars
+   31:19  warning  'setConfig' is assigned a value but never used                                                                      @typescript-eslint/no-unused-vars
+   74:9   warning  'handleApiKeySuccess' is assigned a value but never used                                                            @typescript-eslint/no-unused-vars
+  141:6   warning  React Hook useEffect has a missing dependency: 'selectedSession'. Either include it or remove the dependency array  react-hooks/exhaustive-deps
+  194:9   warning  'handleSessionSelectById' is assigned a value but never used                                                        @typescript-eslint/no-unused-vars
+
+C:\Users\hyper\workspace\jules-autopilot\components\artifact-browser.tsx
+  138:14  warning  Using `<img>` could result in slower LCP and higher bandwidth. Consider using `<Image />` from `next/image` or a custom image loader to automatically optimize images. This may incur additional usage or cost from your provider. See: https://nextjs.org/docs/messages/no-img-element  @next/next/no-img-element
+
+C:\Users\hyper\workspace\jules-autopilot\components\broadcast-dialog.tsx
+  539:9  warning  The 'handleRefreshRecoveredAvailability' function makes the dependencies of useEffect Hook (at line 617) change on every render. To fix this, wrap the definition of 'handleRefreshRecoveredAvailability' in its own useCallback() Hook  react-hooks/exhaustive-deps
+
+C:\Users\hyper\workspace\jules-autopilot\components\cloud-dev-providers-settings.tsx
+  179:31  warning  'initializeProviders' is assigned a value but never used  @typescript-eslint/no-unused-vars
+  188:9   warning  'totalProviders' is assigned a value but never used       @typescript-eslint/no-unused-vars
+
+C:\Users\hyper\workspace\jules-autopilot\components\debate-dialog.tsx
+  256:18  warning  '_' is defined but never used             @typescript-eslint/no-unused-vars
+  387:82  error    Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+
+C:\Users\hyper\workspace\jules-autopilot\components\debate-viewer.tsx
+  10:35  warning  'AlertTriangle' is defined but never used  @typescript-eslint/no-unused-vars
+
+C:\Users\hyper\workspace\jules-autopilot\components\debate-visualizer.tsx
+  20:3   warning  'AlertTriangle' is defined but never used  @typescript-eslint/no-unused-vars
+  21:3   warning  'CheckCircle2' is defined but never used   @typescript-eslint/no-unused-vars
+  22:3   warning  'XCircle' is defined but never used        @typescript-eslint/no-unused-vars
+  80:32  error    Unexpected any. Specify a different type   @typescript-eslint/no-explicit-any
+
+C:\Users\hyper\workspace\jules-autopilot\components\docs-sidebar.tsx
+  9:10  warning  'Book' is defined but never used  @typescript-eslint/no-unused-vars
+
+C:\Users\hyper\workspace\jules-autopilot\components\layout\app-header.tsx
+  31:3  warning  'User' is defined but never used  @typescript-eslint/no-unused-vars
+
+C:\Users\hyper\workspace\jules-autopilot\components\memory-manager.tsx
+   7:75  warning  'DialogFooter' is defined but never used  @typescript-eslint/no-unused-vars
+   9:16  warning  'CardHeader' is defined but never used    @typescript-eslint/no-unused-vars
+   9:28  warning  'CardTitle' is defined but never used     @typescript-eslint/no-unused-vars
+  12:23  warning  'Download' is defined but never used      @typescript-eslint/no-unused-vars
+
+C:\Users\hyper\workspace\jules-autopilot\components\providers-dashboard.tsx
+   93:5  warning  'apiKeys' is assigned a value but never used                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                @typescript-eslint/no-unused-vars
+  140:7  error    Error: Calling setState synchronously within an effect can trigger cascading renders
+
+Effects are intended to synchronize state between React and external systems such as manually updating the DOM, state management libraries, or other platform APIs. In general, the body of an effect should do one or both of the following:
+* Update external systems with the latest state from React.
+* Subscribe for updates from some external system, calling setState in a callback function when external state changes.
+
+Calling setState synchronously within an effect body causes cascading renders that can hurt performance, and is not recommended. (https://react.dev/learn/you-might-not-need-an-effect).
+
+C:\Users\hyper\workspace\jules-autopilot\components\providers-dashboard.tsx:140:7
+  138 |     if (configuredProviders.length > 0) {
+  139 |       fetchAllSessions();
+> 140 |       checkAllHealth();
+      |       ^^^^^^^^^^^^^^ Avoid calling setState() directly within an effect
+  141 |     }
+  142 |   }, [configuredProviders.length]);
+  143 |  react-hooks/set-state-in-effect
+  142:6  warning  React Hook useEffect has missing dependencies: 'checkAllHealth' and 'fetchAllSessions'. Either include them or remove the dependency array                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                  react-hooks/exhaustive-deps
+
+C:\Users\hyper\workspace\jules-autopilot\components\review\review-scorecard.tsx
+  13:37  warning  'rawOutput' is assigned a value but never used  @typescript-eslint/no-unused-vars
+
+C:\Users\hyper\workspace\jules-autopilot\components\session-card.tsx
+  5:10  warning  'Card' is defined but never used   @typescript-eslint/no-unused-vars
+  6:10  warning  'Badge' is defined but never used  @typescript-eslint/no-unused-vars
+
+C:\Users\hyper\workspace\jules-autopilot\components\session-health-badge.tsx
+  2:35  warning  'TooltipProvider' is defined but never used  @typescript-eslint/no-unused-vars
+
+C:\Users\hyper\workspace\jules-autopilot\components\session-keeper-log-panel.tsx
+  1:17  warning  'useRef' is defined but never used     @typescript-eslint/no-unused-vars
+  1:25  warning  'useEffect' is defined but never used  @typescript-eslint/no-unused-vars
+
+C:\Users\hyper\workspace\jules-autopilot\components\settings-dialog.tsx
+   9:10  warning  'Settings' is defined but never used  @typescript-eslint/no-unused-vars
+  15:10  warning  'cn' is defined but never used        @typescript-eslint/no-unused-vars
+
+C:\Users\hyper\workspace\jules-autopilot\components\submodule-dashboard.tsx
+   3:10  warning  'ScrollArea' is defined but never used    @typescript-eslint/no-unused-vars
+   4:46  warning  'BookOpen' is defined but never used      @typescript-eslint/no-unused-vars
+   4:62  warning  'ShieldCheck' is defined but never used   @typescript-eslint/no-unused-vars
+  21:38  error    Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  22:39  error    Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+
+C:\Users\hyper\workspace\jules-autopilot\components\submodules\mcp-server-dashboard.tsx
+  6:10  warning  'Button' is defined but never used  @typescript-eslint/no-unused-vars
+
+C:\Users\hyper\workspace\jules-autopilot\components\submodules\task-queue-dashboard.tsx
+  21:3  warning  'XCircle' is defined but never used      @typescript-eslint/no-unused-vars
+  23:3  warning  'AlertCircle' is defined but never used  @typescript-eslint/no-unused-vars
+
+C:\Users\hyper\workspace\jules-autopilot\components\submodules\terminal-stream.tsx
+   7:33  warning  'RefreshCw' is defined but never used                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                    @typescript-eslint/no-unused-vars
+   7:44  warning  'Maximize2' is defined but never used                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                    @typescript-eslint/no-unused-vars
+   9:10  warning  'DAEMON_WS_URL' is defined but never used                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                @typescript-eslint/no-unused-vars
+  32:5   error    Error: Calling setState synchronously within an effect can trigger cascading renders
+
+Effects are intended to synchronize state between React and external systems such as manually updating the DOM, state management libraries, or other platform APIs. In general, the body of an effect should do one or both of the following:
+* Update external systems with the latest state from React.
+* Subscribe for updates from some external system, calling setState in a callback function when external state changes.
+
+Calling setState synchronously within an effect body causes cascading renders that can hurt performance, and is not recommended. (https://react.dev/learn/you-might-not-need-an-effect).
+
+C:\Users\hyper\workspace\jules-autopilot\components\submodules\terminal-stream.tsx:32:5
+  30 |     });
+  31 |
+> 32 |     setLogs(formattedLogs);
+     |     ^^^^^^^ Avoid calling setState() directly within an effect
+  33 |   }, [storeLogs, isRunning]);
+  34 |
+  35 |   // Auto-scroll to bottom  react-hooks/set-state-in-effect
+
+C:\Users\hyper\workspace\jules-autopilot\components\transfer-progress.tsx
+  3:10  warning  'useEffect' is defined but never used  @typescript-eslint/no-unused-vars
+
+C:\Users\hyper\workspace\jules-autopilot\lib\cloud-dev\providers\blocks.ts
+   1:1   error    Do not use "@ts-nocheck" because it alters compilation errors  @typescript-eslint/ban-ts-comment
+  20:20  warning  '_sessionId' is defined but never used                         @typescript-eslint/no-unused-vars
+  46:23  warning  '_sessionId' is defined but never used                         @typescript-eslint/no-unused-vars
+  47:22  warning  '_sessionId' is defined but never used                         @typescript-eslint/no-unused-vars
+  48:23  warning  '_sessionId' is defined but never used                         @typescript-eslint/no-unused-vars
+  48:43  warning  '_message' is defined but never used                           @typescript-eslint/no-unused-vars
+  49:23  warning  '_sessionId' is defined but never used                         @typescript-eslint/no-unused-vars
+  51:24  warning  '_sessionId' is defined but never used                         @typescript-eslint/no-unused-vars
+
+C:\Users\hyper\workspace\jules-autopilot\lib\cloud-dev\providers\claude-code.ts
+   1:1   error    Do not use "@ts-nocheck" because it alters compilation errors  @typescript-eslint/ban-ts-comment
+  20:20  warning  '_sessionId' is defined but never used                         @typescript-eslint/no-unused-vars
+  46:23  warning  '_sessionId' is defined but never used                         @typescript-eslint/no-unused-vars
+  47:22  warning  '_sessionId' is defined but never used                         @typescript-eslint/no-unused-vars
+  48:23  warning  '_sessionId' is defined but never used                         @typescript-eslint/no-unused-vars
+  48:43  warning  '_message' is defined but never used                           @typescript-eslint/no-unused-vars
+  49:23  warning  '_sessionId' is defined but never used                         @typescript-eslint/no-unused-vars
+  51:24  warning  '_sessionId' is defined but never used                         @typescript-eslint/no-unused-vars
+
+C:\Users\hyper\workspace\jules-autopilot\lib\cloud-dev\providers\codex.ts
+   1:1   error    Do not use "@ts-nocheck" because it alters compilation errors  @typescript-eslint/ban-ts-comment
+  20:20  warning  '_sessionId' is defined but never used                         @typescript-eslint/no-unused-vars
+  46:23  warning  '_sessionId' is defined but never used                         @typescript-eslint/no-unused-vars
+  47:22  warning  '_sessionId' is defined but never used                         @typescript-eslint/no-unused-vars
+  48:23  warning  '_sessionId' is defined but never used                         @typescript-eslint/no-unused-vars
+  48:43  warning  '_message' is defined but never used                           @typescript-eslint/no-unused-vars
+  49:23  warning  '_sessionId' is defined but never used                         @typescript-eslint/no-unused-vars
+  51:24  warning  '_sessionId' is defined but never used                         @typescript-eslint/no-unused-vars
+
+C:\Users\hyper\workspace\jules-autopilot\lib\cloud-dev\providers\devin.ts
+    1:1   error    Do not use "@ts-nocheck" because it alters compilation errors  @typescript-eslint/ban-ts-comment
+   84:23  warning  '_sessionId' is defined but never used                         @typescript-eslint/no-unused-vars
+   84:43  warning  '_updates' is defined but never used                           @typescript-eslint/no-unused-vars
+   88:23  warning  '_sessionId' is defined but never used                         @typescript-eslint/no-unused-vars
+   92:22  warning  '_sessionId' is defined but never used                         @typescript-eslint/no-unused-vars
+   96:23  warning  '_sessionId' is defined but never used                         @typescript-eslint/no-unused-vars
+   96:43  warning  '_message' is defined but never used                           @typescript-eslint/no-unused-vars
+  100:23  warning  '_sessionId' is defined but never used                         @typescript-eslint/no-unused-vars
+  131:21  warning  '_sessionId' is defined but never used                         @typescript-eslint/no-unused-vars
+  131:41  warning  '_content' is defined but never used                           @typescript-eslint/no-unused-vars
+
+C:\Users\hyper\workspace\jules-autopilot\lib\cloud-dev\providers\github-spark.ts
+   1:1   error    Do not use "@ts-nocheck" because it alters compilation errors  @typescript-eslint/ban-ts-comment
+  20:20  warning  '_sessionId' is defined but never used                         @typescript-eslint/no-unused-vars
+  46:23  warning  '_sessionId' is defined but never used                         @typescript-eslint/no-unused-vars
+  47:22  warning  '_sessionId' is defined but never used                         @typescript-eslint/no-unused-vars
+  48:23  warning  '_sessionId' is defined but never used                         @typescript-eslint/no-unused-vars
+  48:43  warning  '_message' is defined but never used                           @typescript-eslint/no-unused-vars
+  49:23  warning  '_sessionId' is defined but never used                         @typescript-eslint/no-unused-vars
+  51:24  warning  '_sessionId' is defined but never used                         @typescript-eslint/no-unused-vars
+
+C:\Users\hyper\workspace\jules-autopilot\lib\cloud-dev\providers\jules.ts
+    1:1   error    Do not use "@ts-nocheck" because it alters compilation errors  @typescript-eslint/ban-ts-comment
+  127:5   warning  '_updates' is defined but never used                           @typescript-eslint/no-unused-vars
+  136:23  warning  '_sessionId' is defined but never used                         @typescript-eslint/no-unused-vars
+  194:39  warning  '_reason' is defined but never used                            @typescript-eslint/no-unused-vars
+
+C:\Users\hyper\workspace\jules-autopilot\lib\cloud-dev\providers\manus.ts
+   1:1   error    Do not use "@ts-nocheck" because it alters compilation errors  @typescript-eslint/ban-ts-comment
+   7:3   warning  'ProviderHealth' is defined but never used                     @typescript-eslint/no-unused-vars
+  74:23  warning  '_sessionId' is defined but never used                         @typescript-eslint/no-unused-vars
+  75:22  warning  '_sessionId' is defined but never used                         @typescript-eslint/no-unused-vars
+  76:23  warning  '_sessionId' is defined but never used                         @typescript-eslint/no-unused-vars
+  76:43  warning  '_message' is defined but never used                           @typescript-eslint/no-unused-vars
+  77:23  warning  '_sessionId' is defined but never used                         @typescript-eslint/no-unused-vars
+
+C:\Users\hyper\workspace\jules-autopilot\lib\cloud-dev\providers\openhands.ts
+  1:32  warning  'ProviderNotImplementedError' is defined but never used  @typescript-eslint/no-unused-vars
+
+C:\Users\hyper\workspace\jules-autopilot\lib\cloud-dev\transfer.ts
+  31:9  error  'transfer' is never reassigned. Use 'const' instead  prefer-const
+
+C:\Users\hyper\workspace\jules-autopilot\lib\jules\client.test.ts
+  2:23  warning  'JulesAPIError' is defined but never used  @typescript-eslint/no-unused-vars
+
+C:\Users\hyper\workspace\jules-autopilot\lib\jules\client.ts
+    6:3   warning  'CreateActivityRequest' is defined but never used  @typescript-eslint/no-unused-vars
+  417:32  error    Unexpected any. Specify a different type           @typescript-eslint/no-explicit-any
+  533:96  error    Unexpected any. Specify a different type           @typescript-eslint/no-explicit-any
+  569:25  error    Unexpected any. Specify a different type           @typescript-eslint/no-explicit-any
+  753:34  error    Unexpected any. Specify a different type           @typescript-eslint/no-explicit-any
+  753:48  error    Unexpected any. Specify a different type           @typescript-eslint/no-explicit-any
+  754:28  error    Unexpected any. Specify a different type           @typescript-eslint/no-explicit-any
+
+C:\Users\hyper\workspace\jules-autopilot\lib\session-utils.ts
+   6:40  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  14:55  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+
+C:\Users\hyper\workspace\jules-autopilot\lib\stores\cloud-dev.ts
+   13:10  warning  'createProvider' is defined but never used  @typescript-eslint/no-unused-vars
+  166:69  error    Unexpected any. Specify a different type    @typescript-eslint/no-explicit-any
+
+C:\Users\hyper\workspace\jules-autopilot\lib\stores\session-keeper.ts
+   12:13  error    Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+   69:58  error    Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  133:47  error    Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  143:18  warning  'error' is defined but never used         @typescript-eslint/no-unused-vars
+  176:63  error    Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  185:18  warning  'error' is defined but never used         @typescript-eslint/no-unused-vars
+
+C:\Users\hyper\workspace\jules-autopilot\middleware.ts
+  1:10  warning  'NextResponse' is defined but never used  @typescript-eslint/no-unused-vars
+  2:15  warning  'NextRequest' is defined but never used   @typescript-eslint/no-unused-vars
+  3:10  warning  'decrypt' is defined but never used       @typescript-eslint/no-unused-vars
+
+C:\Users\hyper\workspace\jules-autopilot\next.config.ts
+  8:10  warning  'e' is defined but never used  @typescript-eslint/no-unused-vars
+
+C:\Users\hyper\workspace\jules-autopilot\packages\shared\dist\orchestration\debate.js
+  52:23  warning  'msg' is assigned a value but never used  @typescript-eslint/no-unused-vars
+
+C:\Users\hyper\workspace\jules-autopilot\packages\shared\dist\orchestration\providers\anthropic.js
+  39:22  warning  'apiKey' is defined but never used  @typescript-eslint/no-unused-vars
+
+C:\Users\hyper\workspace\jules-autopilot\packages\shared\dist\orchestration\providers\index.test.js
+  3:7  warning  'mockOpenAI' is assigned a value but never used     @typescript-eslint/no-unused-vars
+  8:7  warning  'mockAnthropic' is assigned a value but never used  @typescript-eslint/no-unused-vars
+
+C:\Users\hyper\workspace\jules-autopilot\packages\shared\dist\orchestration\providers\qwen.js
+   1:7   warning  'QWEN_ENDPOINT' is assigned a value but never used  @typescript-eslint/no-unused-vars
+  57:22  warning  'apiKey' is defined but never used                  @typescript-eslint/no-unused-vars
+
+C:\Users\hyper\workspace\jules-autopilot\packages\shared\dist\orchestration\review.js
+  37:24  warning  '_' is assigned a value but never used  @typescript-eslint/no-unused-vars
+
+C:\Users\hyper\workspace\jules-autopilot\packages\shared\dist\orchestration\types.d.ts
+  42:18  error  An interface declaring no members is equivalent to its supertype  @typescript-eslint/no-empty-object-type
+  65:16  error  Unexpected any. Specify a different type                          @typescript-eslint/no-explicit-any
+
+C:\Users\hyper\workspace\jules-autopilot\packages\shared\jest.config.js
+  1:33  error    A `require()` style import is forbidden                         @typescript-eslint/no-require-imports
+  6:1   warning  Assign object to a variable before exporting as module default  import/no-anonymous-default-export
+
+C:\Users\hyper\workspace\jules-autopilot\packages\shared\src\orchestration\debate.test.ts
+  38:43  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  69:48  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  81:48  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  96:43  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+
+C:\Users\hyper\workspace\jules-autopilot\packages\shared\src\orchestration\debate.ts
+   2:23  warning  'generateText' is defined but never used  @typescript-eslint/no-unused-vars
+  70:23  warning  'msg' is assigned a value but never used  @typescript-eslint/no-unused-vars
+
+C:\Users\hyper\workspace\jules-autopilot\packages\shared\src\orchestration\providers\anthropic.ts
+  45:20  warning  'apiKey' is defined but never used  @typescript-eslint/no-unused-vars
+
+C:\Users\hyper\workspace\jules-autopilot\packages\shared\src\orchestration\providers\index.test.ts
+   6:7  warning  'mockOpenAI' is assigned a value but never used     @typescript-eslint/no-unused-vars
+  12:7  warning  'mockAnthropic' is assigned a value but never used  @typescript-eslint/no-unused-vars
+
+C:\Users\hyper\workspace\jules-autopilot\packages\shared\src\orchestration\providers\index.ts
+  1:34  warning  'Message' is defined but never used  @typescript-eslint/no-unused-vars
+
+C:\Users\hyper\workspace\jules-autopilot\packages\shared\src\orchestration\providers\openai.ts
+  15:20  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+
+C:\Users\hyper\workspace\jules-autopilot\packages\shared\src\orchestration\providers\qwen.ts
+   3:7   warning  'QWEN_ENDPOINT' is assigned a value but never used  @typescript-eslint/no-unused-vars
+  16:20  error    Unexpected any. Specify a different type            @typescript-eslint/no-explicit-any
+  66:20  warning  'apiKey' is defined but never used                  @typescript-eslint/no-unused-vars
+
+C:\Users\hyper\workspace\jules-autopilot\packages\shared\src\orchestration\review.ts
+    1:15  warning  'LLMProvider' is defined but never used       @typescript-eslint/no-unused-vars
+    1:28  warning  'Message' is defined but never used           @typescript-eslint/no-unused-vars
+    1:37  warning  'CompletionResult' is defined but never used  @typescript-eslint/no-unused-vars
+   77:25  warning  '_' is assigned a value but never used        @typescript-eslint/no-unused-vars
+  107:70  error    Unexpected any. Specify a different type      @typescript-eslint/no-explicit-any
+  159:73  error    Unexpected any. Specify a different type      @typescript-eslint/no-explicit-any
+
+C:\Users\hyper\workspace\jules-autopilot\packages\shared\src\orchestration\supervisor.ts
+  2:15  warning  'Message' is defined but never used  @typescript-eslint/no-unused-vars
+
+C:\Users\hyper\workspace\jules-autopilot\packages\shared\src\orchestration\types.ts
+  48:18  error  An interface declaring no members is equivalent to its supertype  @typescript-eslint/no-empty-object-type
+  73:14  error  Unexpected any. Specify a different type                          @typescript-eslint/no-explicit-any
+
+C:\Users\hyper\workspace\jules-autopilot\scripts\check-version-sync.js
+  1:12  error  A `require()` style import is forbidden  @typescript-eslint/no-require-imports
+  2:14  error  A `require()` style import is forbidden  @typescript-eslint/no-require-imports
+
+C:\Users\hyper\workspace\jules-autopilot\scripts\fix-shared-imports.js
+  1:12  error  A `require()` style import is forbidden  @typescript-eslint/no-require-imports
+  2:14  error  A `require()` style import is forbidden  @typescript-eslint/no-require-imports
+
+C:\Users\hyper\workspace\jules-autopilot\scripts\get-submodule-info.js
+  51:22  warning  'e' is defined but never used  @typescript-eslint/no-unused-vars
+  59:22  warning  'e' is defined but never used  @typescript-eslint/no-unused-vars
+  65:22  warning  'e' is defined but never used  @typescript-eslint/no-unused-vars
+
+C:\Users\hyper\workspace\jules-autopilot\server\daemon.ts
+    4:10   warning  'runDebate' is defined but never used                      @typescript-eslint/no-unused-vars
+    7:15   warning  'Session' is defined but never used                        @typescript-eslint/no-unused-vars
+   19:124  error    Unexpected any. Specify a different type                   @typescript-eslint/no-explicit-any
+   51:43   error    Unexpected any. Specify a different type                   @typescript-eslint/no-explicit-any
+  181:29   error    'messagesToSend' is never reassigned. Use 'const' instead  prefer-const
+  181:45   error    Unexpected any. Specify a different type                   @typescript-eslint/no-explicit-any
+
+C:\Users\hyper\workspace\jules-autopilot\server\index.ts
+    1:20  error    Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+   43:43  error    Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  315:59  error    Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  366:14  warning  'error' is defined but never used         @typescript-eslint/no-unused-vars
+  390:14  warning  'error' is defined but never used         @typescript-eslint/no-unused-vars
+  408:14  warning  'error' is defined but never used         @typescript-eslint/no-unused-vars
+  418:14  warning  'error' is defined but never used         @typescript-eslint/no-unused-vars
+  452:14  warning  'error' is defined but never used         @typescript-eslint/no-unused-vars
+  482:14  warning  'error' is defined but never used         @typescript-eslint/no-unused-vars
+  498:14  warning  'error' is defined but never used         @typescript-eslint/no-unused-vars
+  515:14  warning  'error' is defined but never used         @typescript-eslint/no-unused-vars
+  531:28  error    Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  552:14  warning  'error' is defined but never used         @typescript-eslint/no-unused-vars
+  574:14  warning  'error' is defined but never used         @typescript-eslint/no-unused-vars
+  598:14  warning  'error' is defined but never used         @typescript-eslint/no-unused-vars
+  608:14  warning  'error' is defined but never used         @typescript-eslint/no-unused-vars
+  634:22  error    Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  639:25  error    Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  639:39  error    Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  649:23  error    Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+
+Γ£û 269 problems (65 errors, 204 warnings)
+  2 errors and 0 warnings potentially fixable with the `--fix` option.
+
+ΓÇëELIFECYCLEΓÇë Command failed with exit code 1.

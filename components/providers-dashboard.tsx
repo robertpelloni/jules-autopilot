@@ -75,7 +75,11 @@ const SESSION_STATUS_STYLES: Record<string, string> = {
 
 const TRANSFER_STATUS_STYLES: Record<string, string> = {
   pending: 'bg-zinc-500/20 text-zinc-400',
+  queued: 'bg-zinc-500/20 text-zinc-400',
   in_progress: 'bg-blue-500/20 text-blue-400',
+  preparing: 'bg-blue-500/20 text-blue-400',
+  exporting: 'bg-yellow-500/20 text-yellow-400',
+  importing: 'bg-purple-500/20 text-purple-400',
   completed: 'bg-green-500/20 text-green-400',
   failed: 'bg-red-500/20 text-red-400',
 };
@@ -145,7 +149,9 @@ export function ProvidersDashboard() {
     return sessions.filter((s) => s.providerId === providerId && s.status === 'active').length;
   };
 
-  const activeTransfers = transfers.filter((t) => t.status === 'pending' || t.status === 'in_progress');
+  const activeTransfers = transfers.filter((t) =>
+    ['pending', 'queued', 'in_progress', 'preparing', 'exporting', 'importing'].includes(t.status)
+  );
 
   const stats = {
     totalSessions: sessions.length,

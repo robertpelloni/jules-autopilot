@@ -141,7 +141,7 @@ export interface SessionTransfer {
   fromSessionId: string;
   toProvider: CloudDevProviderId;
   toSessionId?: string;
-  status: 'pending' | 'in_progress' | 'completed' | 'failed';
+  status: 'pending' | 'in_progress' | 'completed' | 'failed' | 'queued' | 'preparing' | 'exporting' | 'importing';
   createdAt: string;
   completedAt?: string;
   error?: string;

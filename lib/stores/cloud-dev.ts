@@ -43,6 +43,7 @@ interface CloudDevState {
 
   fetchSessions: (providerId?: CloudDevProviderId) => Promise<void>;
   fetchAllSessions: () => Promise<void>;
+  fetchTransfers: () => Promise<void>;
   selectSession: (sessionId: string | null) => void;
   fetchActivities: (sessionId: string) => Promise<void>;
 
@@ -101,6 +102,7 @@ export const useCloudDevStore = create<CloudDevState>()(
         const providers = createProviders(apiKeys);
         const transferService = new SessionTransferService(providers);
         set({ providers, transferService });
+        get().fetchTransfers();
       },
 
       fetchSessions: async (providerId) => {
@@ -154,6 +156,41 @@ export const useCloudDevStore = create<CloudDevState>()(
           isLoading: false,
           error: errors.length > 0 ? errors.join('; ') : null,
         });
+      },
+
+      fetchTransfers: async () => {
+        try {
+          const res = await fetch('/api/transfers');
+          if (res.ok) {
+            const data = await res.json();
+            const mappedTransfers: SessionTransfer[] = data.map(
+              (t: {
+                id: string;
+                sourceProvider: string;
+                sourceSessionId: string;
+                targetProvider: string;
+                targetSessionId: string | null;
+                status: SessionTransfer['status'];
+                createdAt: string;
+                errorReason: string | null;
+                transferredItems: string;
+              }) => ({
+                id: t.id,
+                fromProvider: t.sourceProvider as CloudDevProviderId,
+                fromSessionId: t.sourceSessionId,
+                toProvider: t.targetProvider as CloudDevProviderId,
+                toSessionId: t.targetSessionId || undefined,
+                status: t.status,
+                createdAt: t.createdAt,
+                error: t.errorReason || undefined,
+                transferredItems: JSON.parse(t.transferredItems || '{"activities":0,"files":0,"artifacts":0}'),
+              })
+            );
+            set({ transfers: mappedTransfers });
+          }
+        } catch (err) {
+          console.error('Failed to fetch transfers', err);
+        }
       },
 
       selectSession: (sessionId) => {
@@ -319,8 +356,8 @@ export const useCloudDevStore = create<CloudDevState>()(
         }
         return {
           getItem: () => null,
-          setItem: () => {},
-          removeItem: () => {},
+          setItem: () => { },
+          removeItem: () => { },
         };
       }),
       partialize: (state) => ({

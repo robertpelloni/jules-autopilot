@@ -98,9 +98,9 @@ Acceptance criteria:
 
 ### 7) Session transfer reliability
 
-- [ ] Replace optimistic-only transfer flow with observable state machine.
-- [ ] Add transfer checkpoints (queued, preparing, exporting, importing, ready, failed).
-- [ ] Persist transfer history + failure reason for diagnostics.
+- [x] Replace optimistic-only transfer flow with observable state machine.
+- [x] Add transfer checkpoints (queued, preparing, exporting, importing, ready, failed).
+- [x] Persist transfer history + failure reason for diagnostics.
 
 Acceptance criteria:
 - Transfer UI progress maps to backend checkpoints.

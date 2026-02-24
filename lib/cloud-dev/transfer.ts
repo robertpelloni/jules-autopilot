@@ -26,23 +26,67 @@ export class SessionTransferService {
       throw new Error(`Target provider '${request.targetProvider}' not configured`);
     }
 
-    const transfer: SessionTransfer = {
-      id: `transfer-${Date.now()}-${Math.random().toString(36).slice(2, 9)}`,
+    // 1. Create the persistent transfer record via API
+    let dbTransferId = '';
+    let transfer: SessionTransfer = {
+      id: `local-${Date.now()}`,
       fromProvider: request.sourceProvider,
       fromSessionId: request.sourceSessionId,
       toProvider: request.targetProvider,
-      status: 'pending',
+      status: 'queued',
       createdAt: new Date().toISOString(),
       transferredItems: { activities: 0, files: 0, artifacts: 0 },
     };
 
-    this.activeTransfers.set(transfer.id, transfer);
+    try {
+      const res = await fetch('/api/transfers', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          sourceProvider: request.sourceProvider,
+          sourceSessionId: request.sourceSessionId,
+          targetProvider: request.targetProvider,
+        }),
+      });
+      if (res.ok) {
+        const data = await res.json();
+        dbTransferId = data.id;
+        transfer.id = dbTransferId;
+        this.activeTransfers.set(transfer.id, transfer);
+      } else {
+        throw new Error('Failed to create transfer record in database');
+      }
+    } catch (dbError) {
+      console.warn('Backend transfer creation failed, falling back to local-only tracking:', dbError);
+      this.activeTransfers.set(transfer.id, transfer);
+    }
+
+    const updateDBStatus = async (
+      status: string,
+      updates?: { targetSessionId?: string; transferredItems?: string; errorReason?: string }
+    ) => {
+      if (!dbTransferId) return;
+      try {
+        await fetch(`/api/transfers/${dbTransferId}`, {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ status, ...updates }),
+        });
+      } catch (err) {
+        console.warn('Failed to update transfer status to backend:', err);
+      }
+    };
 
     try {
-      transfer.status = 'in_progress';
+      transfer.status = 'preparing';
+      await updateDBStatus('preparing');
 
+      transfer.status = 'exporting';
+      await updateDBStatus('exporting');
       const exportData = await sourceProvider.exportSession(request.sourceSessionId);
 
+      transfer.status = 'importing';
+      await updateDBStatus('importing');
       const newPrompt = this.buildTransferPrompt(exportData, request);
 
       const newSession = await targetProvider.createSession({
@@ -55,13 +99,21 @@ export class SessionTransferService {
       transfer.status = 'completed';
       transfer.completedAt = new Date().toISOString();
       transfer.transferredItems = {
-        activities: exportData.activities.length,
+        activities: exportData.activities?.length || 0,
         files: exportData.files?.length || 0,
         artifacts: exportData.artifacts?.length || 0,
       };
+
+      await updateDBStatus('completed', {
+        targetSessionId: newSession.providerSessionId,
+        transferredItems: JSON.stringify(transfer.transferredItems),
+      });
+
     } catch (error) {
       transfer.status = 'failed';
-      transfer.error = error instanceof Error ? error.message : 'Unknown error';
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+      transfer.error = errorMessage;
+      await updateDBStatus('failed', { errorReason: errorMessage });
       throw error;
     }
 
