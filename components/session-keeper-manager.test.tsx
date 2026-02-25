@@ -8,7 +8,7 @@ import { useSessionKeeperStore } from '@/lib/stores/session-keeper';
 import { useRouter } from 'next/navigation';
 
 // Mocks
-global.fetch = jest.fn();
+global.fetch = jest.fn() as unknown as typeof fetch;
 jest.mock('@/lib/jules/provider');
 jest.mock('@/lib/stores/session-keeper');
 jest.mock('next/navigation', () => ({
@@ -109,12 +109,12 @@ describe('SessionKeeperManager', () => {
 
     // listActivitiesPaged for 1 item check
     mockClient.listActivitiesPaged.mockResolvedValue({
-        activities: [{ id: '1', content: 'agent message', role: 'agent', createdAt: oldDate }]
+      activities: [{ id: '1', content: 'agent message', role: 'agent', createdAt: oldDate }]
     });
 
     // listActivities for full context (fallback)
     mockClient.listActivities.mockResolvedValue([
-        { id: '1', content: 'agent message', role: 'agent', createdAt: oldDate }
+      { id: '1', content: 'agent message', role: 'agent', createdAt: oldDate }
     ]);
 
     render(<SessionKeeperManager />);
@@ -128,39 +128,39 @@ describe('SessionKeeperManager', () => {
 
   it('should call supervisor API if smart pilot enabled', async () => {
     (useSessionKeeperStore as unknown as jest.Mock).mockReturnValue({
-        config: {
-          isEnabled: true,
-          checkIntervalSeconds: 1,
-          inactivityThresholdMinutes: 10,
-          activeWorkThresholdMinutes: 20,
-          smartPilotEnabled: true,
-          supervisorApiKey: 'test-key',
-          supervisorProvider: 'openai',
-          messages: ['Fallback'],
-          customMessages: {}
-        },
-        addLog: mockAddLog,
-        addDebate: mockAddDebate,
-        setStatusSummary: mockSetStatusSummary,
-        incrementStat: mockIncrementStat,
-        updateSessionState: mockUpdateSessionState,
-      });
+      config: {
+        isEnabled: true,
+        checkIntervalSeconds: 1,
+        inactivityThresholdMinutes: 10,
+        activeWorkThresholdMinutes: 20,
+        smartPilotEnabled: true,
+        supervisorApiKey: 'test-key',
+        supervisorProvider: 'openai',
+        messages: ['Fallback'],
+        customMessages: {}
+      },
+      addLog: mockAddLog,
+      addDebate: mockAddDebate,
+      setStatusSummary: mockSetStatusSummary,
+      incrementStat: mockIncrementStat,
+      updateSessionState: mockUpdateSessionState,
+    });
 
     const oldDate = new Date(Date.now() - 15 * 60 * 1000).toISOString();
     mockClient.listSessions.mockResolvedValue([
-        { id: 'session-1', status: 'active', lastActivityAt: oldDate, rawState: 'ACTIVE' }
+      { id: 'session-1', status: 'active', lastActivityAt: oldDate, rawState: 'ACTIVE' }
     ]);
     mockClient.listActivitiesPaged.mockResolvedValue({
-        activities: [{ id: '1', content: 'msg', role: 'agent', createdAt: oldDate }]
+      activities: [{ id: '1', content: 'msg', role: 'agent', createdAt: oldDate }]
     });
     mockClient.listActivities.mockResolvedValue([
-        { id: '1', content: 'msg', role: 'agent', createdAt: oldDate }
+      { id: '1', content: 'msg', role: 'agent', createdAt: oldDate }
     ]);
 
     // Mock global fetch for supervisor
-    (global.fetch as jest.Mock).mockResolvedValue({
-        ok: true,
-        json: async () => ({ content: 'Supervisor says hello' })
+    (global.fetch as unknown as jest.Mock).mockResolvedValue({
+      ok: true,
+      json: async () => ({ content: 'Supervisor says hello' })
     });
 
     render(<SessionKeeperManager />);
@@ -168,7 +168,7 @@ describe('SessionKeeperManager', () => {
 
     expect(global.fetch).toHaveBeenCalledWith('/api/supervisor', expect.anything());
     expect(mockClient.createActivity).toHaveBeenCalledWith(expect.objectContaining({
-        content: 'Supervisor says hello'
+      content: 'Supervisor says hello'
     }));
   });
 });

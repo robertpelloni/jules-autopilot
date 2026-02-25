@@ -18,6 +18,8 @@ model SessionTemplate {
   isFavorite  Boolean  @default(false)
   isPrebuilt  Boolean  @default(false)
   tags        String // Stored as CSV string
+  workspaceId String?
+  workspace   Workspace? @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
 }
@@ -38,6 +40,8 @@ model KeeperSettings {
   supervisorModel            String   @default("gpt-4o")
   contextMessageCount        Int      @default(10)
   resumePaused               Boolean  @default(false)
+  userId                     String?
+  user                       User?    @relation(fields: [userId], references: [id], onDelete: Cascade)
   updatedAt                  DateTime @updatedAt
 }
 
@@ -69,6 +73,8 @@ model Debate {
   promptTokens     Int      @default(0)
   completionTokens Int      @default(0)
   totalTokens      Int      @default(0)
+  workspaceId      String?
+  workspace        Workspace? @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
   createdAt        DateTime @default(now())
   updatedAt        DateTime @updatedAt
 }
@@ -90,6 +96,8 @@ model PluginManifest {
 model InstalledPlugin {
   id          String   @id @default(uuid())
   pluginId    String
+  workspaceId String?
+  workspace   Workspace? @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
   config      String?  // JSON map of user-configured properties
   isEnabled   Boolean  @default(true)
   installedAt DateTime @default(now())
@@ -106,6 +114,90 @@ model SessionTransfer {
   status           String   @default("queued") // queued, preparing, exporting, importing, ready, failed
   transferredItems String   @default("{\"activities\": 0, \"files\": 0}") // JSON
   errorReason      String?
+  userId           String?
+  user             User?    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  workspaceId      String?
+  workspace        Workspace? @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
   createdAt        DateTime @default(now())
   updatedAt        DateTime @updatedAt
+}
+
+// ----------------------------------------------------------------------------
+// Multi-Tenant Auth.js (NextAuth) Schema
+// ----------------------------------------------------------------------------
+
+model Account {
+  id                 String  @id @default(cuid())
+  userId             String
+  type               String
+  provider           String
+  providerAccountId  String
+  refresh_token      String?
+  access_token       String?
+  expires_at         Int?
+  token_type         String?
+  scope              String?
+  id_token           String?
+  session_state      String?
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([provider, providerAccountId])
+}
+
+model Session {
+  id           String   @id @default(cuid())
+  sessionToken String   @unique
+  userId       String
+  expires      DateTime
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model User {
+  id            String    @id @default(cuid())
+  name          String?
+  email         String?   @unique
+  emailVerified DateTime?
+  image         String?
+  accounts      Account[]
+  sessions      Session[]
+  
+  // Relations to system entities
+  memberships      WorkspaceMember[]
+  keeperSettings   KeeperSettings[]
+  sessionTransfers SessionTransfer[]
+}
+
+model VerificationToken {
+  identifier String
+  token      String   @unique
+  expires    DateTime
+
+  @@unique([identifier, token])
+}
+
+model Workspace {
+  id          String   @id @default(cuid())
+  name        String
+  slug        String   @unique
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  members          WorkspaceMember[]
+  templates        SessionTemplate[]
+  debates          Debate[]
+  installedPlugins InstalledPlugin[]
+  sessionTransfers SessionTransfer[]
+}
+
+model WorkspaceMember {
+  id          String   @id @default(cuid())
+  workspaceId String
+  userId      String
+  role        String   @default("member") // owner, admin, member
+
+  workspace   Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  user        User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([workspaceId, userId])
 }

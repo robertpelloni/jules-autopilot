@@ -3,18 +3,24 @@ import { prisma } from '@/lib/prisma';
 import { updateTransferSchema } from '@/lib/schemas/transfers';
 import { z } from 'zod';
 import { handleInternalError, handleZodError, createErrorResponse } from '@/lib/api/error';
+import { getSession } from '@/lib/session';
 
 export async function GET(
     req: Request,
     { params }: { params: Promise<{ id: string }> }
 ) {
     try {
+        const session = await getSession();
+        if (!session?.workspaceId) {
+            return new NextResponse('Unauthorized', { status: 401 });
+        }
+
         const { id } = await params;
         const transfer = await prisma.sessionTransfer.findUnique({
             where: { id },
         });
 
-        if (!transfer) {
+        if (!transfer || transfer.workspaceId !== session.workspaceId) {
             return new NextResponse('Not found', { status: 404 });
         }
 
@@ -30,9 +36,20 @@ export async function PATCH(
     { params }: { params: Promise<{ id: string }> }
 ) {
     try {
+        const session = await getSession();
+        if (!session?.workspaceId) {
+            return new NextResponse('Unauthorized', { status: 401 });
+        }
+
         const { id } = await params;
         const json = await req.json();
         const body = updateTransferSchema.parse(json);
+
+        // Security assertion before update
+        const existing = await prisma.sessionTransfer.findUnique({ where: { id } });
+        if (!existing || existing.workspaceId !== session.workspaceId) {
+            return new NextResponse('Not found', { status: 404 });
+        }
 
         const transfer = await prisma.sessionTransfer.update({
             where: { id },

@@ -19,7 +19,7 @@ export const PluginManifestSchema = z.object({
     author: z.string(),
     version: z.string(),
     capabilities: z.array(PluginCapabilitySchema),
-    configSchema: z.record(z.unknown()).optional(),
+    configSchema: z.record(z.string(), z.unknown()).optional(),
     createdAt: z.string().datetime().optional(),
     updatedAt: z.string().datetime().optional()
 });
@@ -29,7 +29,7 @@ export type PluginManifest = z.infer<typeof PluginManifestSchema>;
 // Defines the payload expected from the UI when installing a plugin
 export const InstallPluginPayloadSchema = z.object({
     pluginId: z.string().min(1),
-    config: z.record(z.unknown()).optional(),
+    config: z.record(z.string(), z.unknown()).optional(),
 });
 
 export type InstallPluginPayload = z.infer<typeof InstallPluginPayloadSchema>;
@@ -38,7 +38,7 @@ export type InstallPluginPayload = z.infer<typeof InstallPluginPayloadSchema>;
 export const PluginRegistryItemSchema = PluginManifestSchema.extend({
     isInstalled: z.boolean(),
     isEnabled: z.boolean().optional(),
-    userConfig: z.record(z.unknown()).optional()
+    userConfig: z.record(z.string(), z.unknown()).optional()
 });
 
 export type PluginRegistryItem = z.infer<typeof PluginRegistryItemSchema>;

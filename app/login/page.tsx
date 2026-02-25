@@ -1,4 +1,4 @@
-import { signIn } from '@/lib/auth/config';
+import { signIn } from '@/auth';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -12,50 +12,22 @@ export default function LoginPage() {
           <CardTitle>Jules UI</CardTitle>
           <CardDescription>Sign in to your command center</CardDescription>
         </CardHeader>
-        <CardContent className="space-y-4">
-          <form
-            action={async (formData) => {
-              'use server';
-              await signIn('credentials', formData);
-            }}
-            className="space-y-4"
-          >
-            <div className="space-y-2">
-              <Label htmlFor="password">Password</Label>
-              <Input
-                id="password"
-                name="password"
-                type="password"
-                placeholder="Enter password..."
-                className="bg-black border-zinc-800"
-              />
-            </div>
-            <Button type="submit" className="w-full">
-              Sign In
-            </Button>
-          </form>
-
-          <div className="relative">
-            <div className="absolute inset-0 flex items-center">
-              <span className="w-full border-t border-zinc-800" />
-            </div>
-            <div className="relative flex justify-center text-xs uppercase">
-              <span className="bg-zinc-950 px-2 text-muted-foreground">
-                Or
-              </span>
-            </div>
+        <CardContent>
+          <div className="space-y-4 text-center">
+            <p className="text-sm text-zinc-400">
+              Welcome to the Jules Autopilot UI. Please authenticate using your version control provider to begin.
+            </p>
+            <form
+              action={async () => {
+                'use server';
+                await signIn('github', { redirectTo: '/dashboard' });
+              }}
+            >
+              <Button variant="outline" className="w-full bg-black border-zinc-800 hover:bg-zinc-900">
+                Sign in with GitHub
+              </Button>
+            </form>
           </div>
-
-          <form
-            action={async () => {
-              'use server';
-              await signIn('github');
-            }}
-          >
-            <Button variant="outline" className="w-full bg-black border-zinc-800 hover:bg-zinc-900">
-              Sign in with GitHub
-            </Button>
-          </form>
         </CardContent>
       </Card>
     </div>

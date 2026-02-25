@@ -22,7 +22,12 @@ describe('Login API', () => {
     const data = await res.json();
 
     expect(res.status).toBe(400);
-    expect(data).toEqual({ error: 'API Key required' });
+    expect(data).toEqual({
+      error: expect.objectContaining({
+        code: 'BAD_REQUEST',
+        message: 'API Key required'
+      })
+    });
   });
 
   it('should set session and return success if API key is provided', async () => {
@@ -55,6 +60,11 @@ describe('Login API', () => {
     const data = await res.json();
 
     expect(res.status).toBe(500);
-    expect(data).toEqual({ error: 'Login failed' });
+    expect(data).toEqual({
+      error: expect.objectContaining({
+        code: 'INTERNAL_ERROR',
+        message: 'Session error'
+      })
+    });
   });
 });

@@ -2,7 +2,7 @@
 import { JulesClient, JulesAPIError } from './client';
 
 // Mock global fetch
-global.fetch = jest.fn();
+global.fetch = jest.fn() as unknown as typeof fetch;
 
 describe('JulesClient', () => {
   let client: JulesClient;
@@ -21,7 +21,7 @@ describe('JulesClient', () => {
 
   describe('Request Handling', () => {
     it('should include API key in headers', async () => {
-      (global.fetch as jest.Mock).mockResolvedValue({
+      (global.fetch as unknown as jest.Mock).mockResolvedValue({
         ok: true,
         json: async () => ({}),
       });
@@ -39,7 +39,7 @@ describe('JulesClient', () => {
     });
 
     it('should throw JulesAPIError on 401', async () => {
-      (global.fetch as jest.Mock).mockResolvedValue({
+      (global.fetch as unknown as jest.Mock).mockResolvedValue({
         ok: false,
         status: 401,
         json: async () => ({ error: 'Unauthorized' }),
@@ -49,7 +49,7 @@ describe('JulesClient', () => {
     });
 
     it('should throw JulesAPIError on network failure', async () => {
-      (global.fetch as jest.Mock).mockRejectedValue(new TypeError('Failed to fetch'));
+      (global.fetch as unknown as jest.Mock).mockRejectedValue(new TypeError('Failed to fetch'));
 
       await expect(client.listSessions()).rejects.toThrow('Unable to connect to the server');
     });
@@ -66,18 +66,18 @@ describe('JulesClient', () => {
 
       // Mock listSessions for the sorting logic inside listSources
       // We'll return empty to simplify
-      (global.fetch as jest.Mock)
+      (global.fetch as unknown as jest.Mock)
         .mockResolvedValueOnce({ // for listSources
-           ok: true,
-           json: async () => mockSources
+          ok: true,
+          json: async () => mockSources
         })
         .mockResolvedValueOnce({ // for listSessions (inside listSources)
-           ok: true,
-           json: async () => ({ sessions: [] })
+          ok: true,
+          json: async () => ({ sessions: [] })
         });
 
       const sources = await client.listSources();
-      
+
       expect(sources).toHaveLength(3); // 2 mock + 1 default missingRepo
       expect(sources[0].name).toBe('owner/repo1');
       expect(sources[1].name).toBe('owner/repo2');
@@ -88,15 +88,15 @@ describe('JulesClient', () => {
     it('should list and transform sessions', async () => {
       const mockSessions = {
         sessions: [
-          { 
-            id: '1', 
+          {
+            id: '1',
             state: 'ACTIVE',
-            sourceContext: { source: 'sources/github/repo' } 
+            sourceContext: { source: 'sources/github/repo' }
           }
         ]
       };
 
-      (global.fetch as jest.Mock).mockResolvedValue({
+      (global.fetch as unknown as jest.Mock).mockResolvedValue({
         ok: true,
         json: async () => mockSessions,
       });
@@ -112,7 +112,7 @@ describe('JulesClient', () => {
   describe('createSession', () => {
     it('should create a session with correct payload', async () => {
       const mockSession = { id: 'new-session', state: 'ACTIVE' };
-      (global.fetch as jest.Mock).mockResolvedValue({
+      (global.fetch as unknown as jest.Mock).mockResolvedValue({
         ok: true,
         json: async () => mockSession,
       });
@@ -132,8 +132,8 @@ describe('JulesClient', () => {
   describe('updateSession', () => {
     it('should send PATCH request with updateMask', async () => {
       const mockSession = { id: '1', title: 'New Title', state: 'ACTIVE' };
-      
-      (global.fetch as jest.Mock).mockResolvedValue({
+
+      (global.fetch as unknown as jest.Mock).mockResolvedValue({
         ok: true,
         json: async () => mockSession,
       });
@@ -151,8 +151,8 @@ describe('JulesClient', () => {
 
     it('should handle partial updates correctly', async () => {
       const mockSession = { id: '1', state: 'PAUSED' };
-      
-      (global.fetch as jest.Mock).mockResolvedValue({
+
+      (global.fetch as unknown as jest.Mock).mockResolvedValue({
         ok: true,
         json: async () => mockSession,
       });

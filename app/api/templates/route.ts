@@ -2,10 +2,17 @@ import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import type { SessionTemplate } from '@prisma/client';
 import { handleInternalError } from '@/lib/api/error';
+import { getSession } from '@/lib/session';
 
 export async function GET(req: Request) {
   try {
+    const session = await getSession();
+    if (!session?.workspaceId) {
+      return new NextResponse('Unauthorized', { status: 401 });
+    }
+
     let templates = await prisma.sessionTemplate.findMany({
+      where: { workspaceId: session.workspaceId },
       orderBy: { updatedAt: 'desc' }
     });
 
@@ -47,10 +54,11 @@ export async function GET(req: Request) {
       ];
 
       for (const t of defaults) {
-        await prisma.sessionTemplate.create({ data: t });
+        await prisma.sessionTemplate.create({ data: { ...t, workspaceId: session.workspaceId } });
       }
 
       templates = await prisma.sessionTemplate.findMany({
+        where: { workspaceId: session.workspaceId },
         orderBy: { updatedAt: 'desc' }
       });
     }
@@ -70,11 +78,17 @@ export async function GET(req: Request) {
 
 export async function POST(req: Request) {
   try {
+    const session = await getSession();
+    if (!session?.workspaceId) {
+      return new NextResponse('Unauthorized', { status: 401 });
+    }
+
     const body = await req.json();
     const { name, description, prompt, title, tags, isFavorite } = body;
 
     const template = await prisma.sessionTemplate.create({
       data: {
+        workspaceId: session.workspaceId,
         name,
         description,
         prompt,

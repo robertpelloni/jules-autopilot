@@ -3,7 +3,7 @@ import { GET, POST, DELETE } from './[...path]/route';
 import { NextRequest } from 'next/server';
 
 // Mock global fetch
-global.fetch = jest.fn();
+global.fetch = jest.fn() as unknown as typeof fetch;
 
 // Mock getSession
 jest.mock('@/lib/session', () => ({
@@ -16,12 +16,12 @@ describe('Jules API Proxy', () => {
   const mockApiKey = 'test-api-key';
   // Note: The base URL in the test request object is for NextRequest internal parsing,
   // the actual proxy target is hardcoded in the route handler.
-  const reqBaseUrl = 'http://localhost:3000/api/jules/test'; 
+  const reqBaseUrl = 'http://localhost:3000/api/jules/test';
 
   beforeEach(() => {
     jest.clearAllMocks();
-    jest.spyOn(console, 'log').mockImplementation(() => {});
-    jest.spyOn(console, 'error').mockImplementation(() => {});
+    jest.spyOn(console, 'log').mockImplementation(() => { });
+    jest.spyOn(console, 'error').mockImplementation(() => { });
     (getSession as jest.Mock).mockResolvedValue({ apiKey: mockApiKey });
   });
 
@@ -32,7 +32,7 @@ describe('Jules API Proxy', () => {
   describe('GET', () => {
     it('should return 401 if API key is missing', async () => {
       (getSession as jest.Mock).mockResolvedValue(null);
-      
+
       const req = new NextRequest(reqBaseUrl);
       const res = await GET(req, { params: Promise.resolve({ path: ['test'] }) });
       const data = await res.json();
@@ -43,7 +43,7 @@ describe('Jules API Proxy', () => {
 
     it('should proxy GET request successfully', async () => {
       const mockResponseData = { data: 'test' };
-      (global.fetch as jest.Mock).mockResolvedValue({
+      (global.fetch as unknown as jest.Mock).mockResolvedValue({
         ok: true,
         status: 200,
         json: async () => mockResponseData,
@@ -67,7 +67,7 @@ describe('Jules API Proxy', () => {
     });
 
     it('should handle fetch errors', async () => {
-      (global.fetch as jest.Mock).mockRejectedValue(new Error('Network error'));
+      (global.fetch as unknown as jest.Mock).mockRejectedValue(new Error('Network error'));
 
       const req = new NextRequest(reqBaseUrl);
       const res = await GET(req, { params: Promise.resolve({ path: ['test'] }) });
@@ -92,8 +92,8 @@ describe('Jules API Proxy', () => {
     it('should proxy POST request successfully', async () => {
       const mockRequestBody = { foo: 'bar' };
       const mockResponseData = { success: true };
-      
-      (global.fetch as jest.Mock).mockResolvedValue({
+
+      (global.fetch as unknown as jest.Mock).mockResolvedValue({
         ok: true,
         status: 201,
         json: async () => mockResponseData,
@@ -101,7 +101,7 @@ describe('Jules API Proxy', () => {
 
       const req = new NextRequest(reqBaseUrl, {
         method: 'POST',
-        headers: { 
+        headers: {
           'Content-Type': 'application/json'
         },
         body: JSON.stringify(mockRequestBody),
@@ -137,7 +137,7 @@ describe('Jules API Proxy', () => {
 
     it('should proxy DELETE request successfully', async () => {
       const mockResponseData = { deleted: true };
-      (global.fetch as jest.Mock).mockResolvedValue({
+      (global.fetch as unknown as jest.Mock).mockResolvedValue({
         ok: true,
         status: 200,
         json: async () => mockResponseData,

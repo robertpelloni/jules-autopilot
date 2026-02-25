@@ -3,10 +3,17 @@ import { prisma } from '@/lib/prisma';
 import { createTransferSchema } from '@/lib/schemas/transfers';
 import { z } from 'zod';
 import { handleInternalError, handleZodError } from '@/lib/api/error';
+import { getSession } from '@/lib/session';
 
 export async function GET() {
     try {
+        const session = await getSession();
+        if (!session?.workspaceId) {
+            return new NextResponse('Unauthorized', { status: 401 });
+        }
+
         const transfers = await prisma.sessionTransfer.findMany({
+            where: { workspaceId: session.workspaceId },
             orderBy: { createdAt: 'desc' },
             take: 50,
         });
@@ -19,11 +26,17 @@ export async function GET() {
 
 export async function POST(req: Request) {
     try {
+        const session = await getSession();
+        if (!session?.workspaceId) {
+            return new NextResponse('Unauthorized', { status: 401 });
+        }
+
         const json = await req.json();
         const body = createTransferSchema.parse(json);
 
         const transfer = await prisma.sessionTransfer.create({
             data: {
+                workspaceId: session.workspaceId,
                 sourceProvider: body.sourceProvider,
                 sourceSessionId: body.sourceSessionId,
                 targetProvider: body.targetProvider,

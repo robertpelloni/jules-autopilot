@@ -1,7 +1,7 @@
 
 import { qwenProvider } from './qwen';
 
-global.fetch = jest.fn();
+global.fetch = jest.fn() as unknown as typeof fetch;
 
 describe('Qwen Provider', () => {
   beforeEach(() => {
@@ -17,7 +17,7 @@ describe('Qwen Provider', () => {
           }]
         }
       };
-      (global.fetch as jest.Mock).mockResolvedValue({
+      (global.fetch as unknown as jest.Mock).mockResolvedValue({
         ok: true,
         json: async () => mockResponse,
       });
@@ -30,56 +30,56 @@ describe('Qwen Provider', () => {
       });
 
       expect(global.fetch).toHaveBeenCalledWith(
-        'https://dashscope.aliyuncs.com/api/v1/services/aigc/text-generation/generation', 
+        'https://dashscope.aliyuncs.com/api/v1/services/aigc/text-generation/generation',
         expect.objectContaining({
-            method: 'POST',
-            headers: expect.objectContaining({ 
-                'Authorization': 'Bearer key',
-                'Content-Type': 'application/json' 
-            }),
-            body: expect.any(String)
+          method: 'POST',
+          headers: expect.objectContaining({
+            'Authorization': 'Bearer key',
+            'Content-Type': 'application/json'
+          }),
+          body: expect.any(String)
         })
       );
-      
-      const callArgs = (global.fetch as jest.Mock).mock.calls[0];
+
+      const callArgs = (global.fetch as unknown as jest.Mock).mock.calls[0];
       const body = JSON.parse(callArgs[1].body);
-      
+
       expect(body.input.messages[0]).toEqual({ role: 'system', content: 'SysPrompt' });
       expect(body.input.messages[1]).toEqual({ role: 'user', content: 'Hi' });
       expect(body.parameters.result_format).toBe('message');
-      
+
       expect(result.content).toBe('Hello from Qwen');
     });
 
     it('should handle message role mapping and name sanitization', async () => {
-        const mockResponse = { output: { text: 'Response' } };
-        (global.fetch as jest.Mock).mockResolvedValue({
-            ok: true,
-            json: async () => mockResponse,
-        });
+      const mockResponse = { output: { text: 'Response' } };
+      (global.fetch as unknown as jest.Mock).mockResolvedValue({
+        ok: true,
+        json: async () => mockResponse,
+      });
 
-        await qwenProvider.complete({
-            messages: [
-                { role: 'user', content: 'User msg', name: 'User 1' },
-                { role: 'system', content: 'Intermediate system' },
-                { role: 'assistant', content: 'Assistant msg' },
-                { role: 'user', content: 'Unknown role msg' }
-            ],
-            apiKey: 'key',
-            model: 'qwen-plus'
-        });
+      await qwenProvider.complete({
+        messages: [
+          { role: 'user', content: 'User msg', name: 'User 1' },
+          { role: 'system', content: 'Intermediate system' },
+          { role: 'assistant', content: 'Assistant msg' },
+          { role: 'user', content: 'Unknown role msg' }
+        ],
+        apiKey: 'key',
+        model: 'qwen-plus'
+      });
 
-        const callArgs = (global.fetch as jest.Mock).mock.calls[0];
-        const body = JSON.parse(callArgs[1].body);
-        const msgs = body.input.messages;
+      const callArgs = (global.fetch as unknown as jest.Mock).mock.calls[0];
+      const body = JSON.parse(callArgs[1].body);
+      const msgs = body.input.messages;
 
-        expect(msgs[0]).toEqual(expect.objectContaining({ role: 'user', content: 'User msg', name: 'User_1' }));
-        expect(msgs[1]).toEqual(expect.objectContaining({ role: 'system', content: 'Intermediate system' }));
-        expect(msgs[2]).toEqual(expect.objectContaining({ role: 'assistant', content: 'Assistant msg' }));
+      expect(msgs[0]).toEqual(expect.objectContaining({ role: 'user', content: 'User msg', name: 'User_1' }));
+      expect(msgs[1]).toEqual(expect.objectContaining({ role: 'system', content: 'Intermediate system' }));
+      expect(msgs[2]).toEqual(expect.objectContaining({ role: 'assistant', content: 'Assistant msg' }));
     });
 
     it('should throw error on API failure', async () => {
-      (global.fetch as jest.Mock).mockResolvedValue({
+      (global.fetch as unknown as jest.Mock).mockResolvedValue({
         ok: false,
         statusText: 'Bad Request',
         json: async () => ({ message: 'Invalid API Key' }),

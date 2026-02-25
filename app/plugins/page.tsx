@@ -14,18 +14,31 @@ import { PluginRegistryItem } from '@/lib/schemas/plugins';
 export default function PluginsPage() {
   const [searchQuery, setSearchQuery] = useState('');
   const [registry, setRegistry] = useState<PluginRegistryItem[]>([]);
+  const [healthStatus, setHealthStatus] = useState<Record<string, string>>({});
   const [processingId, setProcessingId] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true);
 
   const fetchRegistry = async () => {
     try {
-      const res = await fetch('/api/plugins/registry');
-      if (res.ok) {
-        const data = await res.json();
+      const [regRes, healthRes] = await Promise.all([
+        fetch('/api/plugins/registry'),
+        fetch('/api/plugins/health')
+      ]);
+
+      if (regRes.ok) {
+        const data = await regRes.json();
         setRegistry(data.plugins || []);
       }
+      if (healthRes.ok) {
+        const { health } = await healthRes.json();
+        const healthMap: Record<string, string> = {};
+        health.forEach((h: { pluginId: string; status: string }) => {
+          healthMap[h.pluginId] = h.status;
+        });
+        setHealthStatus(healthMap);
+      }
     } catch (e) {
-      console.error("Failed to load plugin registry", e);
+      console.error("Failed to load plugin registry or health status", e);
       toast.error('Failed to connect to the plugin registry.');
     } finally {
       setIsLoading(false);
@@ -124,9 +137,20 @@ export default function PluginsPage() {
                       <Plug className={`h-5 w-5 ${isInstalled ? 'text-purple-300' : 'text-white/80'}`} />
                     </div>
                     {isInstalled && (
-                      <Badge variant="secondary" className="bg-green-500/10 text-green-400 gap-1 h-5 text-[10px] border border-green-500/20">
-                        <Check className="h-3 w-3" /> Installed
-                      </Badge>
+                      <div className="flex flex-col gap-2 items-end">
+                        <Badge variant="secondary" className="bg-green-500/10 text-green-400 gap-1 h-5 text-[10px] border border-green-500/20">
+                          <Check className="h-3 w-3" /> Installed
+                        </Badge>
+                        {healthStatus[plugin.id] === 'healthy' ? (
+                          <Badge variant="outline" className="bg-emerald-500/10 text-emerald-400 gap-1 h-5 text-[10px] border-emerald-500/20">
+                            Healthy
+                          </Badge>
+                        ) : healthStatus[plugin.id] === 'degraded' ? (
+                          <Badge variant="outline" className="bg-yellow-500/10 text-yellow-400 gap-1 h-5 text-[10px] border-yellow-500/20">
+                            Degraded
+                          </Badge>
+                        ) : null}
+                      </div>
                     )}
                   </div>
                   <CardTitle className="mt-3 text-lg">{plugin.name}</CardTitle>
@@ -141,8 +165,17 @@ export default function PluginsPage() {
                       <ShieldCheck className="h-3 w-3" /> {plugin.author}
                     </div>
                     {plugin.capabilities.length > 0 && (
-                      <div className="flex items-center gap-1 col-span-full mt-2 w-full text-zinc-500 font-mono text-[10px]">
-                        <Zap className="h-3 w-3" /> {plugin.capabilities.length} capabilities
+                      <div className="flex flex-col gap-1 col-span-full mt-2 w-full text-zinc-500 font-mono text-[10px]">
+                        <div className="flex items-center gap-1">
+                          <Zap className="h-3 w-3" /> {plugin.capabilities.length} requested capabilities:
+                        </div>
+                        <div className="flex flex-wrap gap-1 mt-1">
+                          {plugin.capabilities.map(cap => (
+                            <span key={cap} className="px-1.5 py-0.5 rounded bg-white/5 border border-white/10 text-white/30 truncate max-w-full">
+                              {cap}
+                            </span>
+                          ))}
+                        </div>
                       </div>
                     )}
                   </div>

@@ -2,7 +2,7 @@
 import { anthropicProvider } from './anthropic';
 
 // Mock global fetch
-global.fetch = jest.fn();
+global.fetch = jest.fn() as unknown as typeof fetch;
 
 describe('Anthropic Provider', () => {
   beforeEach(() => {
@@ -14,7 +14,7 @@ describe('Anthropic Provider', () => {
       const mockResponse = {
         content: [{ text: 'Hello' }],
       };
-      (global.fetch as jest.Mock).mockResolvedValue({
+      (global.fetch as unknown as jest.Mock).mockResolvedValue({
         ok: true,
         json: async () => mockResponse,
       });
@@ -35,32 +35,32 @@ describe('Anthropic Provider', () => {
     });
 
     it('should map system role in messages to user role', async () => {
-        const mockResponse = { content: [{ text: 'Hello' }] };
-        (global.fetch as jest.Mock).mockResolvedValue({
-            ok: true,
-            json: async () => mockResponse,
-        });
+      const mockResponse = { content: [{ text: 'Hello' }] };
+      (global.fetch as unknown as jest.Mock).mockResolvedValue({
+        ok: true,
+        json: async () => mockResponse,
+      });
 
-        await anthropicProvider.complete({
-            messages: [
-                { role: 'user', content: 'User msg' },
-                { role: 'system', content: 'Intermediate system msg' },
-                { role: 'assistant', content: 'Assistant msg' }
-            ],
-            apiKey: 'key',
-            model: 'claude-3-5',
-        });
+      await anthropicProvider.complete({
+        messages: [
+          { role: 'user', content: 'User msg' },
+          { role: 'system', content: 'Intermediate system msg' },
+          { role: 'assistant', content: 'Assistant msg' }
+        ],
+        apiKey: 'key',
+        model: 'claude-3-5',
+      });
 
-        expect(global.fetch).toHaveBeenCalledWith(
-            expect.any(String),
-            expect.objectContaining({
-                body: expect.stringMatching(/"role":"user","content":"Intermediate system msg"/)
-            })
-        );
+      expect(global.fetch).toHaveBeenCalledWith(
+        expect.any(String),
+        expect.objectContaining({
+          body: expect.stringMatching(/"role":"user","content":"Intermediate system msg"/)
+        })
+      );
     });
 
     it('should throw error on API failure', async () => {
-      (global.fetch as jest.Mock).mockResolvedValue({
+      (global.fetch as unknown as jest.Mock).mockResolvedValue({
         ok: false,
         statusText: 'Unauthorized',
         json: async () => ({ error: { message: 'Bad Key' } }),

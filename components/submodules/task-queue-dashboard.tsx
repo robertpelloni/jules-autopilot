@@ -25,14 +25,8 @@ import {
   Activity
 } from "lucide-react";
 
-// Mock data to simulate task queue state
-const INITIAL_TASKS = [
-  { id: 'task-101', type: 'code_analysis', status: 'completed', priority: 'high', created: '2 mins ago', duration: '45s' },
-  { id: 'task-102', type: 'test_execution', status: 'running', priority: 'medium', created: '30s ago', duration: '-' },
-  { id: 'task-103', type: 'deployment', status: 'queued', priority: 'high', created: '10s ago', duration: '-' },
-  { id: 'task-104', type: 'notification', status: 'failed', priority: 'low', created: '5 mins ago', duration: '2s' },
-  { id: 'task-105', type: 'lint', status: 'queued', priority: 'low', created: '15s ago', duration: '-' },
-];
+// Empty array reflecting that this feature is in preview and backend integration is pending
+const INITIAL_TASKS: any[] = [];
 
 export function TaskQueueDashboard() {
   const [tasks, setTasks] = useState(INITIAL_TASKS);
@@ -71,8 +65,8 @@ export function TaskQueueDashboard() {
             <Activity className={`h-4 w-4 ${isRunning ? 'text-green-400' : 'text-yellow-400'}`} />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-white">{isRunning ? 'Active' : 'Paused'}</div>
-            <p className="text-xs text-white/40 mt-1">Worker Pool: 4 Threads</p>
+            <div className="text-2xl font-bold text-white">Paused</div>
+            <p className="text-xs text-white/40 mt-1">Worker Pool: 0 Threads (Preview)</p>
           </CardContent>
         </Card>
         <Card className="bg-zinc-950 border-white/10">
@@ -81,8 +75,8 @@ export function TaskQueueDashboard() {
             <Layers className="h-4 w-4 text-purple-400" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-white">{tasks.filter(t => t.status === 'queued').length}</div>
-            <p className="text-xs text-white/40 mt-1">Estimated Wait: ~12s</p>
+            <div className="text-2xl font-bold text-white">0</div>
+            <p className="text-xs text-white/40 mt-1">Queue inactive</p>
           </CardContent>
         </Card>
         <Card className="bg-zinc-950 border-white/10">
@@ -91,8 +85,8 @@ export function TaskQueueDashboard() {
             <CheckCircle2 className="h-4 w-4 text-green-400" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-white">98.5%</div>
-            <p className="text-xs text-white/40 mt-1">Last 24 hours</p>
+            <div className="text-2xl font-bold text-zinc-500">-</div>
+            <p className="text-xs text-white/40 mt-1">No data available</p>
           </CardContent>
         </Card>
         <Card className="bg-zinc-950 border-white/10">
@@ -101,8 +95,8 @@ export function TaskQueueDashboard() {
             <Clock className="h-4 w-4 text-blue-400" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-white">45/min</div>
-            <p className="text-xs text-white/40 mt-1">Tasks processed</p>
+            <div className="text-2xl font-bold text-zinc-500">0/min</div>
+            <p className="text-xs text-white/40 mt-1">Task queue suspended</p>
           </CardContent>
         </Card>
       </div>
@@ -137,37 +131,15 @@ export function TaskQueueDashboard() {
           </div>
         </CardHeader>
         <CardContent>
-          <div className="rounded-md border border-white/10">
-            <Table>
-              <TableHeader>
-                <TableRow className="border-white/10 hover:bg-white/5">
-                  <TableHead className="text-white/60 h-10 text-xs uppercase tracking-wider">Task ID</TableHead>
-                  <TableHead className="text-white/60 h-10 text-xs uppercase tracking-wider">Type</TableHead>
-                  <TableHead className="text-white/60 h-10 text-xs uppercase tracking-wider">Status</TableHead>
-                  <TableHead className="text-white/60 h-10 text-xs uppercase tracking-wider">Priority</TableHead>
-                  <TableHead className="text-white/60 h-10 text-xs uppercase tracking-wider">Created</TableHead>
-                  <TableHead className="text-white/60 h-10 text-xs uppercase tracking-wider">Duration</TableHead>
-                  <TableHead className="text-white/60 h-10 text-xs uppercase tracking-wider text-right">Actions</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {tasks.map((task) => (
-                  <TableRow key={task.id} className="border-white/10 hover:bg-white/5">
-                    <TableCell className="font-mono text-white/80 text-xs">{task.id}</TableCell>
-                    <TableCell className="text-white/80 text-xs font-medium">{task.type}</TableCell>
-                    <TableCell className="py-2">{getStatusBadge(task.status)}</TableCell>
-                    <TableCell className={`capitalize font-bold text-xs ${getPriorityColor(task.priority)}`}>{task.priority}</TableCell>
-                    <TableCell className="text-white/60 text-xs">{task.created}</TableCell>
-                    <TableCell className="text-white/60 font-mono text-xs">{task.duration}</TableCell>
-                    <TableCell className="text-right py-2">
-                      <Button variant="ghost" size="icon" className="h-6 w-6 hover:bg-white/10 text-white/40 hover:text-red-400">
-                        <Trash2 className="h-3 w-3" />
-                      </Button>
-                    </TableCell>
-                  </TableRow>
-                ))}
-              </TableBody>
-            </Table>
+          <div className="rounded-md border border-white/10 p-8 flex flex-col items-center justify-center text-center">
+            <Layers className="h-12 w-12 text-zinc-700 mb-4" />
+            <h3 className="text-lg font-medium text-white mb-2">Queue Dashboard Preview</h3>
+            <p className="text-sm text-white/50 max-w-sm mb-6">
+              This dashboard is currently in preview. The distributed enterprise task queue backend will be available in a future update (ETA: Q3).
+            </p>
+            <Badge variant="outline" className="bg-purple-500/10 text-purple-400 border-purple-500/20">
+              Backend Integration Pending
+            </Badge>
           </div>
         </CardContent>
       </Card>

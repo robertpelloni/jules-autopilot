@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { runDebate } from '@jules/shared';
 import { Participant } from '@jules/shared';
 import { prisma } from '@/lib/prisma';
+import { getSession } from '@/lib/session';
 
 export const runtime = 'nodejs';
 
@@ -43,6 +44,11 @@ export async function POST(req: NextRequest) {
             };
         });
 
+        const session = await getSession();
+        if (!session?.workspaceId) {
+            return new NextResponse('Unauthorized', { status: 401 });
+        }
+
         const result = await runDebate({
             history: history || [],
             participants: enrichedParticipants,
@@ -53,6 +59,7 @@ export async function POST(req: NextRequest) {
         try {
             await prisma.debate.create({
                 data: {
+                    workspaceId: session.workspaceId,
                     topic: result.topic || topic,
                     summary: result.summary,
                     rounds: JSON.stringify(result.rounds),

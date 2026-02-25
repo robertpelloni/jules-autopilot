@@ -2,7 +2,7 @@
 import { openaiProvider } from './openai';
 
 // Mock global fetch
-global.fetch = jest.fn();
+global.fetch = jest.fn() as unknown as typeof fetch;
 
 describe('OpenAI Provider', () => {
   beforeEach(() => {
@@ -14,7 +14,7 @@ describe('OpenAI Provider', () => {
       const mockResponse = {
         choices: [{ message: { content: 'Hello' } }],
       };
-      (global.fetch as jest.Mock).mockResolvedValue({
+      (global.fetch as unknown as jest.Mock).mockResolvedValue({
         ok: true,
         json: async () => mockResponse,
       });
@@ -35,7 +35,7 @@ describe('OpenAI Provider', () => {
     });
 
     it('should throw error on API failure', async () => {
-      (global.fetch as jest.Mock).mockResolvedValue({
+      (global.fetch as unknown as jest.Mock).mockResolvedValue({
         ok: false,
         statusText: 'Unauthorized',
         json: async () => ({ error: { message: 'Bad Key' } }),
@@ -54,7 +54,7 @@ describe('OpenAI Provider', () => {
       const mockData = {
         data: [{ id: 'gpt-4' }, { id: 'gpt-3.5' }],
       };
-      (global.fetch as jest.Mock).mockResolvedValue({
+      (global.fetch as unknown as jest.Mock).mockResolvedValue({
         ok: true,
         json: async () => mockData,
       });

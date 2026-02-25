@@ -7,17 +7,8 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Search, Database, Terminal, FileCode, Server, ShieldCheck, Globe, Cpu, Lock, Zap } from "lucide-react";
 
-// Mock data reflecting standard MCP tools
-const MOCK_TOOLS = [
-  { name: 'read_file', category: 'FileSystem', description: 'Reads file content from the local workspace.', status: 'active', latency: '2ms', secured: false },
-  { name: 'write_file', category: 'FileSystem', description: 'Writes content to a file.', status: 'active', latency: '12ms', secured: true },
-  { name: 'list_files', category: 'FileSystem', description: 'Lists files in a directory.', status: 'active', latency: '4ms', secured: false },
-  { name: 'run_command', category: 'Terminal', description: 'Executes a bash command.', status: 'restricted', latency: '45ms', secured: true },
-  { name: 'browserbase_navigate', category: 'Browser', description: 'Navigates to a URL using Browserbase.', status: 'beta', latency: '1.2s', secured: true },
-  { name: 'memory_store', category: 'Memory', description: 'Stores key-value pairs in session memory.', status: 'active', latency: '1ms', secured: false },
-  { name: 'memory_retrieve', category: 'Memory', description: 'Retrieves value from session memory.', status: 'active', latency: '1ms', secured: false },
-  { name: 'git_status', category: 'Version Control', description: 'Checks git status of the repo.', status: 'active', latency: '15ms', secured: false },
-];
+// Empty array reflecting that this feature is in preview and backend integration is pending
+const MOCK_TOOLS: any[] = [];
 
 export function McpServerDashboard() {
   const [searchQuery, setSearchQuery] = useState('');
@@ -47,8 +38,8 @@ export function McpServerDashboard() {
             <Server className="h-4 w-4 text-green-400 animate-pulse" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-white">Online</div>
-            <p className="text-xs text-white/40 mt-1">Uptime: 4d 12h 30m</p>
+            <div className="text-2xl font-bold text-zinc-500">Offline</div>
+            <p className="text-xs text-white/40 mt-1">Pending Configuration</p>
           </CardContent>
         </Card>
         <Card className="bg-zinc-950 border-white/10">
@@ -57,8 +48,8 @@ export function McpServerDashboard() {
             <Zap className="h-4 w-4 text-yellow-400" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-white">{MOCK_TOOLS.length}</div>
-            <p className="text-xs text-white/40 mt-1">Across 5 categories</p>
+            <div className="text-2xl font-bold text-white">0</div>
+            <p className="text-xs text-white/40 mt-1">No MCP servers connected</p>
           </CardContent>
         </Card>
         <Card className="bg-zinc-950 border-white/10">
@@ -67,8 +58,8 @@ export function McpServerDashboard() {
             <ShieldCheck className="h-4 w-4 text-purple-400" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-white">High</div>
-            <p className="text-xs text-white/40 mt-1">3 Restricted Tools</p>
+            <div className="text-2xl font-bold text-zinc-500">N/A</div>
+            <p className="text-xs text-white/40 mt-1">No active transport</p>
           </CardContent>
         </Card>
       </div>
@@ -93,37 +84,15 @@ export function McpServerDashboard() {
           </div>
         </CardHeader>
         <CardContent>
-          <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-            {filteredTools.map((tool) => (
-              <div key={tool.name} className="group relative rounded-lg border border-white/10 bg-white/5 p-4 hover:bg-white/10 transition-colors">
-                <div className="flex items-start justify-between">
-                  <div className="flex items-center gap-2">
-                    {getCategoryIcon(tool.category)}
-                    <Badge variant="outline" className="text-[10px] h-5 px-1.5 border-white/10 text-white/60">
-                      {tool.category}
-                    </Badge>
-                  </div>
-                  {tool.secured && (
-                    <Badge variant="secondary" className="bg-red-500/10 text-red-400 h-5 px-1.5 gap-1 hover:bg-red-500/20">
-                      <Lock className="h-3 w-3" /> Secured
-                    </Badge>
-                  )}
-                </div>
-                <h3 className="mt-3 font-mono text-sm font-bold text-white group-hover:text-purple-400 transition-colors">
-                  {tool.name}
-                </h3>
-                <p className="mt-1 text-xs text-white/60 line-clamp-2">
-                  {tool.description}
-                </p>
-                <div className="mt-4 flex items-center justify-between text-[10px] font-mono text-white/30">
-                  <div className="flex items-center gap-1.5">
-                    <span className={`w-1.5 h-1.5 rounded-full ${tool.status === 'active' ? 'bg-green-500' : 'bg-yellow-500'}`} />
-                    <span className="uppercase">{tool.status}</span>
-                  </div>
-                  <span>~{tool.latency}</span>
-                </div>
-              </div>
-            ))}
+          <div className="rounded-md border border-white/10 p-8 flex flex-col items-center justify-center text-center">
+            <Server className="h-12 w-12 text-zinc-700 mb-4" />
+            <h3 className="text-lg font-medium text-white mb-2">MCP Registry Preview</h3>
+            <p className="text-sm text-white/50 max-w-sm mb-6">
+              This registry is currently in preview. The dynamic MCP connection management and routing features will be available in a future update (ETA: Q3).
+            </p>
+            <Badge variant="outline" className="bg-purple-500/10 text-purple-400 border-purple-500/20">
+              Backend Integration Pending
+            </Badge>
           </div>
         </CardContent>
       </Card>

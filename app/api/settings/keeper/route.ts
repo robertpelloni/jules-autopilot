@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { SessionKeeperConfig } from '@/types/jules';
+import { getSession } from '@/lib/session';
 
 const DEFAULT_SETTINGS: SessionKeeperConfig = {
   isEnabled: false,
@@ -19,8 +20,13 @@ const DEFAULT_SETTINGS: SessionKeeperConfig = {
 
 export async function GET() {
   try {
+    const session = await getSession();
+    if (!session?.workspaceId) {
+      return new NextResponse('Unauthorized', { status: 401 });
+    }
+
     const settings = await prisma.keeperSettings.findUnique({
-      where: { id: 'default' }
+      where: { id: session.workspaceId }
     });
 
     if (!settings) {
@@ -39,11 +45,16 @@ export async function GET() {
 
 export async function POST(req: Request) {
   try {
+    const session = await getSession();
+    if (!session?.workspaceId) {
+      return new NextResponse('Unauthorized', { status: 401 });
+    }
+
     const body = await req.json();
     const { messages, customMessages, ...rest } = body;
 
     const settings = await prisma.keeperSettings.upsert({
-      where: { id: 'default' },
+      where: { id: session.workspaceId },
       update: {
         ...rest,
         messages: JSON.stringify(messages || []),
@@ -51,7 +62,8 @@ export async function POST(req: Request) {
       },
       create: {
         ...rest,
-        id: 'default',
+        id: session.workspaceId,
+        workspaceId: session.workspaceId,
         messages: JSON.stringify(messages || []),
         customMessages: JSON.stringify(customMessages || {}),
       }

@@ -41,7 +41,7 @@ const PROVIDER_ICONS: Record<CloudDevProviderId, React.ReactNode> = {
   codex: <Brain className="h-4 w-4" />,
 };
 
-const STATUS_CONFIG = {
+const STATUS_CONFIG: Record<string, { label: string; color: string; icon: React.ReactNode; progress: number }> = {
   pending: {
     label: 'Pending',
     color: 'bg-zinc-500/20 text-zinc-400',
@@ -150,7 +150,7 @@ interface TransferCardProps {
 function TransferCard({ transfer, isExpanded, onToggle, onClick }: TransferCardProps) {
   const fromConfig = CLOUD_DEV_PROVIDERS[transfer.fromProvider];
   const toConfig = CLOUD_DEV_PROVIDERS[transfer.toProvider];
-  const statusConfig = STATUS_CONFIG[transfer.status];
+  const statusConfig = STATUS_CONFIG[transfer.status] || STATUS_CONFIG.pending;
 
   const totalItems =
     transfer.transferredItems.activities +

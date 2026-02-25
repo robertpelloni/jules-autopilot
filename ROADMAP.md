@@ -1,5 +1,9 @@
 # Roadmap
 
+## Core Philosophy
+- Prioritize high-performance, deterministic AI workflows.
+- Maintain rigorous test coverage and continuous verification.
+- Enforce strict typing, consistent UI states, and offline-resilient operations.
 ## Status baseline (audited 2026-02-16)
 
 This roadmap has been re-baselined against the current code and docs state. Prior entries that were marked complete but are actually mock-only, partial, or not fully wired are now reflected accurately.

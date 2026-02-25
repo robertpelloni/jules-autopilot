@@ -53,13 +53,13 @@ Acceptance criteria:
 
 ### 4) Submodule dashboards: live data or explicit preview mode
 
-- [ ] Replace mock data in:
-  - [ ] `components/submodules/task-queue-dashboard.tsx`
-  - [ ] `components/submodules/mcp-server-dashboard.tsx`
-  - [ ] `components/submodules/terminal-stream.tsx`
-- [ ] Wire to actual backend/system signals.
-- [ ] If backend signal unavailable, expose explicit preview badge + roadmap ETA.
-- [ ] Implement robust loading, empty, offline, and error states.
+- [x] Replace mock data in:
+  - [x] `components/submodules/task-queue-dashboard.tsx`
+  - [x] `components/submodules/mcp-server-dashboard.tsx`
+  - [x] `components/submodules/terminal-stream.tsx`
+- [x] Wire to actual backend/system signals.
+- [x] If backend signal unavailable, expose explicit preview badge + roadmap ETA.
+- [x] Implement robust loading, empty, offline, and error states.
 
 Acceptance criteria:
 - Dashboards either show live verified data or explicitly indicate preview mode.
@@ -69,11 +69,11 @@ Acceptance criteria:
 
 ### 5) Plugin system hardening (currently simulated)
 
-- [ ] Define plugin manifest schema and validation rules.
-- [ ] Build backend plugin registry API and persistence model.
-- [ ] Implement install/uninstall lifecycle beyond localStorage simulation.
-- [ ] Add plugin capability permissions and runtime boundaries.
-- [ ] Add health, versioning, and compatibility checks.
+- [x] Define plugin manifest schema and validation rules.
+- [x] Build backend plugin registry API and persistence model.
+- [x] Implement install/uninstall lifecycle beyond localStorage simulation.
+- [x] Add plugin capability permissions and runtime boundaries.
+- [x] Add health, versioning, and compatibility checks.
 
 Acceptance criteria:
 - Plugins are not just UI toggles; install state persists server-side.
@@ -146,9 +146,9 @@ Acceptance criteria:
 
 ### 11) Expand API tests
 
-- [ ] Add route tests for all CRUD/state endpoints with success + failure branches.
-- [ ] Add auth boundary tests for protected routes.
-- [ ] Add provider integration contract tests (mock + real where possible).
+- [x] Add route tests for all CRUD/state endpoints with success + failure branches.
+- [x] Add auth boundary tests for protected routes.
+- [x] Add provider integration contract tests (mock + real where possible).
 
 Acceptance criteria:
 - High-risk routes are covered for both nominal and failure cases.
@@ -157,13 +157,13 @@ Acceptance criteria:
 
 ### 12) Expand E2E Playwright suite
 
-- [ ] Cover critical journeys:
-  - [ ] login/session creation/session detail flow
+- [x] Cover critical journeys:
+  - [x] login/session creation/session detail flow
   - [ ] debate creation/history/view flow
   - [ ] template create/edit/delete flow
-  - [ ] provider dashboard + transfer flow
+  - [x] provider dashboard + transfer flow
   - [ ] system dashboards and settings flow
-- [ ] Add deterministic test data setup/teardown strategy.
+- [x] Add deterministic test data setup/teardown strategy.
 
 Acceptance criteria:
 - CI verifies at least one end-to-end path per major module.
@@ -173,9 +173,9 @@ Acceptance criteria:
 
 ### 13) Quality gates
 
-- [ ] Enforce lint/typecheck/test/build gates in CI.
-- [ ] Add changed-files test selection where useful, but keep full suite on mainline.
-- [ ] Fail builds on known-doc drift checks for roadmap/status taxonomy.
+- [x] Enforce lint/typecheck/test/build gates in CI.
+- [x] Add changed-files test selection where useful, but keep full suite on mainline.
+- [x] Fail builds on known-doc drift checks for roadmap/status taxonomy.
 
 Acceptance criteria:
 - Regressions are blocked pre-merge.
@@ -185,9 +185,9 @@ Acceptance criteria:
 
 ### 14) OAuth and multi-user model
 
-- [ ] Design user/org/workspace model.
-- [ ] Implement OAuth providers and account linking.
-- [ ] Add per-user/per-workspace data isolation and migration plan.
+- [x] Design user/org/workspace model.
+- [x] Implement OAuth providers and account linking.
+- [x] Add per-user/per-workspace data isolation and migration plan.
 
 Acceptance criteria:
 - Auth model scales beyond single-operator/local mode.

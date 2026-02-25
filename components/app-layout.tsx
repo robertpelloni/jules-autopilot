@@ -100,15 +100,15 @@ export function AppLayout({ initialView }: AppLayoutProps) {
   });
 
   const handleStartDebate = (topic?: string, context?: string) => {
-      setDebateTopic(topic || '');
-      setDebateContext(context || '');
-      setDebateOpen(true);
+    setDebateTopic(topic || '');
+    setDebateContext(context || '');
+    setDebateOpen(true);
   };
 
   const handleReviewArtifact = (artifact: Artifact) => {
-      const content = artifact.changeSet?.gitPatch?.unidiffPatch || artifact.changeSet?.unidiffPatch || '';
-      handleStartDebate(`Code Review: ${artifact.name || 'Artifact'}`, content);
-      setView('sessions');
+    const content = artifact.changeSet?.gitPatch?.unidiffPatch || artifact.changeSet?.unidiffPatch || '';
+    handleStartDebate(`Code Review: ${artifact.name || 'Artifact'}`, content);
+    setView('sessions');
   };
 
   // Sync session selection with URL query param
@@ -121,10 +121,10 @@ export function AppLayout({ initialView }: AppLayoutProps) {
         client.getSession(sessionId)
           .then(session => {
             if (session.id === sessionId) {
-                // Only update if the fetched session matches the URL (handle race conditions)
-                // and if it's different from current
-                setSelectedSession(prev => prev?.id === session.id ? prev : session);
-                setView('sessions');
+              // Only update if the fetched session matches the URL (handle race conditions)
+              // and if it's different from current
+              setSelectedSession(prev => prev?.id === session.id ? prev : session);
+              setView('sessions');
             }
           })
           .catch(err => {
@@ -133,10 +133,10 @@ export function AppLayout({ initialView }: AppLayoutProps) {
           });
       }
     } else if (!sessionId && selectedSession) {
-        // If URL has no sessionId but we have a selected session, we might want to clear it
-        // Or do nothing if we want to persist state despite URL.
-        // For now, let's respect the URL as the source of truth for "no session selected" ONLY if needed
-        // But clicking "Sessions" in header might clear URL.
+      // If URL has no sessionId but we have a selected session, we might want to clear it
+      // Or do nothing if we want to persist state despite URL.
+      // For now, let's respect the URL as the source of truth for "no session selected" ONLY if needed
+      // But clicking "Sessions" in header might clear URL.
     }
   }, [searchParams, client, selectedSession?.id]);
 
@@ -175,14 +175,14 @@ export function AppLayout({ initialView }: AppLayoutProps) {
 
     // Optimistic update to prevent the useEffect loop
     if (selectedSession?.id === sessionId) return;
-    
+
     if (sessionObj) {
-        setSelectedSession(sessionObj);
+      setSelectedSession(sessionObj);
     }
-    
+
     setView('sessions');
     setMobileMenuOpen(false);
-    
+
     // Update URL without triggering a full page navigation if possible, 
     // but Next.js router.push will trigger the searchParams effect.
     // The key is ensuring the effect condition `selectedSession?.id !== sessionId` handles it.
@@ -193,7 +193,7 @@ export function AppLayout({ initialView }: AppLayoutProps) {
 
   const handleSessionSelectById = (sessionId: string) => {
     if (client) {
-        client.getSession(sessionId).then(handleSessionSelect).catch(console.error);
+      client.getSession(sessionId).then(handleSessionSelect).catch(console.error);
     }
   };
 
@@ -245,9 +245,9 @@ export function AppLayout({ initialView }: AppLayoutProps) {
           <div className="py-4 text-center text-muted-foreground">Please configure API key in settings.</div>
         </DialogContent>
       </Dialog>
-      
+
       <SessionKeeperManager />
-      
+
       <AppHeader
         view={view}
         setView={setView}
@@ -266,7 +266,6 @@ export function AppLayout({ initialView }: AppLayoutProps) {
         setIsSettingsOpen={setIsSettingsOpen}
         isLogPanelOpen={isLogPanelOpen}
         setIsLogPanelOpen={setIsLogPanelOpen}
-        onLogout={handleLogout}
       />
 
       <div className="flex flex-1 overflow-hidden min-h-0">
@@ -279,8 +278,8 @@ export function AppLayout({ initialView }: AppLayoutProps) {
         />
 
         {/* Resizable Panel Group (Vertical: Top = Main, Bottom = Logs) */}
-        <ResizablePanelGroup 
-          direction="vertical" 
+        <ResizablePanelGroup
+          direction="vertical"
           className="flex-1 min-w-0"
           key={isLogPanelOpen ? "vertical-layout-open" : "vertical-layout-closed"}
         >
@@ -311,9 +310,9 @@ export function AppLayout({ initialView }: AppLayoutProps) {
           {/* Bottom Panel: System/Logs */}
           {isLogPanelOpen && (
             <>
-              <ResizableHandle 
-                withHandle 
-                className="min-h-[8px] w-full cursor-row-resize bg-zinc-900 border-y border-white/10 hover:bg-purple-500/20 transition-colors" 
+              <ResizableHandle
+                withHandle
+                className="min-h-[8px] w-full cursor-row-resize bg-zinc-900 border-y border-white/10 hover:bg-purple-500/20 transition-colors"
               />
               <ResizablePanel defaultSize={30} minSize={10} maxSize={50}>
                 <SessionKeeper onClose={() => setIsLogPanelOpen(false)} isSidebar={false} />

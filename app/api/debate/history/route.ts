@@ -1,6 +1,7 @@
 
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
+import { getSession } from '@/lib/session';
 
 export async function POST(req: NextRequest) {
     try {
@@ -14,8 +15,14 @@ export async function POST(req: NextRequest) {
             );
         }
 
+        const session = await getSession();
+        if (!session?.workspaceId) {
+            return new NextResponse('Unauthorized', { status: 401 });
+        }
+
         const debate = await prisma.debate.create({
             data: {
+                workspaceId: session.workspaceId,
                 topic,
                 summary,
                 rounds: JSON.stringify(rounds),
@@ -36,7 +43,13 @@ export async function POST(req: NextRequest) {
 
 export async function GET(req: NextRequest) {
     try {
+        const session = await getSession();
+        if (!session?.workspaceId) {
+            return new NextResponse('Unauthorized', { status: 401 });
+        }
+
         const debates = await prisma.debate.findMany({
+            where: { workspaceId: session.workspaceId },
             orderBy: { createdAt: 'desc' },
             select: {
                 id: true,
