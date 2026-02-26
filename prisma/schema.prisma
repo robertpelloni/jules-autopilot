@@ -119,6 +119,32 @@ model PluginAuditLog {
   timestamp           DateTime @default(now())
 }
 
+model ProviderTelemetry {
+  id                  String   @id @default(uuid())
+  workspaceId         String
+  provider            String   // e.g. openai, anthropic
+  model               String   // e.g. gpt-4o, claude-3-5-sonnet
+  promptTokens        Int
+  completionTokens    Int
+  estimatedCostUSD    Float
+  timestamp           DateTime @default(now())
+  workspace           Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+}
+
+model RoutingPolicy {
+  id                  String   @id @default(uuid())
+  workspaceId         String
+  taskType            String   // e.g. code_review, fast_chat, deep_reasoning
+  preferredProvider   String?
+  preferredModel      String?
+  costEfficiencyMode  Boolean  @default(false) // If true, ignore 'preferred' if it exceeds budget thresholds
+  createdAt           DateTime @default(now())
+  updatedAt           DateTime @updatedAt
+  workspace           Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+
+  @@unique([workspaceId, taskType])
+}
+
 model SessionTransfer {
   id               String   @id @default(uuid())
   sourceProvider   String
@@ -195,6 +221,7 @@ model Workspace {
   name        String
   slug        String   @unique
   maxPluginExecutionsPerDay Int @default(100)
+  monthlyBudget Float    @default(100.00)
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
 
@@ -204,6 +231,8 @@ model Workspace {
   installedPlugins InstalledPlugin[]
   sessionTransfers SessionTransfer[]
   pluginAudits     PluginAuditLog[]
+  telemetry        ProviderTelemetry[]
+  routingPolicies  RoutingPolicy[]
 }
 
 model WorkspaceMember {

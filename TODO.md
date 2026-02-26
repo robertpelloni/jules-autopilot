@@ -207,9 +207,9 @@ Acceptance criteria:
 
 ### 16) Intelligent provider routing + cost controls
 
-- [ ] Add routing policy engine by task type, capability, and cost.
-- [ ] Add cross-provider cost telemetry and budget constraints.
-- [ ] Add policy simulation mode before rollout.
+- [x] Add routing policy engine by task type, capability, and cost.
+- [x] Add cross-provider cost telemetry and budget constraints.
+- [x] Add policy simulation mode before rollout.
 
 Acceptance criteria:
 - Provider selection can be automated with explicit policy controls.
