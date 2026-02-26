@@ -2,6 +2,24 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.9.1] - 2026-02-26
+
+### Added
+- **Routing Simulation Dashboard**: New `/dashboard/routing` page with interactive task-type selector, token count presets (Light/Medium/Heavy/Mega), real-time cost estimation, budget impact visualization with progress bar, and health status indicators — all backed by the existing `/api/routing/simulate` endpoint.
+- **Plugin Signature Badges**: Ed25519 cryptographic verification status now displayed on each plugin card in the marketplace (✓ Verified / ⚠ Unsigned).
+
+### Fixed
+- **CRITICAL: Missing Auth on `/api/review`**: Added session authentication gate — previously any unauthenticated user could trigger LLM calls and incur costs.
+- **Auth Ordering in `/api/debate`**: Moved authentication check before expensive participant enrichment loop.
+- **Consistent Error Handling**: Replaced raw `console.error` catch blocks in `debate/route.ts`, `debate/history/route.ts` with structured `handleInternalError` responses.
+- **Silent Error Swallowing**: `settings/keeper` GET now logs errors before returning defaults.
+- **Type Safety**: `routing/simulate/route.ts` `catch (err: any)` → `catch (err: unknown)` with proper `instanceof Error` check.
+- **Dead Code Removal**: Removed deprecated `setSession()`/`clearSession()` stubs from `lib/session.ts`.
+- **Legacy Auth Deprecation**: `auth/login` and `auth/logout` routes now return `410 Gone` pointing to NextAuth flow.
+
+### Changed
+- **Test Suite**: 12/12 suites, 61 tests passing. Updated `review/route.test.ts` assertions for structured error format. Rewrote deprecated auth route tests.
+
 ## [0.9.0] - 2026-02-26
 
 ### Added

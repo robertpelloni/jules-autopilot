@@ -164,6 +164,18 @@ export default function PluginsPage() {
                     <div className="flex items-center gap-1">
                       <ShieldCheck className="h-3 w-3" /> {plugin.author}
                     </div>
+                    {/* Ed25519 Signature Verification Status */}
+                    {plugin.signature ? (
+                      <div className="flex items-center gap-1 text-green-400">
+                        <ShieldCheck className="h-3 w-3" />
+                        <span className="text-[10px] font-medium">✓ Verified</span>
+                      </div>
+                    ) : (
+                      <div className="flex items-center gap-1 text-amber-400">
+                        <Globe className="h-3 w-3" />
+                        <span className="text-[10px] font-medium">⚠ Unsigned</span>
+                      </div>
+                    )}
                     {plugin.capabilities.length > 0 && (
                       <div className="flex flex-col gap-1 col-span-full mt-2 w-full text-zinc-500 font-mono text-[10px]">
                         <div className="flex items-center gap-1">
