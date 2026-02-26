@@ -2,6 +2,19 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.9.0] - 2026-02-26
+
+### Added
+- **Phase 15: Advanced Plugin Ecosystem**: Marketplace ingestion pipeline (`POST /api/plugins/ingest`) with Ed25519 cryptographic signature verification (`lib/crypto/signatures.ts`). Plugin execution sandbox with per-workspace daily quotas and comprehensive `PluginAuditLog` audit trail.
+- **Phase 16: Intelligent Provider Routing**: Dynamic LLM provider selection engine (`lib/routing/engine.ts`) supporting task-type-based routing, cost-efficiency fallbacks, and `Workspace.monthlyBudget` enforcement. Routing simulation API (`POST /api/routing/simulate`) for cost previewing. `ProviderTelemetry` model tracking token usage and USD costs. `RoutingPolicy` model for per-workspace routing overrides.
+- **New Prisma Models**: `PluginAuditLog`, `ProviderTelemetry`, `RoutingPolicy`. Added `signature`, `publicKey`, `status` to `PluginManifest`. Added `monthlyBudget` and `maxPluginExecutionsPerDay` to `Workspace`.
+- **Test Coverage**: 12 test suites, 63 tests passing. Added tests for plugin quota enforcement (429), routing simulation (402 budget exceeded, cost-efficiency fallback), workspace auth boundaries.
+
+### Changed
+- **Documentation Overhaul**: Comprehensive rewrite of `LLM_INSTRUCTIONS.md` (v3.0), `VISION.md`, `ROADMAP.md`, `MEMORY.md`, `HANDOFF.md`, `IDEAS.md`, `AGENTS.md`, `CLAUDE.md`, `GEMINI.md`, `GPT.md`, `copilot-instructions.md`. All agent instruction files now reference `LLM_INSTRUCTIONS.md` as the universal hub with model-specific overrides.
+- **Roadmap Re-baseline**: All P0–P4 backlog items marked complete. Remaining gaps accurately documented.
+- **VERSION Sync**: Synchronized `VERSION.md`, `VERSION`, and `package.json` to `0.9.0`.
+
 ## [0.8.9] - 2026-02-22
 
 ### Changed

@@ -37,12 +37,12 @@ describe('API Route: /api/routing/simulate', () => {
         });
 
         // Zero dollars spent this month by default.
-        (prisma.providerTelemetry.aggregate as jest.Mock).mockResolvedValue({
+        ((prisma as any).providerTelemetry.aggregate as jest.Mock).mockResolvedValue({
             _sum: { estimatedCostUSD: 0 }
         });
 
         // No custom policy defined.
-        (prisma.routingPolicy.findUnique as jest.Mock).mockResolvedValue(null);
+        ((prisma as any).routingPolicy.findUnique as jest.Mock).mockResolvedValue(null);
     });
 
     const createRequest = (body: any) => {
@@ -81,7 +81,7 @@ describe('API Route: /api/routing/simulate', () => {
 
     it('should trigger Cost Efficiency mode when budget drops below $10', async () => {
         // Spent 95.00 this month, leaving 5.00 remaining.
-        (prisma.providerTelemetry.aggregate as jest.Mock).mockResolvedValue({
+        ((prisma as any).providerTelemetry.aggregate as jest.Mock).mockResolvedValue({
             _sum: { estimatedCostUSD: 95.00 }
         });
 
@@ -104,7 +104,7 @@ describe('API Route: /api/routing/simulate', () => {
     });
 
     it('should honor custom Routing Policies configured by workspace unless overridden by budget guardrails', async () => {
-        (prisma.routingPolicy.findUnique as jest.Mock).mockResolvedValue({
+        ((prisma as any).routingPolicy.findUnique as jest.Mock).mockResolvedValue({
             preferredProvider: 'openai',
             preferredModel: 'gpt-4o'
         });
@@ -126,7 +126,7 @@ describe('API Route: /api/routing/simulate', () => {
 
     it('should block execution with 402 if budget is wholly consumed', async () => {
         // 100 limit, 100 spent = 0 balance.
-        (prisma.providerTelemetry.aggregate as jest.Mock).mockResolvedValue({
+        ((prisma as any).providerTelemetry.aggregate as jest.Mock).mockResolvedValue({
             _sum: { estimatedCostUSD: 100.00 }
         });
 

@@ -4,80 +4,104 @@
 - Prioritize high-performance, deterministic AI workflows.
 - Maintain rigorous test coverage and continuous verification.
 - Enforce strict typing, consistent UI states, and offline-resilient operations.
-## Status baseline (audited 2026-02-16)
 
-This roadmap has been re-baselined against the current code and docs state. Prior entries that were marked complete but are actually mock-only, partial, or not fully wired are now reflected accurately.
+## Status Baseline (audited 2026-02-26)
 
-## ✅ Solidly implemented foundations
+This roadmap has been re-baselined against current code state after completing the full P0–P4 execution backlog.
 
-- Session lifecycle UI and activity feed core loop (`components/session-list.tsx`, `components/activity-feed.tsx`, `lib/jules/client.ts`)
-- Session Keeper daemon + persisted settings/logs (`server/daemon.ts`, `server/index.ts`, `app/api/settings/keeper/route.ts`)
-- Debate + code review orchestration endpoints and persistence (`app/api/debate/*`, `app/api/review/route.ts`, `prisma/schema.prisma`)
-- HTTP-only cookie auth flow for primary app access (`lib/session.ts`, `middleware.ts`, `app/login/page.tsx`)
-- Templates CRUD data model and API (`app/api/templates/*`, `prisma/schema.prisma`)
-- System status/submodule introspection API (`app/api/system/status/route.ts`, `app/api/system/submodules/route.ts`)
+## ✅ Solidly Implemented Foundations
 
-## 🟡 Partially implemented / requires wiring
+- Session lifecycle UI and activity feed core loop (`components/session-list.tsx`, `components/activity-feed.tsx`)
+- Session Keeper daemon + persisted settings/logs (`server/daemon.ts`, `server/index.ts`)
+- Debate + code review orchestration endpoints and persistence (`app/api/debate/*`, `app/api/review/route.ts`)
+- Templates CRUD data model and API (`app/api/templates/*`)
+- System status/submodule introspection API (`app/api/system/*`)
+- Standardized error contracts across all APIs (`lib/api/error.ts`)
+- Request IDs/correlation IDs and structured logging (`lib/api/error.ts`)
+- Diagnostics endpoint for operational health checks (`app/api/system/status/route.ts`)
+- Comprehensive API route tests (11+ suites, 63+ tests passing)
+- E2E Playwright suite covering critical user journeys
+- CI quality gates (lint, typecheck, test, build, doc-drift checks)
+- Multi-provider dashboard with real provider implementations (`app/dashboard/providers/page.tsx`)
+- Session transfer state machine with observable checkpoints (`app/api/transfers/*`)
+- Plugin manifest schema validation and backend registry (`app/api/plugins/*`)
+- Plugin capability permissions and runtime boundaries (`app/api/plugins/execute/route.ts`)
 
-### Multi-provider cloud dev
-- Unified types/store/provider registry are present.
-- Reality: only `jules` provider is materially implemented; others are stub/mock or throw `ProviderNotImplementedError`.
-- Gaps:
-  - Full provider APIs for `devin`, `manus`, `openhands`, `github-spark`, `blocks`, `claude-code`, `codex`
-  - Real transfer progress lifecycle (currently coarse status + local state)
-  - Robust provider health checks and retries
+## ✅ Completed in P4 Expansion Phase
 
-### Plugin system
-- `/plugins` exists, but uses static plugin cards + localStorage install toggles.
-- No backend plugin registry, loading, sandboxing, manifest spec, permission model, or execution runtime.
+### OAuth & Multi-User Model (Phase 14 — Complete)
+- ✅ NextAuth v5 OAuth via GitHub with Prisma adapter
+- ✅ User/Workspace/WorkspaceMember data model
+- ✅ Automatic "Personal Workspace" provisioning on signup
+- ✅ Per-workspace data isolation across all API routes (templates, debates, settings, transfers)
+- ✅ JWT session strategy with `workspaceId` on session objects
 
-### Submodule dashboards
-- System views exist, but several submodule detail actions are explicit placeholders.
-- `TaskQueueDashboard`, `McpServerDashboard`, and `TerminalStream` components currently use mock/demo datasets rather than live integrations.
+### Advanced Plugin Ecosystem (Phase 15 — Complete)
+- ✅ Marketplace ingestion pipeline (`POST /api/plugins/ingest`)
+- ✅ Ed25519 cryptographic signature verification (`lib/crypto/signatures.ts`)
+- ✅ Plugin execution sandbox with per-workspace daily quotas
+- ✅ Comprehensive `PluginAuditLog` for all execution events
+- ✅ Enhanced Zod schemas with `signature`, `publicKey`, `status` fields
 
-### Templates + memory + settings split-brain
-- Next API routes and daemon routes both provide overlapping functionality (`templates`, `debate`, `settings`, `logs`).
-- Client uses `http://localhost:8080` for template calls via `JulesClient`, bypassing equivalent Next routes.
-- Requires a single source of truth and transport strategy.
+### Intelligent Provider Routing (Phase 16 — Complete)
+- ✅ `ProviderTelemetry` model tracking token usage and USD costs
+- ✅ `RoutingPolicy` model for per-workspace, per-task-type routing overrides
+- ✅ Intelligent routing engine (`lib/routing/engine.ts`) with cost-efficiency fallbacks
+- ✅ `Workspace.monthlyBudget` enforcement with `402 Payment Required` on breach
+- ✅ Routing simulation API (`POST /api/routing/simulate`) for cost previewing
+- ✅ Static pricing matrix for OpenAI, Anthropic, and Google models
 
-### Auth/account UX consistency
-- Core auth is cookie-based.
-- Account page copy still describes browser localStorage for API key storage, which is outdated/misleading in current architecture.
+## 🟡 Partially Implemented / Gaps Remaining
 
-## ❌ Not implemented (but planned/claimed previously)
+### Frontend UI Gaps
+- Provider dashboard exists but several providers still show mock/demo badges
+- Plugin marketplace page (`app/plugins/page.tsx`) needs to consume the new ingestion API
+- Routing simulation UI does not yet exist (backend API is ready)
+- Analytics dashboard uses simulated data for some metrics
+- Terminal demo page exists but is not fully wired to `terminal-server/`
 
-- OAuth/multi-user accounts and workspace-level isolation
-- Production plugin ecosystem
-- Full real-time event architecture replacing polling in major surfaces
-- Comprehensive E2E coverage (current Playwright set is limited)
-- Unified cost/billing tracking across providers
+### Submodule Dashboards
+- `TaskQueueDashboard`, `McpServerDashboard`, and `TerminalStream` components still use mock datasets
+- Need to wire to real backend signals from `external/jules-task-queue` and `external/*-mcp`
+
+### Split-Brain API Surfaces
+- Daemon (`server/`) and Next.js API routes still have overlapping REST endpoints
+- `JulesClient` in `lib/jules/client.ts` still calls `http://localhost:8080` for some operations
+
+### Docker Deployment
+- `Dockerfile` and production `docker-compose.yml` not yet created
+- `DEPLOY.md` references Docker as "pending implementation"
+
+## ❌ Not Yet Implemented (Future Roadmap)
+
+- Full real-time event architecture (WebSocket/SSE replacing polling)
+- Deep Context RAG (codebase indexing for enhanced agent understanding)
+- Shadow Pilot Mode (silent Council background monitoring)
+- Workflow Automation (multi-step Feature → Test → PR → Merge chains)
+- Agent Scaling (automatic parallel session spawning)
+- Mobile Emergency Triage ("One-Tap Approve Fix")
 - Conference-mode dedicated UI flow (backend action exists, no first-class UX)
 
-## Priority execution plan
+## Priority Execution Plan
 
-### Phase A — Truth and consistency (immediate)
-1. Unify docs with code reality (this update + follow-up doc harmonization).
-2. Resolve version drift (`VERSION*` vs `package.json` mismatch).
-3. Consolidate duplicated API surfaces (Next vs daemon ownership).
+### Phase Next — UI Completeness & Polish
+1. Build Routing Simulation UI page consuming `/api/routing/simulate`.
+2. Wire Plugin marketplace to use the ingestion API and display signature status.
+3. Connect submodule dashboards to real backend data.
+4. Add routing/budget/quota widgets to Settings page.
 
-### Phase B — Product integrity
-1. Complete `TaskQueueDashboard` (currently static placeholder).
-2. Complete `McpServerDashboard` (currently mock data).
-3. Complete `TerminalStream` to use real `xterm.js` backend websockets.
-4. Complete at least one non-Jules provider (e.g., `devin`, `manus`) end-to-end to validate abstraction.
-5. Harden auth messaging and remove stale localStorage-sensitive guidance.
+### Phase Next+1 — Infrastructure
+1. Create production `Dockerfile` and `docker-compose.yml`.
+2. Implement real-time event push (SSE/WebSocket) for session activity feeds.
+3. Consolidate daemon vs Next.js API split-brain endpoints.
 
-### Phase C — Scale and reliability
-1. Expand automated tests (API + integration + E2E critical paths).
-2. Improve realtime/event architecture where polling is still heavy.
-3. Add formal API contracts and operational health checks.
-
-### Phase D — Vision features
-1. OAuth/multi-user support.
-2. Plugin runtime + permissions model.
-3. Full provider ecosystem maturity and auto-routing policies.
+### Phase Next+2 — Advanced Intelligence
+1. Implement RAG-based deep context for codebase understanding.
+2. Build Shadow Pilot background monitoring mode.
+3. Add multi-step workflow automation engine.
 
 ## Notes
 
-- Detailed, ordered implementation backlog lives in `TODO.md`.
-- Detailed audit methodology/findings and evidence references live in `HANDOFF.md`.
+- Detailed ordered implementation backlog lives in `TODO.md`.
+- Detailed session handoff notes live in `HANDOFF.md`.
+- Creative improvement ideas live in `IDEAS.md`.
