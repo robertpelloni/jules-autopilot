@@ -48,8 +48,8 @@ export async function POST(req: Request) {
             selectedProvider = resolution.provider;
             selectedModel = resolution.model;
             policyReason = resolution.reason;
-        } catch (err: any) {
-            if (err.message === 'BUDGET_EXCEEDED') {
+        } catch (err: unknown) {
+            if (err instanceof Error && err.message === 'BUDGET_EXCEEDED') {
                 return NextResponse.json(
                     { error: 'Payment Required', message: 'Workspace LLM budget has been fully consumed.' },
                     { status: 402 }

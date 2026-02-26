@@ -3,9 +3,18 @@ import { runDebate } from '@jules/shared';
 import { Participant } from '@jules/shared';
 import { prisma } from '@/lib/prisma';
 import { getSession } from '@/lib/session';
+import { handleInternalError } from '@/lib/api/error';
 
 export const runtime = 'nodejs';
 
+/**
+ * POST /api/debate
+ * 
+ * Orchestrates a multi-agent debate session. Enriches participant API keys
+ * from server-side environment variables when not explicitly provided,
+ * persists the debate result into the authenticated workspace's history,
+ * and returns the full debate output.
+ */
 export async function POST(req: NextRequest) {
     try {
         const body = await req.json();
@@ -18,6 +27,14 @@ export async function POST(req: NextRequest) {
             );
         }
 
+        // Auth gate — must be checked before any expensive operations
+        const session = await getSession();
+        if (!session?.workspaceId) {
+            return new NextResponse('Unauthorized', { status: 401 });
+        }
+
+        // Enrich participant API keys from server env vars when callers
+        // pass 'env', 'placeholder', or omit keys entirely
         const enrichedParticipants = (participants as Participant[]).map((p) => {
             let finalApiKey = p.apiKey;
 
@@ -44,11 +61,6 @@ export async function POST(req: NextRequest) {
             };
         });
 
-        const session = await getSession();
-        if (!session?.workspaceId) {
-            return new NextResponse('Unauthorized', { status: 401 });
-        }
-
         const result = await runDebate({
             history: history || [],
             participants: enrichedParticipants,
@@ -56,6 +68,7 @@ export async function POST(req: NextRequest) {
             topic
         });
 
+        // Persist debate result — failures here are non-fatal
         try {
             await prisma.debate.create({
                 data: {
@@ -71,16 +84,12 @@ export async function POST(req: NextRequest) {
                 }
             });
         } catch (dbError) {
-            console.error('Failed to persist debate:', dbError);
+            console.error('Failed to persist debate (non-fatal):', dbError);
         }
 
         return NextResponse.json(result);
 
     } catch (error) {
-        console.error('Debate request failed:', error);
-        return NextResponse.json(
-            { error: error instanceof Error ? error.message : 'Unknown error' },
-            { status: 500 }
-        );
+        return handleInternalError(req, error);
     }
 }

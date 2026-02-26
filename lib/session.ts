@@ -5,11 +5,14 @@ import { prisma } from '@/lib/prisma';
 export { encrypt, decrypt };
 
 /**
- * Replaces the legacy manual cookie parsing with robust Auth.js verification.
+ * Retrieves the authenticated session with workspace context.
  * 
- * In this multi-tenant iteration, if a developer wants to pass a legacy Jules API key
- * explicitly, we map it into the user object metadata, but the default mode
- * relies on standard NextAuth JWT verification.
+ * Uses NextAuth v5 JWT session verification and eagerly resolves the
+ * user's active workspace membership for data isolation queries across
+ * all API routes. Returns null if the user is not authenticated.
+ * 
+ * The returned `workspaceId` is the critical field used by every API
+ * route to scope database queries to the correct workspace.
  */
 export async function getSession() {
   const session = await auth();
@@ -33,14 +36,4 @@ export async function getSession() {
     },
     workspaceId: membership?.workspaceId || null,
   };
-}
-
-// Stubs for transitionary period where legacy code manually invokes these.
-// True destruction of sessions now happens explicitly via next-auth's <form action={signOut}>.
-export async function setSession(apiKey: string) {
-  console.warn('Manual setSession(apiKey) invoked. This is deprecated under the Auth.js multi-tenant model.');
-}
-
-export async function clearSession() {
-  console.warn('Manual clearSession() invoked. Use NextAuth signOut() instead.');
 }

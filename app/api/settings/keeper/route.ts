@@ -39,7 +39,8 @@ export async function GET() {
       customMessages: JSON.parse(settings.customMessages),
     });
   } catch (error) {
-    return NextResponse.json(DEFAULT_SETTINGS); // Fallback
+    console.error('[Settings Keeper] GET failed, returning defaults:', error);
+    return NextResponse.json(DEFAULT_SETTINGS); // Graceful fallback
   }
 }
 

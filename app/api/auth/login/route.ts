@@ -1,15 +1,19 @@
 import { NextResponse } from 'next/server';
-import { setSession } from '@/lib/session';
-import { createErrorResponse, handleInternalError } from '@/lib/api/error';
+import { createErrorResponse } from '@/lib/api/error';
 
+/**
+ * POST /api/auth/login (DEPRECATED)
+ * 
+ * This legacy endpoint is superseded by NextAuth's built-in OAuth flow.
+ * Authentication is now handled via NextAuth signIn() at /api/auth/signin.
+ * This route is preserved for backwards-compatibility but returns a
+ * deprecation notice directing callers to the new auth flow.
+ */
 export async function POST(req: Request) {
-  try {
-    const { apiKey } = await req.json();
-    if (!apiKey) return createErrorResponse(req, 'BAD_REQUEST', 'API Key required', 400);
-
-    await setSession(apiKey);
-    return NextResponse.json({ success: true });
-  } catch (e) {
-    return handleInternalError(req, e);
-  }
+  return createErrorResponse(
+    req,
+    'DEPRECATED',
+    'Manual API key login is deprecated. Use NextAuth OAuth flow via /api/auth/signin instead.',
+    410 // 410 Gone
+  );
 }

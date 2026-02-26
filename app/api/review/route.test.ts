@@ -93,6 +93,8 @@ describe('API Route: /api/review', () => {
         expect(res.status).toBe(500);
 
         const data = await res.json();
-        expect(data.error).toBe('Review failed');
+        // handleInternalError wraps errors in structured { error: { code, message, requestId } } format
+        expect(data.error.message).toBe('Review failed');
+        expect(data.error.code).toBe('INTERNAL_ERROR');
     });
 });
