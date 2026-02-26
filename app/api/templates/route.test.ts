@@ -5,6 +5,14 @@ import { GET, POST } from './route';
 import { NextRequest } from 'next/server';
 import { prisma } from '@/lib/prisma';
 
+jest.mock('@/lib/session', () => ({
+    getSession: jest.fn().mockResolvedValue({
+        workspaceId: 'ws-test-123',
+        user: { id: 'user-1', workspaceId: 'ws-test-123' },
+        apiKey: 'authenticated-via-oauth',
+    }),
+}));
+
 jest.mock('@/lib/prisma', () => ({
     prisma: {
         sessionTemplate: {

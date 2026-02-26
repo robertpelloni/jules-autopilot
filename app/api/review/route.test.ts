@@ -5,6 +5,15 @@ import { POST } from './route';
 import { NextRequest } from 'next/server';
 import { runCodeReview } from '@jules/shared';
 
+// Mock session to prevent ESM next-auth chain
+jest.mock('@/lib/session', () => ({
+    getSession: jest.fn().mockResolvedValue({
+        workspaceId: 'ws-test-123',
+        user: { id: 'user-1' },
+        apiKey: 'authenticated-via-oauth',
+    }),
+}));
+
 // Mock the review library
 jest.mock('@jules/shared', () => ({
     runCodeReview: jest.fn()
@@ -52,7 +61,7 @@ describe('API Route: /api/review', () => {
 
         const res = await POST(req);
         expect(res.status).toBe(200);
-        
+
         const data = await res.json();
         expect(data).toEqual({
             summary: 'Good code',
@@ -82,7 +91,7 @@ describe('API Route: /api/review', () => {
 
         const res = await POST(req);
         expect(res.status).toBe(500);
-        
+
         const data = await res.json();
         expect(data.error).toBe('Review failed');
     });

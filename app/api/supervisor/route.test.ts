@@ -7,15 +7,9 @@ jest.mock('@/lib/session', () => ({
 }));
 jest.mock('@jules/shared', () => ({
   getProvider: jest.fn(),
-}));
-jest.mock('@jules/shared', () => ({
   runDebate: jest.fn(),
   runConference: jest.fn(),
-}));
-jest.mock('@jules/shared', () => ({
   runCodeReview: jest.fn(),
-}));
-jest.mock('@jules/shared', () => ({
   summarizeSession: jest.fn(),
 }));
 
@@ -35,8 +29,8 @@ describe('Supervisor API', () => {
 
   beforeEach(() => {
     jest.clearAllMocks();
-    jest.spyOn(console, 'error').mockImplementation(() => {});
-    jest.spyOn(console, 'warn').mockImplementation(() => {});
+    jest.spyOn(console, 'error').mockImplementation(() => { });
+    jest.spyOn(console, 'warn').mockImplementation(() => { });
   });
 
   afterEach(() => {
@@ -55,7 +49,7 @@ describe('Supervisor API', () => {
     const req = createRequest({ messages: [] }); // missing provider/apiKey
     const res = await POST(req);
     const data = await res.json();
-    
+
     expect(res.status).toBe(400);
     expect(data.error).toBeDefined();
   });
@@ -81,7 +75,7 @@ describe('Supervisor API', () => {
 
       const req = createRequest({ action: 'list_models', provider: 'invalid' });
       const res = await POST(req);
-      
+
       expect(res.status).toBe(400);
     });
   });
@@ -91,9 +85,9 @@ describe('Supervisor API', () => {
       (getSession as jest.Mock).mockResolvedValue({ apiKey: mockApiKey });
       (runDebate as jest.Mock).mockResolvedValue({ summary: 'Debate done' });
 
-      const req = createRequest({ 
-        action: 'debate', 
-        participants: [{ name: 'P1' }], 
+      const req = createRequest({
+        action: 'debate',
+        participants: [{ name: 'P1' }],
         messages: [],
         topic: 'Test'
       });
@@ -118,8 +112,8 @@ describe('Supervisor API', () => {
       (getSession as jest.Mock).mockResolvedValue({ apiKey: mockApiKey });
       (runCodeReview as jest.Mock).mockResolvedValue('Review result');
 
-      const req = createRequest({ 
-        action: 'review', 
+      const req = createRequest({
+        action: 'review',
         codeContext: 'const a = 1;',
         provider: 'openai'
       });
@@ -144,9 +138,9 @@ describe('Supervisor API', () => {
       const mockComplete = jest.fn().mockResolvedValue({ content: 'Supervisor says...' });
       (getProvider as jest.Mock).mockReturnValue({ complete: mockComplete });
 
-      const req = createRequest({ 
-        messages: [{ role: 'user', content: 'Help' }], 
-        provider: 'openai' 
+      const req = createRequest({
+        messages: [{ role: 'user', content: 'Help' }],
+        provider: 'openai'
       });
       const res = await POST(req);
       const data = await res.json();

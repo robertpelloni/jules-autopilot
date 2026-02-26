@@ -5,6 +5,14 @@ import { GET, PATCH } from './route';
 import { NextRequest } from 'next/server';
 import { prisma } from '@/lib/prisma';
 
+jest.mock('@/lib/session', () => ({
+    getSession: jest.fn().mockResolvedValue({
+        workspaceId: 'ws-test-123',
+        user: { id: 'user-1', workspaceId: 'ws-test-123' },
+        apiKey: 'authenticated-via-oauth',
+    }),
+}));
+
 jest.mock('@/lib/prisma', () => ({
     prisma: {
         sessionTransfer: {
@@ -33,7 +41,7 @@ describe('API Route: /api/transfers/[id]', () => {
         });
 
         it('should return 200 with transfer data if exists', async () => {
-            const mockData = { id: 'transfer-1', status: 'ready' };
+            const mockData = { id: 'transfer-1', status: 'ready', workspaceId: 'ws-test-123' };
             (prisma.sessionTransfer.findUnique as jest.Mock).mockResolvedValue(mockData);
 
             const req = new NextRequest('http://localhost/api/transfers/transfer-1');
@@ -59,7 +67,8 @@ describe('API Route: /api/transfers/[id]', () => {
         });
 
         it('should successfully update transfer status', async () => {
-            const mockUpdated = { id: 'transfer-1', status: 'preparing' };
+            const mockUpdated = { id: 'transfer-1', status: 'preparing', workspaceId: 'ws-test-123' };
+            (prisma.sessionTransfer.findUnique as jest.Mock).mockResolvedValue({ id: 'transfer-1', workspaceId: 'ws-test-123' });
             (prisma.sessionTransfer.update as jest.Mock).mockResolvedValue(mockUpdated);
 
             const req = new NextRequest('http://localhost/api/transfers/transfer-1', {
@@ -77,6 +86,7 @@ describe('API Route: /api/transfers/[id]', () => {
         });
 
         it('should handle internal errors', async () => {
+            (prisma.sessionTransfer.findUnique as jest.Mock).mockResolvedValue({ id: 'transfer-1', workspaceId: 'ws-test-123' });
             (prisma.sessionTransfer.update as jest.Mock).mockRejectedValue(new Error('DB Crash'));
 
             const req = new NextRequest('http://localhost/api/transfers/transfer-1', {

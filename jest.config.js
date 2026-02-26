@@ -12,8 +12,12 @@ const customJestConfig = {
   testEnvironment: "jest-environment-node",
   moduleNameMapper: {
     "^@/(.*)$": "<rootDir>/$1",
+    "^@jules/shared$": "<rootDir>/packages/shared/src/index.ts",
   },
-  modulePathIgnorePatterns: ["<rootDir>/external/"],
+  modulePathIgnorePatterns: ["<rootDir>/external/", "<rootDir>/.next/"],
+  transformIgnorePatterns: [
+    "node_modules/(?!(next-auth|@auth/core)/)",
+  ],
   testMatch: ["<rootDir>/app/**/*.test.ts", "<rootDir>/lib/**/*.test.ts"], // Run tests in app and lib directory
 };
 
