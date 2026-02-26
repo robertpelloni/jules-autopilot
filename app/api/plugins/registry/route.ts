@@ -11,6 +11,7 @@ const SEED_PLUGINS = [
         author: 'Atlassian',
         version: '1.2.0',
         capabilities: '["network:http"]',
+        status: 'active'
     },
     {
         id: 'slack-notifications',
@@ -19,6 +20,7 @@ const SEED_PLUGINS = [
         author: 'Slack',
         version: '2.0.1',
         capabilities: '["network:http"]',
+        status: 'active'
     },
     {
         id: 'figma-to-code',
@@ -27,6 +29,7 @@ const SEED_PLUGINS = [
         author: 'Figma',
         version: '0.9.5',
         capabilities: '["filesystem:write", "network:http"]',
+        status: 'active'
     },
     {
         id: 'sentry-reporting',
@@ -35,6 +38,7 @@ const SEED_PLUGINS = [
         author: 'Sentry',
         version: '3.1.0',
         capabilities: '["network:http"]',
+        status: 'active'
     },
     {
         id: 'vscode-sync',
@@ -43,6 +47,7 @@ const SEED_PLUGINS = [
         author: 'Microsoft',
         version: '1.0.0',
         capabilities: '["filesystem:read", "filesystem:write"]',
+        status: 'active'
     },
     {
         id: 'github-copilot-bridge',
@@ -51,6 +56,7 @@ const SEED_PLUGINS = [
         author: 'GitHub',
         version: '1.5.2',
         capabilities: '["mcp:invoke_tool"]',
+        status: 'active'
     }
 ];
 
@@ -88,6 +94,9 @@ export async function GET(req: Request) {
                 version: manifest.version,
                 capabilities: JSON.parse(manifest.capabilities),
                 configSchema: manifest.configSchema ? JSON.parse(manifest.configSchema) : undefined,
+                signature: manifest.signature || undefined,
+                publicKey: manifest.publicKey || undefined,
+                status: manifest.status as 'pending' | 'active' | 'revoked',
                 createdAt: manifest.createdAt.toISOString(),
                 updatedAt: manifest.updatedAt.toISOString(),
 

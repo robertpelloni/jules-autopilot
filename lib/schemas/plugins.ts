@@ -20,6 +20,9 @@ export const PluginManifestSchema = z.object({
     version: z.string(),
     capabilities: z.array(PluginCapabilitySchema),
     configSchema: z.record(z.string(), z.unknown()).optional(),
+    signature: z.string().optional(),
+    publicKey: z.string().optional(),
+    status: z.enum(['pending', 'active', 'revoked']).default('active'),
     createdAt: z.string().datetime().optional(),
     updatedAt: z.string().datetime().optional()
 });

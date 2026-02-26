@@ -196,9 +196,9 @@ Acceptance criteria:
 
 ### 15) Advanced plugin ecosystem
 
-- [ ] Add marketplace ingestion pipeline.
-- [ ] Add plugin signing/verification.
-- [ ] Add sandbox/runtime quotas and audit logs.
+- [x] Add marketplace ingestion pipeline.
+- [x] Add plugin signing/verification.
+- [x] Add sandbox/runtime quotas and audit logs.
 
 Acceptance criteria:
 - Plugin model supports safe third-party extension in production.

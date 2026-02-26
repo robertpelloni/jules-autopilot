@@ -3,6 +3,7 @@ import { prisma } from '@/lib/prisma';
 import { handleInternalError } from '@/lib/api/error';
 import { z } from 'zod';
 import { PluginCapability } from '@/lib/schemas/plugins';
+import { getSession } from '@/lib/session';
 
 const ExecutionPayloadSchema = z.object({
     pluginId: z.string().min(1),
@@ -36,7 +37,54 @@ export async function POST(req: Request) {
 
         const { pluginId, requiredCapability, action, payload } = parseResult.data;
 
-        // 1. Verify plugin is installed and enabled
+        // 0. Authenticate Workspace and load usage quotas
+        const session = await getSession();
+        if (!session?.workspaceId) {
+            return new NextResponse('Unauthorized', { status: 401 });
+        }
+
+        const workspace = await prisma.workspace.findUnique({
+            where: { id: session.workspaceId },
+            select: { id: true, maxPluginExecutionsPerDay: true }
+        });
+
+        if (!workspace) {
+            return new NextResponse('Workspace not found', { status: 404 });
+        }
+
+        // 1. Enforce Workspace Execution Quota (Rate Limiting)
+        const today = new Date();
+        today.setHours(0, 0, 0, 0);
+
+        const executionsToday = await prisma.pluginAuditLog.count({
+            where: {
+                workspaceId: workspace.id,
+                timestamp: { gte: today }
+            }
+        });
+
+        if (executionsToday >= workspace.maxPluginExecutionsPerDay) {
+            // Log quota violation failure
+            await prisma.pluginAuditLog.create({
+                data: {
+                    pluginId,
+                    action,
+                    capabilityRequested: requiredCapability,
+                    success: false,
+                    workspaceId: workspace.id
+                }
+            });
+
+            return NextResponse.json(
+                {
+                    error: 'Execution Quota Exceeded',
+                    details: `Workspace '${workspace.id}' has exceeded its daily limit of ${workspace.maxPluginExecutionsPerDay} plugin executions.`
+                },
+                { status: 429 }
+            ); // 429 Too Many Requests
+        }
+
+        // 2. Verify plugin is installed and enabled
         const installedPlugin = await prisma.installedPlugin.findUnique({
             where: { id: pluginId },
             include: { plugin: true }
@@ -60,6 +108,17 @@ export async function POST(req: Request) {
 
         if (!capabilities.includes(requiredCapability as PluginCapability)) {
             console.warn(`[Plugins API] Security Boundary Blocked: Plugin ${pluginId} attempted to use ${requiredCapability} without permission.`);
+
+            await prisma.pluginAuditLog.create({
+                data: {
+                    pluginId,
+                    action,
+                    capabilityRequested: requiredCapability,
+                    success: false,
+                    workspaceId: workspace.id
+                }
+            });
+
             return NextResponse.json(
                 {
                     error: 'Security Boundary Violation: Capability not granted',
@@ -70,10 +129,20 @@ export async function POST(req: Request) {
             );
         }
 
-        // 3. Simulate execution (In a real system, this would route to a Plugin Sandbox/VM or MCP Host)
+        // 4. Simulate execution (In a real system, this would route to a Plugin Sandbox/VM or MCP Host)
         console.log(`[Plugins API] Executing ${action} for ${pluginId} using ${requiredCapability}...`, payload);
 
         // Mock successful execution
+        await prisma.pluginAuditLog.create({
+            data: {
+                pluginId,
+                action,
+                capabilityRequested: requiredCapability,
+                success: true,
+                workspaceId: workspace.id
+            }
+        });
+
         return NextResponse.json({
             success: true,
             message: `Executed ${action} successfully`,
