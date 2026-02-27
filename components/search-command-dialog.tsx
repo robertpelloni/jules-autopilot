@@ -13,7 +13,7 @@ import {
 } from '@/components/ui/command';
 import { useJules } from '@/lib/jules/provider';
 import { Session, Activity } from '@jules/shared';
-import { Loader2, MessageSquare, Search, Terminal, FileCode, ArrowRight } from 'lucide-react';
+import { Loader2, MessageSquare, Search, FileCode, ArrowRight } from 'lucide-react';
 import { formatDistanceToNow } from 'date-fns';
 
 interface SearchResult {
@@ -80,7 +80,7 @@ export function SearchCommandDialog({ open, onOpenChange }: SearchCommandDialogP
         // 2. Deep Search (Content) - Limit to top 20 recent sessions for performance
         // In a real app, this should be a backend endpoint.
         const recentSessions = sessions.slice(0, 20);
-        const activityPromises = recentSessions.map(s => 
+        const activityPromises = recentSessions.map(s =>
           client.listActivities(s.id)
             .then(acts => ({ sessionId: s.id, activities: acts }))
             .catch(() => ({ sessionId: s.id, activities: [] }))
@@ -110,7 +110,7 @@ export function SearchCommandDialog({ open, onOpenChange }: SearchCommandDialogP
                 const end = Math.min(content.length, index + query.length + 40);
                 matchContext = (start > 0 ? '...' : '') + content.substring(start, end) + (end < content.length ? '...' : '');
               } else if (bash.toLowerCase().includes(lowerQuery)) {
-                matchContext = '[Terminal Output Match]';
+                matchContext = '[CLI Output Match]';
               } else if (diff.toLowerCase().includes(lowerQuery)) {
                 matchContext = '[Code Diff Match]';
               }
@@ -145,72 +145,72 @@ export function SearchCommandDialog({ open, onOpenChange }: SearchCommandDialogP
 
   return (
     <CommandDialog open={open} onOpenChange={onOpenChange}>
-      <CommandInput 
-        placeholder="Search sessions, code, or conversations..." 
+      <CommandInput
+        placeholder="Search sessions, code, or conversations..."
         value={query}
         onValueChange={setQuery}
       />
       <CommandList>
         <CommandEmpty>
-            {isSearching ? (
-                <div className="flex items-center justify-center py-6 gap-2 text-muted-foreground">
-                    <Loader2 className="h-4 w-4 animate-spin" />
-                    <span>Searching history...</span>
-                </div>
-            ) : (
-                "No results found."
-            )}
+          {isSearching ? (
+            <div className="flex items-center justify-center py-6 gap-2 text-muted-foreground">
+              <Loader2 className="h-4 w-4 animate-spin" />
+              <span>Searching history...</span>
+            </div>
+          ) : (
+            "No results found."
+          )}
         </CommandEmpty>
-        
+
         {!query && (
-            <CommandGroup heading="Recent Sessions">
-                {sessions.slice(0, 5).map(session => (
-                    <CommandItem key={session.id} onSelect={() => handleSelect({ type: 'session', session })}>
-                        <MessageSquare className="mr-2 h-4 w-4 opacity-50" />
-                        <div className="flex flex-col">
-                            <span>{session.title || 'Untitled'}</span>
-                            <span className="text-[10px] text-muted-foreground">{session.sourceId} • {formatDistanceToNow(new Date(session.createdAt))} ago</span>
-                        </div>
-                    </CommandItem>
-                ))}
-            </CommandGroup>
+          <CommandGroup heading="Recent Sessions">
+            {sessions.slice(0, 5).map(session => (
+              <CommandItem key={session.id} onSelect={() => handleSelect({ type: 'session', session })}>
+                <MessageSquare className="mr-2 h-4 w-4 opacity-50" />
+                <div className="flex flex-col">
+                  <span>{session.title || 'Untitled'}</span>
+                  <span className="text-[10px] text-muted-foreground">{session.sourceId} • {formatDistanceToNow(new Date(session.createdAt))} ago</span>
+                </div>
+              </CommandItem>
+            ))}
+          </CommandGroup>
         )}
 
         {results.length > 0 && (
-            <>
-                <CommandGroup heading="Sessions">
-                    {results.filter(r => r.type === 'session').map(result => (
-                        <CommandItem key={result.session.id} onSelect={() => handleSelect(result)}>
-                            <MessageSquare className="mr-2 h-4 w-4 opacity-50" />
-                            <div className="flex flex-col">
-                                <span>{result.session.title || 'Untitled'}</span>
-                                <span className="text-[10px] text-muted-foreground">{result.session.sourceId}</span>
-                            </div>
-                        </CommandItem>
-                    ))}
-                </CommandGroup>
-                <CommandSeparator />
-                <CommandGroup heading="Conversations & Code">
-                    {results.filter(r => r.type === 'activity').map(result => (
-                        <CommandItem key={`${result.session.id}-${result.activity?.id}`} onSelect={() => handleSelect(result)}>
-                            {result.activity?.bashOutput ? (
-                                <Terminal className="mr-2 h-4 w-4 opacity-50" />
-                            ) : result.activity?.diff ? (
-                                <FileCode className="mr-2 h-4 w-4 opacity-50" />
-                            ) : (
-                                <Search className="mr-2 h-4 w-4 opacity-50" />
-                            )}
-                            <div className="flex flex-col min-w-0">
-                                <span className="truncate font-medium">{result.session.title}</span>
-                                <span className="text-[10px] text-muted-foreground truncate">
-                                    {result.matchContext}
-                                </span>
-                            </div>
-                            <ArrowRight className="ml-auto h-3 w-3 opacity-30" />
-                        </CommandItem>
-                    ))}
-                </CommandGroup>
-            </>
+          <>
+            <CommandGroup heading="Sessions">
+              {results.filter(r => r.type === 'session').map(result => (
+                <CommandItem key={result.session.id} onSelect={() => handleSelect(result)}>
+                  <MessageSquare className="mr-2 h-4 w-4 opacity-50" />
+                  <div className="flex flex-col">
+                    <span>{result.session.title || 'Untitled'}</span>
+                    <span className="text-[10px] text-muted-foreground">{result.session.sourceId}</span>
+                  </div>
+                </CommandItem>
+              ))}
+            </CommandGroup>
+            <CommandSeparator />
+            <CommandGroup heading="Conversations & Code">
+              {results.filter(r => r.type === 'activity').map(result => (
+                <CommandItem key={`${result.session.id}-${result.activity?.id}`} onSelect={() => handleSelect(result)}>
+                  {result.activity?.bashOutput ? (
+                    <FileCode className="mr-2 h-4 w-4 opacity-50" />
+                  ) : result.activity?.diff ? (
+                    <FileCode className="mr-2 h-4 w-4 opacity-50" />
+                  ) : (
+                    <Search className="mr-2 h-4 w-4 opacity-50" />
+                  )}
+                  <div className="flex flex-col min-w-0">
+                    <span className="truncate font-medium">{result.session.title}</span>
+                    <span className="text-[10px] text-muted-foreground truncate">
+                      {result.matchContext}
+                    </span>
+                  </div>
+                  <ArrowRight className="ml-auto h-3 w-3 opacity-30" />
+                </CommandItem>
+              ))}
+            </CommandGroup>
+          </>
         )}
       </CommandList>
     </CommandDialog>

@@ -27,6 +27,16 @@ export default function LoginPage() {
                 Sign in with GitHub
               </Button>
             </form>
+            <form
+              action={async () => {
+                'use server';
+                await signIn('credentials', { username: 'admin', password: 'admin', redirectTo: '/dashboard' });
+              }}
+            >
+              <Button variant="default" className="w-full mt-2 bg-purple-600 hover:bg-purple-700 text-white">
+                Sign in as Local Admin
+              </Button>
+            </form>
           </div>
         </CardContent>
       </Card>

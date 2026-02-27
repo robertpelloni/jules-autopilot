@@ -42,7 +42,7 @@ const getSubmoduleFeatures = (name: string) => {
     case 'jules-task-queue':
       return ['Concurrency Fix', 'Auto-Retry', 'Label Management'];
     case 'gemini-cli-jules':
-      return ['Terminal Delegation', 'Async Tasks', 'Background Work'];
+      return ['CLI Delegation', 'Async Tasks', 'Background Work'];
     case 'jules-awesome-list':
       return ['2700+ Stars', 'Curated Prompts', 'Best Practices'];
     default:

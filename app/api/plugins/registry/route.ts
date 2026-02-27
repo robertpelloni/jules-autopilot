@@ -52,7 +52,7 @@ const SEED_PLUGINS = [
     {
         id: 'github-copilot-bridge',
         name: 'GitHub Copilot Bridge',
-        description: 'Use Copilot suggestions within the Jules terminal.',
+        description: 'Use Copilot suggestions within the Jules interface.',
         author: 'GitHub',
         version: '1.5.2',
         capabilities: '["mcp:invoke_tool"]',

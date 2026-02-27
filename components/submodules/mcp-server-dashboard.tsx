@@ -5,7 +5,7 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/com
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Search, Database, Terminal, FileCode, Server, ShieldCheck, Globe, Cpu, Lock, Zap } from "lucide-react";
+import { Search, Database, FileCode, Server, ShieldCheck, Globe, Cpu, Lock, Zap } from "lucide-react";
 
 // Empty array reflecting that this feature is in preview and backend integration is pending
 const MOCK_TOOLS: any[] = [];
@@ -21,7 +21,6 @@ export function McpServerDashboard() {
   const getCategoryIcon = (category: string) => {
     switch (category) {
       case 'FileSystem': return <FileCode className="h-4 w-4 text-blue-400" />;
-      case 'Terminal': return <Terminal className="h-4 w-4 text-green-400" />;
       case 'Browser': return <Globe className="h-4 w-4 text-orange-400" />;
       case 'Memory': return <Database className="h-4 w-4 text-purple-400" />;
       case 'Version Control': return <ShieldCheck className="h-4 w-4 text-yellow-400" />;

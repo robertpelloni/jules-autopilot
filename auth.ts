@@ -1,6 +1,7 @@
 import NextAuth, { NextAuthConfig } from 'next-auth';
 import { PrismaAdapter } from '@auth/prisma-adapter';
 import GitHubProvider from 'next-auth/providers/github';
+import CredentialsProvider from 'next-auth/providers/credentials';
 import { prisma } from '@/lib/prisma';
 import { nanoid } from 'nanoid';
 
@@ -11,6 +12,20 @@ export const authOptions: NextAuthConfig = {
             clientId: process.env.GITHUB_ID!,
             clientSecret: process.env.GITHUB_SECRET!,
         }),
+        CredentialsProvider({
+            name: 'Local Dev (Testing Only)',
+            credentials: {
+                username: { label: "Username", type: "text", placeholder: "admin" },
+                password: { label: "Password", type: "password", placeholder: "admin" }
+            },
+            async authorize(credentials) {
+                // Mock user for testing when GitHub isn't configured
+                if (credentials?.username === "admin" && credentials?.password === "admin") {
+                    return { id: "dev-admin-id", name: "Admin", email: "admin@localhost" };
+                }
+                return null;
+            }
+        })
     ],
     session: {
         strategy: 'jwt',

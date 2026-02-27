@@ -39,8 +39,7 @@ export interface ProviderInterface {
     complete(params: CompletionParams): Promise<CompletionResult>;
     listModels(apiKey?: string): Promise<string[]>;
 }
-export interface LLMProvider extends ProviderInterface {
-}
+export type LLMProvider = ProviderInterface;
 export interface DebateTurn {
     participantId: string;
     participantName: string;
@@ -62,7 +61,7 @@ export interface DebateResult {
     rounds: DebateRound[];
     summary?: string;
     history: Message[];
-    metadata?: any;
+    metadata?: unknown;
     totalUsage?: {
         prompt_tokens: number;
         completion_tokens: number;

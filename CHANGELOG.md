@@ -2,6 +2,19 @@
 
 All notable changes to this project will be documented in this file.
 
+## [1.0.0] - 2026-02-27
+
+### Added
+- **RAG Context Architecture**: Designed the impending `sqlite-vss` integration in `RAG_ARCHITECTURE.md` to offer instantaneous codebase familiarity natively to the orchestrator agents via the `query_codebase` MCP tool.
+- **Enterprise Release**: Consolidated systems, audited all plugins, fully hydrated submodule metrics, and achieved complete project stability representing the "Enterprise Foundations" roadmap target.
+
+### Changed
+- **Database Scalability**: Enforced `connection_limit=1` and `socket_timeout=10` on production SQLite database interactions within `lib/prisma.ts` to neutralize "database is locked" concurrency conflicts.
+- **Terminal System Deprecation**: Ripped out the experimental web-based "Integrated Terminal" (including `xterm.js` dependencies, `components/terminal-panel.tsx`, and the `terminal-stream`) to reduce deployment payload and enforce cleaner REST interfaces.
+
+### Fixed
+- **Authentication**: Patched an unhanded `ClientFetchError` inside the Next.js `authjs` configuration causing 500 crashes by successfully provisioning and generating `.env` secrets.
+
 ## [0.9.2] - 2026-02-27
 
 ### Added
