@@ -2,6 +2,14 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.9.2] - 2026-02-27
+
+### Added
+- **Global Documentation Overhaul**: Rebuilt `VISION.md`, `ROADMAP.md`, `TODO.md`, and `MEMORY.md`. 
+- **Universal LLM Instructions**: Consolidated all agent prompts (`AGENTS.md`, `CLAUDE.md`, `GEMINI.md`, `GPT.md`) to source from a singular `UNIVERSAL_LLM_INSTRUCTIONS.md`.
+- **Submodule Deep Scan Analysis**: Automatically generated structural `IDEAS.md` documents exploring visionary features for all 10 independent Git submodules.
+- **Git Submodule Sync Automation**: Introduced `scripts/sync-submodules.ps1` to automatically checkout, pull, and cleanly merge feature branches across all 10 external submodules.
+
 ## [0.9.1] - 2026-02-26
 
 ### Added

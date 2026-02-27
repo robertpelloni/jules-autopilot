@@ -1,12 +1,24 @@
-See [LLM_INSTRUCTIONS.md](LLM_INSTRUCTIONS.md) for primary instructions.
+# Multi-Agent Symphony & Orchestration Protocols
 
-## 🤖 Agent-Specific Overrides: Generic Agents
+> **MANDATORY:** All agents reading this must also integrate the rules defined in `UNIVERSAL_LLM_INSTRUCTIONS.md`.
 
-*   **Protocol**: Follow standard Git workflow (commit often, pull regularly, push after milestones).
-*   **Safety**: Do not delete files without verification. Do not run destructive commands without confirmation.
-*   **Autonomy**: Proceed with tasks autonomously until blocked. Commit and push after each major step.
-*   **Documentation**: Update `CHANGELOG.md`, `ROADMAP.md`, and `HANDOFF.md` after completing features.
-*   **Version Bumps**: Every feature or fix should increment the version in `VERSION.md` and run `node scripts/update-version.js`.
-*   **Testing**: Run `pnpm lint; pnpm run typecheck; pnpm run test` as the feedback loop. Fix all errors before committing.
-*   **Code Comments**: Comment code in depth — explain what it does, why it's there, why it's designed that way, any relevant findings, side effects, optimizations, and alternate approaches. If self-explanatory, leave it bare.
-*   **UI Completeness**: Every backend feature must have explicit UI state representation (loading, success, empty, error, disabled). Every feature marked "complete" must satisfy: backend integration + UI representation + persisted state + tests.
+## The "Symphony" Architecture
+
+The Jules Autopilot project relies on multiple autonomous LLMs (Claude, Gemini, GPT) working concurrently or sequentially on different aspects of the codebase.
+
+### Agent Roles & Workflows
+
+#### 1. The Architect (Typically Claude 3.5 Opus/Sonnet)
+- **Domain:** `ROADMAP.md`, `IMPLEMENTATION_PLAN.md`, global state directories.
+- **Responsibility:** Ingest massive context, design REST API boundaries, define Prisma schemas, and orchestrate the overall breakdown of epic tickets into granular checklist items in `task.md`.
+
+#### 2. The Engineer (Typically Gemini 1.5 Pro/Flash)
+- **Domain:** `app/`, `components/`, `lib/`
+- **Responsibility:** Execute the checklist provided by the Architect at high speeds. Write React components, bind APIs, and aggressively iterate through `pnpm run typecheck` output until the feature builds flawlessly.
+
+#### 3. The Auditor (Typically GPT-4o)
+- **Domain:** `tests/`, `.github/`, security auditing.
+- **Responsibility:** Performs strict AST/Pattern searches. Writes isolated Jest/Vitest harnesses. Scans the codebase for loose `any` types or uncaught edge-cases and submits patch reviews.
+
+### Handoff Protocol
+When an agent reaches its context limit or finishes its domain tasks, it MUST write a comprehensive update to `HANDOFF.md` and clearly update the internal checklist in `task.md` (`[x]` for finished, `[/]` for active) so the next agent inheriting the process can seamlessly spin up its task context loop.

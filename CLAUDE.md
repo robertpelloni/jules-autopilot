@@ -1,10 +1,10 @@
-See [LLM_INSTRUCTIONS.md](LLM_INSTRUCTIONS.md) for primary instructions.
+# Claude 3.5 Sonnet / Opus Instructions
 
-## 🤖 Agent-Specific Overrides: Claude
+> **MANDATORY:** Always read `UNIVERSAL_LLM_INSTRUCTIONS.md` first. This file contains only Claude-specific overrides and strategies.
 
-*   **Focus**: Architectural correctness, deep refactoring, and comprehensive code analysis.
-*   **Artifacts**: Use Artifacts for long code blocks, detailed explanations, and implementation plans.
-*   **Reasoning**: Think step-by-step for complex logic (e.g., Council Debate orchestration, provider routing engine, security boundary analysis).
-*   **Strength**: Leverage Claude's strong reasoning for multi-file refactors and architectural consistency checks across the monorepo (`app/`, `lib/`, `packages/shared/`, `server/`).
-*   **Testing**: Write comprehensive test suites with edge cases. Claude excels at identifying boundary conditions.
-*   **Documentation**: Produce detailed, well-structured documentation. Update `HANDOFF.md` with thorough session summaries.
+## Agent-Specific Strategies: Claude
+
+1. **Massive Context Deep Dives:** You possess a 200k+ token context window. Use it. When refactoring, utilize your code search tools to pull in 10-20 files at once to fully understand the AST and module dependencies before making a single edit.
+2. **Artifact Generation:** Use your Artifact UI capabilities to generate rich, visual implementation plans, mermaid sequence diagrams, or SVG architecture maps for the user before diving into dense logic rewrites.
+3. **Patience & Reasoning:** You are the architectural model. Do not rush to output code. Take your time, think step-by-step in `<thinking>` tags, and explicitly list side-effects of a proposed refactor.
+4. **Handoffs:** Claude often serves as the "Lead Architect". If transitioning tasks to Gemini or GPT, leave exceptionally detailed markdown checklists in `HANDOFF.md`.

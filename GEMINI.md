@@ -1,9 +1,10 @@
-See [LLM_INSTRUCTIONS.md](LLM_INSTRUCTIONS.md) for primary instructions.
+# Gemini 1.5 Pro / Flash Instructions
 
-## 🤖 Agent-Specific Overrides: Gemini
+> **MANDATORY:** Always read `UNIVERSAL_LLM_INSTRUCTIONS.md` first. This file contains only Gemini-specific overrides and strategies.
 
-*   **Focus**: Speed, concise answers, and large-context analysis.
-*   **Integration**: Check for Google-specific integrations — `external/google-jules-mcp`, `external/gemini-cli-jules`, Gemini API usage in the routing engine pricing matrix (`lib/routing/telemetry.ts`).
-*   **Context**: Leverage Gemini's large context window to analyze multiple files simultaneously when performing cross-cutting refactors.
-*   **Jules Extension**: When users invoke `/jules`, follow the Jules Extension protocol defined in the project's GEMINI.md user rules.
-*   **Speed**: Prioritize fast iteration cycles. Commit frequently. Don't over-deliberate on obvious changes.
+## Agent-Specific Strategies: Gemini
+
+1. **Speed & Mass Iteration:** Gemini 1.5 Flash excels at extremely rapid iteration. When running in Flash mode, generate smaller, highly focused PRs in quick succession rather than massive monolithic structural changes.
+2. **Infinite Context Trawl:** With up to a 2M token context window, never hesitate to ingest entire sub-directories at once if there are intricate, multi-file bugs. 
+3. **Google Integrations:** Maintain strong awareness of the broader Google ecosystem connected to this project. Be watchful for `external/google-jules-mcp` or `external/gemini-cli-jules` code references.
+4. **Execution Bias:** "Move fast and break nothing." Prioritize fast code writing and running terminal commands in parallel immediately after forming a plan. Trust your tests. Use `pnpm run test` as your primary QA instead of second-guessing yourself statically.

@@ -1,15 +1,15 @@
 # GitHub Copilot Instructions
 
-**IMPORTANT**: Please refer to [LLM_INSTRUCTIONS.md](./LLM_INSTRUCTIONS.md) for the master set of instructions, coding standards, and versioning protocols.
+> **MANDATORY INCLUSION:** Refer to the global project directives maintained in `UNIVERSAL_LLM_INSTRUCTIONS.md`. 
 
-## Copilot Specifics
-- Follow the user's requirements carefully & to the letter.
-- Keep answers short and impersonal.
-- Use the `run_in_terminal` tool for shell commands.
-- Follow the Git Workflow described in the universal instructions.
-- Prioritize "developer-first" UX in all implementations.
-- Use ShadCN UI primitives from `components/ui/` for new UI elements.
-- Follow existing patterns in `components/` — check for similar components before creating new ones.
-- Import types from `types/` or `@jules/shared` — never define inline duplicates.
-- Use Zod schemas from `lib/schemas/` for validation — never validate manually.
-- When suggesting code completions, prefer the project's established patterns over generic boilerplate.
+## Inline Assistance Strategies
+
+1. **Code Completion Standards:**
+   - Always prefer `pnpm` ecosystem tooling. Do not suggest `npm install`.
+   - Next.js: Adhere to App Router conventions (`app/` directory). Do not suggest legacy `pages/` directory structures.
+   - Database: Always suggest `prisma.$transaction` for multi-step database mutations to ensure atomic compliance.
+   - TypeScript: Never auto-complete with `any`. Derive exact types from `schema.prisma` exports or `app/types/index.ts`.
+   
+2. **Context Window Limitations:**
+   - Understand that you are operating within a constrained inline editor context. You will not see the holistic architecture. 
+   - Trust and utilize the imports and variable names present in the active file, assuming they follow the overarching project structure defined in the universal instructions.
