@@ -33,6 +33,8 @@
     "build:all": "pnpm run build:shared && pnpm run build && pnpm run build:cli",
     "start": "next start",
     "daemon": "bun run server/index.ts",
+    "mcp": "bun run server/run-mcp.ts",
+    "index": "bun run scripts/index-repo.ts",
     "lint": "eslint",
     "test": "jest",
     "test:e2e": "playwright test",

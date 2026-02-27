@@ -246,3 +246,21 @@ model WorkspaceMember {
 
   @@unique([workspaceId, userId])
 }
+
+// ----------------------------------------------------------------------------
+// Retrieval-Augmented Generation (RAG) Architecture
+// ----------------------------------------------------------------------------
+
+model CodeChunk {
+  id        String   @id @default(uuid())
+  filePath  String
+  startLine Int
+  endLine   Int
+  content   String
+  embedding Bytes?   // Stored as Float32Array buffer
+  checksum  String   // To detect if the file chunk has changed
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  
+  @@index([filePath])
+}
