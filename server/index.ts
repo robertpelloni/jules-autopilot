@@ -1,3 +1,4 @@
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
 declare const Bun: any;
 
 import { Hono } from 'hono';
@@ -40,6 +41,7 @@ app.use('*', cors({
     allowHeaders: ['Content-Type', 'Authorization'],
 }));
 
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
 function enrichParticipants(participants: any[], apiKey?: string) {
     return participants.map(p => ({
         ...p,
@@ -61,7 +63,7 @@ app.get('/api/daemon/status', async (c) => {
             orderBy: { createdAt: 'desc' },
             take: 50
         });
-        
+
         return c.json({
             isEnabled: settings?.isEnabled || false,
             lastCheck: new Date().toISOString(),
@@ -78,10 +80,10 @@ app.post('/api/daemon/start', async (c) => {
         await prisma.keeperSettings.upsert({
             where: { id: 'default' },
             update: { isEnabled: true },
-            create: { 
-                id: 'default', 
-                isEnabled: true, 
-                messages: '[]', 
+            create: {
+                id: 'default',
+                isEnabled: true,
+                messages: '[]',
                 customMessages: '{}',
                 checkIntervalSeconds: 60,
                 inactivityThresholdMinutes: 10,
@@ -118,7 +120,7 @@ app.post('/api/sessions/interrupt-all', async (c) => {
         }
 
         const sessions = await client.listSessions();
-        const activeSessions = sessions.filter(s => 
+        const activeSessions = sessions.filter(s =>
             s.status === 'active' || s.rawState === 'IN_PROGRESS' || s.rawState === 'PLANNING'
         );
 
@@ -129,7 +131,7 @@ app.post('/api/sessions/interrupt-all', async (c) => {
             try {
                 await client.updateSession(session.id, { status: 'paused' });
                 interrupted++;
-                
+
                 await prisma.keeperLog.create({
                     data: {
                         message: `Interrupted session ${session.id.substring(0, 8)}`,
@@ -142,15 +144,15 @@ app.post('/api/sessions/interrupt-all', async (c) => {
             }
         }
 
-        emitDaemonEvent('sessions_interrupted', { 
-            count: interrupted, 
+        emitDaemonEvent('sessions_interrupted', {
+            count: interrupted,
             total: activeSessions.length,
-            errors 
+            errors
         });
 
-        return c.json({ 
-            success: true, 
-            interrupted, 
+        return c.json({
+            success: true,
+            interrupted,
             total: activeSessions.length,
             errors: errors.length > 0 ? errors : undefined
         });
@@ -167,7 +169,7 @@ app.post('/api/sessions/continue-all', async (c) => {
         }
 
         const sessions = await client.listSessions();
-        const pausedSessions = sessions.filter(s => 
+        const pausedSessions = sessions.filter(s =>
             s.status === 'paused' || s.status === 'completed' || s.status === 'failed'
         );
 
@@ -178,7 +180,7 @@ app.post('/api/sessions/continue-all', async (c) => {
             try {
                 await client.resumeSession(session.id, 'Please continue working on this task.');
                 continued++;
-                
+
                 await prisma.keeperLog.create({
                     data: {
                         message: `Resumed session ${session.id.substring(0, 8)}`,
@@ -191,15 +193,15 @@ app.post('/api/sessions/continue-all', async (c) => {
             }
         }
 
-        emitDaemonEvent('sessions_continued', { 
-            count: continued, 
+        emitDaemonEvent('sessions_continued', {
+            count: continued,
             total: pausedSessions.length,
-            errors 
+            errors
         });
 
-        return c.json({ 
-            success: true, 
-            continued, 
+        return c.json({
+            success: true,
+            continued,
             total: pausedSessions.length,
             errors: errors.length > 0 ? errors : undefined
         });
@@ -213,7 +215,7 @@ app.post('/api/supervisor', async (c) => {
         const body = await c.req.json();
         const { messages, provider, apiKey: bodyApiKey, model, action, participants, topic, codeContext } = body;
 
-        const apiKey = bodyApiKey || process.env.OPENAI_API_KEY; 
+        const apiKey = bodyApiKey || process.env.OPENAI_API_KEY;
 
         if (action === 'list_models') {
             if (!apiKey || !provider) {
@@ -280,7 +282,7 @@ app.post('/api/supervisor', async (c) => {
 
         return c.json({ error: 'Invalid provider or action' }, 400);
 
-    } catch (error) {
+    } catch {
         console.error('Supervisor API Error:', error);
         const msg = error instanceof Error ? error.message : 'Internal server error';
         return c.json({ error: msg }, 500);
@@ -291,7 +293,7 @@ app.post('/api/supervisor/clear', async (c) => {
     try {
         const { sessionId } = await c.req.json();
         if (!sessionId) return c.json({ error: 'Missing sessionId' }, 400);
-        
+
         await prisma.supervisorState.deleteMany({ where: { sessionId } });
         return c.json({ success: true });
     } catch (e) {
@@ -312,6 +314,7 @@ app.post('/api/debate', async (c) => {
             return c.json({ error: 'Missing required fields: topic, participants' }, 400);
         }
 
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
         const enrichedParticipants = participants.map((p: any) => {
             let finalApiKey = p.apiKey;
             if (finalApiKey === 'env' || finalApiKey === 'placeholder' || !finalApiKey) {
@@ -350,7 +353,7 @@ app.post('/api/debate', async (c) => {
         }
 
         return c.json(result);
-    } catch (error) {
+    } catch {
         console.error('Debate request failed:', error);
         return c.json({ error: error instanceof Error ? error.message : 'Unknown error' }, 500);
     }
@@ -363,7 +366,7 @@ app.get('/api/debate/history', async (c) => {
             select: { id: true, topic: true, summary: true, createdAt: true }
         });
         return c.json(debates);
-    } catch (error) {
+    } catch {
         return c.json({ error: 'Failed to fetch debates' }, 500);
     }
 });
@@ -387,7 +390,7 @@ app.post('/api/debate/history', async (c) => {
             },
         });
         return c.json(debate);
-    } catch (error) {
+    } catch {
         return c.json({ error: 'Failed to save debate' }, 500);
     }
 });
@@ -405,7 +408,7 @@ app.get('/api/debate/:id', async (c) => {
             history: typeof debate.history === 'string' ? JSON.parse(debate.history) : debate.history,
             metadata: debate.metadata && typeof debate.metadata === 'string' ? JSON.parse(debate.metadata) : debate.metadata,
         });
-    } catch (error) {
+    } catch {
         return c.json({ error: 'Failed to fetch debate' }, 500);
     }
 });
@@ -415,7 +418,7 @@ app.delete('/api/debate/:id', async (c) => {
         const id = c.req.param('id');
         await prisma.debate.delete({ where: { id } });
         return c.json({ success: true });
-    } catch (error) {
+    } catch {
         return c.json({ error: 'Failed to delete debate' }, 500);
     }
 });
@@ -449,7 +452,7 @@ app.get('/api/settings/keeper', async (c) => {
             messages: JSON.parse(settings.messages),
             customMessages: JSON.parse(settings.customMessages),
         });
-    } catch (error) {
+    } catch {
         return c.json(DEFAULT_KEEPER_SETTINGS);
     }
 });
@@ -479,7 +482,7 @@ app.post('/api/settings/keeper', async (c) => {
             messages: JSON.parse(settings.messages),
             customMessages: JSON.parse(settings.customMessages),
         });
-    } catch (error) {
+    } catch {
         return c.json({ error: 'Failed to save settings' }, 500);
     }
 });
@@ -495,7 +498,7 @@ app.get('/api/logs/keeper', async (c) => {
             take: 100
         });
         return c.json(logs);
-    } catch (error) {
+    } catch {
         return c.json({ error: 'Failed to fetch logs' }, 500);
     }
 });
@@ -512,7 +515,7 @@ app.post('/api/logs/keeper', async (c) => {
             }
         });
         return c.json(log);
-    } catch (error) {
+    } catch {
         return c.json({ error: 'Failed to create log' }, 500);
     }
 });
@@ -528,6 +531,7 @@ const DEFAULT_TEMPLATES = [
     { name: "Refactoring", description: "Refactor code to improve structure and maintainability", prompt: "I want to refactor some code. Help me improve its structure without changing behavior.", isPrebuilt: true, tags: "refactor,cleanup", isFavorite: false }
 ];
 
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
 function formatTemplate(t: any) {
     return {
         ...t,
@@ -549,7 +553,7 @@ app.get('/api/templates', async (c) => {
         }
 
         return c.json(templates.map(formatTemplate));
-    } catch (error) {
+    } catch {
         return c.json({ error: 'Failed to fetch templates' }, 500);
     }
 });
@@ -571,7 +575,7 @@ app.post('/api/templates', async (c) => {
         });
 
         return c.json(formatTemplate(template));
-    } catch (error) {
+    } catch {
         return c.json({ error: 'Failed to create template' }, 500);
     }
 });
@@ -595,7 +599,7 @@ app.put('/api/templates/:id', async (c) => {
         });
 
         return c.json(formatTemplate(template));
-    } catch (error) {
+    } catch {
         return c.json({ error: 'Failed to update template' }, 500);
     }
 });
@@ -605,7 +609,7 @@ app.delete('/api/templates/:id', async (c) => {
         const id = c.req.param('id');
         await prisma.sessionTemplate.delete({ where: { id } });
         return c.json({ success: true });
-    } catch (error) {
+    } catch {
         return c.json({ error: 'Failed to delete template' }, 500);
     }
 });
@@ -631,11 +635,13 @@ if (typeof Bun !== 'undefined') {
         port,
         fetch: app.fetch,
         websocket: {
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
             open(ws: any) {
                 wsClients.add(ws);
                 ws.send(JSON.stringify({ type: 'connected', timestamp: Date.now() }));
                 console.log(`WebSocket client connected (${wsClients.size} total)`);
             },
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
             message(ws: any, message: any) {
                 try {
                     const data = JSON.parse(message.toString());
@@ -646,6 +652,7 @@ if (typeof Bun !== 'undefined') {
                     ws.send(JSON.stringify({ type: 'error', message: 'Invalid JSON' }));
                 }
             },
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
             close(ws: any) {
                 wsClients.delete(ws);
                 console.log(`WebSocket client disconnected (${wsClients.size} total)`);

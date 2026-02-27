@@ -1,5 +1,5 @@
 import { generateText } from '@jules/shared';
-import { Activity } from '@/types/jules';
+import { Activity } from '@jules/shared';
 
 export interface MemoryFile {
   version: string;

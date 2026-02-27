@@ -9,7 +9,7 @@ This document tracks granular bugs, missing features, and technical debt. For ep
 
 ## Technical Debt & Refactoring
 - [ ] **Prisma Connection Pooling:** For production Docker deployments, we are using the default Prisma SQLite connector. We need to evaluate connection pooling limits when concurrency scales up.
-- [ ] **Types Extraction:** There are several duplicated types between the frontend App router and the `server/index.ts` daemon. Extract all types strictly to `types/jules.d.ts` or a shared `packages/` workspace.
+- [x] **Types Extraction:** There are several duplicated types between the frontend App router and the `server/index.ts` daemon. Extract all types strictly to `types/jules.d.ts` or a shared `packages/` workspace.
 
 ## Future Exploration
 - [ ] Investigate RAG (Retrieval-Augmented Generation) native integration in the orchestrator so the agents can query the entire GitHub organization context before writing code.

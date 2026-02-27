@@ -3,7 +3,7 @@
 import { useState, useCallback, useEffect } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useJules } from "@/lib/jules/provider";
-import type { Session, Activity, SessionTemplate, Artifact } from "@/types/jules";
+import type { Session, Activity, SessionTemplate, Artifact } from '@jules/shared';
 import {
   Dialog,
   DialogContent,

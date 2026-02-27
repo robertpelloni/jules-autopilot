@@ -22,7 +22,7 @@ import {
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { Copy, Loader2, Megaphone } from "lucide-react";
-import type { Session } from "@/types/jules";
+import type { Session } from '@jules/shared';
 import { toast } from "sonner";
 
 interface BroadcastDialogProps {

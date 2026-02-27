@@ -36,7 +36,7 @@ import { BroadcastDialog } from "@/components/broadcast-dialog";
 import { SettingsDialog } from "@/components/settings-dialog";
 import { ModeToggle } from "@/components/mode-toggle";
 import { ContextHelp } from "@/components/context-help";
-import { Session } from "@/types/jules";
+import { Session } from '@jules/shared';
 import { useRouter } from "next/navigation";
 import { signOut } from "next-auth/react";
 

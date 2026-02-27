@@ -2,7 +2,7 @@
 
 import { useState, useMemo, useEffect, useCallback } from "react";
 import { useJules } from "@/lib/jules/provider";
-import type { Session } from "@/types/jules";
+import type { Session } from '@jules/shared';
 import { 
   KanbanProvider, 
   KanbanBoard as KanbanBoardRoot, 

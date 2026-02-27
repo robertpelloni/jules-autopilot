@@ -1,10 +1,9 @@
 import { prisma } from '../lib/prisma.ts';
 import { JulesClient } from '../lib/jules/client.ts';
 import { getProvider } from '@jules/shared';
-import { runDebate } from '@jules/shared';
 import { summarizeSession } from '@jules/shared';
 import { emitDaemonEvent } from './index.ts';
-import type { Session, Activity } from '@/types/jules';
+import type { Activity } from '@jules/shared';
 import type { KeeperSettings } from '@prisma/client';
 
 let isRunning = false;
@@ -16,6 +15,7 @@ async function getJulesClient(settings: KeeperSettings) {
     return new JulesClient(apiKey, 'https://jules.googleapis.com/v1alpha');
 }
 
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
 async function addLog(message: string, type: 'info' | 'action' | 'error' | 'skip', sessionId: string = 'global', details?: any) {
     console.log(`[Daemon][${type.toUpperCase()}] ${message}`);
     const log = await prisma.keeperLog.create({
@@ -26,7 +26,7 @@ async function addLog(message: string, type: 'info' | 'action' | 'error' | 'skip
             metadata: details ? JSON.stringify(details) : null
         }
     });
-    
+
     // Broadcast log to WebSocket clients
     emitDaemonEvent('log_added', { log });
 }
@@ -48,6 +48,7 @@ async function getSupervisorState(sessionId: string) {
     };
 }
 
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
 async function saveSupervisorState(state: any) {
     await prisma.supervisorState.upsert({
         where: { sessionId: state.sessionId },
@@ -86,7 +87,7 @@ export async function runLoop() {
         }
 
         const sessions = await client.listSessions();
-        
+
         for (const session of sessions) {
             try {
                 const createdTime = new Date(session.createdAt);
@@ -102,9 +103,9 @@ export async function runLoop() {
                     }));
 
                     const summary = await summarizeSession(
-                        history, 
-                        settings.supervisorProvider || "openai", 
-                        settings.supervisorApiKey || process.env.OPENAI_API_KEY || "", 
+                        history,
+                        settings.supervisorProvider || "openai",
+                        settings.supervisorApiKey || process.env.OPENAI_API_KEY || "",
                         settings.supervisorModel || "gpt-4o"
                     );
 
@@ -145,7 +146,7 @@ export async function runLoop() {
                     if (settings.smartPilotEnabled) {
                         await addLog(`Auto-approving plan for ${session.id.substring(0, 8)}...`, 'action', session.id);
                         await client.approvePlan(session.id);
-                        emitDaemonEvent('session_approved', { 
+                        emitDaemonEvent('session_approved', {
                             sessionId: session.id,
                             sessionTitle: session.title
                         });
@@ -158,7 +159,7 @@ export async function runLoop() {
                 const lastActivityTime = session.lastActivityAt ? new Date(session.lastActivityAt) : new Date(session.updatedAt);
                 const diffMinutes = (Date.now() - lastActivityTime.getTime()) / 60000;
                 let threshold = settings.inactivityThresholdMinutes;
-                
+
                 if (session.rawState === 'IN_PROGRESS') {
                     threshold = settings.activeWorkThresholdMinutes;
                     if ((Date.now() - lastActivityTime.getTime()) < 30000) continue;
@@ -166,19 +167,20 @@ export async function runLoop() {
 
                 if (diffMinutes > threshold) {
                     await addLog(`Sending nudge to ${session.id.substring(0, 8)} (${Math.round(diffMinutes)}m inactive)`, 'action', session.id);
-                    
+
                     let messageToSend = "Please resume working on this task.";
                     if (settings.smartPilotEnabled) {
                         const supervisorState = await getSupervisorState(session.id);
                         const activities = await client.listActivities(session.id);
                         const sortedActivities = activities.sort((a, b) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime());
-                        
+
                         let newActivities = sortedActivities;
                         if (supervisorState.lastProcessedActivityTimestamp) {
                             newActivities = sortedActivities.filter(a => new Date(a.createdAt).getTime() > new Date(supervisorState.lastProcessedActivityTimestamp!).getTime());
                         }
 
-                        let messagesToSend: any[] = [];
+                        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+                        const messagesToSend: any[] = [];
                         if (newActivities.length > 0) {
                             const updates = newActivities.map(a => `${a.role.toUpperCase()}: ${a.content}`).join('\n\n');
                             messagesToSend.push({ role: 'user', content: `Latest updates:\n\n${updates}` });
@@ -211,9 +213,9 @@ export async function runLoop() {
                         content: messageToSend,
                         type: 'message'
                     });
-                    
+
                     emitDaemonEvent('activities_updated', { sessionId: session.id });
-                    emitDaemonEvent('session_nudged', { 
+                    emitDaemonEvent('session_nudged', {
                         sessionId: session.id,
                         sessionTitle: session.title,
                         inactiveMinutes: Math.round(diffMinutes),

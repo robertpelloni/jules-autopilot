@@ -45,7 +45,7 @@ export interface ProviderInterface {
   listModels(apiKey?: string): Promise<string[]>;
 }
 
-export interface LLMProvider extends ProviderInterface {}
+export type LLMProvider = ProviderInterface;
 
 export interface DebateTurn {
   participantId: string;
@@ -70,7 +70,7 @@ export interface DebateResult {
   rounds: DebateRound[];
   summary?: string;
   history: Message[];
-  metadata?: any;
+  metadata?: unknown;
   totalUsage?: {
     prompt_tokens: number;
     completion_tokens: number;
@@ -81,7 +81,7 @@ export interface DebateResult {
   durationMs?: number;
 }
 
-export type DebateProgressEvent = 
+export type DebateProgressEvent =
   | { type: 'start'; topic?: string; rounds: number }
   | { type: 'round_start'; roundNumber: number }
   | { type: 'turn_start'; participantId: string; participantName: string; role: string }

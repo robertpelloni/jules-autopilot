@@ -11,11 +11,11 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { getArchivedSessions } from '@/lib/archive';
 import { SessionKeeperSettings } from './session-keeper-settings';
 import { useSessionKeeperStore } from '@/lib/stores/session-keeper';
-import { SessionKeeperConfig } from '@/types/jules';
+import { SessionKeeperConfig } from '@jules/shared';
 import { DebateVisualizer } from './debate-visualizer';
 import { MemoryManager } from './memory-manager';
 
-import type { Session } from "@/types/jules";
+import type { Session } from '@jules/shared';
 
 // Persistent Supervisor State
 interface SupervisorState {

@@ -7,7 +7,7 @@ import type {
   SessionOutput,
   SessionTemplate,
   Artifact
-} from "@/types/jules";
+} from '@jules/shared';
 
 // API Response Interfaces (Internal)
 interface ApiSource {

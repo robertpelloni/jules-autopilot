@@ -1,7 +1,7 @@
 import { Badge } from '@/components/ui/badge';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { calculateSessionHealth, HealthStatus } from '@/lib/health';
-import { Session } from '@/types/jules';
+import { Session } from '@jules/shared';
 import { AlertCircle, CheckCircle2, Clock } from 'lucide-react';
 
 interface SessionHealthBadgeProps {

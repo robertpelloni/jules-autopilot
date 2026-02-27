@@ -6,7 +6,7 @@ import { KanbanBoard } from "@/components/kanban-board";
 import { ActivityFeed } from "@/components/activity-feed";
 import { CodeDiffSidebar } from "@/components/code-diff-sidebar";
 import { DebateHistoryList } from "@/components/debate-history-list";
-import { Session, Activity, SessionTemplate, Artifact } from "@/types/jules";
+import { Session, Activity, SessionTemplate, Artifact } from '@jules/shared';
 
 interface MainContentProps {
   view: 'sessions' | 'analytics' | 'templates' | 'kanban' | 'debates' | 'board' | 'artifacts';

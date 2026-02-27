@@ -1,6 +1,6 @@
 import { create } from 'zustand';
 import { persist, createJSONStorage } from 'zustand/middleware';
-import { SessionKeeperConfig } from '@/types/jules';
+import { SessionKeeperConfig } from '@jules/shared';
 import type { DebateResult as OrchestrationDebateResult } from '@jules/shared'; export interface Log {
   id?: string;
   time: string;

@@ -6,7 +6,7 @@ import type {
   CreateCloudDevSessionRequest,
   UnifiedSessionStatus,
 } from '@/types/cloud-dev';
-import type { Session, Activity } from '@/types/jules';
+import type { Session, Activity } from '@jules/shared';
 import { JulesClient } from '@/lib/jules/client';
 
 function mapJulesStatusToUnified(status: Session['status']): UnifiedSessionStatus {

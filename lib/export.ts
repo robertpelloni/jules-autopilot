@@ -1,4 +1,4 @@
-import { Session, Activity } from "@/types/jules";
+import { Session, Activity } from '@jules/shared';
 import { Log } from "@/lib/stores/session-keeper";
 
 interface ImportedSessionData {

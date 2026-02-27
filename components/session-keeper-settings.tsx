@@ -1,7 +1,7 @@
 'use client';
 
 import { useState } from 'react';
-import { SessionKeeperConfig } from '@/types/jules';
+import { SessionKeeperConfig } from '@jules/shared';
 import { Button } from '@/components/ui/button';
 import {
   Dialog,

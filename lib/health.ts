@@ -1,4 +1,4 @@
-import { Session } from '@/types/jules';
+import { Session } from '@jules/shared';
 
 export type HealthStatus = 'healthy' | 'stalled' | 'critical' | 'inactive';
 

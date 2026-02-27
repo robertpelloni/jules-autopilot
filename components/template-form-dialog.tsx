@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { SessionTemplate } from "@/types/jules";
+import { SessionTemplate } from '@jules/shared';
 import { useJules } from "@/lib/jules/provider";
 import {
   Dialog,

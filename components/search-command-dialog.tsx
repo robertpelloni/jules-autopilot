@@ -12,7 +12,7 @@ import {
   CommandSeparator,
 } from '@/components/ui/command';
 import { useJules } from '@/lib/jules/provider';
-import { Session, Activity } from '@/types/jules';
+import { Session, Activity } from '@jules/shared';
 import { Loader2, MessageSquare, Search, Terminal, FileCode, ArrowRight } from 'lucide-react';
 import { formatDistanceToNow } from 'date-fns';
 

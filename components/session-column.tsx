@@ -1,6 +1,6 @@
 'use client';
 
-import type { Session } from '@/types/jules';
+import type { Session } from '@jules/shared';
 import { useDroppable } from '@dnd-kit/core';
 import { SortableContext, verticalListSortingStrategy } from '@dnd-kit/sortable';
 import { SessionCard } from './session-card';

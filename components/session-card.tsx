@@ -1,6 +1,6 @@
 'use client';
 
-import type { Session } from '@/types/jules';
+import type { Session } from '@jules/shared';
 import { CLOUD_DEV_PROVIDERS, type CloudDevProviderId } from '@/types/cloud-dev';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';

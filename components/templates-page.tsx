@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect, useCallback } from "react";
-import { SessionTemplate } from "@/types/jules";
+import { SessionTemplate } from '@jules/shared';
 import { useJules } from '@/lib/jules/provider';
 import { Button } from "@/components/ui/button";
 import {

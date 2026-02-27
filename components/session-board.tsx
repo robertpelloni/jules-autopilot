@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect, useMemo } from 'react';
-import type { Session } from '@/types/jules';
+import type { Session } from '@jules/shared';
 import { useJules } from '@/lib/jules/provider';
 import { useCloudDevStore } from '@/lib/stores/cloud-dev';
 import { CLOUD_DEV_PROVIDERS, type CloudDevProviderId } from '@/types/cloud-dev';

@@ -1,7 +1,7 @@
 import { Button } from "@/components/ui/button";
 import { ChevronLeft, ChevronRight } from "lucide-react";
 import { SessionList } from "@/components/session-list";
-import { Session } from "@/types/jules";
+import { Session } from '@jules/shared';
 
 interface AppSidebarProps {
   collapsed: boolean;

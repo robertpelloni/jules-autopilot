@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { useJules } from '@/lib/jules/provider';
-import type { Artifact, Session } from '@/types/jules';
+import type { Artifact, Session } from '@jules/shared';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Button } from '@/components/ui/button';
 import { FileCode, Terminal, Image as ImageIcon, File, Download, Loader2, Play, ShieldCheck } from 'lucide-react';

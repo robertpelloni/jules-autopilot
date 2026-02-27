@@ -4,7 +4,7 @@ import { useEffect, useState, useMemo, useCallback } from 'react';
 import useSWR from 'swr';
 import { useJules } from '@/lib/jules/provider';
 import { useSessionKeeperStore } from '@/lib/stores/session-keeper';
-import type { Session, Source, Activity } from '@/types/jules';
+import type { Session, Source, Activity } from '@jules/shared';
 import { calculateSessionHealth } from '@/lib/health';
 import { calculateDiffStats } from '@/lib/diff-utils';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';

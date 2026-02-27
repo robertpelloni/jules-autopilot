@@ -6,7 +6,7 @@ import { useCloudDevStore } from "@/lib/stores/cloud-dev";
 import { useDaemonEvent } from "@/lib/hooks/use-daemon-events";
 import type { SessionsListUpdatedPayload } from "@jules/shared";
 import { CLOUD_DEV_PROVIDERS, type CloudDevProviderId } from "@/types/cloud-dev";
-import type { Session } from "@/types/jules";
+import type { Session } from '@jules/shared';
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";

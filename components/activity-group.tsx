@@ -1,7 +1,7 @@
 'use client';
 
 import { memo } from 'react';
-import { Activity } from '@/types/jules';
+import { Activity } from '@jules/shared';
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';

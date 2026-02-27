@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
-import { SessionKeeperConfig } from '@/types/jules';
+import { SessionKeeperConfig } from '@jules/shared';
 import { getSession } from '@/lib/session';
 
 const DEFAULT_SETTINGS: SessionKeeperConfig = {

@@ -11,7 +11,7 @@ import { Button } from "@/components/ui/button";
 import submodulesData from "../submodules.json";
 import { useSessionKeeperStore } from "@/lib/stores/session-keeper";
 import { useJules } from "@/lib/jules/provider";
-import type { Session } from "@/types/jules";
+import type { Session } from '@jules/shared';
 import { calculateTPS, calculateAvgResponseTime } from "@/lib/utils";
 import { useMemo } from "react";
 
