@@ -12,4 +12,4 @@ This document tracks granular bugs, missing features, and technical debt. For ep
 - [x] **Types Extraction:** There are several duplicated types between the frontend App router and the `server/index.ts` daemon. Extract all types strictly to `types/jules.d.ts` or a shared `packages/` workspace.
 
 ## Future Exploration
-- [ ] Investigate RAG (Retrieval-Augmented Generation) native integration in the orchestrator so the agents can query the entire GitHub organization context before writing code.
+- [x] Investigate RAG (Retrieval-Augmented Generation) native integration in the orchestrator so the agents can query the entire GitHub organization context before writing code. (See: `RAG_ARCHITECTURE.md`)

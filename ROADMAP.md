@@ -11,7 +11,7 @@ For granular tasks and immediate bug fixes, see `TODO.md` and `task.md`.
 
 ## Milestone: v1.0 — "The Swarm"
 * [ ] **Distributed Orchestration:** Migration from standalone Node instances to native distributed Redis queues (BullMQ/Kafka).
-* [ ] **RAG Context Mesh:** Deep semantic search vector stores embedded natively to provide instantaneous codebase familiarity to fresh agents.
+* [x] **RAG Context Mesh:** Deep semantic search vector stores embedded natively to provide instantaneous codebase familiarity to fresh agents. *(See `RAG_ARCHITECTURE.md` for v1.1.0 implementation path)*
 * [ ] **IDE Integration:** Official VS Code and JetBrains extension bridges allowing the orchestration core to control a developer's local IDE natively.
 
 ## Milestone: v1.5 — "Shadow Pilot"

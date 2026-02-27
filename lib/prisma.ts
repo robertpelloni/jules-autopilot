@@ -5,17 +5,21 @@ const globalForPrisma = global as unknown as { prisma: PrismaClient };
 import path from 'path';
 
 const getDbUrl = () => {
-  if (process.env.DATABASE_URL) {
-    return process.env.DATABASE_URL;
-  }
-  // In Vercel (or production), fallback to a temp file to avoid "Access to storage not allowed"
-  // caused by trying to write to read-only ./prisma/dev.db
-  if (process.env.VERCEL || process.env.NODE_ENV === 'production') {
-    return 'file:/tmp/dev.db';
+  let url = process.env.DATABASE_URL;
+  if (!url) {
+    if (process.env.VERCEL || process.env.NODE_ENV === 'production') {
+      url = 'file:/tmp/dev.db';
+    } else {
+      url = `file:${path.join(process.cwd(), 'prisma', 'dev.db')}`;
+    }
   }
 
-  const dbPath = path.join(process.cwd(), 'prisma', 'dev.db');
-  return `file:${dbPath}`;
+  // Optimize SQLite connection pooling for Docker concurrency
+  if (url.startsWith('file:') && !url.includes('connection_limit')) {
+    const separator = url.includes('?') ? '&' : '?';
+    url += `${separator}connection_limit=1&socket_timeout=10`;
+  }
+  return url;
 };
 
 const url = getDbUrl();
@@ -48,12 +52,12 @@ try {
   prismaClient = globalForPrisma.prisma || (adapter
     ? new PrismaClient({ adapter })
     : new PrismaClient({
-        datasources: {
-          db: {
-            url: url
-          }
+      datasources: {
+        db: {
+          url: url
         }
-      }));
+      }
+    }));
 } catch (e) {
   console.error('Failed to initialize Prisma Client:', e);
   // Return a proxy that throws on any access to prevent crash loop but allow module load
