@@ -1,10 +1,7 @@
 import { create } from 'zustand';
 import { persist, createJSONStorage } from 'zustand/middleware';
 import { SessionKeeperConfig } from '@/types/jules';
-import type { DebateResult as OrchestrationDebateResult } from '@jules/shared';
-import { DAEMON_HTTP_BASE_URL } from '@/lib/config/daemon';
-
-export interface Log {
+import type { DebateResult as OrchestrationDebateResult } from '@jules/shared'; export interface Log {
   id?: string;
   time: string;
   message: string;
@@ -125,7 +122,7 @@ export const useSessionKeeperStore = create<SessionKeeperState>()(
             const config = await res.json();
             set({ config });
 
-            const statusRes = await fetch(`${DAEMON_HTTP_BASE_URL}/api/daemon/status`);
+            const statusRes = await fetch('/api/daemon/status');
             if (statusRes.ok) {
               const statusData = await statusRes.json();
               set((state) => ({
@@ -158,8 +155,11 @@ export const useSessionKeeperStore = create<SessionKeeperState>()(
             body: JSON.stringify(config),
           });
 
-          const endpoint = config.isEnabled ? '/api/daemon/start' : '/api/daemon/stop';
-          await fetch(`${DAEMON_HTTP_BASE_URL}${endpoint}`, { method: 'POST' });
+          await fetch('/api/daemon/status', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ action: config.isEnabled ? 'start' : 'stop' })
+          });
 
         } catch (error) {
           console.error('Failed to save keeper config:', error);
@@ -170,7 +170,7 @@ export const useSessionKeeperStore = create<SessionKeeperState>()(
 
       loadLogs: async () => {
         try {
-          const res = await fetch(`${DAEMON_HTTP_BASE_URL}/api/daemon/status`);
+          const res = await fetch('/api/daemon/status');
           if (res.ok) {
             const statusData = await res.json();
             const mappedLogs: Log[] = statusData.logs.map((l: any) => ({
@@ -203,7 +203,7 @@ export const useSessionKeeperStore = create<SessionKeeperState>()(
         }));
 
         try {
-          await fetch(`${DAEMON_HTTP_BASE_URL}/api/logs/keeper`, {
+          await fetch('/api/logs/keeper', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
@@ -254,7 +254,11 @@ export const useSessionKeeperStore = create<SessionKeeperState>()(
         const { addLog } = get();
         set({ isPausedAll: true });
         try {
-          const res = await fetch(`${DAEMON_HTTP_BASE_URL}/api/sessions/interrupt-all`, { method: 'POST' });
+          const res = await fetch('/api/sessions/bulk', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ action: 'interrupt-all' })
+          });
           if (res.ok) {
             const data = await res.json();
             await addLog(`Global Interrupt: ${data.interruptedCount} sessions paused.`, 'action');
@@ -271,7 +275,11 @@ export const useSessionKeeperStore = create<SessionKeeperState>()(
         const { addLog } = get();
         set({ isPausedAll: false });
         try {
-          const res = await fetch(`${DAEMON_HTTP_BASE_URL}/api/sessions/continue-all`, { method: 'POST' });
+          const res = await fetch('/api/sessions/bulk', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ action: 'continue-all' })
+          });
           if (res.ok) {
             const data = await res.json();
             await addLog(`Global Continue: ${data.continuedCount} sessions resumed.`, 'action');

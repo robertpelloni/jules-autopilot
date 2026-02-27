@@ -3,9 +3,9 @@
 This document tracks granular bugs, missing features, and technical debt. For epic-level milestones, see `ROADMAP.md`.
 
 ## Immediate Actions (Phase 19 Gaps)
-- [ ] **Submodule Dashboard Live Data:** The `/dashboard/submodules` page was added, but the backend `scripts/get-submodule-info.js` needs to be triggered reliably or we need an API endpoint to parse the `.git` metadata natively so the UI isn't relying on a static JSON file.
-- [ ] **Daemon Split-Brain Finalization:** We built the proxy layer (`lib/api/daemon-proxy.ts`), but we need to audit the frontend Code Editor and Submodule Editor components to ensure they exclusively call `/api/daemon` Next.js routes rather than hardcoded `localhost:8080`.
-- [ ] **SSE Streaming Hardening:** The `useEventStream` hook is working, but it needs to be injected into the `SessionView` component so that keeper logs stream in real-time instead of polling.
+- [x] **Submodule Dashboard Live Data:** The `/dashboard/submodules` page was added, but the backend `scripts/get-submodule-info.js` needs to be triggered reliably or we need an API endpoint to parse the `.git` metadata natively so the UI isn't relying on a static JSON file.
+- [x] **Daemon Split-Brain Finalization:** We built the proxy layer (`lib/api/daemon-proxy.ts`), but we need to audit the frontend Code Editor and Submodule Editor components to ensure they exclusively call `/api/daemon` Next.js routes rather than hardcoded `localhost:8080`.
+- [x] **SSE Streaming Hardening:** The `useEventStream` hook is working, but it needs to be injected into the `SessionView` component so that keeper logs stream in real-time instead of polling.
 
 ## Technical Debt & Refactoring
 - [ ] **Prisma Connection Pooling:** For production Docker deployments, we are using the default Prisma SQLite connector. We need to evaluate connection pooling limits when concurrency scales up.
