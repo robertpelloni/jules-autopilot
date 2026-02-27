@@ -1,15 +1,19 @@
 version: "3.8"
 
 services:
-  # Jules Frontend (Next.js)
+  # Jules Frontend (Next.js — Development)
   jules-ui:
     build:
       context: ..
       dockerfile: deploy/Dockerfile
+      target: dev
     ports:
       - "3002:3000"
     environment:
       - NODE_ENV=development
+      - DATABASE_URL=file:/app/prisma/dev.db
+      - NEXTAUTH_URL=http://localhost:3002
+      - NEXTAUTH_SECRET=dev-secret-change-in-production
     volumes:
       - ..:/app
       - /app/node_modules
@@ -31,13 +35,8 @@ services:
     environment:
       - NODE_ENV=development
     volumes:
-      # Mount user's repository into container
       - ${REPO_PATH:-../workspace}:/workspace:rw
-      # Preserve command history
       - terminal-history:/root/.bash_history
-      # Mount git config for git commands (conditional, comment out if not needed)
-      # - ~/.gitconfig:/root/.gitconfig:ro
-      # - ~/.ssh:/root/.ssh:ro
     networks:
       - jules-network
     security_opt:

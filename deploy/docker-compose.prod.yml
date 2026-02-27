@@ -1,18 +1,29 @@
 version: '3.8'
 
 services:
-  # Jules Frontend (Production)
+  # Jules Frontend (Production — Next.js standalone)
   jules-ui:
     build:
       context: ..
       dockerfile: deploy/Dockerfile
       target: runner
     ports:
-      - "3000:3000"
+      - "${PORT:-3000}:3000"
     environment:
       - NODE_ENV=production
-      - SESSION_SECRET=${SESSION_SECRET:-change_me_in_prod}
+      # Database
       - DATABASE_URL=file:/app/prisma/prod.db
+      # NextAuth — REQUIRED for OAuth login
+      - NEXTAUTH_URL=${NEXTAUTH_URL:-http://localhost:3000}
+      - NEXTAUTH_SECRET=${NEXTAUTH_SECRET:?Set NEXTAUTH_SECRET in .env}
+      - GITHUB_ID=${GITHUB_ID:-}
+      - GITHUB_SECRET=${GITHUB_SECRET:-}
+      # LLM Provider Keys (optional — can also be set from Settings UI)
+      - OPENAI_API_KEY=${OPENAI_API_KEY:-}
+      - ANTHROPIC_API_KEY=${ANTHROPIC_API_KEY:-}
+      - GOOGLE_GENERATIVE_AI_API_KEY=${GOOGLE_GENERATIVE_AI_API_KEY:-}
+      # Jules API
+      - JULES_API_KEY=${JULES_API_KEY:-}
     volumes:
       - jules-data:/app/prisma
     depends_on:
@@ -20,14 +31,20 @@ services:
     networks:
       - jules-network
     restart: always
+    healthcheck:
+      test: ["CMD", "node", "-e", "fetch('http://localhost:3000/api/system/status').then(r => r.ok ? process.exit(0) : process.exit(1)).catch(() => process.exit(1))"]
+      interval: 30s
+      timeout: 5s
+      start_period: 15s
+      retries: 3
 
-  # Terminal Server
+  # Terminal Server (Node.js + node-pty + Socket.io)
   terminal-server:
     build:
       context: ../terminal-server
       dockerfile: Dockerfile
       args:
-        - BASE_IMAGE=${TERMINAL_BASE_IMAGE:-nvcr.io/nvidia/pytorch:25.11-py3}
+        - BASE_IMAGE=${TERMINAL_BASE_IMAGE:-python:3.11-slim-bookworm}
     ports:
       - "8080:8080"
     environment:
@@ -38,6 +55,14 @@ services:
     networks:
       - jules-network
     restart: always
+    security_opt:
+      - no-new-privileges:true
+    cap_drop:
+      - ALL
+    cap_add:
+      - CHOWN
+      - SETGID
+      - SETUID
 
 volumes:
   terminal-history:
