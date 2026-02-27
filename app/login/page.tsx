@@ -20,7 +20,7 @@ export default function LoginPage() {
             <form
               action={async () => {
                 'use server';
-                await signIn('github', { redirectTo: '/dashboard' });
+                await signIn('github', { redirectTo: '/' });
               }}
             >
               <Button variant="outline" className="w-full bg-black border-zinc-800 hover:bg-zinc-900">
@@ -30,7 +30,7 @@ export default function LoginPage() {
             <form
               action={async () => {
                 'use server';
-                await signIn('credentials', { username: 'admin', password: 'admin', redirectTo: '/dashboard' });
+                await signIn('credentials', { username: 'admin', password: 'admin', redirectTo: '/' });
               }}
             >
               <Button variant="default" className="w-full mt-2 bg-purple-600 hover:bg-purple-700 text-white">
