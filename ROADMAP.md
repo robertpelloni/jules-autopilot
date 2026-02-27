@@ -55,10 +55,11 @@ This roadmap has been re-baselined against current code state after completing t
 
 ### Frontend UI Gaps
 - Provider dashboard exists but several providers still show mock/demo badges
-- Plugin marketplace page (`app/plugins/page.tsx`) needs to consume the new ingestion API
-- Routing simulation UI does not yet exist (backend API is ready)
+- ~~Routing simulation UI does not yet exist~~ ✅ Built in v0.9.1 (`/dashboard/routing`)
+- ~~Plugin marketplace missing signature verification status~~ ✅ Added Ed25519 badges in v0.9.1
 - Analytics dashboard uses simulated data for some metrics
 - Terminal demo page exists but is not fully wired to `terminal-server/`
+- Settings page needs routing/budget/quota management widgets
 
 ### Submodule Dashboards
 - `TaskQueueDashboard`, `McpServerDashboard`, and `TerminalStream` components still use mock datasets
@@ -84,11 +85,12 @@ This roadmap has been re-baselined against current code state after completing t
 
 ## Priority Execution Plan
 
-### Phase Next — UI Completeness & Polish
-1. Build Routing Simulation UI page consuming `/api/routing/simulate`.
-2. Wire Plugin marketplace to use the ingestion API and display signature status.
+### Phase Next — UI Completeness & Polish (v0.9.1 partial ✅)
+1. ~~Build Routing Simulation UI page consuming `/api/routing/simulate`~~ ✅
+2. ~~Wire Plugin marketplace to display signature status~~ ✅
 3. Connect submodule dashboards to real backend data.
 4. Add routing/budget/quota widgets to Settings page.
+5. Wire analytics dashboard to real provider telemetry data.
 
 ### Phase Next+1 — Infrastructure
 1. Create production `Dockerfile` and `docker-compose.yml`.
