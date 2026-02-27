@@ -3,6 +3,7 @@
 import { useEffect } from 'react';
 import { useSessionKeeperStore } from '@/lib/stores/session-keeper';
 import { useEventStream } from '@/lib/hooks/use-event-stream';
+import { toast } from 'sonner';
 
 export function SessionKeeperManager() {
   const config = useSessionKeeperStore(state => state.config);
@@ -25,6 +26,16 @@ export function SessionKeeperManager() {
             // Append directly to the Zustand store
             addLog(data.message, data.type || 'info');
             setStatusSummary({ lastAction: data.message.substring(0, 40) });
+          }
+        } else if (event.type === 'shadow_pilot_alert') {
+          const alert = event.data as any;
+          if (alert.severity === 'critical') {
+            toast.error(`⚠️ SHADOW PILOT: ${alert.message}`, {
+              description: `Uncommitted anomaly detected! Please check your local git diff.`,
+              duration: 10000,
+            });
+          } else {
+            toast.warning(`Shadow Pilot: ${alert.message}`);
           }
         }
       } catch (e) {

@@ -10,7 +10,8 @@ export type SSEEventType =
     | 'heartbeat'
     | 'session:update'
     | 'keeper:action'
-    | 'telemetry:cost';
+    | 'telemetry:cost'
+    | 'shadow_pilot_alert';
 
 export interface SSEEvent<T = unknown> {
     type: SSEEventType;

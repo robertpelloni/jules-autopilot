@@ -9,6 +9,7 @@ export type DaemonEventType =
   | 'session_approved'
   | 'activities_updated'
   | 'sessions_list_updated'
+  | 'shadow_pilot_alert'
   | 'ping'
   | 'pong';
 
@@ -59,6 +60,12 @@ export interface ActivitiesUpdatedPayload {
 
 export interface SessionsListUpdatedPayload {
   reason?: 'created' | 'deleted' | 'status_changed';
+}
+
+export interface ShadowPilotAlertPayload {
+  severity: 'critical' | 'warning' | 'info';
+  message: string;
+  diffSnippet: string;
 }
 
 export type LogType = 'info' | 'action' | 'error' | 'warn' | 'skip';

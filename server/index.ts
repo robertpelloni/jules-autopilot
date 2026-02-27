@@ -282,7 +282,7 @@ app.post('/api/supervisor', async (c) => {
 
         return c.json({ error: 'Invalid provider or action' }, 400);
 
-    } catch {
+    } catch (error) {
         console.error('Supervisor API Error:', error);
         const msg = error instanceof Error ? error.message : 'Internal server error';
         return c.json({ error: msg }, 500);
@@ -353,7 +353,7 @@ app.post('/api/debate', async (c) => {
         }
 
         return c.json(result);
-    } catch {
+    } catch (error) {
         console.error('Debate request failed:', error);
         return c.json({ error: error instanceof Error ? error.message : 'Unknown error' }, 500);
     }
@@ -440,6 +440,8 @@ const DEFAULT_KEEPER_SETTINGS = {
     supervisorApiKey: '',
     supervisorModel: 'gpt-4o',
     contextMessageCount: 10,
+    shadowPilotEnabled: false,
+    lastShadowPilotCommit: null,
 };
 
 app.get('/api/settings/keeper', async (c) => {

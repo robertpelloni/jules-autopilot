@@ -3,7 +3,12 @@ import { JulesClient } from '../lib/jules/client.ts';
 import { getProvider } from '@jules/shared';
 import { summarizeSession } from '@jules/shared';
 import { emitDaemonEvent } from './index.ts';
+import { exec } from 'child_process';
+import { promisify } from 'util';
+import * as crypto from 'crypto';
 import type { Activity } from '@jules/shared';
+
+const execAsync = promisify(exec);
 import type { KeeperSettings } from '@prisma/client';
 
 let isRunning = false;
@@ -85,6 +90,49 @@ export async function runLoop() {
             isRunning = false;
             return;
         }
+
+        // --- Shadow Pilot Watcher ---
+        if (settings.shadowPilotEnabled) {
+            try {
+                const { stdout: diff } = await execAsync('git diff');
+                const lastScannedHash = settings.lastShadowPilotCommit || '';
+
+                const diffHash = diff.length > 0 ? crypto.createHash('md5').update(diff).digest('hex') : '';
+
+                // Only scan if there are uncommitted changes and we haven't already scanned this exact diff
+                if (diff.trim().length > 20 && lastScannedHash !== diffHash) {
+                    await addLog(`Shadow Pilot analyzing local diff (${diff.length} bytes)`, 'info');
+                    const p = getProvider(settings.supervisorProvider);
+                    if (p) {
+                        const result = await p.complete({
+                            messages: [{ role: 'user', content: `Review this local git diff for CRITICAL vulnerabilities, exposed secrets, destructive queries, or glaring fatal bugs. If it is safe or only contains minor issues, reply EXACTLY with the word "SAFE". If there is a severe problem, reply with a concise 1-sentence warning stating the exact problem:\n\n${diff.substring(0, 10000)}` }],
+                            apiKey: settings.supervisorApiKey || process.env.OPENAI_API_KEY || "",
+                            model: settings.supervisorModel,
+                            systemPrompt: 'You are the Shadow Pilot. Protect the engineer from committing catastrophic code to version control. Only flag severe anomalies (secrets, structural breaks). Do not nitpick stylistic choices or logic unless it is fundamentally broken.'
+                        });
+
+                        const response = result.content.trim();
+                        if (response !== 'SAFE' && !response.includes('SAFE')) {
+                            await addLog(`Shadow Pilot detected severe anomaly: ${response}`, 'error');
+                            emitDaemonEvent('shadow_pilot_alert', {
+                                severity: 'critical',
+                                message: response,
+                                diffSnippet: diff.substring(0, 500)
+                            });
+                        }
+
+                        await prisma.keeperSettings.update({
+                            where: { id: 'default' },
+                            data: { lastShadowPilotCommit: diffHash }
+                        });
+                    }
+                }
+            } catch (e) {
+                console.error("[Daemon][Shadow Pilot] Error analyzing diff:", e);
+                // Ignore git diff errors silently to not disrupt the core daemon
+            }
+        }
+        // -----------------------------
 
         const sessions = await client.listSessions();
 

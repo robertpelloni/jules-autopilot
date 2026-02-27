@@ -114,6 +114,7 @@ export interface SessionKeeperConfig {
     // Debate Configuration
     debateEnabled?: boolean;
     resumePaused?: boolean;
+    shadowPilotEnabled?: boolean;
     debateParticipants?: {
         id: string;
         name: string;

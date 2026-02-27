@@ -16,6 +16,8 @@ const DEFAULT_SETTINGS: SessionKeeperConfig = {
   supervisorApiKey: '',
   supervisorModel: 'gpt-4o',
   contextMessageCount: 10,
+  shadowPilotEnabled: false,
+  lastShadowPilotCommit: null,
 };
 
 export async function GET() {

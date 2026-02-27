@@ -40,6 +40,8 @@ model KeeperSettings {
   supervisorModel            String   @default("gpt-4o")
   contextMessageCount        Int      @default(10)
   resumePaused               Boolean  @default(false)
+  shadowPilotEnabled         Boolean  @default(false)
+  lastShadowPilotCommit      String?
   userId                     String?
   user                       User?    @relation(fields: [userId], references: [id], onDelete: Cascade)
   updatedAt                  DateTime @updatedAt

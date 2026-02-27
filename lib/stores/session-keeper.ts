@@ -98,7 +98,8 @@ const DEFAULT_CONFIG: SessionKeeperConfig = {
   supervisorModel: '',
   contextMessageCount: 20,
   debateEnabled: false,
-  debateParticipants: []
+  debateParticipants: [],
+  shadowPilotEnabled: false,
 };
 
 export const useSessionKeeperStore = create<SessionKeeperState>()(
