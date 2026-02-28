@@ -44,3 +44,8 @@
 
 **Learning:** While relative dates (e.g., "2 days ago") are cleaner for scanning, users often need the precision of exact timestamps. Tooltips provide the perfect mechanism for this "progressive disclosure"—keeping the interface clean while making detailed data available on demand.
 **Action:** Use relative time for display and exact timestamp in tooltips.
+
+## 2025-12-21 - Search Reset Affordance
+
+**Learning:** Search inputs without an explicit clear button require users to repeatedly press backspace, increasing interaction cost. This is especially problematic in filtering components like Combobox where users frequently cycle through different queries.
+**Action:** Search input components should implement a clear button ('X' icon) that appears when text is entered to allow users to quickly reset the query.
