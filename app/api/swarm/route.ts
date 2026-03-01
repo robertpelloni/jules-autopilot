@@ -16,13 +16,14 @@ export async function GET(): Promise<Response> {
 }
 
 export async function POST(req: Request): Promise<Response> {
-    const body = await req.json() as { name?: string; prompt?: string };
+    const body = await req.json() as { name?: string; prompt?: string; priority?: number };
 
     if (!body.prompt) {
         return NextResponse.json({ error: 'Missing "prompt" field' }, { status: 400 });
     }
 
     const name = body.name || `Swarm ${new Date().toISOString().slice(0, 16)}`;
+    const priority = body.priority || 0;
 
     // Create the swarm record immediately in "pending" state
     // The actual decomposition happens asynchronously via the daemon
@@ -30,6 +31,7 @@ export async function POST(req: Request): Promise<Response> {
         data: {
             name,
             prompt: body.prompt,
+            priority,
             status: 'pending'
         }
     });

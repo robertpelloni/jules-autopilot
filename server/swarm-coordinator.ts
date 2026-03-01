@@ -17,6 +17,26 @@ interface SwarmConfig {
 export class SwarmCoordinator {
     private config: SwarmConfig;
 
+    private constructor(config: SwarmConfig) {
+        this.config = config;
+    }
+
+    /**
+     * Get the consolidated context of all completed tasks in a swarm.
+     */
+    static async getSwarmContext(swarmId: string): Promise<string> {
+        const tasks = await prisma.swarmTask.findMany({
+            where: { swarmId, status: 'completed' }
+        });
+
+        if (tasks.length === 0) return "No task results available yet.";
+
+        return tasks
+            .map(t => `### ${t.title} ###\n${t.result || '(No output)'}`)
+            .join('\n\n');
+    }
+
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     private static async persistEvent(swarmId: string, event: { type: string; data: any }) {
         const swarm = await prisma.agentSwarm.findUnique({ where: { id: swarmId } });
         if (!swarm) return;
@@ -28,10 +48,6 @@ export class SwarmCoordinator {
             where: { id: swarmId },
             data: { metadata: JSON.stringify(events.slice(-100)) } // Keep last 100 events
         });
-    }
-
-    constructor(config: SwarmConfig) {
-        this.config = config;
     }
 
     /**
@@ -50,7 +66,9 @@ export class SwarmCoordinator {
             }
         });
 
-        emitDaemonEvent('swarm_created', { swarmId: swarm.id, name: swarm.name });
+        emitDaemonEvent('swarm_created', {
+            swarmId: swarm.id, name: swarm.name
+        });
         emitDaemonEvent('swarm:task_pondering', { swarmId: swarm.id, taskId: 'root', message: 'Analyzing task requirements...' });
 
         await SwarmCoordinator.persistEvent(swarm.id, { type: 'swarm_created', data: { name: swarm.name } });
@@ -167,13 +185,34 @@ ${this.config.prompt}`
 
         for (const task of tasksToDispatch) {
             try {
+                // Step 2a: Swarm Memory - Gather context from dependencies
+                let augmentedPrompt = task.prompt;
+                if (task.dependsOn) {
+                    const depIds = task.dependsOn.split(',').map(id => id.trim());
+                    const dependencies = swarm.tasks.filter(t => depIds.includes(t.id) && t.status === 'completed');
+
+                    if (dependencies.length > 0) {
+                        const contextHeader = "\n\n### SWARM CONTEXT FROM DEPENDENCIES ###\n";
+                        const contextBody = dependencies
+                            .map(dep => `[Output of "${dep.title}"]: ${dep.result || 'No output recorded.'}`)
+                            .join('\n\n');
+                        augmentedPrompt = `${contextHeader}${contextBody}\n\n### ORIGINAL TASK PROMPT ###\n${task.prompt}`;
+                    }
+                }
+
+                // Step 2b: Adaptive Escalation - Add hint if escalated
+                if ((task as any).isEscalated) {
+                    augmentedPrompt = `[MODE: HIGH_PRECISION_ESCALATION]\n${augmentedPrompt}`;
+                }
+
                 // Dynamically import JulesClient to avoid server/ tsc graph issues
                 const { JulesClient } = await import('../lib/jules/client');
                 const client = new JulesClient(apiKey, 'https://jules.googleapis.com/v1alpha');
 
+                // eslint-disable-next-line @typescript-eslint/no-explicit-any
                 const session = await client.createSession(
-                    undefined,
-                    task.prompt,
+                    undefined as any,
+                    augmentedPrompt,
                     `[Swarm] ${task.title}`
                 );
 
@@ -211,6 +250,9 @@ ${this.config.prompt}`
             }
         }
 
+        // Sync statuses for dispatched tasks
+        await SwarmCoordinator.syncTaskStatuses(swarmId);
+
         // Check if all tasks are completed
         const freshSwarm = await prisma.agentSwarm.findUnique({
             where: { id: swarmId },
@@ -247,5 +289,248 @@ ${this.config.prompt}`
                 await addLog(`Swarm "${freshSwarm.name}" completed (${doneCount}/${freshSwarm.totalTasks} succeeded)`, 'action');
             }
         }
+    }
+
+    /**
+     * Pause an individual task.
+     */
+    static async pauseTask(taskId: string): Promise<void> {
+        const task = await prisma.swarmTask.findUnique({ where: { id: taskId } });
+        if (!task || task.status !== 'pending') return;
+
+        await prisma.swarmTask.update({
+            where: { id: taskId },
+            data: { status: 'paused' }
+        });
+
+        emitDaemonEvent('swarm_task_updated', {
+            swarmId: task.swarmId,
+            taskId: task.id,
+            status: 'paused'
+        });
+
+        await SwarmCoordinator.persistEvent(task.swarmId, {
+            type: 'swarm:task_paused',
+            data: { taskId: task.id, title: task.title }
+        });
+    }
+
+    /**
+     * Resume a paused task.
+     */
+    static async resumeTask(taskId: string): Promise<void> {
+        const task = await prisma.swarmTask.findUnique({ where: { id: taskId } });
+        if (!task || task.status !== 'paused') return;
+
+        await prisma.swarmTask.update({
+            where: { id: taskId },
+            data: { status: 'pending' }
+        });
+
+        emitDaemonEvent('swarm_task_updated', {
+            swarmId: task.swarmId,
+            taskId: task.id,
+            status: 'pending'
+        });
+
+        await SwarmCoordinator.persistEvent(task.swarmId, {
+            type: 'swarm:task_resumed',
+            data: { taskId: task.id, title: task.title }
+        });
+
+        // Trigger dispatcher
+        await SwarmCoordinator.dispatchPendingTasks(task.swarmId);
+    }
+
+    /**
+     * Update token usage and cost for a task and its swarm.
+     */
+    static async updateTaskMetrics(taskId: string, metrics: { inputTokens: number; outputTokens: number; costCents: number }): Promise<void> {
+        const task = await prisma.swarmTask.findUnique({ where: { id: taskId } });
+        if (!task) return;
+
+        await prisma.swarmTask.update({
+            where: { id: taskId },
+            data: {
+                inputTokens: metrics.inputTokens,
+                outputTokens: metrics.outputTokens,
+                costCents: metrics.costCents
+            } as any // eslint-disable-line @typescript-eslint/no-explicit-any
+        });
+
+        // Atomic update of the swarm's global metrics
+        await prisma.agentSwarm.update({
+            where: { id: task.swarmId },
+            data: {
+                totalTokens: { increment: metrics.inputTokens + metrics.outputTokens },
+                totalCostCents: { increment: metrics.costCents }
+            } as any // eslint-disable-line @typescript-eslint/no-explicit-any
+        });
+
+        emitDaemonEvent('swarm_metrics_updated' as any, { // eslint-disable-line @typescript-eslint/no-explicit-any
+            swarmId: task.swarmId,
+            taskId: task.id,
+            ...metrics
+        });
+    }
+
+    /**
+     * Sync status of all dispatched tasks with the Jules API.
+     * Triggers verification logic if tasks are completed.
+     */
+    static async syncTaskStatuses(swarmId: string): Promise<void> {
+        const swarm = await prisma.agentSwarm.findUnique({
+            where: { id: swarmId },
+            include: { tasks: true }
+        });
+        if (!swarm) return;
+
+        const dispatchedTasks = swarm.tasks.filter(t => t.status === 'dispatched');
+        if (dispatchedTasks.length === 0) return;
+
+        const settings = await prisma.keeperSettings.findUnique({ where: { id: 'default' } });
+        const apiKey = settings?.julesApiKey || process.env.JULES_API_KEY;
+        if (!apiKey) return;
+
+        const { JulesClient } = await import('../lib/jules/client');
+        const client = new JulesClient(apiKey, 'https://jules.googleapis.com/v1alpha');
+
+        for (const task of dispatchedTasks) {
+            if (!task.sessionId) continue;
+            try {
+                const session = await client.getSession(task.sessionId);
+                if (session.status === 'completed') {
+                    // Task finished!
+                    // Extract result from outputs if available
+                    const sessionAny = session as any;
+                    const result = sessionAny.outputs?.[0]?.pullRequest?.url ||
+                        sessionAny.outputs?.[0]?.summary ||
+                        'Task completed successfully.';
+
+                    await prisma.swarmTask.update({
+                        where: { id: task.id },
+                        data: {
+                            status: 'completed',
+                            result
+                        }
+                    });
+
+                    emitDaemonEvent('swarm_task_updated', {
+                        swarmId,
+                        taskId: task.id,
+                        status: 'completed'
+                    });
+
+                    await SwarmCoordinator.persistEvent(swarmId, {
+                        type: 'swarm:task_completed',
+                        data: { taskId: task.id, title: task.title }
+                    });
+
+                    // --- Phase 83: Automated Peer Review ---
+                    if (!(task as any).isVerification) {
+                        await SwarmCoordinator.spawnVerifier(swarmId, task.id);
+                    } else if ((task as any).reviewedTaskId) {
+                        // Verification task completed, update the target task's reviewStatus
+                        const isSuccess = result.toLowerCase().includes('pass') || !result.toLowerCase().includes('fail');
+                        await prisma.swarmTask.update({
+                            where: { id: (task as any).reviewedTaskId },
+                            data: { reviewStatus: isSuccess ? 'passed' : 'failed' }
+                        } as any);
+
+                        if (!isSuccess) {
+                            await SwarmCoordinator.handleReviewFailure(swarmId, task.id);
+                        }
+                    }
+                } else if (session.status === 'failed') {
+                    await prisma.swarmTask.update({
+                        where: { id: task.id },
+                        data: { status: 'failed', result: (session as any).error || 'Unknown session failure' }
+                    });
+                    emitDaemonEvent('swarm_task_updated', { swarmId, taskId: task.id, status: 'failed' });
+                }
+            } catch (err) {
+                console.error(`[Swarm] Sync error for task ${task.id}:`, err);
+            }
+        }
+    }
+
+    /**
+     * Spawn a verifier task for a completed task.
+     */
+    private static async spawnVerifier(swarmId: string, targetTaskId: string): Promise<void> {
+        const targetTask = await prisma.swarmTask.findUnique({ where: { id: targetTaskId } });
+        if (!targetTask) return;
+
+        const verifierTitle = `Verify: ${targetTask.title}`;
+        const verifierPrompt = `Review the following task output for correctness and quality. 
+Output "PASS" if the work is correct. 
+If there are errors, identify them specifically and output "FAIL" followed by the issues.
+
+TASK TITLE: ${targetTask.title}
+TASK PROMPT: ${targetTask.prompt}
+AGENT OUTPUT:
+${targetTask.result}`;
+
+        await prisma.swarmTask.create({
+            data: {
+                swarmId,
+                title: verifierTitle,
+                prompt: verifierPrompt,
+                isVerification: true,
+                reviewedTaskId: targetTaskId,
+                priority: targetTask.priority + 10,
+                status: 'pending'
+            } as any
+        });
+
+        await SwarmCoordinator.persistEvent(swarmId, {
+            type: 'swarm:verifier_spawned',
+            data: { targetTaskId, verifierTitle }
+        });
+
+        emitDaemonEvent('swarm_updated', { swarmId });
+    }
+
+    /**
+     * Handle a failed review by re-decomposing the failing branch.
+     */
+    private static async handleReviewFailure(swarmId: string, verifierTaskId: string): Promise<void> {
+        const verifierTask = await prisma.swarmTask.findUnique({ where: { id: verifierTaskId } });
+        if (!verifierTask || !(verifierTask as any).reviewedTaskId) return;
+
+        const targetTask = await prisma.swarmTask.findUnique({ where: { id: (verifierTask as any).reviewedTaskId } });
+        if (!targetTask) return;
+
+        await SwarmCoordinator.persistEvent(swarmId, {
+            type: 'swarm:replanning',
+            data: { taskId: targetTask.id, reason: 'Review failed' }
+        });
+
+        emitDaemonEvent('swarm:task_pondering', {
+            swarmId,
+            taskId: targetTask.id,
+            message: 'Review failed. Re-planning corrective actions...'
+        });
+
+        // Simplified re-planning: mark the task as pending again but with the review feedback augmented
+        const correctivePrompt = `[CORRECTIVE ACTION] Your previous attempt failed review.
+ISSUES CITED BY REVIEWER:
+${verifierTask.result}
+
+ORIGINAL PROMPT:
+${targetTask.prompt}`;
+
+        await prisma.swarmTask.update({
+            where: { id: targetTask.id },
+            data: {
+                status: 'pending',
+                prompt: correctivePrompt,
+                retryCount: { increment: 1 },
+                isEscalated: true,
+                reviewStatus: 'pending'
+            } as any
+        });
+
+        emitDaemonEvent('swarm_task_updated', { swarmId, taskId: targetTask.id, status: 'pending' });
     }
 }

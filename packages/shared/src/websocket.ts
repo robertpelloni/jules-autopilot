@@ -18,6 +18,9 @@ export type DaemonEventType =
   | 'swarm:task_pondering'
   | 'swarm:task_executing'
   | 'swarm:task_finalizing'
+  | 'swarm:task_paused'
+  | 'swarm:task_resumed'
+  | 'swarm_metrics_updated'
   | 'swarm_completed'
   | 'ping'
   | 'pong';

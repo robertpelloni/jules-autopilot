@@ -12,6 +12,7 @@ import { prisma } from '../lib/prisma.ts';
 import { JulesClient } from '../lib/jules/client.ts';
 import type { DaemonEventType } from '@jules/shared';
 import { createDaemonEvent } from '@jules/shared';
+import { orchestratorQueue } from './queue.ts';
 
 const app = new Hono();
 
@@ -334,6 +335,21 @@ app.post('/api/swarm/decompose', async (c) => {
     } catch (e) {
         console.error('Swarm decomposition trigger failed:', e);
         return c.json({ error: e instanceof Error ? e.message : 'Internal error' }, { status: 500 });
+    }
+});
+
+app.post('/api/swarm/refresh', async (c) => {
+    try {
+        const { swarmId } = await c.req.json();
+        if (!swarmId) return c.json({ error: 'Missing swarmId' }, 400);
+
+        const { SwarmCoordinator } = await import('./swarm-coordinator.ts');
+        await SwarmCoordinator.dispatchPendingTasks(swarmId);
+
+        return c.json({ success: true });
+    } catch (e) {
+        console.error('Swarm refresh failed:', e);
+        return c.json({ error: e instanceof Error ? e.message : 'Internal error' }, 500);
     }
 });
 
