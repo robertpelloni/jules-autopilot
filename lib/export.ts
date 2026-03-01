@@ -99,9 +99,9 @@ export function exportSessionToMarkdown(session: Session, activities: Activity[]
   md += `**Source:** ${session.sourceId}\n`;
   if (session.branch) md += `**Branch:** ${session.branch}\n`;
   md += `\n`;
-  
+
   md += `## Initial Prompt\n\n${session.prompt || "No prompt provided"}\n\n`;
-  
+
   if (session.summary) {
     md += `## Summary\n\n${session.summary}\n\n`;
   }
@@ -111,29 +111,29 @@ export function exportSessionToMarkdown(session: Session, activities: Activity[]
   activities.forEach((activity) => {
     const role = activity.role === 'user' ? 'User' : 'Agent';
     const date = new Date(activity.createdAt).toLocaleString();
-    
+
     md += `### ${role} (${date})\n\n`;
-    
+
     if (activity.type === 'plan') {
-        md += `**Plan:**\n\n`;
+      md += `**Plan:**\n\n`;
     } else if (activity.type === 'error') {
-        md += `**Error:**\n\n`;
+      md += `**Error:**\n\n`;
     }
-    
+
     md += `${activity.content}\n\n`;
-    
+
     if (activity.bashOutput) {
-        md += `**Terminal Output:**\n\`\`\`bash\n${activity.bashOutput}\n\`\`\`\n\n`;
+      md += `**Terminal Output:**\n\`\`\`bash\n${activity.bashOutput}\n\`\`\`\n\n`;
     }
-    
+
     if (activity.diff) {
-        md += `**Code Diff:**\n\`\`\`diff\n${activity.diff}\n\`\`\`\n\n`;
+      md += `**Code Diff:**\n\`\`\`diff\n${activity.diff}\n\`\`\`\n\n`;
     }
 
     if (activity.metadata && Object.keys(activity.metadata).length > 0) {
-        md += `**Metadata:**\n\`\`\`json\n${JSON.stringify(activity.metadata, null, 2)}\n\`\`\`\n\n`;
+      md += `**Metadata:**\n\`\`\`json\n${JSON.stringify(activity.metadata, null, 2)}\n\`\`\`\n\n`;
     }
-    
+
     md += `---\n\n`;
   });
 
@@ -151,12 +151,13 @@ export function exportSessionToMarkdown(session: Session, activities: Activity[]
 export function exportSystemLogsToMarkdown(logs: Log[]) {
   let md = `# Jules System Logs\n\n`;
   md += `**Exported At:** ${new Date().toLocaleString()}\n\n`;
-  
+
   md += `| Time | Type | Message | Details |\n`;
   md += `|------|------|---------|---------|\n`;
 
   logs.forEach((log) => {
-    const details = log.details ? log.details.replace(/\n/g, '<br>') : "-";
+    const detailsStr = log.details ? JSON.stringify(log.details) : "";
+    const details = detailsStr ? detailsStr.replace(/\n/g, '<br>') : "-";
     md += `| ${log.time} | ${log.type.toUpperCase()} | ${log.message} | ${details} |\n`;
   });
 

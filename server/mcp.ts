@@ -7,10 +7,10 @@ export const mcpServer = new McpServer({
     version: "1.0.0"
 });
 
-mcpServer.tool("query_codebase",
-    "Performs a semantic similarity search across the currently indexed codebase to find relevant code patterns or implementations.",
+mcpServer.tool(
+    "query_codebase",
     {
-        query: z.string().describe("The semantic prompt (e.g., 'How is authentication handled in the frontend?')"),
+        query: z.string().describe("Performs a semantic similarity search across the currently indexed codebase. Input: semantic prompt (e.g., 'How is authentication handled in the frontend?')"),
         top_k: z.number().optional().describe("Number of results to return. Defaults to 5")
     },
     async ({ query, top_k }) => {
@@ -64,3 +64,74 @@ mcpServer.tool("query_codebase",
         }
     }
 );
+
+/**
+ * Dynamically queries the database for installed and active Wasm Plugins
+ * and binds them directly into the underlying MCP Tool Registry.
+ */
+export async function registerWasmPluginsAsMcpTools() {
+    console.log("[MCP] Fetching active WebAssembly plugins to mount as tools...");
+
+    // Lazy-import prisma and WasmPluginRunner at runtime to avoid Node 24 ESM loader
+    // crashes caused by lib/prisma.ts using CJS require() internally.
+    const { prisma } = await import('../lib/prisma.ts');
+    const { WasmPluginRunner } = await import('../lib/plugins/wasm-runner.ts');
+
+    const activePlugins = await prisma.pluginManifest.findMany({
+        where: {
+            status: 'active',
+            OR: [
+                { wasmPayload: { not: null } },
+                { wasmUrl: { not: null } }
+            ]
+        }
+    });
+
+    let toolsMounted = 0;
+
+    for (const manifest of activePlugins) {
+        // Zod validation is tough dynamically without 'eval', so we accept generic string payloads.
+        // The Plugin author is responsible for parsing JSON inputs from the prompt inside the Wasm Guest.
+        if (manifest.capabilities.includes('mcp:invoke_tool')) {
+            try {
+                // If the plugin declares configSchema, we could theoretically build a Zod object dynamically.
+                // For the zero-trust architecture MVP, we simply send a raw text instruction.
+                mcpServer.tool(
+                    manifest.id,
+                    {
+                        input: z.string().describe(manifest.description || `Input payload or command for the ${manifest.name} plugin to process.`)
+                    },
+                    async ({ input }) => {
+                        try {
+                            // Instantiate the sandbox per-request. Extism initializes in ~1ms
+                            // eslint-disable-next-line @typescript-eslint/no-explicit-any
+                            const runner = new WasmPluginRunner(manifest as any);
+
+                            // Execute a presumed 'run' or 'execute' function inside the Guest Wasm
+                            const result = await runner.execute('run', input);
+
+                            if (result.success) {
+                                return {
+                                    content: [{ type: "text", text: result.output || 'Execution completed with no output.' }]
+                                };
+                            } else {
+                                return {
+                                    content: [{ type: "text", text: `Plugin Execution Failed: ${result.error}` }]
+                                };
+                            }
+                        } catch (err) {
+                            return {
+                                content: [{ type: "text", text: `Sandbox Fault: ${err instanceof Error ? err.message : String(err)}` }]
+                            };
+                        }
+                    }
+                );
+                toolsMounted++;
+                console.log(`[MCP] Mounted secure Wasm Tool: ${manifest.id} (${manifest.version})`);
+            } catch (err) {
+                console.error(`[MCP] Failed to mount tool for plugin ${manifest.id}:`, err);
+            }
+        }
+    }
+    console.log(`[MCP] Ready. Isolated ${toolsMounted} Wasm Plugins.`);
+}

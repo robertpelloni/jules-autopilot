@@ -21,14 +21,14 @@ export function SessionKeeperManager() {
           setStatusSummary({ lastAction: 'SSE Connected' });
         } else if (event.type === 'keeper:action') {
           // SSE pushing new keeper logs in real-time
-          const data = event.data as any;
+          const data = event.data as { message?: string; type?: 'info' | 'error' | 'action' | 'skip' };
           if (data && data.message) {
             // Append directly to the Zustand store
             addLog(data.message, data.type || 'info');
             setStatusSummary({ lastAction: data.message.substring(0, 40) });
           }
         } else if (event.type === 'shadow_pilot_alert') {
-          const alert = event.data as any;
+          const alert = event.data as { severity?: string; message?: string };
           if (alert.severity === 'critical') {
             toast.error(`⚠️ SHADOW PILOT: ${alert.message}`, {
               description: `Uncommitted anomaly detected! Please check your local git diff.`,
@@ -38,7 +38,7 @@ export function SessionKeeperManager() {
             toast.warning(`Shadow Pilot: ${alert.message}`);
           }
         }
-      } catch (e) {
+      } catch {
         // Silently ignore format errors
       }
     }

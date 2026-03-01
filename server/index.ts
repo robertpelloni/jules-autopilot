@@ -292,12 +292,48 @@ app.post('/api/supervisor', async (c) => {
 app.post('/api/supervisor/clear', async (c) => {
     try {
         const { sessionId } = await c.req.json();
-        if (!sessionId) return c.json({ error: 'Missing sessionId' }, 400);
+        if (!sessionId) return c.json({ error: 'Missing sessionId' }, { status: 400 });
 
         await prisma.supervisorState.deleteMany({ where: { sessionId } });
         return c.json({ success: true });
     } catch (e) {
-        return c.json({ error: e instanceof Error ? e.message : 'Failed to clear memory' }, 500);
+        return c.json({ error: e instanceof Error ? e.message : 'Failed to clear memory' }, { status: 500 });
+    }
+});
+
+// ============================================================================
+// SWARM ROUTES
+// ============================================================================
+
+app.post('/api/swarm/decompose', async (c) => {
+    try {
+        const body = await c.req.json();
+        const { swarmId } = body;
+
+        if (!swarmId) {
+            return c.json({ error: 'Missing swarmId' }, { status: 400 });
+        }
+
+        const swarm = await prisma.agentSwarm.findUnique({ where: { id: swarmId } });
+        if (!swarm) {
+            return c.json({ error: 'Swarm not found' }, { status: 404 });
+        }
+
+        // Add to queue for asynchronous decomposition
+        await orchestratorQueue.add('process_swarm_decomposition', { swarmId }, {
+            jobId: `swarm-decomp-${swarmId}`,
+            removeOnComplete: true
+        });
+
+        await prisma.agentSwarm.update({
+            where: { id: swarmId },
+            data: { status: 'decomposing' }
+        });
+
+        return c.json({ success: true, swarmId });
+    } catch (e) {
+        console.error('Swarm decomposition trigger failed:', e);
+        return c.json({ error: e instanceof Error ? e.message : 'Internal error' }, { status: 500 });
     }
 });
 
@@ -618,13 +654,66 @@ app.delete('/api/templates/:id', async (c) => {
 
 const port = 8080;
 
+import { setupWorker } from './queue.ts';
+let workerInstance: ReturnType<typeof setupWorker> | null = null;
+
 prisma.keeperSettings.findUnique({ where: { id: 'default' } }).then(settings => {
     if (settings?.isEnabled) {
         console.log("Auto-starting Session Keeper daemon...");
         startDaemon();
+        if (!workerInstance) {
+            console.log("Starting BullMQ Worker...");
+            workerInstance = setupWorker();
+        }
     }
 }).catch(err => {
     console.error("Failed to check auto-start settings:", err);
+});
+
+app.post('/api/daemon/start', async (c) => {
+    try {
+        await prisma.keeperSettings.upsert({
+            where: { id: 'default' },
+            update: { isEnabled: true },
+            create: {
+                id: 'default',
+                isEnabled: true,
+                messages: '[]',
+                customMessages: '{}',
+                checkIntervalSeconds: 60,
+                inactivityThresholdMinutes: 10,
+                activeWorkThresholdMinutes: 5
+            }
+        });
+        startDaemon();
+        if (!workerInstance) {
+            console.log("Starting BullMQ Worker...");
+            workerInstance = setupWorker();
+        }
+        emitDaemonEvent('daemon_status', { status: 'running' });
+        return c.json({ success: true });
+    } catch (e) {
+        return c.json({ error: e instanceof Error ? e.message : 'Failed to start daemon' }, 500);
+    }
+});
+
+app.post('/api/daemon/stop', async (c) => {
+    try {
+        await prisma.keeperSettings.update({
+            where: { id: 'default' },
+            data: { isEnabled: false }
+        });
+        stopDaemon();
+        if (workerInstance) {
+            console.log("Stopping BullMQ Worker...");
+            workerInstance.close();
+            workerInstance = null;
+        }
+        emitDaemonEvent('daemon_status', { status: 'stopped' });
+        return c.json({ success: true });
+    } catch (e) {
+        return c.json({ error: e instanceof Error ? e.message : 'Failed to stop daemon' }, 500);
+    }
 });
 
 console.log(`Server starting on port ${port}`);

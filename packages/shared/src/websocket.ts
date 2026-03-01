@@ -10,6 +10,15 @@ export type DaemonEventType =
   | 'activities_updated'
   | 'sessions_list_updated'
   | 'shadow_pilot_alert'
+  | 'swarm_created'
+  | 'swarm_updated'
+  | 'swarm_task_updated'
+  | 'swarm_paused'
+  | 'swarm_resumed'
+  | 'swarm:task_pondering'
+  | 'swarm:task_executing'
+  | 'swarm:task_finalizing'
+  | 'swarm_completed'
   | 'ping'
   | 'pong';
 

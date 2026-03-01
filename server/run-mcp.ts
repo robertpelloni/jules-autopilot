@@ -1,7 +1,8 @@
 import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js";
-import { mcpServer } from "./mcp.js"; // Note: .js extension for runtime compatibility
+import { mcpServer, registerWasmPluginsAsMcpTools } from "./mcp.js"; // Note: .js extension for runtime compatibility
 
 async function main() {
+    await registerWasmPluginsAsMcpTools();
     const transport = new StdioServerTransport();
     await mcpServer.connect(transport);
     console.error("Jules Autopilot RAG MCP Server running on stdio");

@@ -6,7 +6,7 @@ import type { DebateResult as OrchestrationDebateResult } from '@jules/shared'; 
   time: string;
   message: string;
   type: 'info' | 'action' | 'error' | 'skip';
-  details?: any;
+  details?: Record<string, unknown>;
 }
 
 export interface DebateOpinion {
@@ -63,7 +63,7 @@ interface SessionKeeperState {
   saveConfig: (config: SessionKeeperConfig) => Promise<void>;
 
   loadLogs: () => Promise<void>;
-  addLog: (message: string, type: Log['type'], details?: any) => Promise<void>;
+  addLog: (message: string, type: Log['type'], details?: Record<string, unknown>) => Promise<void>;
   addDebate: (debate: DebateResult) => void;
 
   clearLogs: () => void;
@@ -128,17 +128,17 @@ export const useSessionKeeperStore = create<SessionKeeperState>()(
               const statusData = await statusRes.json();
               set((state) => ({
                 config: { ...state.config, isEnabled: statusData.isEnabled },
-                logs: statusData.logs.map((l: any) => ({
+                logs: statusData.logs.map((l: { id: string; createdAt: string | number | Date; message: string; type: string; metadata?: string }) => ({
                   id: l.id,
                   time: new Date(l.createdAt).toLocaleTimeString(),
                   message: l.message,
-                  type: l.type,
+                  type: l.type as Log['type'],
                   details: l.metadata ? JSON.parse(l.metadata) : undefined
                 }))
               }));
             }
           }
-        } catch (error) {
+        } catch {
           console.warn('Session Keeper: Backend not reachable. Is the server running? (bun run server/index.ts)');
         } finally {
           set({ isLoading: false });
@@ -174,7 +174,7 @@ export const useSessionKeeperStore = create<SessionKeeperState>()(
           const res = await fetch('/api/daemon/status');
           if (res.ok) {
             const statusData = await res.json();
-            const mappedLogs: Log[] = statusData.logs.map((l: any) => ({
+            const mappedLogs: Log[] = statusData.logs.map((l: { id: string; createdAt: string | number | Date; message: string; type: string; metadata?: string }) => ({
               id: l.id,
               time: new Date(l.createdAt).toLocaleTimeString(),
               message: l.message,
@@ -183,7 +183,7 @@ export const useSessionKeeperStore = create<SessionKeeperState>()(
             }));
             set({ logs: mappedLogs });
           }
-        } catch (error) {
+        } catch {
           // Silent fail for logs polling/loading if backend is down
           if (process.env.NODE_ENV === 'development') {
             console.warn('Session Keeper: Failed to load logs (backend offline?)');

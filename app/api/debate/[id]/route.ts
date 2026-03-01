@@ -1,21 +1,19 @@
-import { NextRequest, NextResponse } from 'next/server';
+import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
-import { createErrorResponse, handleInternalError } from '@/lib/api/error';
+import { handleInternalError } from '@/lib/api/error';
 
 export async function GET(
-  req: NextRequest,
-  props: { params: Promise<{ id: string }> }
+  req: Request,
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const params = await props.params;
-    const { id } = params;
-
-    const debate = await prisma.debate.findUnique({
+    const { id } = await params;
+    const debate = await prisma.storedDebate.findUnique({
       where: { id },
     });
 
     if (!debate) {
-      return createErrorResponse(req, 'NOT_FOUND', 'Debate not found', 404);
+      return NextResponse.json({ error: 'Debate not found' }, { status: 404 });
     }
 
     const formattedDebate = {
@@ -27,24 +25,22 @@ export async function GET(
 
     return NextResponse.json(formattedDebate);
   } catch (error) {
-    return handleInternalError(req, error);
+    return handleInternalError(req as any, error);
   }
 }
 
 export async function DELETE(
-  req: NextRequest,
-  props: { params: Promise<{ id: string }> }
+  req: Request,
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const params = await props.params;
-    const { id } = params;
-
-    await prisma.debate.delete({
+    const { id } = await params;
+    await prisma.storedDebate.delete({
       where: { id },
     });
 
     return NextResponse.json({ success: true });
   } catch (error) {
-    return handleInternalError(req, error);
+    return handleInternalError(req as any, error);
   }
 }

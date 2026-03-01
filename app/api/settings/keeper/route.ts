@@ -17,7 +17,6 @@ const DEFAULT_SETTINGS: SessionKeeperConfig = {
   supervisorModel: 'gpt-4o',
   contextMessageCount: 10,
   shadowPilotEnabled: false,
-  lastShadowPilotCommit: null,
 };
 
 export async function GET() {
@@ -77,7 +76,7 @@ export async function POST(req: Request) {
       messages: JSON.parse(settings.messages),
       customMessages: JSON.parse(settings.customMessages),
     });
-  } catch (error) {
+  } catch {
     return NextResponse.json({ error: 'Failed to save settings' }, { status: 500 });
   }
 }

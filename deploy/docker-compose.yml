@@ -23,6 +23,16 @@ services:
     networks:
       - jules-network
 
+  # Redis Queue (BullMQ)
+  redis:
+    image: redis:7-alpine
+    ports:
+      - "6379:6379"
+    networks:
+      - jules-network
+    volumes:
+      - redis-data:/data
+
   # Terminal Server (Node.js + node-pty + Socket.io)
   terminal-server:
     build:
@@ -50,6 +60,7 @@ services:
 
 volumes:
   terminal-history:
+  redis-data:
 
 networks:
   jules-network:

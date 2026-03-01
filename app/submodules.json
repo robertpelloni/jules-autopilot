@@ -1,115 +1,115 @@
 {
-  "generatedAt": "2026-02-27T06:57:36.727Z",
+  "generatedAt": "2026-02-28T09:24:44.938Z",
   "submodules": [
     {
       "name": "antigravity-jules-orchestration",
       "path": "external/antigravity-jules-orchestration",
       "branch": "main",
-      "commit": "275e39b380270d3c6091031c5ef6edebeff94ad6",
+      "commit": "8e8996e6583b625a8d1773b66e55a72993ab89ee",
       "url": "https://github.com/Scarmonit/antigravity-jules-orchestration",
-      "lastCommitDate": "2026-02-27 01:57:23 -0500",
-      "buildNumber": 169,
-      "describe": "(v2.6.1-22-g275e39b)",
-      "status": "modified"
+      "lastCommitDate": "2026-02-27 17:14:33 -0500",
+      "buildNumber": 171,
+      "describe": "(v2.6.1-24-g8e8996e)",
+      "status": "synced"
     },
     {
       "name": "gemini-cli-jules",
       "path": "external/gemini-cli-jules",
       "branch": "main",
-      "commit": "84efe96dd3d6e7d9c99aa533188d1cd477f89cf2",
+      "commit": "96317a083637652ba7ccd0d3fe6ee976e7365928",
       "url": "https://github.com/gemini-cli-extensions/jules",
-      "lastCommitDate": "2026-02-27 01:57:20 -0500",
-      "buildNumber": 16,
-      "describe": "(v0.1.0-5-g84efe96)",
-      "status": "modified"
+      "lastCommitDate": "2026-02-27 02:03:32 -0500",
+      "buildNumber": 17,
+      "describe": "(v0.1.0-6-g96317a0)",
+      "status": "synced"
     },
     {
       "name": "google-jules-mcp",
       "path": "external/google-jules-mcp",
       "branch": "main",
-      "commit": "ebd22e838f1671244017ff2e4f1d0e5fd777fdae",
+      "commit": "5ab807ff95b4680db9e6970a58eaca4e3d756f60",
       "url": "https://github.com/samihalawa/google-jules-mcp",
-      "lastCommitDate": "2026-02-27 01:57:18 -0500",
-      "buildNumber": 10,
+      "lastCommitDate": "2026-02-27 17:14:44 -0500",
+      "buildNumber": 12,
       "describe": "(heads/main)",
-      "status": "modified"
+      "status": "synced"
     },
     {
       "name": "jules-action",
       "path": "external/jules-action",
       "branch": "main",
-      "commit": "38c0d427e8674074f965d9bcde1db6ba0b4652d1",
+      "commit": "b45377b40d2eaf5d5c77c16e483cfa5dbdc4aa88",
       "url": "https://github.com/google-labs-code/jules-action",
-      "lastCommitDate": "2026-02-27 01:57:25 -0500",
-      "buildNumber": 13,
-      "describe": "(ai-assisted-2-g38c0d42)",
-      "status": "modified"
+      "lastCommitDate": "2026-02-27 02:03:34 -0500",
+      "buildNumber": 14,
+      "describe": "(ai-assisted-3-gb45377b)",
+      "status": "synced"
     },
     {
       "name": "jules-awesome-list",
       "path": "external/jules-awesome-list",
       "branch": "main",
-      "commit": "de756af047c49e7fe7b0f4fac3b1cbf2fe453adf",
+      "commit": "c8662b05abfc1f9a813a1c5c949de9d17e2539e0",
       "url": "https://github.com/google-labs-code/jules-awesome-list",
-      "lastCommitDate": "2026-02-27 01:57:11 -0500",
-      "buildNumber": 7,
+      "lastCommitDate": "2026-02-27 02:03:28 -0500",
+      "buildNumber": 8,
       "describe": "(heads/main)",
-      "status": "modified"
+      "status": "synced"
     },
     {
       "name": "jules-mcp-server",
       "path": "external/jules-mcp-server",
       "branch": "main",
-      "commit": "641b5ee033e8704dfb42cb5a996039a5caabf282",
+      "commit": "824a63dc3fe0e9b4add03bdeac8d393a5465abf0",
       "url": "https://github.com/CodeAgentBridge/jules-mcp-server",
-      "lastCommitDate": "2026-02-27 01:57:13 -0500",
-      "buildNumber": 19,
-      "describe": "(v0.1.6-2-g641b5ee)",
-      "status": "modified"
+      "lastCommitDate": "2026-02-27 02:03:29 -0500",
+      "buildNumber": 20,
+      "describe": "(v0.1.6-3-g824a63d)",
+      "status": "synced"
     },
     {
       "name": "jules-system-prompt",
       "path": "external/jules-system-prompt",
       "branch": "add-details-md",
-      "commit": "e0de38607e310c9ee7ff4036558656ad007263ce",
+      "commit": "d3c3890374cf428657aa64fb447cdd823f5e0eef",
       "url": "https://github.com/DiaAviLinden/Jules-system-prompt",
-      "lastCommitDate": "2026-02-27 01:57:29 -0500",
-      "buildNumber": 7,
-      "describe": "(v1.0.0-alpha-4-ge0de386)",
-      "status": "modified"
+      "lastCommitDate": "2026-02-27 02:03:36 -0500",
+      "buildNumber": 8,
+      "describe": "(v1.0.0-alpha-5-gd3c3890)",
+      "status": "synced"
     },
     {
       "name": "jules-task-queue",
       "path": "external/jules-task-queue",
       "branch": "main",
-      "commit": "fca5e17cde66b3fda06f00804803713f9c39f711",
+      "commit": "eb44be73c9deaaf3ab09c07b21d973c159462d04",
       "url": "https://github.com/iHildy/jules-task-queue",
-      "lastCommitDate": "2026-02-27 01:57:27 -0500",
-      "buildNumber": 118,
+      "lastCommitDate": "2026-02-27 02:03:35 -0500",
+      "buildNumber": 119,
       "describe": "(heads/main)",
-      "status": "modified"
+      "status": "synced"
     },
     {
       "name": "jules_mcp",
       "path": "external/jules_mcp",
       "branch": "main",
-      "commit": "9e8f58092ce24d37d2fbf935ddae1f2127657f38",
+      "commit": "e5a106d2321ae0299de69c0266d0f7417aa89158",
       "url": "https://github.com/GatienBoquet/jules_mcp",
-      "lastCommitDate": "2026-02-27 01:57:15 -0500",
-      "buildNumber": 4,
+      "lastCommitDate": "2026-02-27 02:03:30 -0500",
+      "buildNumber": 5,
       "describe": "(heads/main)",
-      "status": "modified"
+      "status": "synced"
     },
     {
       "name": "jules-sdk-reference",
       "path": "jules-sdk-reference",
       "branch": "main",
-      "commit": "7bdca9bec4d6bd7b889ef13e22187e89179e8a4c",
+      "commit": "b9eb94acd60caff48e2a0a29ebe547faa4b98c82",
       "url": "https://github.com/AsyncFuncAI/jules-agent-sdk-python",
-      "lastCommitDate": "2026-02-27 01:57:09 -0500",
-      "buildNumber": 7,
+      "lastCommitDate": "2026-02-27 02:03:27 -0500",
+      "buildNumber": 8,
       "describe": "(heads/main)",
-      "status": "modified"
+      "status": "synced"
     }
   ]
 }

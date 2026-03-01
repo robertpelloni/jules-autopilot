@@ -1,4 +1,4 @@
-export type DaemonEventType = 'connected' | 'daemon_status' | 'log_added' | 'sessions_interrupted' | 'sessions_continued' | 'session_updated' | 'session_nudged' | 'session_approved' | 'activities_updated' | 'sessions_list_updated' | 'ping' | 'pong';
+export type DaemonEventType = 'connected' | 'daemon_status' | 'log_added' | 'sessions_interrupted' | 'sessions_continued' | 'session_updated' | 'session_nudged' | 'session_approved' | 'activities_updated' | 'sessions_list_updated' | 'shadow_pilot_alert' | 'swarm_created' | 'swarm_updated' | 'swarm_task_updated' | 'swarm:task_pondering' | 'swarm:task_executing' | 'swarm:task_finalizing' | 'swarm_completed' | 'ping' | 'pong';
 export interface DaemonEvent<T = unknown> {
     type: DaemonEventType;
     timestamp?: number;
@@ -37,6 +37,11 @@ export interface ActivitiesUpdatedPayload {
 }
 export interface SessionsListUpdatedPayload {
     reason?: 'created' | 'deleted' | 'status_changed';
+}
+export interface ShadowPilotAlertPayload {
+    severity: 'critical' | 'warning' | 'info';
+    message: string;
+    diffSnippet: string;
 }
 export type LogType = 'info' | 'action' | 'error' | 'warn' | 'skip';
 export interface KeeperLog {

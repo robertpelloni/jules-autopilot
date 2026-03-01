@@ -9,19 +9,115 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
-model SessionTemplate {
-  id          String   @id @default(uuid())
-  name        String
-  description String
-  prompt      String
-  title       String?
-  isFavorite  Boolean  @default(false)
-  isPrebuilt  Boolean  @default(false)
-  tags        String // Stored as CSV string
+model Account {
+  id String @id @default(cuid())
+  userId            String
+  type              String
+  provider          String
+  providerAccountId String
+  refresh_token     String?
+  access_token      String?
+  expires_at        Int?
+  token_type        String?
+  scope             String?
+  id_token          String?
+  session_state     String?
+  user User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([provider, providerAccountId])
+}
+
+model AgentPersona {
+  id              String   @id @default(cuid())
+  name            String   @unique
+  description     String
+  systemPrompt    String
+  temperature     Float    @default(0.7)
+  modelPreference String   @default("gpt-4o")
+  isDefault       Boolean  @default(false)
+  allowedTools    String?  // JSON array of allowed tool names
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+}
+
+model ApiKey {
+  id           String     @id @default(cuid())
+  name         String
+  keyHash      String     @unique
+  keyPrefix    String     @default("")
+  scopes       String
+  isActive     Boolean    @default(true)
+  rateLimit    Int        @default(100)
+  expiresAt    DateTime?
+  quotaCents   Int?
+  usedCents    Int        @default(0)
+  requestCount Int        @default(0)
+  lastUsedAt   DateTime?
+  createdAt    DateTime   @default(now())
+  updatedAt    DateTime   @updatedAt
+  workspaceId  String?
+  workspace    Workspace? @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+}
+
+model AuditLog {
+  id String @id @default(cuid())
+  actor      String
+  action     String
+  resource   String
+  resourceId String?
+  metadata   String?
+  ipAddress  String?
+  apiKeyId   String?
+  createdAt  DateTime @default(now())
+}
+
+model CodeChunk {
+  id String @id @default(cuid())
+  filePath  String
+  startLine Int
+  endLine   Int
+  content   String
+  embedding Bytes?
+  checksum  String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  @@index([filePath])
+}
+
+model Debate {
+  id String @id @default(cuid())
+  topic            String
+  summary          String?
+  rounds           String
+  history          String
+  metadata         String?
+  promptTokens     Int        @default(0)
+  completionTokens Int        @default(0)
+  totalTokens      Int        @default(0)
+  workspaceId      String?
+  createdAt        DateTime   @default(now())
+  updatedAt DateTime @updatedAt
+  workspace Workspace? @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+}
+
+model InstalledPlugin {
+  id          String         @id @default(cuid())
+  pluginId    String
   workspaceId String?
-  workspace   Workspace? @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+  config      String?
+  isEnabled   Boolean        @default(true)
+  installedAt DateTime       @default(now())
+  plugin      PluginManifest @relation(fields: [pluginId], references: [id])
+  workspace   Workspace?     @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+}
+
+model KeeperLog {
+  id String @id @default(cuid())
+  sessionId String
+  type      String
+  message   String
+  metadata  String?
+  createdAt DateTime @default(now())
 }
 
 model KeeperSettings {
@@ -31,8 +127,8 @@ model KeeperSettings {
   checkIntervalSeconds       Int      @default(60)
   inactivityThresholdMinutes Int      @default(10)
   activeWorkThresholdMinutes Int      @default(5)
-  messages                   String // JSON
-  customMessages             String // JSON
+  messages                   String
+  customMessages             String
   smartPilotEnabled          Boolean  @default(false)
   supervisorProvider         String   @default("openai")
   supervisorApiKey           String?
@@ -43,171 +139,197 @@ model KeeperSettings {
   shadowPilotEnabled         Boolean  @default(false)
   lastShadowPilotCommit      String?
   userId                     String?
-  user                       User?    @relation(fields: [userId], references: [id], onDelete: Cascade)
-  updatedAt                  DateTime @updatedAt
+  updatedAt DateTime @updatedAt
+  user User?    @relation(fields: [userId], references: [id], onDelete: Cascade)
 }
 
-model SupervisorState {
-  sessionId                      String   @id
-  lastProcessedActivityTimestamp String?
-  history                        String? // JSON
-  openaiThreadId                 String?
-  openaiAssistantId              String?
-  updatedAt                      DateTime @updatedAt
-}
-
-model KeeperLog {
-  id        String   @id @default(uuid())
-  sessionId String
-  type      String
-  message   String
-  metadata  String? // JSON
-  createdAt DateTime @default(now())
-}
-
-model Debate {
-  id               String   @id @default(uuid())
-  topic            String
-  summary          String?
-  rounds           String // JSON: DebateRound[]
-  history          String // JSON: Message[]
-  metadata         String? // JSON: Extra context
-  promptTokens     Int      @default(0)
-  completionTokens Int      @default(0)
-  totalTokens      Int      @default(0)
-  workspaceId      String?
-  workspace        Workspace? @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
-  createdAt        DateTime @default(now())
-  updatedAt        DateTime @updatedAt
-}
-
-model PluginManifest {
-  id           String   @id // e.g., 'jira-integration'
-  name         String
+model MarketplacePlugin {
+  id           String    @id @default(cuid())
+  name         String    @unique
   description  String
   author       String
-  version      String   @default("1.0.0")
-  capabilities String   // JSON array e.g., ["filesystem", "network"]
-  configSchema String?  // Optional JSON schema for keys/secrets
-  signature    String?  // hex or base64 Ed25519 signature
-  publicKey    String?  // Developer's public key
-  status       String   @default("active") // pending, active, revoked
-  createdAt    DateTime @default(now())
-  updatedAt    DateTime @updatedAt
-  
-  installations InstalledPlugin[]
+  version      String
+  wasmUrl      String?
+  iconUrl      String?
+  signature    String?
+  tags         String?
+  capabilities String?
+  downloads    Int       @default(0)
+  installedAt  DateTime?
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
 }
 
-model InstalledPlugin {
-  id          String   @id @default(uuid())
-  pluginId    String
-  workspaceId String?
-  workspace   Workspace? @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
-  config      String?  // JSON map of user-configured properties
-  isEnabled   Boolean  @default(true)
-  installedAt DateTime @default(now())
-  
-  plugin      PluginManifest @relation(fields: [pluginId], references: [id])
+model McpServerLink {
+  id String @id @default(cuid())
+  name        String   @unique
+  description String?
+  url         String?
+  command     String?
+  args        String?
+  env         String?
+  isActive    Boolean  @default(true)
+  status      String   @default("disconnected")
+  createdAt   DateTime @default(now())
+  updatedAt DateTime @updatedAt
 }
 
 model PluginAuditLog {
-  id                  String   @id @default(uuid())
+  id String @id @default(cuid())
   pluginId            String
   action              String
   capabilityRequested String
   success             Boolean
   workspaceId         String
-  workspace           Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
-  timestamp           DateTime @default(now())
+  timestamp           DateTime  @default(now())
+  workspace Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+}
+
+model PluginManifest {
+  id               String            @id
+  name             String
+  description      String
+  author           String
+  version          String            @default("1.0.0")
+  capabilities     String
+  configSchema     String?
+  signature        String?
+  publicKey        String?
+  status           String            @default("active")
+  wasmUrl          String?
+  wasmPayload      Bytes?
+  createdAt        DateTime          @default(now())
+  updatedAt        DateTime          @updatedAt
+  installations    InstalledPlugin[]
 }
 
 model ProviderTelemetry {
-  id                  String   @id @default(uuid())
-  workspaceId         String
-  provider            String   // e.g. openai, anthropic
-  model               String   // e.g. gpt-4o, claude-3-5-sonnet
-  promptTokens        Int
-  completionTokens    Int
-  estimatedCostUSD    Float
-  timestamp           DateTime @default(now())
-  workspace           Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  id String @id @default(cuid())
+  workspaceId      String
+  provider         String
+  model            String
+  promptTokens     Int
+  completionTokens Int
+  estimatedCostUSD Float
+  timestamp        DateTime  @default(now())
+  workspace Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+}
+
+model ProviderUsageLog {
+  id               String     @id @default(cuid())
+  provider         String
+  model            String
+  taskType         String
+  promptTokens     Int
+  completionTokens Int
+  inputTokens      Int        @default(0)
+  outputTokens     Int        @default(0)
+  estimatedCostUSD Float
+  costCents        Int        @default(0)
+  latencyMs        Int        @default(0)
+  createdAt        DateTime   @default(now())
+  timestamp        DateTime   @default(now())
+  success          Boolean    @default(true)
+  sessionId        String?
+  workspaceId      String?
+  workspace        Workspace? @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
 }
 
 model RoutingPolicy {
-  id                  String   @id @default(uuid())
-  workspaceId         String
-  taskType            String   // e.g. code_review, fast_chat, deep_reasoning
-  preferredProvider   String?
-  preferredModel      String?
-  costEfficiencyMode  Boolean  @default(false) // If true, ignore 'preferred' if it exceeds budget thresholds
-  createdAt           DateTime @default(now())
-  updatedAt           DateTime @updatedAt
-  workspace           Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  id String @id @default(cuid())
+  workspaceId        String
+  taskType           String
+  preferredProvider  String?
+  preferredModel     String?
+  costEfficiencyMode Boolean   @default(false)
+  createdAt          DateTime  @default(now())
+  updatedAt DateTime @updatedAt
+  workspace Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
 
   @@unique([workspaceId, taskType])
 }
 
+model Session {
+  id String @id @default(cuid())
+  sessionToken String   @unique
+  userId       String
+  expires      DateTime
+  user User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model SessionTemplate {
+  id String @id @default(cuid())
+  name        String
+  description String
+  prompt      String
+  title       String?
+  isFavorite  Boolean    @default(false)
+  isPrebuilt  Boolean    @default(false)
+  tags        String
+  workspaceId String?
+  createdAt   DateTime   @default(now())
+  updatedAt DateTime @updatedAt
+  workspace Workspace? @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+}
+
 model SessionTransfer {
-  id               String   @id @default(uuid())
+  id String @id @default(cuid())
   sourceProvider   String
   sourceSessionId  String
   targetProvider   String
   targetSessionId  String?
-  status           String   @default("queued") // queued, preparing, exporting, importing, ready, failed
-  transferredItems String   @default("{\"activities\": 0, \"files\": 0}") // JSON
+  status           String     @default("queued")
+  transferredItems String     @default("{\"activities\": 0, \"files\": 0}")
   errorReason      String?
   userId           String?
-  user             User?    @relation(fields: [userId], references: [id], onDelete: Cascade)
   workspaceId      String?
-  workspace        Workspace? @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
-  createdAt        DateTime @default(now())
-  updatedAt        DateTime @updatedAt
+  createdAt        DateTime   @default(now())
+  updatedAt DateTime @updatedAt
+  workspace Workspace? @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  user User?      @relation(fields: [userId], references: [id], onDelete: Cascade)
 }
 
-// ----------------------------------------------------------------------------
-// Multi-Tenant Auth.js (NextAuth) Schema
-// ----------------------------------------------------------------------------
-
-model Account {
-  id                 String  @id @default(cuid())
-  userId             String
-  type               String
-  provider           String
-  providerAccountId  String
-  refresh_token      String?
-  access_token       String?
-  expires_at         Int?
-  token_type         String?
-  scope              String?
-  id_token           String?
-  session_state      String?
-
-  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
-
-  @@unique([provider, providerAccountId])
+model StoredDebate {
+  id          String     @id @default(cuid())
+  topic       String
+  summary     String?
+  history     String
+  metadata    String?
+  rounds      String     @default("[]")
+  workspaceId String?
+  createdAt   DateTime   @default(now())
+  updatedAt   DateTime   @updatedAt
+  workspace   Workspace? @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
 }
 
-model Session {
-  id           String   @id @default(cuid())
-  sessionToken String   @unique
-  userId       String
-  expires      DateTime
-  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+model SupervisorState {
+  sessionId                      String   @id
+  lastProcessedActivityTimestamp String?
+  history                        String?
+  openaiThreadId                 String?
+  openaiAssistantId              String?
+  updatedAt DateTime @updatedAt
+}
+
+model SystemMetric {
+  id String @id @default(cuid())
+  type      String
+  value     Float
+  metadata  String?
+  createdAt DateTime @default(now())
 }
 
 model User {
-  id            String    @id @default(cuid())
-  name          String?
-  email         String?   @unique
-  emailVerified DateTime?
-  image         String?
-  accounts      Account[]
-  sessions      Session[]
-  
-  // Relations to system entities
-  memberships      WorkspaceMember[]
-  keeperSettings   KeeperSettings[]
+  id String @id @default(cuid())
+  name            String?
+  email           String?           @unique
+  emailVerified   DateTime?
+  image           String?
+  accounts Account[]
+  keeperSettings KeeperSettings[]
+  sessions Session[]
   sessionTransfers SessionTransfer[]
+  memberships WorkspaceMember[]
 }
 
 model VerificationToken {
@@ -218,51 +340,153 @@ model VerificationToken {
   @@unique([identifier, token])
 }
 
-model Workspace {
-  id          String   @id @default(cuid())
-  name        String
-  slug        String   @unique
-  maxPluginExecutionsPerDay Int @default(100)
-  monthlyBudget Float    @default(100.00)
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+model WebhookRoute {
+  id String @id @default(cuid())
+  name            String
+  source          String
+  secret          String?
+  matchPath       String
+  matchValue      String
+  actionType      String
+  actionConfig    String
+  isActive        Boolean   @default(true)
+  hitCount        Int       @default(0)
+  lastTriggeredAt DateTime?
+  createdAt       DateTime  @default(now())
+  updatedAt DateTime @updatedAt
+}
 
-  members          WorkspaceMember[]
-  templates        SessionTemplate[]
-  debates          Debate[]
+model Workspace {
+  id String @id @default(cuid())
+  name                      String
+  slug                      String              @unique
+  maxPluginExecutionsPerDay Int                 @default(100)
+  monthlyBudget             Float               @default(100.00)
+  createdAt                 DateTime            @default(now())
+  updatedAt DateTime @updatedAt
+  apiKeys ApiKey[]
+  debates Debate[]
   installedPlugins InstalledPlugin[]
+  pluginAudits PluginAuditLog[]
+  telemetry ProviderTelemetry[]
+  providerUsageLogs ProviderUsageLog[]
+  routingPolicies RoutingPolicy[]
+  templates SessionTemplate[]
   sessionTransfers SessionTransfer[]
-  pluginAudits     PluginAuditLog[]
-  telemetry        ProviderTelemetry[]
-  routingPolicies  RoutingPolicy[]
+  storedDebates StoredDebate[]
+  members WorkspaceMember[]
+  providerConfigs ProviderConfig[]
 }
 
 model WorkspaceMember {
-  id          String   @id @default(cuid())
+  id String @id @default(cuid())
   workspaceId String
   userId      String
-  role        String   @default("member") // owner, admin, member
+  role        String    @default("member")
+  user User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  workspace Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
 
-  workspace   Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
-  user        User      @relation(fields: [userId], references: [id], onDelete: Cascade)
-
-  @@unique([workspaceId, userId])
 }
 
 // ----------------------------------------------------------------------------
-// Retrieval-Augmented Generation (RAG) Architecture
+// Recovered Models (Background Jobs & Swarms)
 // ----------------------------------------------------------------------------
 
-model CodeChunk {
-  id        String   @id @default(uuid())
-  filePath  String
-  startLine Int
-  endLine   Int
+model ScheduledJob {
+  id        String    @id @default(cuid())
+  name      String
+  cronExpr  String
+  timezone  String    @default("UTC")
+  jobType   String
+  jobConfig String
+  nextRunAt DateTime?
+  lastRunAt DateTime?
+  runCount  Int       @default(0)
+  isActive  Boolean   @default(true)
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+}
+
+model SessionSnapshot {
+  id        String   @id @default(cuid())
+  sessionId String
+  sequence  Int
+  eventType String
+  actor     String
   content   String
-  embedding Bytes?   // Stored as Float32Array buffer
-  checksum  String   // To detect if the file chunk has changed
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-  
-  @@index([filePath])
+  metadata  String?
+  timestamp DateTime
+}
+
+model AgentSwarm {
+  id        String       @id @default(cuid())
+  name      String
+  prompt    String
+  status    String       @default("pending")
+  result    String?
+  totalTasks Int        @default(0)
+  doneTasks  Int        @default(0)
+  metadata  String?
+  createdAt DateTime     @default(now())
+  updatedAt DateTime     @updatedAt
+  tasks     SwarmTask[]
+}
+
+model SwarmTask {
+  id          String     @id @default(cuid())
+  swarmId     String
+  title       String
+  description String?
+  prompt      String
+  status      String     @default("pending")
+  priority    Int        @default(0)
+  dependsOn   String?
+  assignedTo  String?
+  sessionId   String?
+  result      String?
+  swarm       AgentSwarm @relation(fields: [swarmId], references: [id], onDelete: Cascade)
+  createdAt   DateTime   @default(now())
+  updatedAt   DateTime   @updatedAt
+}
+
+model CIRun {
+  id           String   @id @default(cuid())
+  runId        String   @unique
+  repo         String
+  conclusion   String?
+  headSha      String?
+  workflowName String?
+  status       String   @default("completed")
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+}
+
+model Notification {
+  id           String    @id @default(cuid())
+  type         String
+  title        String
+  body         String
+  severity     String    @default("info")
+  resourceType String?
+  resourceId   String?
+  isRead       Boolean   @default(false)
+  dismissedAt  DateTime?
+  createdAt    DateTime  @default(now())
+}
+
+model ProviderConfig {
+  id            String     @id @default(cuid())
+  workspaceId   String
+  providerId    String
+  apiKey        String?    // Encrypted at rest in production
+  isEnabled     Boolean    @default(true)
+  priority      Int        @default(0)
+  maxConcurrent Int        @default(3)
+  metadata      String?    // JSON for provider-specific settings
+  createdAt     DateTime   @default(now())
+  updatedAt     DateTime   @updatedAt
+  workspace     Workspace  @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+
+  @@unique([workspaceId, providerId])
+  @@index([workspaceId])
 }

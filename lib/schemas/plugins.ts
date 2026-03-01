@@ -23,6 +23,8 @@ export const PluginManifestSchema = z.object({
     signature: z.string().optional(),
     publicKey: z.string().optional(),
     status: z.enum(['pending', 'active', 'revoked']).default('active'),
+    wasmPayload: z.any().optional(), // Expected Buffer or Base64 string representing raw .wasm bytes
+    wasmUrl: z.string().url().optional(), // URL to remote .wasm file
     createdAt: z.string().datetime().optional(),
     updatedAt: z.string().datetime().optional()
 });

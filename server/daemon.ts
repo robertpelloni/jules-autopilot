@@ -1,15 +1,12 @@
 import { prisma } from '../lib/prisma.ts';
 import { JulesClient } from '../lib/jules/client.ts';
 import { getProvider } from '@jules/shared';
-import { summarizeSession } from '@jules/shared';
 import { emitDaemonEvent } from './index.ts';
 import { exec } from 'child_process';
 import { promisify } from 'util';
 import * as crypto from 'crypto';
-import type { Activity } from '@jules/shared';
-
-const execAsync = promisify(exec);
 import type { KeeperSettings } from '@prisma/client';
+import { orchestratorQueue } from './queue.ts';
 
 let isRunning = false;
 let checkTimeout: ReturnType<typeof setTimeout> | null = null;
@@ -20,8 +17,9 @@ async function getJulesClient(settings: KeeperSettings) {
     return new JulesClient(apiKey, 'https://jules.googleapis.com/v1alpha');
 }
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-async function addLog(message: string, type: 'info' | 'action' | 'error' | 'skip', sessionId: string = 'global', details?: any) {
+const execAsync = promisify(exec);
+
+export async function addLog(message: string, type: 'info' | 'action' | 'error' | 'skip', sessionId: string = 'global', details?: unknown) {
     console.log(`[Daemon][${type.toUpperCase()}] ${message}`);
     const log = await prisma.keeperLog.create({
         data: {
@@ -36,7 +34,7 @@ async function addLog(message: string, type: 'info' | 'action' | 'error' | 'skip
     emitDaemonEvent('log_added', { log });
 }
 
-async function getSupervisorState(sessionId: string) {
+export async function getSupervisorState(sessionId: string) {
     const state = await prisma.supervisorState.findUnique({ where: { sessionId } });
     if (state) {
         return {
@@ -53,8 +51,13 @@ async function getSupervisorState(sessionId: string) {
     };
 }
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-async function saveSupervisorState(state: any) {
+export async function saveSupervisorState(state: {
+    sessionId: string;
+    lastProcessedActivityTimestamp: string | null;
+    history: { role: string; content: string }[];
+    openaiThreadId: string | null;
+    openaiAssistantId: string | null;
+}) {
     await prisma.supervisorState.upsert({
         where: { sessionId: state.sessionId },
         update: {
@@ -134,147 +137,42 @@ export async function runLoop() {
         }
         // -----------------------------
 
+        // --- Swarm Orchestrator ---
+        const activeSwarms = await prisma.agentSwarm.findMany({
+            where: { status: 'running' }
+        });
+
+        for (const swarm of activeSwarms) {
+            try {
+                // Enqueue a job to check for and dispatch pending sub-tasks
+                await orchestratorQueue.add('dispatch_swarm_tasks', { swarmId: swarm.id }, {
+                    jobId: `swarm-dispatch-${swarm.id}-${Date.now()}`,
+                    removeOnComplete: true
+                });
+            } catch (err) {
+                console.error(`[Daemon] Failed to enqueue swarm dispatch for ${swarm.id}`, err);
+            }
+        }
+        // ---------------------------
+
         const sessions = await client.listSessions();
+        let queuedCount = 0;
 
         for (const session of sessions) {
             try {
-                const createdTime = new Date(session.createdAt);
-                const ageDays = (Date.now() - createdTime.getTime()) / (1000 * 60 * 60 * 24);
-                const HANDOFF_THRESHOLD_DAYS = 30;
-
-                if (ageDays >= HANDOFF_THRESHOLD_DAYS && session.status !== "completed" && session.status !== "failed") {
-                    await addLog(`Session ${session.id.substring(0, 8)} is ${Math.floor(ageDays)} days old. Initiating handoff...`, "action", session.id);
-                    const activities = await client.listActivities(session.id);
-                    const history = activities.map((a: Activity) => ({
-                        role: a.role === "agent" ? "assistant" : "user",
-                        content: a.content
-                    }));
-
-                    const summary = await summarizeSession(
-                        history,
-                        settings.supervisorProvider || "openai",
-                        settings.supervisorApiKey || process.env.OPENAI_API_KEY || "",
-                        settings.supervisorModel || "gpt-4o"
-                    );
-
-                    const newSession = await client.createSession(
-                        session.sourceId,
-                        session.prompt || "Continuing previous session",
-                        `${session.title || "Untitled"} (Part 2)`
-                    );
-
-                    await client.createActivity({
-                        sessionId: newSession.id,
-                        content: `*** SESSION HANDOFF ***\n\nPrevious Session Summary:\n${summary}\n\nOriginal Start Date: ${session.createdAt}`,
-                        type: "message"
-                    });
-
-                    await client.createActivity({
-                        sessionId: session.id,
-                        content: `*** SESSION ARCHIVED ***\n\nThis session has been handed off to ${newSession.id}. Marking as completed.`,
-                        type: "message"
-                    });
-
-                    emitDaemonEvent('sessions_list_updated', { reason: 'created' });
-                    emitDaemonEvent('activities_updated', { sessionId: newSession.id });
-                    emitDaemonEvent('activities_updated', { sessionId: session.id });
-                    await addLog(`Created new session ${newSession.id.substring(0, 8)} with handoff log.`, "action", session.id);
-                    continue;
-                }
-
-                if (settings.resumePaused && (session.status === 'paused' || session.status === 'completed' || session.status === 'failed')) {
-                    await addLog(`Resuming ${session.status} session ${session.id.substring(0, 8)}...`, 'action', session.id);
-                    await client.resumeSession(session.id);
-                    emitDaemonEvent('session_updated', { sessionId: session.id });
-                    emitDaemonEvent('sessions_list_updated', { reason: 'status_changed' });
-                    continue;
-                }
-
-                if (session.status === 'awaiting_approval' || session.rawState === 'AWAITING_PLAN_APPROVAL') {
-                    if (settings.smartPilotEnabled) {
-                        await addLog(`Auto-approving plan for ${session.id.substring(0, 8)}...`, 'action', session.id);
-                        await client.approvePlan(session.id);
-                        emitDaemonEvent('session_approved', {
-                            sessionId: session.id,
-                            sessionTitle: session.title
-                        });
-                        emitDaemonEvent('session_updated', { sessionId: session.id });
-                        emitDaemonEvent('sessions_list_updated', { reason: 'status_changed' });
-                    }
-                    continue;
-                }
-
-                const lastActivityTime = session.lastActivityAt ? new Date(session.lastActivityAt) : new Date(session.updatedAt);
-                const diffMinutes = (Date.now() - lastActivityTime.getTime()) / 60000;
-                let threshold = settings.inactivityThresholdMinutes;
-
-                if (session.rawState === 'IN_PROGRESS') {
-                    threshold = settings.activeWorkThresholdMinutes;
-                    if ((Date.now() - lastActivityTime.getTime()) < 30000) continue;
-                }
-
-                if (diffMinutes > threshold) {
-                    await addLog(`Sending nudge to ${session.id.substring(0, 8)} (${Math.round(diffMinutes)}m inactive)`, 'action', session.id);
-
-                    let messageToSend = "Please resume working on this task.";
-                    if (settings.smartPilotEnabled) {
-                        const supervisorState = await getSupervisorState(session.id);
-                        const activities = await client.listActivities(session.id);
-                        const sortedActivities = activities.sort((a, b) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime());
-
-                        let newActivities = sortedActivities;
-                        if (supervisorState.lastProcessedActivityTimestamp) {
-                            newActivities = sortedActivities.filter(a => new Date(a.createdAt).getTime() > new Date(supervisorState.lastProcessedActivityTimestamp!).getTime());
-                        }
-
-                        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-                        const messagesToSend: any[] = [];
-                        if (newActivities.length > 0) {
-                            const updates = newActivities.map(a => `${a.role.toUpperCase()}: ${a.content}`).join('\n\n');
-                            messagesToSend.push({ role: 'user', content: `Latest updates:\n\n${updates}` });
-                            supervisorState.lastProcessedActivityTimestamp = newActivities[newActivities.length - 1]?.createdAt || supervisorState.lastProcessedActivityTimestamp;
-                        } else {
-                            messagesToSend.push({ role: 'user', content: "The agent has been inactive. Please provide a nudge." });
-                        }
-
-                        const p = getProvider(settings.supervisorProvider);
-                        if (p) {
-                            const result = await p.complete({
-                                messages: [...supervisorState.history, ...messagesToSend].slice(-settings.contextMessageCount),
-                                apiKey: settings.supervisorApiKey || process.env.OPENAI_API_KEY || "",
-                                model: settings.supervisorModel,
-                                systemPrompt: 'You are a project supervisor. provide a concise, direct instruction to reactivate the agent Jules.'
-                            });
-                            messageToSend = result.content;
-                            supervisorState.history = [...supervisorState.history, ...messagesToSend, { role: 'assistant', content: messageToSend }];
-                            await saveSupervisorState(supervisorState);
-                        }
-                    } else {
-                        const messages = JSON.parse(settings.messages) as string[];
-                        if (messages.length > 0) {
-                            messageToSend = messages[Math.floor(Math.random() * messages.length)] || messageToSend;
-                        }
-                    }
-
-                    await client.createActivity({
-                        sessionId: session.id,
-                        content: messageToSend,
-                        type: 'message'
-                    });
-
-                    emitDaemonEvent('activities_updated', { sessionId: session.id });
-                    emitDaemonEvent('session_nudged', {
-                        sessionId: session.id,
-                        sessionTitle: session.title,
-                        inactiveMinutes: Math.round(diffMinutes),
-                        message: messageToSend
-                    });
-                }
-
+                await orchestratorQueue.add('process_session_state', { session, settings }, {
+                    jobId: `session-${session.id}-${Date.now()}`,
+                    removeOnComplete: true,
+                    removeOnFail: 100 // Keep last 100 failed jobs for debugging
+                });
+                queuedCount++;
             } catch (err) {
-                await addLog(`Error processing session ${session.id}: ${err instanceof Error ? err.message : String(err)}`, 'error', session.id);
+                console.error(`[Daemon] Failed to enqueue session ${session.id}`, err);
             }
-            await new Promise(resolve => setTimeout(resolve, 2000));
+        }
+
+        if (queuedCount > 0 || activeSwarms.length > 0) {
+            console.log(`[Daemon] Enqueued ${queuedCount} session jobs and ${activeSwarms.length} swarm jobs to BullMQ.`);
         }
 
     } catch (error) {

@@ -17,7 +17,7 @@ const getDbUrl = () => {
   // Optimize SQLite connection pooling for Docker concurrency
   if (url.startsWith('file:') && !url.includes('connection_limit')) {
     const separator = url.includes('?') ? '&' : '?';
-    url += `${separator}connection_limit=1&socket_timeout=10`;
+    url += `${separator}connection_limit=1&pool_timeout=10`;
   }
   return url;
 };
@@ -58,6 +58,11 @@ try {
         }
       }
     }));
+
+  // Explicitly enable WAL mode for SQLite to maximize read concurrency
+  if (!isRemote) {
+    prismaClient.$executeRawUnsafe('PRAGMA journal_mode = WAL;').catch(console.error);
+  }
 } catch (e) {
   console.error('Failed to initialize Prisma Client:', e);
   // Return a proxy that throws on any access to prevent crash loop but allow module load

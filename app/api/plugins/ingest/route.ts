@@ -23,6 +23,12 @@ export async function POST(req: Request) {
 
         const manifest = parseResult.data;
 
+        // Parse incoming base64 Wasm payload into a native Buffer for SQLite Bytes storage
+        let wasmBuffer = null;
+        if (manifest.wasmPayload) {
+            wasmBuffer = Buffer.from(manifest.wasmPayload, 'base64');
+        }
+
         // Verify cryptographic signature to prevent supply-chain poisoning
         if (!verifyPluginManifest(manifest)) {
             return NextResponse.json(
@@ -43,6 +49,8 @@ export async function POST(req: Request) {
                 configSchema: manifest.configSchema ? JSON.stringify(manifest.configSchema) : null,
                 signature: manifest.signature,
                 publicKey: manifest.publicKey,
+                wasmUrl: manifest.wasmUrl || null,
+                wasmPayload: wasmBuffer,
                 status: 'active' // For the sake of the MVP marketplace, we default to active after passing signature verification
             },
             create: {
@@ -55,6 +63,8 @@ export async function POST(req: Request) {
                 configSchema: manifest.configSchema ? JSON.stringify(manifest.configSchema) : null,
                 signature: manifest.signature,
                 publicKey: manifest.publicKey,
+                wasmUrl: manifest.wasmUrl || null,
+                wasmPayload: wasmBuffer,
                 status: 'active'
             }
         });

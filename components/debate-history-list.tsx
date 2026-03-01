@@ -12,12 +12,12 @@ import { Button } from '@/components/ui/button';
 import { toast } from 'sonner';
 import { DebateDialog } from '@/components/debate-dialog';
 import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
+    Dialog,
+    DialogContent,
+    DialogDescription,
+    DialogFooter,
+    DialogHeader,
+    DialogTitle,
 } from "@/components/ui/dialog";
 
 interface StoredDebate {
@@ -34,11 +34,11 @@ export function DebateHistoryList() {
     const [detailsOpen, setDetailsOpen] = useState(false);
     const [deleteId, setDeleteId] = useState<string | null>(null);
     const [isDeleting, setIsDeleting] = useState(false);
-    const [resumeData, setResumeData] = useState<{topic: string, history: Message[], sessionId?: string} | null>(null);
+    const [resumeData, setResumeData] = useState<{ topic: string, history: Message[], sessionId?: string } | null>(null);
 
     const handleResume = (debate: DebateResult) => {
         const history: Message[] = [...(debate.history || [])];
-        
+
         if (debate.rounds) {
             debate.rounds.forEach(round => {
                 round.turns.forEach(turn => {
@@ -53,13 +53,13 @@ export function DebateHistoryList() {
         setResumeData({
             topic: `Continued: ${debate.topic}`,
             history,
-            sessionId: debate.metadata?.sessionId
+            sessionId: (debate.metadata as { sessionId?: string })?.sessionId
         });
     };
 
     const handleDelete = async () => {
         if (!deleteId) return;
-        
+
         try {
             setIsDeleting(true);
             const res = await fetch(`/api/debate/${deleteId}`, {
@@ -123,8 +123,8 @@ export function DebateHistoryList() {
             <ScrollArea className="h-[600px] w-full pr-4">
                 <div className="space-y-4">
                     {debates.map((debate) => (
-                        <Card 
-                            key={debate.id} 
+                        <Card
+                            key={debate.id}
                             className="bg-zinc-900 border-zinc-800 hover:border-zinc-700 transition-all cursor-pointer hover:bg-zinc-800/50"
                             onClick={() => {
                                 setSelectedDebateId(debate.id);

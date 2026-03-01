@@ -106,6 +106,7 @@ export interface SessionKeeperConfig {
     contextMessageCount: number;
     debateEnabled?: boolean;
     resumePaused?: boolean;
+    shadowPilotEnabled?: boolean;
     debateParticipants?: {
         id: string;
         name: string;

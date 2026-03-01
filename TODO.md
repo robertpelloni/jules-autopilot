@@ -8,7 +8,7 @@ This document tracks granular bugs, missing features, and technical debt. For ep
 - [x] **SSE Streaming Hardening:** The `useEventStream` hook is working, but it needs to be injected into the `SessionView` component so that keeper logs stream in real-time instead of polling.
 
 ## Technical Debt & Refactoring
-- [ ] **Prisma Connection Pooling:** For production Docker deployments, we are using the default Prisma SQLite connector. We need to evaluate connection pooling limits when concurrency scales up.
+- [x] **Prisma Connection Pooling:** For production Docker deployments, we are using the default Prisma SQLite connector. We need to evaluate connection pooling limits when concurrency scales up.
 - [x] **Types Extraction:** There are several duplicated types between the frontend App router and the `server/index.ts` daemon. Extract all types strictly to `types/jules.d.ts` or a shared `packages/` workspace.
 
 ## Future Exploration

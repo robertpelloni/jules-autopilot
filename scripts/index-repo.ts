@@ -1,8 +1,8 @@
 import fs from 'fs';
 import path from 'path';
 import crypto from 'crypto';
-import { prisma } from '../lib/prisma.ts';
-import { insertChunk } from '../lib/api/rag.ts';
+import { prisma } from '../lib/prisma';
+import { insertChunk } from '../lib/api/rag';
 
 const DIRECTORIES_TO_INDEX = ['app', 'lib', 'server', 'components', 'packages'];
 const EXTENSIONS_TO_INDEX = ['.ts', '.tsx', '.js', '.jsx', '.md'];
