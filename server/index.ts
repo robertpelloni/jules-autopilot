@@ -7,12 +7,13 @@ import { EventEmitter } from 'events';
 import { getProvider } from '@jules/shared';
 import { runDebate, runConference } from '@jules/shared';
 import { runCodeReview } from '@jules/shared';
-import { startDaemon, stopDaemon } from './daemon.ts';
-import { prisma } from '../lib/prisma.ts';
-import { JulesClient } from '../lib/jules/client.ts';
+import { startDaemon, stopDaemon } from './daemon';
+import { prisma } from '../lib/prisma';
+import { JulesClient } from '../lib/jules/client';
 import type { DaemonEventType } from '@jules/shared';
 import { createDaemonEvent } from '@jules/shared';
-import { orchestratorQueue } from './queue.ts';
+import type { Prisma } from '@prisma/client';
+import { orchestratorQueue } from './queue';
 
 const app = new Hono();
 
@@ -343,7 +344,7 @@ app.post('/api/swarm/refresh', async (c) => {
         const { swarmId } = await c.req.json();
         if (!swarmId) return c.json({ error: 'Missing swarmId' }, 400);
 
-        const { SwarmCoordinator } = await import('./swarm-coordinator.ts');
+        const { SwarmCoordinator } = await import('./swarm-coordinator');
         await SwarmCoordinator.dispatchPendingTasks(swarmId);
 
         return c.json({ success: true });
@@ -670,7 +671,7 @@ app.delete('/api/templates/:id', async (c) => {
 
 const port = 8080;
 
-import { setupWorker } from './queue.ts';
+import { setupWorker } from './queue';
 let workerInstance: ReturnType<typeof setupWorker> | null = null;
 
 prisma.keeperSettings.findUnique({ where: { id: 'default' } }).then(settings => {

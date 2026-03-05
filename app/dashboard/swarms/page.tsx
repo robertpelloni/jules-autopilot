@@ -12,7 +12,8 @@ import {
     XCircle,
     ChevronDown,
     ChevronRight,
-    ListTodo
+    ListTodo,
+    ArrowUpCircle
 } from 'lucide-react';
 
 interface SwarmTask {
@@ -29,6 +30,7 @@ interface Swarm {
     name: string;
     prompt: string;
     status: string;
+    priority: number;
     createdAt: string;
     tasks: SwarmTask[];
 }
@@ -48,6 +50,7 @@ export default function SwarmDashboard() {
     const [expandedId, setExpandedId] = useState<string | null>(null);
     const [creating, setCreating] = useState(false);
     const [newPrompt, setNewPrompt] = useState('');
+    const [newPriority, setNewPriority] = useState(0);
 
     const fetchSwarms = useCallback(async () => {
         setLoading(true);
@@ -94,10 +97,11 @@ export default function SwarmDashboard() {
             const res = await fetch('/api/swarm', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ prompt: newPrompt })
+                body: JSON.stringify({ prompt: newPrompt, priority: newPriority })
             });
             if (!res.ok) throw new Error('Failed to create swarm');
             setNewPrompt('');
+            setNewPriority(0);
             fetchSwarms();
         } catch (err) {
             setError(err instanceof Error ? err.message : 'Create failed');
@@ -134,6 +138,15 @@ export default function SwarmDashboard() {
                         className="flex-1 bg-zinc-900 border border-zinc-800 rounded-lg px-4 py-2.5 text-sm text-zinc-200 placeholder:text-zinc-600 focus:outline-none focus:ring-1 focus:ring-purple-500"
                         onKeyDown={e => e.key === 'Enter' && createSwarm()}
                     />
+                    <select
+                        value={newPriority}
+                        onChange={e => setNewPriority(Number(e.target.value))}
+                        className="bg-zinc-900 border border-zinc-800 rounded-lg px-3 py-2.5 text-sm text-zinc-200 focus:outline-none focus:ring-1 focus:ring-purple-500"
+                    >
+                        <option value={0}>Normal Priority</option>
+                        <option value={5}>High Priority</option>
+                        <option value={10}>Urgent Priority</option>
+                    </select>
                     <button
                         onClick={createSwarm}
                         disabled={creating || !newPrompt.trim()}
@@ -175,7 +188,14 @@ export default function SwarmDashboard() {
                                     {isExpanded ? <ChevronDown className="h-4 w-4 text-zinc-500" /> : <ChevronRight className="h-4 w-4 text-zinc-500" />}
                                     <StatusIcon className={`h-4 w-4 ${style.color} ${swarm.status === 'running' ? 'animate-spin' : ''}`} />
                                     <div className="flex-1 min-w-0">
-                                        <span className="text-sm font-medium text-zinc-200">{swarm.name}</span>
+                                        <div className="flex items-center gap-2">
+                                            <span className="text-sm font-medium text-zinc-200">{swarm.name}</span>
+                                            {swarm.priority > 0 && (
+                                                <span className="flex items-center gap-1 text-[10px] font-medium px-1.5 py-0.5 rounded-sm bg-orange-500/10 text-orange-400 border border-orange-500/20">
+                                                    <ArrowUpCircle className="h-3 w-3" /> P{swarm.priority}
+                                                </span>
+                                            )}
+                                        </div>
                                         <div className="flex items-center gap-2 mt-0.5 text-xs text-zinc-500">
                                             <ListTodo className="h-3 w-3" />
                                             {completedTasks}/{swarm.tasks.length} tasks

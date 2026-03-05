@@ -28,7 +28,9 @@ import {
     History,
     ShieldCheck,
     CheckSquare,
-    Search
+    Search,
+    Flame,
+    Skull
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Button } from '@/components/ui/button';
@@ -50,6 +52,7 @@ interface SwarmTask {
     retryCount?: number;
     isEscalated?: boolean;
     isVerification?: boolean;
+    isRedTeam?: boolean;
     reviewedTaskId?: string;
     reviewStatus?: 'pending' | 'passed' | 'failed';
 }
@@ -58,6 +61,7 @@ interface Swarm {
     id: string;
     name: string;
     status: string;
+    priority: number;
     tasks: SwarmTask[];
     totalTokens?: number;
     totalCostCents?: number;
@@ -156,6 +160,7 @@ export default function SwarmMonitorPage() {
             case 'swarm_paused': return <Pause className="w-4 h-4 text-yellow-500" />;
             case 'swarm_resumed': return <Play className="w-4 h-4 text-blue-500" />;
             case 'swarm:verifier_spawned': return <ShieldCheck className="w-4 h-4 text-cyan-400" />;
+            case 'swarm:red_team_spawned': return <Flame className="w-4 h-4 text-red-500" />;
             case 'swarm:replanning': return <RefreshCw className="w-4 h-4 text-orange-400" />;
             default: return <Info className="w-4 h-4 text-slate-400" />;
         }
@@ -172,6 +177,22 @@ export default function SwarmMonitorPage() {
             if (res.ok) fetchSwarm();
         } catch (err) {
             console.error('Failed to update status:', err);
+        } finally {
+            setActionLoading(null);
+        }
+    };
+
+    const updateSwarmPriority = async (priority: number) => {
+        setActionLoading('swarm-priority');
+        try {
+            const res = await fetch(`/api/swarm/${swarmId}/priority`, {
+                method: 'PATCH',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ priority })
+            });
+            if (res.ok) fetchSwarm();
+        } catch (err) {
+            console.error('Failed to update priority:', err);
         } finally {
             setActionLoading(null);
         }
@@ -239,7 +260,21 @@ export default function SwarmMonitorPage() {
                         <ArrowLeft className="w-5 h-5" />
                     </Button>
                     <div>
-                        <h1 className="text-2xl font-bold tracking-tight">{swarm?.name || 'Swarm Monitor'}</h1>
+                        <div className="flex items-center gap-3">
+                            <h1 className="text-2xl font-bold tracking-tight">{swarm?.name || 'Swarm Monitor'}</h1>
+                            {swarm && (
+                                <select
+                                    value={swarm.priority}
+                                    onChange={(e) => updateSwarmPriority(Number(e.target.value))}
+                                    disabled={!!actionLoading}
+                                    className="bg-slate-900 border border-orange-500/30 rounded px-2 py-0.5 text-xs text-orange-400 font-medium focus:outline-none focus:ring-1 focus:ring-orange-500 disabled:opacity-50"
+                                >
+                                    <option value={0}>P0 (Normal)</option>
+                                    <option value={5}>P5 (High)</option>
+                                    <option value={10}>P10 (Urgent)</option>
+                                </select>
+                            )}
+                        </div>
                         <p className="text-sm text-slate-400">ID: {swarmId}</p>
                     </div>
                 </div>
@@ -358,22 +393,23 @@ export default function SwarmMonitorPage() {
                                         animate={{ opacity: 1, scale: 1 }}
                                         whileHover={{ scale: 1.05 }}
                                         className={`p-4 rounded-xl border-2 transition-colors w-48 shadow-lg ${task.status === 'running' || task.status === 'dispatched'
-                                            ? 'border-blue-500/50 bg-blue-500/10 shadow-blue-500/20'
+                                            ? task.isRedTeam ? 'border-red-500/50 bg-red-500/10 shadow-red-500/20' : 'border-blue-500/50 bg-blue-500/10 shadow-blue-500/20'
                                             : task.status === 'completed'
                                                 ? 'border-green-500/50 bg-green-500/10'
                                                 : 'border-slate-700 bg-slate-800'
                                             }`}
                                     >
                                         <div className="flex items-center justify-between mb-2">
-                                            <Badge variant="secondary" className={`text-[10px] uppercase font-bold tracking-wider opacity-70 ${task.isVerification ? 'bg-cyan-500/20 text-cyan-300' : ''}`}>
-                                                {task.isVerification ? 'Verifier' : `Task ${idx + 1}`}
+                                            <Badge variant="secondary" className={`text-[10px] uppercase font-bold tracking-wider opacity-70 flex items-center gap-1 ${task.isRedTeam ? 'bg-red-500/20 text-red-400' : task.isVerification ? 'bg-cyan-500/20 text-cyan-300' : ''}`}>
+                                                {task.isRedTeam ? <><Flame className="w-3 h-3" /> Red Team</> : task.isVerification ? 'Verifier' : `Task ${idx + 1}`}
                                             </Badge>
                                             <div className="flex items-center gap-1">
                                                 {task.status === 'running' && <Loader2 className="w-3 h-3 animate-spin text-blue-400" />}
                                                 {task.status === 'completed' && <CheckCircle2 className="w-3 h-3 text-green-400" />}
                                                 {task.status === 'paused' && <Pause className="w-3 h-3 text-yellow-500" />}
-                                                {task.isEscalated && <Zap className="w-3 h-3 text-red-500 fill-red-500" />}
-                                                {task.isVerification && <ShieldCheck className="w-3 h-3 text-cyan-400" />}
+                                                {task.isEscalated && !task.isRedTeam && <Zap className="w-3 h-3 text-red-500 fill-red-500" />}
+                                                {task.isRedTeam && <Skull className="w-3 h-3 text-red-500" />}
+                                                {task.isVerification && !task.isRedTeam && <ShieldCheck className="w-3 h-3 text-cyan-400" />}
                                                 {(task.status === 'pending' || task.status === 'paused') && (
                                                     <Button variant="ghost" size="icon" className="h-5 w-5" onClick={() => toggleTaskPause(task.id, task.status)} disabled={!!actionLoading}>
                                                         {task.status === 'paused' ? <Play className="w-3 h-3 text-green-400" /> : <Pause className="w-3 h-3 text-slate-400" />}

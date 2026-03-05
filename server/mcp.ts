@@ -1,18 +1,18 @@
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { z } from "zod";
-import { searchSimilar } from "../lib/api/rag.ts";
+import { searchSimilar } from "../lib/api/rag";
 
 export const mcpServer = new McpServer({
     name: "Jules Autopilot RAG Context",
     version: "1.0.0"
 });
-
 mcpServer.tool(
     "query_codebase",
+    "Performs a semantic similarity search across the currently indexed codebase.",
     {
-        query: z.string().describe("Performs a semantic similarity search across the currently indexed codebase. Input: semantic prompt (e.g., 'How is authentication handled in the frontend?')"),
+        query: z.string().describe("Input: semantic prompt (e.g., 'How is authentication handled in the frontend?')"),
         top_k: z.number().optional().describe("Number of results to return. Defaults to 5")
-    },
+    } as any,
     async ({ query, top_k }) => {
         const apiKey = process.env.OPENAI_API_KEY;
         if (!apiKey) {
@@ -95,12 +95,12 @@ export async function registerWasmPluginsAsMcpTools() {
         if (manifest.capabilities.includes('mcp:invoke_tool')) {
             try {
                 // If the plugin declares configSchema, we could theoretically build a Zod object dynamically.
-                // For the zero-trust architecture MVP, we simply send a raw text instruction.
                 mcpServer.tool(
                     manifest.id,
+                    manifest.description || `Tool for the ${manifest.name} plugin`,
                     {
-                        input: z.string().describe(manifest.description || `Input payload or command for the ${manifest.name} plugin to process.`)
-                    },
+                        input: z.string().describe(`Input payload or command for the ${manifest.name} plugin to process.`)
+                    } as any,
                     async ({ input }) => {
                         try {
                             // Instantiate the sandbox per-request. Extism initializes in ~1ms

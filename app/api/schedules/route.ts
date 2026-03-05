@@ -1,6 +1,8 @@
 import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 
+export const revalidate = 15; // Cache schedule listings for 15s
+
 /**
  * GET /api/schedules — List all scheduled jobs.
  * POST /api/schedules — Create a new scheduled job.

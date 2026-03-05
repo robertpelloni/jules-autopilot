@@ -1,6 +1,6 @@
 import { prisma } from '../lib/prisma';
 import { getProvider } from '../packages/shared/src/orchestration/providers';
-import { emitDaemonEvent } from './daemon';
+import { emitDaemonEvent } from './index';
 
 interface CIFixJobData {
     ciRunId: string;
@@ -101,18 +101,25 @@ export async function processCIFix(data: CIFixJobData): Promise<void> {
 
         const analysis = result.content.trim();
 
+        // Parse severity from the analysis
+        let severity: 'critical' | 'warning' | 'info' = 'warning';
+        if (analysis.includes('SEVERITY: critical')) {
+            severity = 'critical';
+        } else if (analysis.includes('SEVERITY: info')) {
+            severity = 'info';
+        }
+
         // Update the CIRun record with the analysis
         await prisma.cIRun.update({
             where: { id: ciRunId },
             data: {
-                failureLog: logContent.substring(0, 5000),
-                fixAttempted: true,
-                fixSummary: analysis.substring(0, 2000)
+                status: severity === 'critical' ? 'failed' : 'completed'
+                // TODO: Add these fields to CIRun schema
+                // failureLog: logContent.substring(0, 5000),
+                // fixAttempted: true,
+                // fixSummary: analysis.substring(0, 2000)
             }
         });
-
-        // Parse severity from the analysis
-        let severity: 'critical' | 'warning' | 'info' = 'warning';
         if (analysis.includes('SEVERITY: critical')) {
             severity = 'critical';
         } else if (analysis.includes('SEVERITY: info')) {

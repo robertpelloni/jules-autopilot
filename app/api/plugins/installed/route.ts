@@ -2,6 +2,8 @@ import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { getSession } from '@/lib/session';
 
+export const revalidate = 60; // Cache plugin lists for 60s to reduce DB load
+
 /**
  * GET /api/plugins/installed — List all installed plugins for the current workspace.
  */

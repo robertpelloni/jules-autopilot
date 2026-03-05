@@ -452,6 +452,7 @@ model SwarmTask {
   outputTokens Int       @default(0)
   costCents     Int        @default(0)
   isVerification Boolean    @default(false)
+  isRedTeam      Boolean    @default(false)
   reviewedTaskId String?
   reviewStatus   String?    @default("pending")
   result        String?

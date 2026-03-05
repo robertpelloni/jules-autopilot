@@ -1,6 +1,8 @@
 import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 
+export const revalidate = 2; // Short 2s ISR cache to debounce simultaneous dashboard loads without sacrificing freshness
+
 /**
  * GET /api/swarm — List all swarms with their tasks.
  * POST /api/swarm — Create a new swarm from a high-level prompt.

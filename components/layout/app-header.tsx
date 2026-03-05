@@ -39,6 +39,7 @@ import { ContextHelp } from "@/components/context-help";
 import { Session } from '@jules/shared';
 import { useRouter } from "next/navigation";
 import { signOut } from "next-auth/react";
+import { BudgetMeter } from './budget-meter';
 
 interface AppHeaderProps {
   view: 'sessions' | 'analytics' | 'templates' | 'kanban' | 'board' | 'artifacts' | 'debates';
@@ -90,7 +91,7 @@ export function AppHeader({
   const [openSessions, setOpenSessions] = useState<Session[]>([]);
 
   const handleLogout = async () => {
-      await signOut({ callbackUrl: '/login' });
+    await signOut({ callbackUrl: '/login' });
   };
 
   // Load all sessions for broadcast
@@ -119,7 +120,7 @@ export function AppHeader({
               <SheetHeader className="border-b border-white/[0.08] px-4 py-3 text-left">
                 <SheetTitle className="text-sm font-bold text-white">JULES</SheetTitle>
               </SheetHeader>
-              
+
               <div className="flex-1 overflow-y-auto">
                 <div className="px-2 py-2 space-y-1 border-b border-white/[0.08]">
                   <Button
@@ -226,9 +227,8 @@ export function AppHeader({
           <Button
             variant="ghost"
             size="sm"
-            className={`h-8 px-3 hover:bg-white/5 ${
-              view === "sessions" ? "text-white" : "text-white/60"
-            }`}
+            className={`h-8 px-3 hover:bg-white/5 ${view === "sessions" ? "text-white" : "text-white/60"
+              }`}
             onClick={() => setView("sessions")}
           >
             <MessageSquare className="h-3.5 w-3.5 mr-1.5" />
@@ -240,9 +240,8 @@ export function AppHeader({
           <Button
             variant="ghost"
             size="sm"
-            className={`h-8 px-3 hover:bg-white/5 ${
-              view === "analytics" ? "text-white" : "text-white/60"
-            }`}
+            className={`h-8 px-3 hover:bg-white/5 ${view === "analytics" ? "text-white" : "text-white/60"
+              }`}
             onClick={() => setView("analytics")}
           >
             <BarChart3 className="h-3.5 w-3.5 mr-1.5" />
@@ -254,9 +253,8 @@ export function AppHeader({
           <Button
             variant="ghost"
             size="sm"
-            className={`h-8 px-3 hover:bg-white/5 ${
-              view === "debates" ? "text-white" : "text-white/60"
-            }`}
+            className={`h-8 px-3 hover:bg-white/5 ${view === "debates" ? "text-white" : "text-white/60"
+              }`}
             onClick={() => setView("debates")}
           >
             <Scale className="h-3.5 w-3.5 mr-1.5" />
@@ -268,9 +266,8 @@ export function AppHeader({
           <Button
             variant="ghost"
             size="sm"
-            className={`h-8 px-3 hover:bg-white/5 ${
-              view === "kanban" ? "text-white" : "text-white/60"
-            }`}
+            className={`h-8 px-3 hover:bg-white/5 ${view === "kanban" ? "text-white" : "text-white/60"
+              }`}
             onClick={() => setView("kanban")}
           >
             <Kanban className="h-3.5 w-3.5 mr-1.5" />
@@ -282,9 +279,8 @@ export function AppHeader({
           <Button
             variant="ghost"
             size="sm"
-            className={`h-8 px-3 hover:bg-white/5 ${
-              isLogPanelOpen ? "text-white" : "text-white/60"
-            }`}
+            className={`h-8 px-3 hover:bg-white/5 ${isLogPanelOpen ? "text-white" : "text-white/60"
+              }`}
             onClick={() => setIsLogPanelOpen(!isLogPanelOpen)}
           >
             <ActivityIcon className="h-3.5 w-3.5 mr-1.5" />
@@ -323,6 +319,8 @@ export function AppHeader({
           />
 
           <BroadcastDialog sessions={openSessions} />
+
+          <BudgetMeter />
 
           <ModeToggle />
 

@@ -1,12 +1,12 @@
-import { prisma } from '../lib/prisma.ts';
-import { JulesClient } from '../lib/jules/client.ts';
+import { prisma } from '../lib/prisma';
+import { JulesClient } from '../lib/jules/client';
 import { getProvider } from '@jules/shared';
-import { emitDaemonEvent } from './index.ts';
+import { emitDaemonEvent } from './index';
 import { exec } from 'child_process';
 import { promisify } from 'util';
 import * as crypto from 'crypto';
 import type { KeeperSettings } from '@prisma/client';
-import { orchestratorQueue } from './queue.ts';
+import { orchestratorQueue } from './queue';
 
 let isRunning = false;
 let checkTimeout: ReturnType<typeof setTimeout> | null = null;
@@ -147,7 +147,8 @@ export async function runLoop() {
                 // Enqueue a job to check for and dispatch pending sub-tasks
                 await orchestratorQueue.add('dispatch_swarm_tasks', { swarmId: swarm.id }, {
                     jobId: `swarm-dispatch-${swarm.id}-${Date.now()}`,
-                    removeOnComplete: true
+                    removeOnComplete: true,
+                    priority: Math.max(1, 100 - (swarm.priority || 0))
                 });
             } catch (err) {
                 console.error(`[Daemon] Failed to enqueue swarm dispatch for ${swarm.id}`, err);

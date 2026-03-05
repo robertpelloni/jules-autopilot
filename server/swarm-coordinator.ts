@@ -17,7 +17,7 @@ interface SwarmConfig {
 export class SwarmCoordinator {
     private config: SwarmConfig;
 
-    private constructor(config: SwarmConfig) {
+    constructor(config: SwarmConfig) {
         this.config = config;
     }
 
@@ -110,19 +110,18 @@ ${this.config.prompt}`
         }
 
         // Create SwarmTask records
-        for (let i = 0; i < tasks.length; i++) {
-            const task = tasks[i];
-            if (!task) continue;
-            await prisma.swarmTask.create({
-                data: {
-                    swarmId: swarm.id,
-                    title: task.title,
-                    prompt: task.prompt,
-                    dependsOn: task.dependsOn || null,
-                    priority: i
-                }
-            });
-        }
+        const newTasks = tasks.map((t, i) => ({
+            swarmId: swarm.id,
+            title: t.title,
+            prompt: t.prompt,
+            dependsOn: t.dependsOn || null,
+            status: 'pending',
+            priority: i // Assign priority based on order
+        }));
+
+        await prisma.swarmTask.createMany({
+            data: newTasks
+        });
 
         // Update swarm status
         await prisma.agentSwarm.update({
@@ -171,7 +170,9 @@ ${this.config.prompt}`
 
         const maxParallel = 3; // Jules concurrent limit
         const runningTasks = swarm.tasks.filter(t => t.status === 'dispatched' || t.status === 'running');
-        const pendingTasks = swarm.tasks.filter(t => t.status === 'pending');
+        const pendingTasks = swarm.tasks
+            .filter(t => t.status === 'pending')
+            .sort((a, b) => b.priority - a.priority);
 
         // Check dependency resolution
         const completedIds = new Set(swarm.tasks.filter(t => t.status === 'completed').map(t => t.id));
@@ -426,9 +427,9 @@ ${this.config.prompt}`
                         data: { taskId: task.id, title: task.title }
                     });
 
-                    // --- Phase 83: Automated Peer Review ---
-                    if (!(task as any).isVerification) {
-                        await SwarmCoordinator.spawnVerifier(swarmId, task.id);
+                    // --- Phase 87: Adversarial Red Team Debate ---
+                    if (!(task as any).isVerification && !(task as any).isRedTeam) {
+                        await SwarmCoordinator.spawnRedTeamCritique(swarmId, task.id);
                     } else if ((task as any).reviewedTaskId) {
                         // Verification task completed, update the target task's reviewStatus
                         const isSuccess = result.toLowerCase().includes('pass') || !result.toLowerCase().includes('fail');
@@ -455,20 +456,27 @@ ${this.config.prompt}`
     }
 
     /**
-     * Spawn a verifier task for a completed task.
+     * Spawn an adversarial Red Team critique task.
      */
-    private static async spawnVerifier(swarmId: string, targetTaskId: string): Promise<void> {
+    private static async spawnRedTeamCritique(swarmId: string, targetTaskId: string): Promise<void> {
         const targetTask = await prisma.swarmTask.findUnique({ where: { id: targetTaskId } });
         if (!targetTask) return;
 
-        const verifierTitle = `Verify: ${targetTask.title}`;
-        const verifierPrompt = `Review the following task output for correctness and quality. 
-Output "PASS" if the work is correct. 
-If there are errors, identify them specifically and output "FAIL" followed by the issues.
+        const verifierTitle = `Devil's Advocate: ${targetTask.title}`;
+        const verifierPrompt = `[MODE: RED_TEAM_CRITIQUE]
+You are an adversarial 'Red Team' Devil's Advocate for the Jules Swarm Orchestrator. 
+Your sole purpose is to find security flaws, logical failures, unhandled edge-cases, and architectural weaknesses in the provided code/output.
+You MUST be ruthless and entirely objective. Do NOT be polite if the code is flawed.
+If you find ANY issues (no matter how small), output "FAIL" followed by a detailed, actionable breakdown of the vulnerabilities.
+If and ONLY if the output is absolutely flawless, structurally sound, and secure, output "PASS".
 
-TASK TITLE: ${targetTask.title}
-TASK PROMPT: ${targetTask.prompt}
-AGENT OUTPUT:
+### ORIGINAL TASK TARGET
+${targetTask.title}
+
+### ORIGINAL PROMPT
+${targetTask.prompt}
+
+### AGENT OUTPUT TO CRITIQUE
 ${targetTask.result}`;
 
         await prisma.swarmTask.create({
@@ -477,14 +485,15 @@ ${targetTask.result}`;
                 title: verifierTitle,
                 prompt: verifierPrompt,
                 isVerification: true,
+                isRedTeam: true,
                 reviewedTaskId: targetTaskId,
-                priority: targetTask.priority + 10,
+                priority: targetTask.priority + 20, // Critical priority to unblock swarm
                 status: 'pending'
             } as any
         });
 
         await SwarmCoordinator.persistEvent(swarmId, {
-            type: 'swarm:verifier_spawned',
+            type: 'swarm:red_team_spawned',
             data: { targetTaskId, verifierTitle }
         });
 
@@ -512,12 +521,14 @@ ${targetTask.result}`;
             message: 'Review failed. Re-planning corrective actions...'
         });
 
-        // Simplified re-planning: mark the task as pending again but with the review feedback augmented
-        const correctivePrompt = `[CORRECTIVE ACTION] Your previous attempt failed review.
-ISSUES CITED BY REVIEWER:
+        // Re-plan task emphasizing the Red Team critique
+        const correctivePrompt = `[MODE: CRITICAL_REPLANNING] Your previous output failed the Red Team adversarial review.
+You must fix ALL vulnerabilities and issues cited by the Devil's Advocate.
+
+### RED TEAM CRITIQUE:
 ${verifierTask.result}
 
-ORIGINAL PROMPT:
+### ORIGINAL TASK:
 ${targetTask.prompt}`;
 
         await prisma.swarmTask.update({

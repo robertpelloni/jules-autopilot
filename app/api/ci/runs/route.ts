@@ -1,6 +1,8 @@
 import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 
+export const revalidate = 15; // Cache CI run lists for 15s to reduce DB load
+
 /**
  * GET /api/ci/runs — List all CI runs, most recent first.
  */
