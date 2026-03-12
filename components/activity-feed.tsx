@@ -5,7 +5,7 @@ import useSWR from 'swr'; // Keeping for potential future use, though origin use
 import { useJules } from '@/lib/jules/provider';
 import type { CloudDevProviderId } from '@/types/cloud-dev';
 import { CLOUD_DEV_PROVIDERS } from '@/types/cloud-dev';
-import type { Activity, Session, Artifact } from '@jules/shared';
+import type { Activity, Session, Artifact, DebateResult } from '@jules/shared';
 import { exportSessionToJSON, exportSessionToMarkdown } from '@/lib/export';
 import { useNotifications } from '@/hooks/use-notifications';
 import { useDaemonEvent } from '@/lib/hooks/use-daemon-events';
@@ -83,8 +83,9 @@ function getProviderIdFromSessionId(sessionId: string): CloudDevProviderId {
 }
 
 export function ActivityFeed({ session, onArchive, showCodeDiffs, onToggleCodeDiffs, onActivitiesChange, onStartDebate, onSaveTemplate, onReviewArtifact }: ActivityFeedProps) {
-  const { client } = useJules();
+  const { client, refreshTrigger } = useJules();
   const providerId = getProviderIdFromSessionId(session.id);
+  // ... rest of the same variables ...
   const providerConfig = CLOUD_DEV_PROVIDERS[providerId];
   const [sending, setSending] = useState(false);
   const [approvingPlan, setApprovingPlan] = useState(false);
@@ -220,11 +221,11 @@ export function ActivityFeed({ session, onArchive, showCodeDiffs, onToggleCodeDi
     } finally {
       if (isInitialLoad) setLoading(false);
     }
-  }, [client, session.id, session.createdAt, permission, sendNotification]);
+  }, [client, session.id, session.createdAt, permission, sendNotification, refreshTrigger]);
 
   useEffect(() => {
     loadActivities(true);
-  }, [session.id, loadActivities]);
+  }, [session.id, loadActivities, refreshTrigger]);
 
   useDaemonEvent<ActivitiesUpdatedPayload>(
     'activities_updated',
@@ -752,7 +753,7 @@ export function ActivityFeed({ session, onArchive, showCodeDiffs, onToggleCodeDi
                             <div className={`flex gap-2.5 px-3 ${newActivityIds.has(activity.id) ? 'animate-in fade-in slide-in-from-bottom-2 duration-500' : ''}`}>
                                 <Avatar className="h-6 w-6 shrink-0 mt-0.5 bg-zinc-900 border border-white/10">{getActivityIcon(activity)}</Avatar>
                                 <div className="flex-1">
-                                    <DebateViewer result={activity.metadata.debate as any} />
+                                    <DebateViewer result={activity.metadata.debate as DebateResult} />
                                 </div>
                             </div>
                         );

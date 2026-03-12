@@ -13,11 +13,12 @@ mcpServer.tool(
         query: z.string().describe("Input: semantic prompt (e.g., 'How is authentication handled in the frontend?')"),
         top_k: z.number().optional().describe("Number of results to return. Defaults to 5")
     } as any,
-    async ({ query, top_k }) => {
+    async (args: any) => {
+        const { query, top_k } = args;
         const apiKey = process.env.OPENAI_API_KEY;
         if (!apiKey) {
             return {
-                content: [{ type: "text", text: "Error: OPENAI_API_KEY is not defined in the environment." }]
+                content: [{ type: "text" as const, text: "Error: OPENAI_API_KEY is not defined in the environment." }]
             };
         }
 
@@ -46,20 +47,20 @@ mcpServer.tool(
 
             if (results.length === 0) {
                 return {
-                    content: [{ type: "text", text: "No relevant codebase chunks found. Is the repository currently indexed?" }]
+                    content: [{ type: "text" as const, text: "No relevant codebase chunks found. Is the repository currently indexed?" }]
                 };
             }
 
             const formattedResults = results.map((r, i) => {
-                return `### RAG Search Result ${i + 1} (Similarity: ${(r.score * 100).toFixed(1)}%)\n**File:** \`${r.filePath}\` (Lines ${r.startLine}-${r.endLine})\n\`\`\`\n${r.content}\n\`\`\``;
+                return `### RAG Search Result ${i + 1} (Similarity: ${(r.score * 100).toFixed(1)}%)\n**File:** \`${r.filepath}\` (Lines ${r.startLine}-${r.endLine})\n\`\`\`\n${r.content}\n\`\`\``;
             }).join("\n\n---\n\n");
 
             return {
-                content: [{ type: "text", text: formattedResults }]
+                content: [{ type: "text" as const, text: formattedResults }]
             };
         } catch (error) {
             return {
-                content: [{ type: "text", text: `Error querying codebase vector database: ${error instanceof Error ? error.message : String(error)}` }]
+                content: [{ type: "text" as const, text: `Error querying codebase vector database: ${error instanceof Error ? error.message : String(error)}` }]
             };
         }
     }
@@ -74,8 +75,8 @@ export async function registerWasmPluginsAsMcpTools() {
 
     // Lazy-import prisma and WasmPluginRunner at runtime to avoid Node 24 ESM loader
     // crashes caused by lib/prisma.ts using CJS require() internally.
-    const { prisma } = await import('../lib/prisma.ts');
-    const { WasmPluginRunner } = await import('../lib/plugins/wasm-runner.ts');
+    const { prisma } = await import('../lib/prisma');
+    const { WasmPluginRunner } = await import('../lib/plugins/wasm-runner');
 
     const activePlugins = await prisma.pluginManifest.findMany({
         where: {
@@ -101,7 +102,8 @@ export async function registerWasmPluginsAsMcpTools() {
                     {
                         input: z.string().describe(`Input payload or command for the ${manifest.name} plugin to process.`)
                     } as any,
-                    async ({ input }) => {
+                    async (args: any) => {
+                        const { input } = args;
                         try {
                             // Instantiate the sandbox per-request. Extism initializes in ~1ms
                             // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -112,16 +114,16 @@ export async function registerWasmPluginsAsMcpTools() {
 
                             if (result.success) {
                                 return {
-                                    content: [{ type: "text", text: result.output || 'Execution completed with no output.' }]
+                                    content: [{ type: "text" as const, text: result.output || 'Execution completed with no output.' }]
                                 };
                             } else {
                                 return {
-                                    content: [{ type: "text", text: `Plugin Execution Failed: ${result.error}` }]
+                                    content: [{ type: "text" as const, text: `Plugin Execution Failed: ${result.error}` }]
                                 };
                             }
                         } catch (err) {
                             return {
-                                content: [{ type: "text", text: `Sandbox Fault: ${err instanceof Error ? err.message : String(err)}` }]
+                                content: [{ type: "text" as const, text: `Sandbox Fault: ${err instanceof Error ? err.message : String(err)}` }]
                             };
                         }
                     }

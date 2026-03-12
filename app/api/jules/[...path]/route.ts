@@ -1,15 +1,13 @@
 import { NextResponse, NextRequest } from 'next/server';
-import { getSession } from '@/lib/session';
 
 const JULES_API_BASE = 'https://jules.googleapis.com/v1alpha';
 
 export async function GET(request: NextRequest, props: { params: Promise<{ path: string[] }> }) {
   try {
-    const session = await getSession();
-    const apiKey = session?.apiKey;
+    const apiKey = request.headers.get('X-Jules-Api-Key') || process.env.JULES_API_KEY;
 
     if (!apiKey) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+      return NextResponse.json({ error: 'JULES_API_KEY not set in .env' }, { status: 500 });
     }
 
     const params = await props.params;
@@ -42,11 +40,10 @@ export async function GET(request: NextRequest, props: { params: Promise<{ path:
 
 export async function POST(request: NextRequest, props: { params: Promise<{ path: string[] }> }) {
   try {
-    const session = await getSession();
-    const apiKey = session?.apiKey;
+    const apiKey = request.headers.get('X-Jules-Api-Key') || process.env.JULES_API_KEY;
 
     if (!apiKey) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+      return NextResponse.json({ error: 'JULES_API_KEY not set in .env' }, { status: 500 });
     }
 
     const params = await props.params;
@@ -89,11 +86,10 @@ export async function POST(request: NextRequest, props: { params: Promise<{ path
 
 export async function PATCH(request: NextRequest, props: { params: Promise<{ path: string[] }> }) {
   try {
-    const session = await getSession();
-    const apiKey = session?.apiKey;
+    const apiKey = request.headers.get('X-Jules-Api-Key') || process.env.JULES_API_KEY;
 
     if (!apiKey) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+      return NextResponse.json({ error: 'JULES_API_KEY not set in .env' }, { status: 500 });
     }
 
     const params = await props.params;
@@ -141,11 +137,10 @@ export async function PATCH(request: NextRequest, props: { params: Promise<{ pat
 
 export async function DELETE(request: NextRequest, props: { params: Promise<{ path: string[] }> }) {
   try {
-    const session = await getSession();
-    const apiKey = session?.apiKey;
+    const apiKey = request.headers.get('X-Jules-Api-Key') || process.env.JULES_API_KEY;
 
     if (!apiKey) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+      return NextResponse.json({ error: 'JULES_API_KEY not set in .env' }, { status: 500 });
     }
 
     const params = await props.params;

@@ -28,7 +28,8 @@ import {
   FolderTree,
   Search,
   Scale,
-  User
+  User,
+  Terminal
 } from "lucide-react";
 import { SessionList } from "@/components/session-list";
 import { NewSessionDialog } from "@/components/new-session-dialog";
@@ -39,7 +40,6 @@ import { ContextHelp } from "@/components/context-help";
 import { Session } from '@jules/shared';
 import { useRouter } from "next/navigation";
 import { signOut } from "next-auth/react";
-import { BudgetMeter } from './budget-meter';
 
 interface AppHeaderProps {
   view: 'sessions' | 'analytics' | 'templates' | 'kanban' | 'board' | 'artifacts' | 'debates';
@@ -194,7 +194,7 @@ export function AppHeader({
           </Sheet>
           <h1 className="text-sm font-bold tracking-tight text-white">JULES</h1>
           <span className="text-[9px] font-mono text-white/30 bg-white/5 px-1.5 py-0.5 rounded-sm">
-            v{process.env.NEXT_PUBLIC_APP_VERSION}
+            v{process.env.NEXT_PUBLIC_APP_VERSION || '0.8.0'}
           </span>
 
           {/* GitHub Repo Link */}
@@ -285,7 +285,19 @@ export function AppHeader({
           >
             <ActivityIcon className="h-3.5 w-3.5 mr-1.5" />
             <span className="text-[10px] font-mono uppercase tracking-wider hidden sm:inline">
-              Monitor
+              Side Logs
+            </span>
+          </Button>
+
+          <Button
+            variant="ghost"
+            size="sm"
+            className="h-8 px-3 hover:bg-white/5 text-white/60"
+            onClick={() => router.push("/dashboard/logs")}
+          >
+            <Terminal className="h-3.5 w-3.5 mr-1.5" />
+            <span className="text-[10px] font-mono uppercase tracking-wider hidden sm:inline">
+              System Logs
             </span>
           </Button>
 
@@ -319,8 +331,6 @@ export function AppHeader({
           />
 
           <BroadcastDialog sessions={openSessions} />
-
-          <BudgetMeter />
 
           <ModeToggle />
 

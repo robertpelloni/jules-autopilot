@@ -48,16 +48,8 @@ export async function GET() {
     daemonStatus = 'unavailable';
   }
 
-  // 3. Version
-  let version = '0.0.0';
-  try {
-    const fs = await import('fs');
-    const path = await import('path');
-    version = fs.readFileSync(path.join(process.cwd(), 'VERSION.md'), 'utf8').trim();
-  } catch {
-    // Fall back to env
-    version = process.env.NEXT_PUBLIC_APP_VERSION || '0.0.0';
-  }
+  // 3. Version (Edge compliant, fallback to ENV)
+  const version = process.env.NEXT_PUBLIC_APP_VERSION || '0.0.0';
 
   const totalMs = Date.now() - start;
   const overallStatus = dbStatus === 'ok' ? 'healthy' : 'degraded';
@@ -66,7 +58,7 @@ export async function GET() {
     status: overallStatus,
     version,
     timestamp: new Date().toISOString(),
-    uptime: process.uptime(),
+    uptime: 0, // uptime unavailable in edge runtime
     latency: {
       total: totalMs,
       database: dbLatencyMs,

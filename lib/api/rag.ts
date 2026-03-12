@@ -16,12 +16,13 @@ export function cosineSimilarity(vecA: Float32Array, vecB: Float32Array): number
  * Inserts a new codebase AST chunk and its 1536-dimensional embedding.
  */
 export async function insertChunk(
-    filePath: string,
+    filepath: string,
     startLine: number,
     endLine: number,
     content: string,
     embeddingArray: number[],
-    checksum: string
+    checksum: string,
+    workspaceId: string = 'default'
 ) {
     // Convert basic JS number array to strict 32-bit floats, then to a Node Buffer
     const floatArray = new Float32Array(embeddingArray);
@@ -29,7 +30,8 @@ export async function insertChunk(
 
     return prisma.codeChunk.create({
         data: {
-            filePath,
+            workspaceId,
+            filepath,
             startLine,
             endLine,
             content,
@@ -42,9 +44,9 @@ export async function insertChunk(
 /**
  * Clear existing chunks for a file before re-indexing.
  */
-export async function clearChunksForFile(filePath: string) {
+export async function clearChunksForFile(filepath: string) {
     return prisma.codeChunk.deleteMany({
-        where: { filePath }
+        where: { filepath }
     });
 }
 
@@ -58,7 +60,7 @@ export async function searchSimilar(queryEmbeddingArray: number[], topK: number 
         where: { embedding: { not: null } },
         select: {
             id: true,
-            filePath: true,
+            filepath: true,
             startLine: true,
             endLine: true,
             content: true,

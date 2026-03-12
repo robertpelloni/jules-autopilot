@@ -66,18 +66,38 @@ export async function GET(request: Request) {
             ? Math.round(durations.reduce((a, b) => a + b, 0) / durations.length)
             : 0;
 
-        // Timeline Data
+        // Timeline Data & Advanced Timeseries
         const timelineMap = new Map<string, number>();
+        const timeseriesMap = new Map<string, { success: number; failed: number; totalDuration: number }>();
+
         sessions.forEach(s => {
             const d = startOfDay(parseISO(s.createdAt)).toISOString();
+            
+            // Basic Timeline
             timelineMap.set(d, (timelineMap.get(d) || 0) + 1);
+
+            // Advanced Timeseries for Recharts
+            const tsData = timeseriesMap.get(d) || { success: 0, failed: 0, totalDuration: 0 };
+            if (s.status === 'completed') tsData.success++;
+            if (s.status === 'failed') tsData.failed++;
+            tsData.totalDuration += differenceInMinutes(parseISO(s.updatedAt), parseISO(s.createdAt));
+            timeseriesMap.set(d, tsData);
         });
 
         const timelineData = Array.from(timelineMap.entries())
             .sort((a, b) => a[0].localeCompare(b[0]))
             .map(([isoDate, count]) => ({
-                date: isoDate, // Send ISO, format on client
+                date: isoDate,
                 count
+            }));
+
+        const timeSeriesData = Array.from(timeseriesMap.entries())
+            .sort((a, b) => a[0].localeCompare(b[0]))
+            .map(([isoDate, data]) => ({
+                date: isoDate,
+                success: data.success,
+                failed: data.failed,
+                avgDuration: (data.success + data.failed) > 0 ? Math.round(data.totalDuration / (data.success + data.failed)) : 0
             }));
 
         // Repo Usage
@@ -94,21 +114,7 @@ export async function GET(request: Request) {
             .slice(0, 5);
 
         // Note: Activity/Code Churn requires fetching activities for EVERY session.
-        // This is expensive (N+1 requests).
-        // Optimization: Only fetch activities for the *latest* 10 sessions for detailed breakdown,
-        // or rely on a synced local DB in the future.
-        // For this implementation, we will skip detailed Activity/Churn aggregation to keep this endpoint fast,
-        // OR we can fetch them in parallel with a limit.
-
-        // Let's implement a limited fetch for "Activity Breakdown" based on recent sessions only.
         const recentSessions = sessions.sort((a, b) => new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime()).slice(0, 10);
-
-        // We can't easily do parallel fetch limit here without a complex queue,
-        // so we'll just skip the heavy churn data for the "Overview" API to ensure speed.
-        // The frontend can fetch detailed activity for specific sessions if needed.
-
-        // However, to keep the dashboard working, we'll return empty/mocked structure for churn
-        // or simplified estimates.
 
         return NextResponse.json({
             stats: {
@@ -121,10 +127,9 @@ export async function GET(request: Request) {
                 avgDuration
             },
             timelineData,
+            timeSeriesData,
             repoData,
-            // Include Keeper stats from local DB
             keeperStats: await getKeeperStats(),
-            // Include real LLM cost telemetry from ProviderTelemetry table
             llmCosts: await getLLMCostTelemetry(days)
         });
 

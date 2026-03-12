@@ -61,7 +61,7 @@ try {
 
   // Explicitly enable WAL mode for SQLite to maximize read concurrency
   if (!isRemote) {
-    prismaClient.$executeRawUnsafe('PRAGMA journal_mode = WAL;').catch(console.error);
+    prismaClient.$queryRawUnsafe('PRAGMA journal_mode = WAL;').catch(console.error);
   }
 } catch (e) {
   console.error('Failed to initialize Prisma Client:', e);

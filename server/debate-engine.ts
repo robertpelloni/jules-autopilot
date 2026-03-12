@@ -27,17 +27,22 @@ export async function runDebate(
     topic: string,
     personaNameA: string,
     personaNameB: string,
-    numRounds: number = 3
+    numRounds: number = 3,
+    adversarialPersonaName?: string
 ): Promise<DebateResult> {
     const personaA = await prisma.agentPersona.findUnique({ where: { name: personaNameA } });
     const personaB = await prisma.agentPersona.findUnique({ where: { name: personaNameB } });
+    const personaRedTeam = adversarialPersonaName 
+        ? await prisma.agentPersona.findUnique({ where: { name: adversarialPersonaName }}) 
+        : null;
 
     if (!personaA || !personaB) {
-        throw new Error('One or both specified personas not found');
+        throw new Error('One or both specified primary personas not found');
     }
 
     const providerA = getProvider('anthropic'); // Defaulting engines for debate
     const providerB = getProvider('openai');
+    const providerRedTeam = getProvider('gemini'); // Red team gets a unique model
 
     const history: { role: 'system' | 'user' | 'assistant'; content: string }[] = [];
     const rounds: DebateRound[] = [];
@@ -71,14 +76,27 @@ export async function runDebate(
         history.push({ role: 'assistant', content: `[${personaB.name}]: ${responseB}` });
         currentContext = `Rebuttal to [${personaB.name}]:\n\n${responseB}`;
 
+        // Red Team Interjection
+        if (personaRedTeam && providerRedTeam) {
+            const promptRed = [
+                { role: 'system' as const, content: personaRedTeam.systemPrompt },
+                ...history,
+                { role: 'user' as const, content: `Analyze the previous arguments from ${personaA.name} and ${personaB.name}. Identify any security vulnerabilities, edge cases, architectural flaws, or logical oversights.` }
+            ];
+            const responseRed = await providerRedTeam.generateText(promptRed, { temperature: personaRedTeam.temperature });
+            turns.push({ participantName: personaRedTeam.name, role: 'Adversary', content: responseRed });
+            history.push({ role: 'assistant', content: `[${personaRedTeam.name} - RED TEAM]: ${responseRed}` });
+            currentContext = `Address the Red Team vulnerabilities raised by [${personaRedTeam.name}]:\n\n${responseRed}`;
+        }
+
         rounds.push({ roundNumber: r, turns });
     }
 
     // Generate summary using a neutral judge
     const summaryPrompt = [
-        { role: 'system' as const, content: 'You are an impartial judge summarizing a debate. Provide a concise summary of the key arguments and any resulting consensus.' },
+        { role: 'system' as const, content: 'You are an impartial judge summarizing a debate. Provide a concise summary of the key arguments, any consensus reached, and specifically highlight defensive architectural adjustments required based on Red Team vulnerabilities (if applicable).' },
         ...history,
-        { role: 'user' as const, content: 'Please summarize the debate above.' }
+        { role: 'user' as const, content: 'Please summarize the debate and outline the final defensive resolution.' }
     ];
 
     const summary = await providerA.generateText(summaryPrompt, { temperature: 0.3 });
@@ -102,3 +120,4 @@ export async function runDebate(
 
     return result;
 }
+

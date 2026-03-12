@@ -33,7 +33,8 @@ export function JulesProvider({ children }: { children: React.ReactNode }) {
         try {
             const res = await fetch('/api/auth/me');
             if (res.ok) {
-                setClient(new JulesClient());
+                const localJulesKey = typeof window !== 'undefined' ? localStorage.getItem('jules_api_key') : null;
+                setClient(new JulesClient(localJulesKey || undefined));
                 setHasApiKey(true);
             } else {
                 setClient(null);
@@ -48,6 +49,17 @@ export function JulesProvider({ children }: { children: React.ReactNode }) {
     };
 
     checkSession();
+
+    // Listen for storage changes to update API key dynamically
+    const handleStorageChange = (e: StorageEvent) => {
+      if (e.key === 'jules_api_key') {
+        const newKey = e.newValue;
+        setClient(new JulesClient(newKey || undefined));
+      }
+    };
+
+    window.addEventListener('storage', handleStorageChange);
+    return () => window.removeEventListener('storage', handleStorageChange);
   }, []);
 
   const setApiKey = useCallback(async (key: string) => {

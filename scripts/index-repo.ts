@@ -12,15 +12,15 @@ function getFiles(dir: string, fileList: string[] = []): string[] {
     if (!fs.existsSync(dir)) return fileList;
     const files = fs.readdirSync(dir);
     for (const file of files) {
-        const filePath = path.join(dir, file);
-        if (fs.statSync(filePath).isDirectory()) {
+        const filepath = path.join(dir, file);
+        if (fs.statSync(filepath).isDirectory()) {
             // Avoid indexing build artifacts and modules
             if (file !== 'node_modules' && file !== '.next' && file !== 'dist') {
-                getFiles(filePath, fileList);
+                getFiles(filepath, fileList);
             }
         } else {
-            if (EXTENSIONS_TO_INDEX.includes(path.extname(filePath))) {
-                fileList.push(filePath);
+            if (EXTENSIONS_TO_INDEX.includes(path.extname(filepath))) {
+                fileList.push(filepath);
             }
         }
     }
@@ -105,7 +105,7 @@ async function main() {
             // Check if chunk already exists
             const existing = await prisma.codeChunk.findFirst({
                 where: {
-                    filePath: relativePath,
+                    filepath: relativePath,
                     startLine: chunk.startLine,
                     checksum: checksum
                 }
@@ -132,7 +132,7 @@ async function main() {
                 // Remove outdated chunks for this exact line range
                 await prisma.codeChunk.deleteMany({
                     where: {
-                        filePath: relativePath,
+                        filepath: relativePath,
                         startLine: chunk.startLine,
                         checksum: { not: checksum }
                     }

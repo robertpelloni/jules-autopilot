@@ -114,6 +114,15 @@ export function setupWorker() {
                 if (settings.smartPilotEnabled) {
                     await addLog(`Auto-approving plan for ${session.id.substring(0, 8)}...`, 'action', session.id);
                     await client.approvePlan(session.id);
+                    
+                    // Fire a wakeup activity to kick the agent back into the loop
+                    await client.createActivity({
+                        sessionId: session.id,
+                        content: 'Plan auto-approved by supervisor. Please proceed with execution.',
+                        type: 'message',
+                        role: 'user'
+                    });
+
                     emitDaemonEvent('session_approved', {
                         sessionId: session.id,
                         sessionTitle: session.title

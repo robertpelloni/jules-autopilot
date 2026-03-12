@@ -5,7 +5,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Separator } from "@/components/ui/separator";
-import { ArrowLeft, GitBranch, FolderTree, Clock, Hash, RefreshCw, CheckCircle2, AlertCircle, HelpCircle, Activity, Zap, ShieldCheck } from "lucide-react";
+import { ArrowLeft, GitBranch, FolderTree, Clock, Hash, RefreshCw, CheckCircle2, AlertCircle, HelpCircle, Activity, Zap, ShieldCheck, Server, Cloud } from "lucide-react";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import submodulesData from "../submodules.json";
@@ -139,7 +139,7 @@ export default function SystemDashboard() {
               <div className="flex justify-between items-center">
                 <span className="text-xs text-white/60">Version</span>
                 <Badge variant="outline" className="border-purple-500/50 text-purple-400">
-                  v{process.env.NEXT_PUBLIC_APP_VERSION || '0.7.1'}
+                  v{process.env.NEXT_PUBLIC_APP_VERSION || '0.8.0'}
                 </Badge>
               </div>
               <div className="flex justify-between items-center">
@@ -245,6 +245,45 @@ export default function SystemDashboard() {
               </div>
             </CardContent>
           </Card>
+        </div>
+
+        <Separator className="bg-white/10" />
+
+        <div className="space-y-4">
+          <h2 className="text-lg font-bold tracking-wide text-white/80">Integrations</h2>
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            <Link href="/dashboard/mcp-links">
+              <Card className="bg-zinc-950 border-white/10 hover:border-purple-500/30 hover:bg-zinc-900/50 transition-all duration-300 cursor-pointer h-full">
+                <CardHeader>
+                  <CardTitle className="text-base flex items-center gap-2">
+                    <Server className="h-4 w-4 text-blue-500" />
+                    MCP Meta-Mesh
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <p className="text-sm text-white/60">
+                    Manage external Stdio and SSE Model Context Protocol connections extending swarm capabilities.
+                  </p>
+                </CardContent>
+              </Card>
+            </Link>
+
+            <Link href="/dashboard/environments">
+              <Card className="bg-zinc-950 border-white/10 hover:border-teal-500/30 hover:bg-zinc-900/50 transition-all duration-300 cursor-pointer h-full">
+                <CardHeader>
+                  <CardTitle className="text-base flex items-center gap-2">
+                    <Cloud className="h-4 w-4 text-teal-400" />
+                    Cloud Dev Envs
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <p className="text-sm text-white/60">
+                    Connect and manage Google-Jules remote cloud development environments.
+                  </p>
+                </CardContent>
+              </Card>
+            </Link>
+          </div>
         </div>
 
         <Separator className="bg-white/10" />

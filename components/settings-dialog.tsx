@@ -6,13 +6,12 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Settings, Github, Brain, Palette, Cloud, DollarSign } from 'lucide-react';
+import { Github, Brain, Palette, Cloud, DollarSign } from 'lucide-react';
 import { SessionKeeperSettingsContent } from './session-keeper-settings-content';
 import { ThemeCustomizer } from './theme-customizer';
 import { CloudDevProvidersSettings } from './cloud-dev-providers-settings';
 import { useSessionKeeperStore } from '@/lib/stores/session-keeper';
 import { toast } from 'sonner';
-import { cn } from '@/lib/utils';
 import { BudgetRoutingSettings } from './budget-routing-settings';
 
 interface SettingsDialogProps {
@@ -28,6 +27,7 @@ export function SettingsDialog({ open: propOpen, onOpenChange: propOnOpenChange,
   const [openAIKey, setOpenAIKey] = useState('');
   const [anthropicKey, setAnthropicKey] = useState('');
   const [geminiKey, setGeminiKey] = useState('');
+  const [julesKey, setJulesKey] = useState('');
 
   const open = propOpen !== undefined ? propOpen : internalOpen;
   const onOpenChange = propOnOpenChange || setInternalOpen;
@@ -41,11 +41,13 @@ export function SettingsDialog({ open: propOpen, onOpenChange: propOnOpenChange,
         const oaKey = localStorage.getItem('openai_api_key');
         const antKey = localStorage.getItem('anthropic_api_key');
         const gemKey = localStorage.getItem('google_api_key');
+        const julKey = localStorage.getItem('jules_api_key');
 
         if (ghToken) setGithubToken(ghToken);
         if (oaKey) setOpenAIKey(oaKey);
         if (antKey) setAnthropicKey(antKey);
         if (gemKey) setGeminiKey(gemKey);
+        if (julKey) setJulesKey(julKey);
       }, 0);
       return () => clearTimeout(timer);
     }
@@ -60,6 +62,7 @@ export function SettingsDialog({ open: propOpen, onOpenChange: propOnOpenChange,
     if (openAIKey) localStorage.setItem('openai_api_key', openAIKey);
     if (anthropicKey) localStorage.setItem('anthropic_api_key', anthropicKey);
     if (geminiKey) localStorage.setItem('google_api_key', geminiKey);
+    if (julesKey) localStorage.setItem('jules_api_key', julesKey);
     toast.success('LLM API Keys saved');
   };
 
@@ -136,6 +139,17 @@ export function SettingsDialog({ open: propOpen, onOpenChange: propOnOpenChange,
                       value={geminiKey}
                       onChange={e => setGeminiKey(e.target.value)}
                       placeholder="AIza..."
+                      className="bg-black/50 border-white/10 text-xs font-mono"
+                    />
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label className="text-xs text-white/60">Jules API Key</Label>
+                    <Input
+                      type="password"
+                      value={julesKey}
+                      onChange={e => setJulesKey(e.target.value)}
+                      placeholder="jules_..."
                       className="bg-black/50 border-white/10 text-xs font-mono"
                     />
                   </div>

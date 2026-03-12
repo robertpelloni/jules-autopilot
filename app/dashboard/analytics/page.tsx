@@ -15,6 +15,7 @@ import {
     RefreshCw,
     Zap
 } from 'lucide-react';
+import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
 
 interface AnalyticsData {
     stats: {
@@ -27,6 +28,7 @@ interface AnalyticsData {
         avgDuration: number;
     };
     timelineData: { date: string; count: number }[];
+    timeSeriesData: { date: string; success: number; failed: number; avgDuration: number }[];
     repoData: { name: string; value: number }[];
     keeperStats: {
         totalApprovals: number;
@@ -260,28 +262,74 @@ export default function AnalyticsDashboard() {
                             </div>
                         </div>
 
-                        {/* Session Timeline */}
-                        <div className="rounded-xl border border-zinc-800 bg-zinc-900/50 p-5">
-                            <div className="flex items-center gap-2 mb-4 text-sm font-medium text-zinc-400">
-                                <Zap className="h-4 w-4" />
-                                Sessions Over Time
+                        {/* Advanced Session Timeline */}
+                        <div className="rounded-xl border border-zinc-800 bg-zinc-900/50 p-5 mb-8">
+                            <div className="flex items-center justify-between mb-4">
+                                <div className="flex items-center gap-2 text-sm font-medium text-zinc-400">
+                                    <Zap className="h-4 w-4" />
+                                    Sessions Over Time
+                                </div>
+                                <div className="flex gap-4 text-xs">
+                                    <div className="flex items-center gap-2">
+                                        <div className="w-2 h-2 rounded-full bg-emerald-500"></div>
+                                        <span className="text-zinc-500">Completed</span>
+                                    </div>
+                                    <div className="flex items-center gap-2">
+                                        <div className="w-2 h-2 rounded-full bg-red-500"></div>
+                                        <span className="text-zinc-500">Failed</span>
+                                    </div>
+                                </div>
                             </div>
-                            {data.timelineData.length === 0 ? (
-                                <p className="text-xs text-zinc-600">No timeline data</p>
+                            
+                            {!data.timeSeriesData || data.timeSeriesData.length === 0 ? (
+                                <div className="h-48 flex items-center justify-center text-xs text-zinc-600">No timeline data</div>
                             ) : (
-                                <div className="flex items-end gap-1 h-32">
-                                    {data.timelineData.map((d, i) => {
-                                        const maxCount = Math.max(...data.timelineData.map(t => t.count), 1);
-                                        const height = Math.max((d.count / maxCount) * 100, 4);
-                                        return (
-                                            <div
-                                                key={i}
-                                                className="flex-1 bg-gradient-to-t from-indigo-600 to-indigo-400 rounded-t opacity-80 hover:opacity-100 transition-opacity cursor-default"
-                                                style={{ height: `${height}%` }}
-                                                title={`${new Date(d.date).toLocaleDateString()}: ${d.count} sessions`}
+                                <div className="h-48">
+                                    <ResponsiveContainer width="100%" height="100%">
+                                        <AreaChart
+                                            data={data.timeSeriesData}
+                                            margin={{ top: 10, right: 10, left: -20, bottom: 0 }}
+                                        >
+                                            <defs>
+                                                <linearGradient id="colorSuccess" x1="0" y1="0" x2="0" y2="1">
+                                                    <stop offset="5%" stopColor="#10b981" stopOpacity={0.3}/>
+                                                    <stop offset="95%" stopColor="#10b981" stopOpacity={0}/>
+                                                </linearGradient>
+                                                <linearGradient id="colorFailed" x1="0" y1="0" x2="0" y2="1">
+                                                    <stop offset="5%" stopColor="#ef4444" stopOpacity={0.3}/>
+                                                    <stop offset="95%" stopColor="#ef4444" stopOpacity={0}/>
+                                                </linearGradient>
+                                            </defs>
+                                            <CartesianGrid strokeDasharray="3 3" stroke="#27272a" vertical={false} />
+                                            <XAxis 
+                                                dataKey="date" 
+                                                stroke="#52525b" 
+                                                fontSize={10} 
+                                                tickFormatter={(str) => new Date(str).toLocaleDateString(undefined, { month: 'short', day: 'numeric' })}
                                             />
-                                        );
-                                    })}
+                                            <YAxis stroke="#52525b" fontSize={10} />
+                                            <Tooltip 
+                                                contentStyle={{ backgroundColor: '#18181b', borderColor: '#27272a', fontSize: '12px' }}
+                                                labelFormatter={(label) => new Date(label).toLocaleDateString()}
+                                            />
+                                            <Area 
+                                                type="monotone" 
+                                                dataKey="success" 
+                                                name="Completed"
+                                                stroke="#10b981" 
+                                                fillOpacity={1} 
+                                                fill="url(#colorSuccess)" 
+                                            />
+                                            <Area 
+                                                type="monotone" 
+                                                dataKey="failed" 
+                                                name="Failed"
+                                                stroke="#ef4444" 
+                                                fillOpacity={1} 
+                                                fill="url(#colorFailed)" 
+                                            />
+                                        </AreaChart>
+                                    </ResponsiveContainer>
                                 </div>
                             )}
                         </div>

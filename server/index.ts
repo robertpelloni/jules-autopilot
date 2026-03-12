@@ -14,17 +14,28 @@ import type { DaemonEventType } from '@jules/shared';
 import { createDaemonEvent } from '@jules/shared';
 import type { Prisma } from '@prisma/client';
 import { orchestratorQueue } from './queue';
+import { createBunWebSocket } from 'hono/bun';
+import type { ServerWebSocket } from 'bun';
+import * as pty from 'bun-pty';
+import path from 'path';
+import fs from 'fs';
 
+// MCP Integration
+import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js";
+import { mcpServer, registerWasmPluginsAsMcpTools } from "./mcp.js";
+
+const { upgradeWebSocket, websocket } = createBunWebSocket();
 const app = new Hono();
 
 const eventBus = new EventEmitter();
-const wsClients = new Set<{ send: (data: string) => void }>();
+const wsClients = new Set<ServerWebSocket<any>>();
+const terminalSessions = new Map<string, { ptyProcess: pty.IPty, createdAt: number, ws: ServerWebSocket<any> }>();
 
 export function broadcastToClients(message: object) {
     const payload = JSON.stringify(message);
     for (const client of wsClients) {
         try {
-            client.send(payload);
+            client.sendText(payload);
         } catch {
             wsClients.delete(client);
         }
@@ -735,46 +746,130 @@ app.post('/api/daemon/stop', async (c) => {
 
 console.log(`Server starting on port ${port}`);
 
-if (typeof Bun !== 'undefined') {
-    console.log(`Using Bun Runtime`);
-    console.log(`WebSocket clients can connect to ws://localhost:${port}/ws`);
+// ============================================================================
+// WEBSOCKET ROUTES (Hono/Bun Native)
+// ============================================================================
 
-    const server = Bun.serve({
-        port,
-        fetch: app.fetch,
-        websocket: {
-            // eslint-disable-next-line @typescript-eslint/no-explicit-any
-            open(ws: any) {
-                wsClients.add(ws);
-                ws.send(JSON.stringify({ type: 'connected', timestamp: Date.now() }));
-                console.log(`WebSocket client connected (${wsClients.size} total)`);
-            },
-            // eslint-disable-next-line @typescript-eslint/no-explicit-any
-            message(ws: any, message: any) {
-                try {
-                    const data = JSON.parse(message.toString());
-                    if (data.type === 'ping') {
-                        ws.send(JSON.stringify({ type: 'pong', timestamp: Date.now() }));
-                    }
-                } catch {
-                    ws.send(JSON.stringify({ type: 'error', message: 'Invalid JSON' }));
+app.get('/ws', upgradeWebSocket((c) => {
+    return {
+        onOpen(event, ws) {
+            wsClients.add(ws as unknown as ServerWebSocket<any>);
+            ws.send(JSON.stringify({ type: 'connected', timestamp: Date.now() }));
+            console.log(`[Daemon] WebSocket client connected (${wsClients.size} total)`);
+        },
+        onMessage(event, ws) {
+            try {
+                const data = JSON.parse(event.data.toString());
+                if (data.type === 'ping') {
+                    ws.send(JSON.stringify({ type: 'pong', timestamp: Date.now() }));
                 }
-            },
-            // eslint-disable-next-line @typescript-eslint/no-explicit-any
-            close(ws: any) {
-                wsClients.delete(ws);
-                console.log(`WebSocket client disconnected (${wsClients.size} total)`);
+            } catch {
+                ws.send(JSON.stringify({ type: 'error', message: 'Invalid JSON' }));
+            }
+        },
+        onClose(event, ws) {
+            wsClients.delete(ws as unknown as ServerWebSocket<any>);
+            console.log(`[Daemon] WebSocket client disconnected (${wsClients.size} total)`);
+        }
+    };
+}));
+
+// Terminal WebSocket Route replacing terminal-server
+app.get('/terminal/ws', upgradeWebSocket((c) => {
+    const sessionId = c.req.query('sessionId');
+    const workingDir = c.req.query('workingDir');
+    const apiKey = c.req.query('apiKey');
+
+    return {
+        onOpen(event, ws) {
+            const defaultBaseDir = fs.existsSync("/workspace") ? "/workspace" : path.join(process.cwd(), "..");
+            const baseDir = process.env.WORKSPACE_DIR || defaultBaseDir;
+            const cwd = workingDir ? path.join(baseDir, workingDir) : baseDir;
+
+            const isWindows = process.platform === "win32";
+            const shell = process.env.SHELL || (isWindows ? "powershell.exe" : "/bin/bash");
+
+            console.log(`[Terminal] Spawning PTY: ${shell} in ${cwd}`);
+
+            const ptyProcess = pty.spawn(shell, [], {
+                name: "xterm-256color",
+                cols: 80,
+                rows: 30,
+                cwd: cwd,
+                env: {
+                    ...process.env,
+                    TERM: "xterm-256color",
+                    COLORTERM: "truecolor",
+                    JULES_API_KEY: apiKey || "",
+                },
+            });
+
+            ptyProcess.onData((data) => {
+                ws.send(JSON.stringify({ type: "terminal.output", data }));
+            });
+
+            ptyProcess.onExit(({ exitCode, signal }) => {
+                console.log(`[Terminal] PTY exited: code=${exitCode}, signal=${signal}`);
+                ws.send(JSON.stringify({ type: "terminal.exit", exitCode, signal }));
+                terminalSessions.delete(sessionId || 'default');
+            });
+
+            terminalSessions.set(sessionId || 'default', {
+                ptyProcess,
+                createdAt: Date.now(),
+                ws: ws as unknown as ServerWebSocket<any>
+            });
+        },
+        onMessage(event, ws) {
+            try {
+                const payload = JSON.parse(event.data.toString());
+                const session = terminalSessions.get(sessionId || 'default');
+                if (!session) return;
+
+                if (payload.type === 'terminal.input') {
+                    session.ptyProcess.write(payload.data);
+                } else if (payload.type === 'terminal.resize') {
+                    try {
+                        session.ptyProcess.resize(payload.cols, payload.rows);
+                    } catch (e) {
+                        console.error('Resize error:', e);
+                    }
+                }
+            } catch (err) {
+                console.error("Terminal WS Error:", err);
+            }
+        },
+        onClose(event, ws) {
+            const session = terminalSessions.get(sessionId || 'default');
+            if (session) {
+                session.ptyProcess.kill();
+                terminalSessions.delete(sessionId || 'default');
+                console.log(`[Terminal] Client disconnected, PTY killed`);
             }
         }
-    });
+    };
+}));
 
-    app.get('/ws', (c) => {
-        const upgraded = server.upgrade(c.req.raw);
-        if (!upgraded) {
-            return c.text('WebSocket upgrade failed', 400);
-        }
-        return new Response(null, { status: 101 });
+// ============================================================================
+// SERVER INITIALIZATION
+// ============================================================================
+
+if (typeof Bun !== 'undefined') {
+    console.log(`Using Bun Runtime`);
+    
+    // Start MCP Server Internally
+    registerWasmPluginsAsMcpTools().then(() => {
+        console.log("[MCP] Mounting Stdio Transport internally...");
+        // Although this process is an HTTP/WS server, we can still bind an internal MCP router if desired,
+        // or just let it expose standard tools to the swarm orchestration layer.
+    }).catch(console.error);
+
+    Bun.serve({
+        port,
+        fetch: app.fetch,
+        websocket,
     });
+    console.log(`Server listening on ws://localhost:${port}/ws and ws://localhost:${port}/terminal/ws`);
 } else {
     console.log(`Using Node.js Runtime (via @hono/node-server)`);
     // Dynamic import to avoid bundling issues in Bun-only environments if not properly tree-shaken

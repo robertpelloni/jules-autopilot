@@ -1,173 +1,261 @@
-'use client';
+"use client";
 
-import { useState, useEffect, useCallback } from 'react';
+import { useState } from "react";
+import useSWR from "swr";
+import { formatDistanceToNow } from "date-fns";
+import { Plus, Server, Trash2, Unplug, Zap } from "lucide-react";
+import { toast } from "sonner";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
+
+const fetcher = (url: string) => fetch(url).then((res) => res.json());
 
 interface McpServerLink {
-    id: string;
-    name: string;
-    url: string | null;
-    command: string | null;
-    args: string | null;
-    env: string | null;
-    isActive: boolean;
-    status: string;
-    errorMsg: string | null;
-    createdAt: string;
+  id: string;
+  name: string;
+  description: string | null;
+  url: string | null;
+  command: string | null;
+  args: string | null;
+  env: string | null;
+  isActive: boolean;
+  status: string;
+  createdAt: string;
 }
 
 export default function McpLinksPage() {
-    const [links, setLinks] = useState<McpServerLink[]>([]);
-    const [loading, setLoading] = useState(true);
-    const [creating, setCreating] = useState(false);
+  const { data: links, error, isLoading, mutate } = useSWR<McpServerLink[]>("/api/mcp-links", fetcher);
+  const [isDialogOpen, setIsDialogOpen] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [connectionType, setConnectionType] = useState<"stdio" | "sse">("stdio");
 
-    // Form state
-    const [name, setName] = useState('');
-    const [transport, setTransport] = useState<'sse' | 'stdio'>('sse');
-    const [url, setUrl] = useState('');
-    const [command, setCommand] = useState('');
-    const [args, setArgs] = useState(''); // Comma separated for UI simplicity
+  // Form State
+  const [name, setName] = useState("");
+  const [description, setDescription] = useState("");
+  const [url, setUrl] = useState("");
+  const [command, setCommand] = useState("");
+  const [args, setArgs] = useState("");
+  const [env, setEnv] = useState("");
 
-    const fetchLinks = useCallback(async () => {
-        try {
-            const res = await fetch('/api/mcp-links');
-            if (res.ok) {
-                const data = await res.json();
-                setLinks(data.links);
-            }
-        } catch { /* Silent fail */ } finally {
-            setLoading(false);
-        }
-    }, []);
+  const resetForm = () => {
+    setName("");
+    setDescription("");
+    setUrl("");
+    setCommand("");
+    setArgs("");
+    setEnv("");
+    setConnectionType("stdio");
+  };
 
-    useEffect(() => { fetchLinks(); const iv = setInterval(fetchLinks, 10000); return () => clearInterval(iv); }, [fetchLinks]);
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setIsSubmitting(true);
 
-    const handleCreate = async () => {
-        if (!name || (transport === 'sse' && !url) || (transport === 'stdio' && !command)) return;
-        setCreating(true);
-        try {
-            const body = {
-                name,
-                url: transport === 'sse' ? url : undefined,
-                command: transport === 'stdio' ? command : undefined,
-                args: transport === 'stdio' && args ? args.split(',').map(s => s.trim()) : undefined
-            };
+    try {
+      const payload = {
+        name,
+        description,
+        ...(connectionType === "sse" ? { url } : { command, args, env })
+      };
 
-            await fetch('/api/mcp-links', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify(body)
-            });
-            setName(''); setUrl(''); setCommand(''); setArgs('');
-            await fetchLinks();
-        } finally {
-            setCreating(false);
-        }
-    };
+      const res = await fetch("/api/mcp-links", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload),
+      });
 
-    const handleDelete = async (id: string) => {
-        if (!confirm('Remove this MCP connection?')) return;
-        await fetch('/api/mcp-links', { method: 'DELETE', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ id }) });
-        await fetchLinks();
-    };
+      if (!res.ok) {
+        const errorData = await res.json();
+        throw new Error(errorData.error || "Failed to add MCP Link");
+      }
 
-    const handleToggle = async (id: string, current: boolean) => {
-        await fetch('/api/mcp-links', { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ id, isActive: !current }) });
-        await fetchLinks();
-    };
+      toast.success("MCP Integration Added");
+      setIsDialogOpen(false);
+      resetForm();
+      mutate();
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "An error occurred");
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
 
-    const getStatusColor = (status: string, isActive: boolean) => {
-        if (!isActive) return '#6b7280'; // gray
-        switch (status) {
-            case 'connected': return '#10b981'; // green
-            case 'error': return '#ef4444'; // red
-            default: return '#f59e0b'; // yellow/disconnected
-        }
-    };
+  const handleDelete = async (id: string, linkName: string) => {
+    if (!confirm(`Remove integration '${linkName}'?`)) return;
 
-    return (
-        <div style={{ padding: '2rem', maxWidth: '1000px', margin: '0 auto' }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem' }}>
-                <div>
-                    <h1 style={{ fontSize: '1.75rem', fontWeight: 700, marginBottom: '0.25rem' }}>🔌 Meta-MCP Federation</h1>
-                    <p style={{ color: '#9ca3af' }}>Connect external Model Context Protocol servers to Jules.</p>
-                </div>
-            </div>
+    try {
+      const res = await fetch(`/api/mcp-links/${id}`, { method: "DELETE" });
+      if (!res.ok) throw new Error("Failed to delete integration");
+      
+      toast.success("Integration removed");
+      mutate();
+    } catch (err) {
+      toast.error("Could not remove integration");
+    }
+  };
 
-            {/* Create Form */}
-            <div style={{
-                background: '#1f2937', borderRadius: '12px', padding: '1.5rem',
-                marginBottom: '2rem', border: '1px solid #374151'
-            }}>
-                <div style={{ display: 'flex', gap: '1rem', marginBottom: '1rem' }}>
-                    <input placeholder="Connection Name (e.g. PostgresDB)" value={name} onChange={e => setName(e.target.value)}
-                        style={{ flex: 1, padding: '0.6rem', borderRadius: '8px', border: '1px solid #374151', background: '#111827', color: '#fff' }} />
-                    <select value={transport} onChange={e => setTransport(e.target.value as 'sse' | 'stdio')}
-                        style={{ padding: '0.6rem', borderRadius: '8px', border: '1px solid #374151', background: '#111827', color: '#fff' }}>
-                        <option value="sse">🌐 HTTP/SSE URL</option>
-                        <option value="stdio">💻 Local Process (Stdio)</option>
-                    </select>
-                </div>
+  return (
+    <div className="min-h-screen bg-zinc-950 text-zinc-100 p-6 font-sans">
+      <div className="max-w-5xl mx-auto space-y-6">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-3">
+             <div className="p-2 rounded-lg bg-blue-500/20">
+                 <Server className="h-6 w-6 text-blue-400" />
+             </div>
+             <div>
+                <h1 className="text-2xl font-bold">MCP Meta-Mesh</h1>
+                <p className="text-sm text-zinc-500">Connect external Model Context Protocol resources to your swarm</p>
+             </div>
+          </div>
+          <div className="flex items-center space-x-2">
+            <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
+              <DialogTrigger asChild>
+                <Button onClick={resetForm}>
+                  <Plus className="mr-2 h-4 w-4" />
+                  Add Integration
+                </Button>
+              </DialogTrigger>
+              <DialogContent className="sm:max-w-[425px]">
+                <form onSubmit={handleSubmit}>
+                  <DialogHeader>
+                    <DialogTitle>Add MCP Server Link</DialogTitle>
+                    <DialogDescription>
+                      Connect Jules Autopilot to an external capability provider.
+                    </DialogDescription>
+                  </DialogHeader>
 
-                {transport === 'sse' ? (
-                    <input placeholder="http://localhost:8080/mcp" value={url} onChange={e => setUrl(e.target.value)}
-                        style={{ width: '100%', padding: '0.6rem', borderRadius: '8px', border: '1px solid #374151', background: '#111827', color: '#fff', marginBottom: '1rem' }} />
-                ) : (
-                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 2fr', gap: '1rem', marginBottom: '1rem' }}>
-                        <input placeholder="Command (e.g. npx)" value={command} onChange={e => setCommand(e.target.value)}
-                            style={{ padding: '0.6rem', borderRadius: '8px', border: '1px solid #374151', background: '#111827', color: '#fff' }} />
-                        <input placeholder="Args (comma separated: -y, @modelcontextprotocol/server-postgres, postgres://...)" value={args} onChange={e => setArgs(e.target.value)}
-                            style={{ padding: '0.6rem', borderRadius: '8px', border: '1px solid #374151', background: '#111827', color: '#fff' }} />
+                  <div className="grid gap-4 py-4">
+                    <div className="space-y-1">
+                      <Label htmlFor="type" className="text-xs font-bold text-muted-foreground uppercase">Transport Type</Label>
+                      <div className="flex gap-2">
+                        <Button 
+                          type="button" 
+                          variant={connectionType === "stdio" ? "default" : "outline"}
+                          size="sm"
+                          className="flex-1"
+                          onClick={() => setConnectionType("stdio")}
+                        >
+                          <Unplug className="mr-2 h-4 w-4" /> Stdio (Local)
+                        </Button>
+                        <Button 
+                          type="button" 
+                          variant={connectionType === "sse" ? "default" : "outline"}
+                          size="sm"
+                          className="flex-1"
+                          onClick={() => setConnectionType("sse")}
+                        >
+                          <Zap className="mr-2 h-4 w-4" /> SSE (Remote)
+                        </Button>
+                      </div>
                     </div>
-                )}
 
-                <button onClick={handleCreate} disabled={creating || !name} style={{
-                    padding: '0.6rem 1.5rem', borderRadius: '8px', border: 'none',
-                    background: creating ? '#374151' : '#8b5cf6', color: '#fff', fontWeight: 600, cursor: creating ? 'not-allowed' : 'pointer'
-                }}>
-                    {creating ? 'Adding...' : '🔌 Add MCP Server'}
-                </button>
-            </div>
+                    <div className="space-y-1">
+                      <Label htmlFor="name">Name</Label>
+                      <Input id="name" required placeholder="e.g. pg-sql-mcp" value={name} onChange={(e) => setName(e.target.value)} />
+                    </div>
 
-            {/* List */}
-            {loading ? <p style={{ color: '#9ca3af', textAlign: 'center' }}>Loading connections...</p> :
-                links.length === 0 ? <p style={{ color: '#9ca3af', textAlign: 'center' }}>No external MCP servers configured.</p> :
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
-                        {links.map(link => (
-                            <div key={link.id} style={{
-                                background: '#1f2937', borderRadius: '12px', padding: '1.25rem',
-                                border: '1px solid #374151', opacity: link.isActive ? 1 : 0.6,
-                                display: 'flex', alignItems: 'center', gap: '1rem'
-                            }}>
-                                <div style={{
-                                    width: '12px', height: '12px', borderRadius: '50%',
-                                    background: getStatusColor(link.status, link.isActive),
-                                    boxShadow: `0 0 8px ${getStatusColor(link.status, link.isActive)}40`
-                                }} />
+                    <div className="space-y-1">
+                      <Label htmlFor="description">Description (optional)</Label>
+                      <Textarea 
+                        id="description" 
+                        placeholder="Provides read-only access to the prod replica DB..." 
+                        value={description} 
+                        onChange={(e) => setDescription(e.target.value)} 
+                        className="resize-none h-16"
+                      />
+                    </div>
 
-                                <div style={{ flex: 1 }}>
-                                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
-                                        <span style={{ fontWeight: 600, fontSize: '1.1rem' }}>{link.name}</span>
-                                        <span style={{ fontSize: '0.7rem', color: '#8b5cf6', background: '#8b5cf620', padding: '0.2rem 0.5rem', borderRadius: '4px', textTransform: 'uppercase' }}>
-                                            {link.url ? 'SSE' : 'STDIO'}
-                                        </span>
-                                    </div>
-                                    <code style={{ display: 'block', color: '#9ca3af', fontSize: '0.8rem', marginTop: '0.25rem' }}>
-                                        {link.url || `${link.command} ${link.args ? JSON.parse(link.args).join(' ') : ''}`}
-                                    </code>
-                                    {link.errorMsg && <p style={{ color: '#ef4444', fontSize: '0.8rem', margin: '0.5rem 0 0' }}>Error: {link.errorMsg}</p>}
-                                </div>
+                    {connectionType === "sse" ? (
+                      <div className="space-y-1">
+                        <Label htmlFor="url">SSE Connection URL</Label>
+                        <Input id="url" type="url" required placeholder="http://10.0.0.5:4000/sse" value={url} onChange={(e) => setUrl(e.target.value)} />
+                      </div>
+                    ) : (
+                      <>
+                        <div className="space-y-1">
+                          <Label htmlFor="command">Command</Label>
+                          <Input id="command" required placeholder="npx" value={command} onChange={(e) => setCommand(e.target.value)} />
+                        </div>
+                        <div className="space-y-1">
+                          <Label htmlFor="args">Arguments (space separated)</Label>
+                          <Input id="args" placeholder="-y @modelcontextprotocol/server-postgres postgresql://..." value={args} onChange={(e) => setArgs(e.target.value)} />
+                        </div>
+                        <div className="space-y-1">
+                          <Label htmlFor="env">Environment (K=V, space separated)</Label>
+                          <Input id="env" placeholder="DEBUG=mcp* API_TOKEN=xyz" value={env} onChange={(e) => setEnv(e.target.value)} />
+                        </div>
+                      </>
+                    )}
+                  </div>
 
-                                <div style={{ display: 'flex', gap: '0.5rem' }}>
-                                    <button onClick={() => handleToggle(link.id, link.isActive)} style={{ padding: '0.4rem 0.8rem', borderRadius: '6px', border: '1px solid #374151', background: '#111827', color: '#d1d5db', fontSize: '0.8rem', cursor: 'pointer' }}>
-                                        {link.isActive ? 'Disable' : 'Enable'}
-                                    </button>
-                                    <button onClick={() => handleDelete(link.id)} style={{ padding: '0.4rem 0.8rem', borderRadius: '6px', border: 'none', background: '#7f1d1d', color: '#fca5a5', fontSize: '0.8rem', cursor: 'pointer' }}>
-                                        Remove
-                                    </button>
-                                </div>
-                            </div>
-                        ))}
-                    </div>}
+                  <DialogFooter>
+                    <Button type="button" variant="outline" onClick={() => setIsDialogOpen(false)}>Cancel</Button>
+                    <Button type="submit" disabled={isSubmitting}>{isSubmitting ? "Linking..." : "Connect Server"}</Button>
+                  </DialogFooter>
+                </form>
+              </DialogContent>
+            </Dialog>
+          </div>
         </div>
-    );
+
+        {isLoading ? (
+          <div className="text-center py-10 text-muted-foreground">Loading integrations...</div>
+        ) : error ? (
+          <div className="text-center py-10 text-destructive">Failed to load MCP links.</div>
+        ) : links?.length === 0 ? (
+          <Card className="border-dashed">
+            <CardContent className="flex flex-col items-center justify-center p-12 text-center text-sm text-muted-foreground">
+              <Server className="h-10 w-10 mb-4 opacity-20" />
+              <p>No external MCP servers are linked to this workspace.</p>
+              <p className="mt-1">Add a Stdio or SSE connection to expand the swarm's capabilities.</p>
+            </CardContent>
+          </Card>
+        ) : (
+          <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+            {links?.map((link) => (
+              <Card key={link.id} className="flex flex-col">
+                <CardHeader className="flex flex-row items-start justify-between space-y-0 pb-2">
+                  <div className="space-y-1">
+                    <CardTitle className="text-base flex items-center gap-2">
+                      <Server className="h-4 w-4 text-blue-500" />
+                      {link.name}
+                    </CardTitle>
+                    <CardDescription className="line-clamp-2 min-h-8">
+                      {link.description || "No description provided."}
+                    </CardDescription>
+                  </div>
+                  <Badge variant={link.status === "connected" ? "default" : "secondary"} className="ml-2">
+                    {link.status}
+                  </Badge>
+                </CardHeader>
+                <CardContent className="flex-1 mt-4 space-y-4">
+                  <div className="text-xs font-mono bg-muted p-2 rounded-md ovrflow-hidden break-all">
+                    {link.url ? (
+                      <span className="text-blue-400">SSE: {link.url}</span>
+                    ) : (
+                      <>
+                        <span className="text-green-400">`$ {link.command} {link.args}`</span>
+                        {link.env && <div className="mt-1 pt-1 border-t border-border/50 text-amber-500/70">{link.env}</div>}
+                      </>
+                    )}
+                  </div>
+                  <div className="flex items-center justify-between text-xs text-muted-foreground">
+                    <span>Added {formatDistanceToNow(new Date(link.createdAt), { addSuffix: true })}</span>
+                    <Button variant="ghost" size="icon" className="h-6 w-6 text-red-400 hover:text-red-500" onClick={() => handleDelete(link.id, link.name)}>
+                      <Trash2 className="h-3 w-3" />
+                    </Button>
+                  </div>
+                </CardContent>
+              </Card>
+            ))}
+          </div>
+        )}
+      </div>
+    </div>
+  );
 }

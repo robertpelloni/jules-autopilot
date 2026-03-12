@@ -3,7 +3,6 @@ import type {
   Session,
   Activity,
   CreateSessionRequest,
-  CreateActivityRequest,
   SessionOutput,
   SessionTemplate,
   Artifact
@@ -414,7 +413,7 @@ export class JulesClient {
 
   async updateSession(sessionId: string, updates: Partial<Session>): Promise<Session> {
     const normalizedSessionId = this.normalizeSessionId(sessionId);
-    const body: Record<string, any> = {};
+    const body: Record<string, unknown> = {};
     const updateMaskParts: string[] = [];
 
     // Map frontend 'status' to backend 'state'
@@ -456,19 +455,38 @@ export class JulesClient {
     }
   }
 
-  async listActivities(sessionId: string, limit: number = 1000, offset: number = 0): Promise<Activity[]> {
+  async listActivities(sessionId: string, limit: number = 1000): Promise<Activity[]> {
     const normalizedSessionId = this.normalizeSessionId(sessionId);
-    const params = new URLSearchParams();
-    params.set('pageSize', String(limit));
-    if (offset > 0) {
-      params.set('pageToken', String(offset));
-    }
+    let allActivities: ApiActivity[] = [];
+    let pageToken: string | undefined;
 
-    const endpoint = `/sessions/${normalizedSessionId}/activities?${params.toString()}`;
-    const response = await this.request<{ activities?: ApiActivity[] } | ApiActivity[]>(endpoint);
-    const activityList = Array.isArray(response) ? response : (response.activities || []);
-    
-    return activityList.map(a => this.transformActivity(a, normalizedSessionId));
+    try {
+      do {
+        const params = new URLSearchParams();
+        params.set('pageSize', String(limit));
+        if (pageToken) {
+          params.set('pageToken', pageToken);
+        }
+
+        const endpoint = `/sessions/${normalizedSessionId}/activities?${params.toString()}`;
+        const response = await this.request<{ activities?: ApiActivity[]; nextPageToken?: string } | ApiActivity[]>(endpoint);
+        
+        if (Array.isArray(response)) {
+          allActivities = response;
+          break; // Legacy or direct array response
+        } else {
+          if (response.activities) {
+            allActivities = allActivities.concat(response.activities);
+          }
+          pageToken = response.nextPageToken;
+        }
+      } while (pageToken);
+      
+      return allActivities.map(a => this.transformActivity(a, normalizedSessionId));
+    } catch (error) {
+      console.error('[JulesClient] Failed to list activities:', error);
+      throw error;
+    }
   }
 
   private transformActivity(activity: ApiActivity, sessionId: string): Activity {
@@ -516,6 +534,10 @@ export class JulesClient {
       content = activity.sessionCompleted.summary || activity.sessionCompleted.message || 'Session Completed';
     }
 
+    if (!content) {
+      content = activity.content || activity.message || activity.text || activity.description || '';
+    }
+
     return {
       id: activity.id || `temp-${Date.now()}`,
       sessionId,
@@ -530,19 +552,8 @@ export class JulesClient {
     };
   }
 
-  async createActivity(params: { sessionId: string; content: string; type?: string; metadata?: any; role?: 'user' | 'agent' }): Promise<Activity> {
+  async createActivity(params: { sessionId: string; content: string; type?: string; metadata?: Record<string, unknown>; role?: 'user' | 'agent' }): Promise<Activity> {
     const normalizedSessionId = this.normalizeSessionId(params.sessionId);
-    // Check if the content implies a specific action (like a slash command or special instruction)
-    // or if we should use the sendMessage endpoint which is more robust for agent interaction.
-    
-    // For standard chat messages, use the :sendMessage action endpoint if possible
-    // as it might be handled differently by the backend orchestrator than a generic activity create.
-    
-    // However, looking at the previous implementation, it seems it was constructing a userMessage object
-    // and POSTing to /activities. 
-    
-    // Let's try to align with the 'sendMessage' pattern seen in other parts of the codebase
-    // (e.g., antigravity-jules-orchestration) which POSTs to /sessions/{id}:sendMessage
     
     try {
         if (params.type === 'message' || !params.type) {
@@ -550,23 +561,28 @@ export class JulesClient {
           const response = await this.request<ApiActivity>(`/sessions/${normalizedSessionId}:sendMessage`, {
                 method: 'POST',
                 body: JSON.stringify({
-                    message: params.content 
-                    // Note: backend might expect 'prompt' or 'message'. 
-                    // Based on grep results: 
-                    // - antigravity-jules-orchestration uses { message: ... }
-                    // - python sdk uses { prompt: ... }
-                    // Let's try sending both or check if we can fallback.
-                    // Safest bet based on JS usage in grep is 'message'.
+                    prompt: params.content 
                 }),
             });
-              return this.transformActivity(response, normalizedSessionId);
+            
+            // If response is empty (void), construct a manual activity for optimistic UI
+            if (!response || Object.keys(response).length === 0) {
+                return {
+                    id: `temp-${Date.now()}`,
+                    sessionId: normalizedSessionId,
+                    type: 'message',
+                    role: params.role || 'user',
+                    content: params.content,
+                    createdAt: new Date().toISOString(),
+                    metadata: {}
+                };
+            }
+            
+            return this.transformActivity(response, normalizedSessionId);
         } else {
              // For other types like 'result' or explicit role setting, we use the manual creation if supported
-             // OR we mock the return object if the backend doesn't support creating arbitrary activities directly.
-             // Currently the backend seems to allow creating activities via POST /activities, but let's verify.
-             
              // Fallback to original implementation which allows more flexibility
-            const body: any = {
+            const body: Record<string, unknown> = {
                 content: params.content
             };
             
@@ -587,6 +603,18 @@ export class JulesClient {
                 method: 'POST',
                 body: JSON.stringify(body),
             });
+            
+            if (!response || Object.keys(response).length === 0) {
+                return {
+                    id: `temp-${Date.now()}`,
+                    sessionId: normalizedSessionId,
+                    type: (params.type as Activity['type']) || 'message',
+                    role: params.role || 'user',
+                    content: params.content,
+                    createdAt: new Date().toISOString(),
+                    metadata: {}
+                };
+            }
     
             return this.transformActivity(response, normalizedSessionId);
         }
@@ -605,6 +633,18 @@ export class JulesClient {
             method: 'POST',
             body: JSON.stringify(body),
         });
+
+        if (!response || Object.keys(response).length === 0) {
+            return {
+                id: `temp-${Date.now()}`,
+                sessionId: normalizedSessionId,
+                type: 'message',
+                role: 'user',
+                content: params.content,
+                createdAt: new Date().toISOString(),
+                metadata: {}
+            };
+        }
 
         return this.transformActivity(response, normalizedSessionId);
     }
@@ -750,8 +790,8 @@ export class JulesClient {
     return res.content;
   }
 
-  async runDirectReview(request: any): Promise<any> {
-    return this.fetchLocal<any>('/api/review', {
+  async runDirectReview(request: Record<string, unknown>): Promise<Record<string, unknown>> {
+    return this.fetchLocal<Record<string, unknown>>('/api/review', {
       method: 'POST',
       body: JSON.stringify(request)
     });

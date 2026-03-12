@@ -82,3 +82,11 @@ For granular tasks and immediate bug fixes, see `TODO.md` and `task.md`.
 ## Milestone: v16.0 — "The Lens"
 * [x] **Session Replay Dashboard:** Timeline-based `/dashboard/snapshots` page with session ID search, actor icons (user/assistant/system), event type badges, sequence numbers, and paginated browsing, backed by a new `/api/snapshots` API.
 * [x] **System Health Dashboard:** Auto-refreshing `/dashboard/system` page showing database/daemon service status, uptime, and platform-wide metrics (sessions, swarms, plugins, active jobs).
+
+## Milestone: v17.0 — "The Circuit"
+* [x] **Session Transfers Dashboard:** Intuitive `/dashboard/transfers` page allowing users to view cross-provider context handoffs, showing source/target providers and session IDs, item counts (activities, files), and completion rules, powered by the `/api/transfers` API.
+* [x] **System Alerts Dashboard:** Actionable `/dashboard/alerts` hub displaying system notifications with severity-based styling (info/warning/error/success), read statuses, and mark-as-read API actions across `/api/alerts`.
+
+## Milestone: v18.0 — "The Core Team"
+* [x] **Workspace Members Dashboard:** Intuitive `/dashboard/members` UI providing tabular display of users, visual role badges (Admin/Member/Viewer), and a secure email invitation modal hooked into the v14.0 API.
+* [x] **Data Import API:** Robust `/api/import` endpoint handling `multipart/form-data` JSON uploads to seamlessly restore database environments (Debates, API Keys, Routing Policies, Templates, Provider Usage) matching the v13.0 `/api/export` payload.

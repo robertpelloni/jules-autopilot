@@ -12,7 +12,7 @@ try {
 const nextConfig: NextConfig = {
   output: 'standalone',
   env: {
-    NEXT_PUBLIC_APP_VERSION: version,
+    NEXT_PUBLIC_APP_VERSION: '0.8.0',
   },
   transpilePackages: ['@jules/shared'],
   experimental: {

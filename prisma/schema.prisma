@@ -71,19 +71,6 @@ model AuditLog {
   createdAt  DateTime @default(now())
 }
 
-model CodeChunk {
-  id String @id @default(cuid())
-  filePath  String
-  startLine Int
-  endLine   Int
-  content   String
-  embedding Bytes?
-  checksum  String
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-  @@index([filePath])
-}
-
 model Debate {
   id String @id @default(cuid())
   topic            String
@@ -501,4 +488,48 @@ model ProviderConfig {
 
   @@unique([workspaceId, providerId])
   @@index([workspaceId])
+}
+
+model CodeChunk {
+  id          String   @id @default(cuid())
+  workspaceId String
+  filepath    String
+  content     String
+  startLine   Int
+  endLine     Int
+  embedding   Bytes?   // Stored as Float32Array blob for libSQL vector search, 1536 dims
+  checksum    String   // MD5 or SHA for cache validation
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@index([workspaceId, filepath])
+}
+
+model Workflow {
+  id          String         @id @default(cuid())
+  name        String
+  description String?
+  triggerType String         @default("manual") // manual | scheduled | webhook
+  status      String         @default("pending") // pending | running | completed | failed
+  metadata    String?        // JSON config
+  createdAt   DateTime       @default(now())
+  updatedAt   DateTime       @updatedAt
+  steps       WorkflowStep[]
+}
+
+model WorkflowStep {
+  id         String   @id @default(cuid())
+  workflowId String
+  order      Int
+  name       String
+  stepType   String   // session | swarm | ci_check | guard_check | custom
+  config     String   @default("{}") // JSON step config (prompt, repo, etc.)
+  dependsOn  String?  // ID of step that must complete first
+  status     String   @default("pending") // pending | running | completed | failed | skipped
+  result     String?  // JSON output
+  startedAt  DateTime?
+  finishedAt DateTime?
+  workflow   Workflow @relation(fields: [workflowId], references: [id], onDelete: Cascade)
+
+  @@index([workflowId])
 }

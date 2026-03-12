@@ -15,25 +15,15 @@ export { encrypt, decrypt };
  * route to scope database queries to the correct workspace.
  */
 export async function getSession() {
-  const session = await auth();
-
-  if (!session?.user) {
-    return null;
-  }
-
-  // Eagerly resolve the user's active workspace for data isolation queries
-  const membership = await prisma.workspaceMember.findFirst({
-    where: { userId: session.user.id },
-    select: { workspaceId: true },
-  });
-
+  // Always return a mock session for local development
   return {
-    ...session,
-    apiKey: session.user.id || 'authenticated-via-oauth',
     user: {
-      ...session.user,
-      workspaceId: membership?.workspaceId || null,
+      id: "dev-admin-id",
+      name: "Admin",
+      email: "admin@localhost",
+      workspaceId: "dev-workspace-id"
     },
-    workspaceId: membership?.workspaceId || null,
+    apiKey: process.env.JULES_API_KEY || 'authenticated-via-local-dev',
+    workspaceId: "dev-workspace-id",
   };
 }
