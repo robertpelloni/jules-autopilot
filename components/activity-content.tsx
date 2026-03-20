@@ -24,8 +24,8 @@ const formatContent = (content: string, metadata?: Record<string, any>): React.R
            return formatContent(realContent, undefined);
       }
 
-      if (trimmedContent === '[userMessaged]') return <span className="text-white/50 italic">Message sent</span>;
-      if (trimmedContent === '[agentMessaged]') return <span className="text-white/50 italic">Agent working...</span>;
+      if (trimmedContent === '[userMessaged]') return <span className="text-muted-foreground italic">Message sent</span>;
+      if (trimmedContent === '[agentMessaged]') return <span className="text-muted-foreground italic">Agent working...</span>;
   }
 
   // 2. Try JSON Parsing

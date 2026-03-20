@@ -80,16 +80,16 @@ export const ActivityItem = memo(function ActivityItem({
       </Avatar>
       
       {activity.role === "user" ? (
-        <Card className="flex-1 min-w-0 border-white/[0.08] bg-purple-950/20 border-purple-500/20">
-          <CardContent className="p-3 group/card relative">
+        <Card className="flex-1 min-w-0 border-primary/20 bg-primary/10">
+          <CardContent className="p-3 group/card relative text-card-foreground">
             <div className="flex items-center gap-2 mb-2">
               <Badge
                 variant="outline"
-                className={`text-[9px] h-4 px-1.5 font-mono uppercase tracking-wider ${getActivityTypeColor(activity.type)} border-transparent text-black font-bold`}
+                className={`text-[9px] h-4 px-1.5 font-mono uppercase tracking-wider ${getActivityTypeColor(activity.type)} border-transparent text-white font-bold`}
               >
                 {activity.type}
               </Badge>
-              <span className="text-[9px] font-mono text-white/40 tracking-wide">
+              <span className="text-[9px] font-mono text-muted-foreground tracking-wide">
                 {formatDate(activity.createdAt)}
               </span>
               <Button
@@ -98,10 +98,10 @@ export const ActivityItem = memo(function ActivityItem({
                 className="h-4 w-4 ml-auto opacity-0 group-hover/card:opacity-100 transition-opacity"
                 onClick={handleCopy}
               >
-                {copied ? <Check className="h-3 w-3 text-green-500" /> : <Copy className="h-3 w-3 text-white/40" />}
+                {copied ? <Check className="h-3 w-3 text-green-500" /> : <Copy className="h-3 w-3 text-muted-foreground" />}
               </Button>
             </div>
-            <div className="text-[11px] leading-relaxed text-white/90 break-words">
+            <div className="text-[11px] leading-relaxed break-words">
               <ActivityContent content={activity.content} metadata={activity.metadata} />
             </div>
           </CardContent>
@@ -109,18 +109,18 @@ export const ActivityItem = memo(function ActivityItem({
       ) : (
         <BorderGlow
           className="flex-1 min-w-0"
-          containerClassName="bg-zinc-950/50"
+          containerClassName="bg-muted/50"
         >
-          <Card className="border-0 bg-transparent">
+          <Card className="border-0 bg-transparent text-card-foreground">
             <CardContent className="p-3 group/card relative">
               <div className="flex items-center gap-2 mb-2">
                 <Badge
                   variant="outline"
-                  className={`text-[9px] h-4 px-1.5 font-mono uppercase tracking-wider ${getActivityTypeColor(activity.type)} border-transparent text-black font-bold`}
+                  className={`text-[9px] h-4 px-1.5 font-mono uppercase tracking-wider ${getActivityTypeColor(activity.type)} border-transparent text-white font-bold`}
                 >
                   {activity.type}
                 </Badge>
-                <span className="text-[9px] font-mono text-white/40 tracking-wide">
+                <span className="text-[9px] font-mono text-muted-foreground tracking-wide">
                   {formatDate(activity.createdAt)}
                 </span>
                 <Button
@@ -129,12 +129,12 @@ export const ActivityItem = memo(function ActivityItem({
                   className="h-4 w-4 ml-auto opacity-0 group-hover/card:opacity-100 transition-opacity"
                   onClick={handleCopy}
                 >
-                  {copied ? <Check className="h-3 w-3 text-green-500" /> : <Copy className="h-3 w-3 text-white/40" />}
+                  {copied ? <Check className="h-3 w-3 text-green-500" /> : <Copy className="h-3 w-3 text-muted-foreground" />}
                 </Button>
               </div>
 
               {activity.media && activity.media.data && (
-                  <div className="mb-2 rounded overflow-hidden border border-white/10">
+                  <div className="mb-2 rounded overflow-hidden border border-border">
                     <img
                       src={`data:${activity.media.mimeType};base64,${activity.media.data}`}
                       alt="Generated Artifact"
@@ -143,7 +143,7 @@ export const ActivityItem = memo(function ActivityItem({
                   </div>
               )}
 
-              <div className="text-[11px] leading-relaxed text-white/90 break-words">
+              <div className="text-[11px] leading-relaxed break-words">
                 <ActivityContent content={activity.content} metadata={activity.metadata} />
               </div>
 

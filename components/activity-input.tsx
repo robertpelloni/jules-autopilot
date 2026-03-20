@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useRef, useEffect } from 'react';
+import { useState, useRef } from 'react';
 import { Textarea } from '@/components/ui/textarea';
 import { Button } from '@/components/ui/button';
 import { Send, Loader2 } from 'lucide-react';
@@ -40,7 +40,7 @@ export function ActivityInput({ onSendMessage, disabled, placeholder = "Send a m
   return (
     <form
       onSubmit={handleSubmit}
-      className="border-t border-white/[0.08] bg-zinc-950/95 p-3"
+      className="border-t border-border bg-card/95 p-3"
     >
       <div className="flex gap-2">
         <Textarea
@@ -48,7 +48,7 @@ export function ActivityInput({ onSendMessage, disabled, placeholder = "Send a m
           value={message}
           onChange={(e) => setMessage(e.target.value)}
           placeholder={placeholder}
-          className="min-h-[56px] resize-none text-[11px] bg-black border-white/[0.08] text-white placeholder:text-white/30 focus:border-purple-500/50"
+          className="min-h-[56px] resize-none text-[11px] bg-background border-border text-foreground placeholder:text-muted-foreground/50 focus:border-primary/50"
           onKeyDown={handleKeyDown}
           disabled={disabled}
         />
@@ -57,7 +57,7 @@ export function ActivityInput({ onSendMessage, disabled, placeholder = "Send a m
           size="icon"
           aria-label="Send message"
           disabled={!message.trim() || disabled}
-          className="h-9 w-9"
+          className="h-9 w-9 bg-primary hover:bg-primary/90 text-primary-foreground"
         >
           {disabled ? (
             <Loader2 className="h-3.5 w-3.5 animate-spin" />

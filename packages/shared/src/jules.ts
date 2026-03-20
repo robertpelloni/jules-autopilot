@@ -1,3 +1,5 @@
+import { Participant } from "./orchestration/types";
+
 export interface Source {
     id: string;
     name: string;
@@ -101,27 +103,16 @@ export interface SessionKeeperConfig {
     checkIntervalSeconds: number;
     inactivityThresholdMinutes: number;
     activeWorkThresholdMinutes: number;
-    messages: string[]; // Fallback messages
-    customMessages: Record<string, string[]>;
+    messages: string[]; // Encouragement messages
 
     // Smart Auto-Pilot Settings
     smartPilotEnabled: boolean;
-    supervisorProvider: 'openai' | 'openai-assistants' | 'anthropic' | 'gemini';
+    supervisorProvider: 'openai' | 'anthropic' | 'gemini';
     supervisorApiKey: string;
     supervisorModel: string;
     contextMessageCount: number;
 
-    // Debate Configuration
-    debateEnabled?: boolean;
-    resumePaused?: boolean;
-    shadowPilotEnabled?: boolean;
-    debateParticipants?: {
-        id: string;
-        name: string;
-        provider: string;
-        model: string;
-        apiKey: string;
-        role: string;
-        systemPrompt: string;
-    }[];
+    // Debate Settings
+    debateEnabled: boolean;
+    debateParticipants: Participant[];
 }

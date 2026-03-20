@@ -1,3 +1,4 @@
+import { Participant } from "./orchestration/types";
 export interface Source {
     id: string;
     name: string;
@@ -98,23 +99,12 @@ export interface SessionKeeperConfig {
     inactivityThresholdMinutes: number;
     activeWorkThresholdMinutes: number;
     messages: string[];
-    customMessages: Record<string, string[]>;
     smartPilotEnabled: boolean;
-    supervisorProvider: 'openai' | 'openai-assistants' | 'anthropic' | 'gemini';
+    supervisorProvider: 'openai' | 'anthropic' | 'gemini';
     supervisorApiKey: string;
     supervisorModel: string;
     contextMessageCount: number;
-    debateEnabled?: boolean;
-    resumePaused?: boolean;
-    shadowPilotEnabled?: boolean;
-    debateParticipants?: {
-        id: string;
-        name: string;
-        provider: string;
-        model: string;
-        apiKey: string;
-        role: string;
-        systemPrompt: string;
-    }[];
+    debateEnabled: boolean;
+    debateParticipants: Participant[];
 }
 //# sourceMappingURL=jules.d.ts.map

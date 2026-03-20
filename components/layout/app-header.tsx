@@ -1,396 +1,111 @@
-import { useState, useEffect } from "react";
-import { useJules } from "@/lib/jules/provider";
 import { Button } from "@/components/ui/button";
-import {
-  Sheet,
-  SheetContent,
-  SheetHeader,
-  SheetTitle,
-  SheetTrigger,
-} from "@/components/ui/sheet";
+import { 
+  Search, 
+  Plus, 
+  Settings as SettingsIcon, 
+  Terminal,
+  User
+} from "lucide-react";
+import { useState } from "react";
+import { SettingsDialog } from "@/components/settings-dialog";
+import { Badge } from "@/components/ui/badge";
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
-  DropdownMenuTrigger,
+  DropdownMenuLabel,
   DropdownMenuSeparator,
+  DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import {
-  Menu,
-  LogOut,
-  Settings,
-  BarChart3,
-  MessageSquare,
-  LayoutTemplate,
-  Plus,
-  Kanban,
-  Activity as ActivityIcon,
-  FolderTree,
-  Search,
-  Scale,
-  User,
-  Terminal
-} from "lucide-react";
-import { SessionList } from "@/components/session-list";
-import { NewSessionDialog } from "@/components/new-session-dialog";
-import { BroadcastDialog } from "@/components/broadcast-dialog";
-import { SettingsDialog } from "@/components/settings-dialog";
-import { ModeToggle } from "@/components/mode-toggle";
-import { ContextHelp } from "@/components/context-help";
-import { Session } from '@jules/shared';
-import { useRouter } from "next/navigation";
-import { signOut } from "next-auth/react";
+import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 
 interface AppHeaderProps {
-  view: 'sessions' | 'analytics' | 'templates' | 'kanban' | 'board' | 'artifacts' | 'debates';
-  setView: (view: 'sessions' | 'analytics' | 'templates' | 'kanban' | 'board' | 'artifacts' | 'debates') => void;
-  onToggleSearch: () => void;
-  mobileMenuOpen: boolean;
-
-  setMobileMenuOpen: (open: boolean) => void;
-  refreshKey: number;
-  selectedSession: Session | null;
-  onSelectSession: (session: Session | string) => void;
-  isNewSessionOpen: boolean;
-  setIsNewSessionOpen: (open: boolean) => void;
-  newSessionInitialValues?: {
-    sourceId?: string;
-    title?: string;
-    prompt?: string;
-    startingBranch?: string;
-  };
-  onSessionCreated: (sessionId?: string) => void;
-  onOpenNewSession: () => void;
-  isSettingsOpen: boolean;
-  setIsSettingsOpen: (open: boolean) => void;
-  isLogPanelOpen: boolean;
-  setIsLogPanelOpen: (open: boolean) => void;
+  onSearchClick: () => void;
+  onNewSession: () => void;
 }
 
-export function AppHeader({
-  view,
-  setView,
-  onToggleSearch,
-  mobileMenuOpen,
-  setMobileMenuOpen,
-  refreshKey,
-  selectedSession,
-  onSelectSession,
-  isNewSessionOpen,
-  setIsNewSessionOpen,
-  newSessionInitialValues,
-  onSessionCreated,
-  onOpenNewSession,
-  isSettingsOpen,
-  setIsSettingsOpen,
-  isLogPanelOpen,
-  setIsLogPanelOpen,
-}: AppHeaderProps) {
-  const router = useRouter();
-  const { client } = useJules();
-  const [openSessions, setOpenSessions] = useState<Session[]>([]);
-
-  const handleLogout = async () => {
-    await signOut({ callbackUrl: '/login' });
-  };
-
-  // Load all sessions for broadcast
-  useEffect(() => {
-    if (!client) return;
-    client.listSessions().then(setOpenSessions).catch(console.error);
-  }, [client, refreshKey]);
+export function AppHeader({ onSearchClick, onNewSession }: AppHeaderProps) {
+  const [isSettingsOpen, setIsSettingsOpen] = useState(false);
 
   return (
-    <header className="border-b border-white/[0.08] bg-zinc-950/95 backdrop-blur-sm">
-      <div className="flex h-14 items-center justify-between px-4">
-        <div className="flex items-center gap-3">
-          <Sheet open={mobileMenuOpen} onOpenChange={setMobileMenuOpen}>
-            <SheetTrigger asChild>
-              <Button
-                variant="ghost"
-                size="icon"
-                className="md:hidden h-8 w-8"
-                aria-label="Toggle mobile menu"
-                aria-expanded={mobileMenuOpen}
-              >
-                <Menu className="h-4 w-4" />
-              </Button>
-            </SheetTrigger>
-            <SheetContent side="left" className="w-[280px] p-0 bg-zinc-950 border-white/[0.08] flex flex-col">
-              <SheetHeader className="border-b border-white/[0.08] px-4 py-3 text-left">
-                <SheetTitle className="text-sm font-bold text-white">JULES</SheetTitle>
-              </SheetHeader>
-
-              <div className="flex-1 overflow-y-auto">
-                <div className="px-2 py-2 space-y-1 border-b border-white/[0.08]">
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    className={`w-full justify-start ${view === "sessions" ? "bg-white/10 text-white" : "text-white/60"}`}
-                    onClick={() => { setView("sessions"); setMobileMenuOpen(false); }}
-                  >
-                    <MessageSquare className="h-4 w-4 mr-2" />
-                    Sessions
-                  </Button>
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    className={`w-full justify-start ${view === "analytics" ? "bg-white/10 text-white" : "text-white/60"}`}
-                    onClick={() => { setView("analytics"); setMobileMenuOpen(false); }}
-                  >
-                    <BarChart3 className="h-4 w-4 mr-2" />
-                    Analytics
-                  </Button>
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    className={`w-full justify-start ${view === "debates" ? "bg-white/10 text-white" : "text-white/60"}`}
-                    onClick={() => { setView("debates"); setMobileMenuOpen(false); }}
-                  >
-                    <Scale className="h-4 w-4 mr-2" />
-                    Debates
-                  </Button>
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    className={`w-full justify-start ${view === "kanban" ? "bg-white/10 text-white" : "text-white/60"}`}
-                    onClick={() => { setView("kanban"); setMobileMenuOpen(false); }}
-                  >
-                    <Kanban className="h-4 w-4 mr-2" />
-                    Kanban
-                  </Button>
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    className={`w-full justify-start ${isLogPanelOpen ? "bg-white/10 text-white" : "text-white/60"}`}
-                    onClick={() => { setIsLogPanelOpen(!isLogPanelOpen); setMobileMenuOpen(false); }}
-                  >
-                    <ActivityIcon className="h-4 w-4 mr-2" />
-                    Monitor
-                  </Button>
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    className="w-full justify-start text-white/60"
-                    onClick={() => { router.push("/system"); setMobileMenuOpen(false); }}
-                  >
-                    <FolderTree className="h-4 w-4 mr-2" />
-                    System
-                  </Button>
-                </div>
-
-                <div className="px-4 py-2 text-[10px] font-bold text-white/40 uppercase tracking-widest">
-                  Sessions
-                </div>
-                <div className="px-2 pb-4">
-                  <SessionList
-                    key={refreshKey}
-                    onSelectSession={(s) => { onSelectSession(s); setMobileMenuOpen(false); }}
-                    selectedSessionId={selectedSession?.id}
-                  />
-                </div>
-              </div>
-            </SheetContent>
-          </Sheet>
-          <h1 className="text-sm font-bold tracking-tight text-white">JULES</h1>
-          <span className="text-[9px] font-mono text-white/30 bg-white/5 px-1.5 py-0.5 rounded-sm">
-            v{process.env.NEXT_PUBLIC_APP_VERSION || '0.8.0'}
-          </span>
-
-          {/* GitHub Repo Link */}
-          {selectedSession?.sourceId && (
-            <a
-              href={`https://github.com/${selectedSession.sourceId}`}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="text-xs text-muted-foreground hover:text-white flex items-center gap-1 ml-4"
-            >
-              <span className="opacity-50">Repo:</span> {selectedSession.sourceId}
-            </a>
-          )}
-        </div>
-
-        <div className="flex items-center gap-1">
-          <Button
-            variant="ghost"
-            size="sm"
-            className="hidden md:flex h-8 px-3 hover:bg-white/5 text-white/60"
-            onClick={onToggleSearch}
-            title="Search (Cmd+K)"
-          >
-            <Search className="h-3.5 w-3.5 mr-1.5" />
-            <span className="text-[10px] font-mono uppercase tracking-wider">
-              Search
-            </span>
-          </Button>
-
-          <Button
-            variant="ghost"
-            size="sm"
-            className={`h-8 px-3 hover:bg-white/5 ${view === "sessions" ? "text-white" : "text-white/60"
-              }`}
-            onClick={() => setView("sessions")}
-          >
-            <MessageSquare className="h-3.5 w-3.5 mr-1.5" />
-            <span className="text-[10px] font-mono uppercase tracking-wider hidden sm:inline">
-              Sessions
-            </span>
-          </Button>
-
-          <Button
-            variant="ghost"
-            size="sm"
-            className={`h-8 px-3 hover:bg-white/5 ${view === "analytics" ? "text-white" : "text-white/60"
-              }`}
-            onClick={() => setView("analytics")}
-          >
-            <BarChart3 className="h-3.5 w-3.5 mr-1.5" />
-            <span className="text-[10px] font-mono uppercase tracking-wider hidden sm:inline">
-              Analytics
-            </span>
-          </Button>
-
-          <Button
-            variant="ghost"
-            size="sm"
-            className={`h-8 px-3 hover:bg-white/5 ${view === "debates" ? "text-white" : "text-white/60"
-              }`}
-            onClick={() => setView("debates")}
-          >
-            <Scale className="h-3.5 w-3.5 mr-1.5" />
-            <span className="text-[10px] font-mono uppercase tracking-wider hidden sm:inline">
-              Debates
-            </span>
-          </Button>
-
-          <Button
-            variant="ghost"
-            size="sm"
-            className={`h-8 px-3 hover:bg-white/5 ${view === "kanban" ? "text-white" : "text-white/60"
-              }`}
-            onClick={() => setView("kanban")}
-          >
-            <Kanban className="h-3.5 w-3.5 mr-1.5" />
-            <span className="text-[10px] font-mono uppercase tracking-wider hidden sm:inline">
-              Kanban
-            </span>
-          </Button>
-
-          <Button
-            variant="ghost"
-            size="sm"
-            className={`h-8 px-3 hover:bg-white/5 ${isLogPanelOpen ? "text-white" : "text-white/60"
-              }`}
-            onClick={() => setIsLogPanelOpen(!isLogPanelOpen)}
-          >
-            <ActivityIcon className="h-3.5 w-3.5 mr-1.5" />
-            <span className="text-[10px] font-mono uppercase tracking-wider hidden sm:inline">
-              Side Logs
-            </span>
-          </Button>
-
-          <Button
-            variant="ghost"
-            size="sm"
-            className="h-8 px-3 hover:bg-white/5 text-white/60"
-            onClick={() => router.push("/dashboard/logs")}
-          >
-            <Terminal className="h-3.5 w-3.5 mr-1.5" />
-            <span className="text-[10px] font-mono uppercase tracking-wider hidden sm:inline">
-              System Logs
-            </span>
-          </Button>
-
-          <Button
-            variant="ghost"
-            size="sm"
-            className="h-8 px-3 hover:bg-white/5 text-white/60"
-            onClick={() => router.push("/system")}
-          >
-            <FolderTree className="h-3.5 w-3.5 mr-1.5" />
-            <span className="text-[10px] font-mono uppercase tracking-wider hidden sm:inline">
-              System
-            </span>
-          </Button>
-
-          <NewSessionDialog
-            onSessionCreated={onSessionCreated}
-            open={isNewSessionOpen}
-            onOpenChange={setIsNewSessionOpen}
-            initialValues={newSessionInitialValues}
-            trigger={
-              <Button
-                data-testid="new-session-btn"
-                className="w-full sm:w-auto h-8 text-[10px] font-mono uppercase tracking-widest bg-purple-600 hover:bg-purple-500 text-white border-0"
-                onClick={onOpenNewSession}
-              >
-                <Plus className="h-3.5 w-3.5 mr-1.5" />
-                New Session
-              </Button>
-            }
-          />
-
-          <BroadcastDialog sessions={openSessions} />
-
-          <ModeToggle />
-
-          <ContextHelp topic={view} className="h-8 w-8 text-white/60 hover:text-white" />
-
-          {/* Global Settings Dialog (Controlled) */}
-          <SettingsDialog
-            open={isSettingsOpen}
-            onOpenChange={setIsSettingsOpen}
-            trigger={null}
-          />
-
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <Button
-                data-testid="settings-dropdown-trigger"
-                variant="ghost"
-                size="icon"
-                className="h-8 w-8 hover:bg-white/5 text-white/60"
-              >
-                <Settings className="h-4 w-4" />
-              </Button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent
-              align="end"
-              className="w-48 bg-zinc-950 border-white/[0.08]"
-            >
-              <DropdownMenuItem
-                onClick={() => setView("templates")}
-                className="hover:bg-white/5 text-white/80"
-              >
-                <LayoutTemplate className="mr-2 h-3.5 w-3.5" />
-                <span className="text-xs uppercase tracking-wide">
-                  Manage Templates
-                </span>
-              </DropdownMenuItem>
-
-              <DropdownMenuItem
-                onClick={() => setIsSettingsOpen(true)}
-                className="hover:bg-white/5 text-white/80"
-              >
-                <Settings className="mr-2 h-3.5 w-3.5" />
-                <span className="text-xs uppercase tracking-wide">
-                  Settings
-                </span>
-              </DropdownMenuItem>
-
-              <DropdownMenuSeparator className="bg-white/10" />
-
-              <DropdownMenuItem
-                onClick={handleLogout}
-                className="hover:bg-white/5 text-white/80"
-              >
-                <LogOut className="mr-2 h-3.5 w-3.5" />
-                <span className="text-xs uppercase tracking-wide">Logout</span>
-              </DropdownMenuItem>
-            </DropdownMenuContent>
-          </DropdownMenu>
+    <header className="h-12 border-b border-white/[0.08] bg-zinc-950 flex items-center justify-between px-4 shrink-0 z-30">
+      <div className="flex items-center gap-4">
+        <div className="flex items-center gap-2">
+          <div className="w-6 h-6 bg-primary rounded flex items-center justify-center">
+            <Terminal className="w-3.5 h-3.5 text-white" />
+          </div>
+          <h1 className="text-xs font-bold tracking-tighter uppercase text-white">
+            Jules <span className="text-white/40">Autopilot</span>
+          </h1>
+          <Badge variant="outline" className="h-4 px-1.5 text-[8px] border-white/10 text-white/40 font-mono">
+            v0.9.1
+          </Badge>
         </div>
       </div>
+
+      <div className="flex items-center gap-2">
+        <Button
+          variant="ghost"
+          size="sm"
+          className="h-8 text-white/40 hover:text-white hover:bg-white/5 gap-2 px-3"
+          onClick={onSearchClick}
+        >
+          <Search className="w-3.5 h-3.5" />
+          <span className="text-[10px] font-medium uppercase tracking-wider hidden sm:inline">Search</span>
+          <kbd className="hidden md:inline-flex h-4 items-center gap-1 rounded border border-white/10 bg-white/5 px-1.5 font-mono text-[8px] font-medium text-white/20">
+            <span>⌘</span>K
+          </kbd>
+        </Button>
+
+        <div className="h-4 w-[1px] bg-white/10 mx-1" />
+
+        <Button
+          size="sm"
+          className="h-8 bg-primary hover:bg-primary/90 text-white gap-2 px-3"
+          onClick={onNewSession}
+        >
+          <Plus className="w-3.5 h-3.5" />
+          <span className="text-[10px] font-bold uppercase tracking-wider">New Session</span>
+        </Button>
+
+        <Button
+          variant="ghost"
+          size="icon"
+          className="h-8 w-8 text-white/40 hover:text-white hover:bg-white/5"
+          onClick={() => setIsSettingsOpen(true)}
+        >
+          <SettingsIcon className="w-3.5 h-3.5" />
+        </Button>
+
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <Button variant="ghost" className="relative h-8 w-8 rounded-full p-0 overflow-hidden border border-white/10">
+              <Avatar className="h-8 w-8">
+                <AvatarFallback className="bg-zinc-900 text-[10px] text-white/40 font-bold uppercase">AD</AvatarFallback>
+              </Avatar>
+            </Button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent className="w-56 bg-zinc-950 border-white/10 text-white" align="end" forceMount>
+            <DropdownMenuLabel className="font-normal">
+              <div className="flex flex-col space-y-1">
+                <p className="text-xs font-bold leading-none uppercase tracking-wider">Local Admin</p>
+                <p className="text-[10px] leading-none text-white/40 font-mono">admin@localhost</p>
+              </div>
+            </DropdownMenuLabel>
+            <DropdownMenuSeparator className="bg-white/10" />
+            <DropdownMenuItem className="text-[10px] uppercase tracking-wider focus:bg-white/5 focus:text-white cursor-pointer">
+              <User className="mr-2 h-3.5 w-3.5" />
+              <span>Profile</span>
+            </DropdownMenuItem>
+            <DropdownMenuItem className="text-[10px] uppercase tracking-wider focus:bg-white/5 focus:text-white cursor-pointer" onClick={() => setIsSettingsOpen(true)}>
+              <SettingsIcon className="mr-2 h-3.5 w-3.5" />
+              <span>Settings</span>
+            </DropdownMenuItem>
+          </DropdownMenuContent>
+        </DropdownMenu>
+      </div>
+
+      <SettingsDialog open={isSettingsOpen} onOpenChange={setIsSettingsOpen} />
     </header>
   );
 }

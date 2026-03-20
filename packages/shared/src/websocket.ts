@@ -9,19 +9,6 @@ export type DaemonEventType =
   | 'session_approved'
   | 'activities_updated'
   | 'sessions_list_updated'
-  | 'shadow_pilot_alert'
-  | 'swarm_created'
-  | 'swarm_updated'
-  | 'swarm_task_updated'
-  | 'swarm_paused'
-  | 'swarm_resumed'
-  | 'swarm:task_pondering'
-  | 'swarm:task_executing'
-  | 'swarm:task_finalizing'
-  | 'swarm:task_paused'
-  | 'swarm:task_resumed'
-  | 'swarm_metrics_updated'
-  | 'swarm_completed'
   | 'ping'
   | 'pong';
 
@@ -72,12 +59,6 @@ export interface ActivitiesUpdatedPayload {
 
 export interface SessionsListUpdatedPayload {
   reason?: 'created' | 'deleted' | 'status_changed';
-}
-
-export interface ShadowPilotAlertPayload {
-  severity: 'critical' | 'warning' | 'info';
-  message: string;
-  diffSnippet: string;
 }
 
 export type LogType = 'info' | 'action' | 'error' | 'warn' | 'skip';

@@ -1,28 +1,31 @@
-# See https://help.github.com/articles/ignoring-files/ for more about ignoring files.
-
 # dependencies
-/node_modules
-/.pnp
+node_modules/
+**/node_modules/
+.pnp
 .pnp.*
-.yarn/*
-!.yarn/patches
-!.yarn/plugins
-!.yarn/releases
-!.yarn/versions
 
 # testing
 /coverage
 
-# next.js
+# vite / build
+/dist
+/dist-ssr
+*.local
+
+# next.js (legacy)
 /.next/
 /out/
 
-# production
+# production (legacy)
 /build
 
 # misc
 .DS_Store
 *.pem
+*.log
+daemon.log
+.borg_startup_marker
+.cli_startup_marker
 
 # debug
 npm-debug.log*
@@ -30,7 +33,7 @@ yarn-debug.log*
 yarn-error.log*
 .pnpm-debug.log*
 
-# env files (can opt-in for committing if needed)
+# env files
 .env*
 
 # vercel
@@ -38,12 +41,9 @@ yarn-error.log*
 
 # typescript
 *.tsbuildinfo
-next-env.d.ts
 
-# terminal server
-/terminal-server/node_modules
+# workspace
 /workspace
-*.log
 
 # claude code artifacts
 /.claude
@@ -57,12 +57,15 @@ next-env.d.ts
 .aider*
 
 # Playwright
-node_modules/
 /test-results/
 /playwright-report/
 /blob-report/
 /playwright/.cache/
 /playwright/.auth/
 
+# Database
 /lib/generated/prisma
 dev.db
+dev.db-journal
+dev.db-shm
+dev.db-wal

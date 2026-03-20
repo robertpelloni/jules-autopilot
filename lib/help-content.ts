@@ -45,11 +45,6 @@ export const HELP_CONTENT: Record<string, HelpTopic> = {
     summary: "Visualize your sessions by status (Active, Paused, Completed). Useful for managing multiple concurrent tasks.",
     docSlug: "intro"
   },
-  "analytics": {
-    title: "Analytics Dashboard",
-    summary: "Track token usage, costs, and agent performance metrics over time.",
-    docSlug: "intro"
-  },
   "debates": {
     title: "Council Debates",
     summary: "Monitor multi-agent debates where different personas discuss the best approach before executing actions.",

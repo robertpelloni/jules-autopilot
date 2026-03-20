@@ -1,6 +1,6 @@
 {
   "name": "@jules/cli",
-  "version": "0.8.0",
+  "version": "0.9.1",
   "description": "Jules Autopilot TUI - Terminal cockpit for Jules AI agent management",
   "type": "module",
   "bin": {
@@ -16,12 +16,16 @@
     "@jules/shared": "workspace:*",
     "ink": "^5.2.0",
     "@inkjs/ui": "^2.0.0",
-    "react": "^18.3.1",
+    "react": "^19.2.3",
+    "react-dom": "^19.2.3",
+    "lucide-react": "^0.555.0",
+    "axios": "^1.13.2",
     "zustand": "^5.0.0"
   },
   "devDependencies": {
-    "@types/react": "^18.3.0",
-    "typescript": "^5.4.0"
+    "@types/react": "^19.2.7",
+    "@types/react-dom": "^19.2.3",
+    "typescript": "^5.9.3"
   },
   "engines": {
     "node": ">=20"

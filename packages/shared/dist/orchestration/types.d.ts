@@ -8,7 +8,7 @@ export interface Participant {
     name: string;
     role: string;
     systemPrompt: string;
-    provider: 'openai' | 'anthropic' | 'gemini' | 'openai-assistants' | 'qwen';
+    provider: 'openai' | 'anthropic' | 'gemini';
     model: string;
     apiKey?: string;
 }

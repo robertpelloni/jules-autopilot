@@ -1,58 +1,4 @@
 import { Session, Activity } from '@jules/shared';
-import { Log } from "@/lib/stores/session-keeper";
-
-interface ImportedSessionData {
-  session: Session;
-  activities: Activity[];
-  exportedAt: string;
-  version: string;
-}
-
-interface ImportedLogsData {
-  logs: Log[];
-  exportedAt: string;
-  version: string;
-}
-
-export function importSessionFromJSON(file: File): Promise<ImportedSessionData> {
-  return new Promise((resolve, reject) => {
-    const reader = new FileReader();
-    reader.onload = (e) => {
-      try {
-        const data = JSON.parse(e.target?.result as string) as ImportedSessionData;
-        if (!data.session || !data.activities) {
-          reject(new Error('Invalid session export file: missing session or activities'));
-          return;
-        }
-        resolve(data);
-      } catch (err) {
-        reject(new Error(`Failed to parse JSON: ${err instanceof Error ? err.message : 'Unknown error'}`));
-      }
-    };
-    reader.onerror = () => reject(new Error('Failed to read file'));
-    reader.readAsText(file);
-  });
-}
-
-export function importSystemLogsFromJSON(file: File): Promise<ImportedLogsData> {
-  return new Promise((resolve, reject) => {
-    const reader = new FileReader();
-    reader.onload = (e) => {
-      try {
-        const data = JSON.parse(e.target?.result as string) as ImportedLogsData;
-        if (!data.logs || !Array.isArray(data.logs)) {
-          reject(new Error('Invalid logs export file: missing logs array'));
-          return;
-        }
-        resolve(data);
-      } catch (err) {
-        reject(new Error(`Failed to parse JSON: ${err instanceof Error ? err.message : 'Unknown error'}`));
-      }
-    };
-    reader.onerror = () => reject(new Error('Failed to read file'));
-    reader.readAsText(file);
-  });
-}
 
 export function exportSessionToJSON(session: Session, activities: Activity[]) {
   const data = {
@@ -67,24 +13,6 @@ export function exportSessionToJSON(session: Session, activities: Activity[]) {
   const a = document.createElement("a");
   a.href = url;
   a.download = `jules-session-${session.id}-${new Date().toISOString().split('T')[0]}.json`;
-  document.body.appendChild(a);
-  a.click();
-  document.body.removeChild(a);
-  URL.revokeObjectURL(url);
-}
-
-export function exportSystemLogsToJSON(logs: Log[]) {
-  const data = {
-    logs,
-    exportedAt: new Date().toISOString(),
-    version: "1.0"
-  };
-
-  const blob = new Blob([JSON.stringify(data, null, 2)], { type: "application/json" });
-  const url = URL.createObjectURL(blob);
-  const a = document.createElement("a");
-  a.href = url;
-  a.download = `jules-system-logs-${new Date().toISOString().split('T')[0]}.json`;
   document.body.appendChild(a);
   a.click();
   document.body.removeChild(a);
@@ -148,26 +76,3 @@ export function exportSessionToMarkdown(session: Session, activities: Activity[]
   URL.revokeObjectURL(url);
 }
 
-export function exportSystemLogsToMarkdown(logs: Log[]) {
-  let md = `# Jules System Logs\n\n`;
-  md += `**Exported At:** ${new Date().toLocaleString()}\n\n`;
-
-  md += `| Time | Type | Message | Details |\n`;
-  md += `|------|------|---------|---------|\n`;
-
-  logs.forEach((log) => {
-    const detailsStr = log.details ? JSON.stringify(log.details) : "";
-    const details = detailsStr ? detailsStr.replace(/\n/g, '<br>') : "-";
-    md += `| ${log.time} | ${log.type.toUpperCase()} | ${log.message} | ${details} |\n`;
-  });
-
-  const blob = new Blob([md], { type: "text/markdown" });
-  const url = URL.createObjectURL(blob);
-  const a = document.createElement("a");
-  a.href = url;
-  a.download = `jules-system-logs-${new Date().toISOString().split('T')[0]}.md`;
-  document.body.appendChild(a);
-  a.click();
-  document.body.removeChild(a);
-  URL.revokeObjectURL(url);
-}

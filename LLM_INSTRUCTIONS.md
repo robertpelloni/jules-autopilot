@@ -98,7 +98,7 @@ jules-autopilot/
 | **Jules Task Queue** | `external/jules-task-queue` | iHildy/jules-task-queue | Task queue management for Jules |
 | **Jules System Prompt** | `external/jules-system-prompt` | DiaAviLinden/Jules-system-prompt | Reference system prompts |
 
-**Rule**: Check submodule versions via `git submodule status` or the System Dashboard at `/system/internals`.
+**Rule**: Check submodule versions via `git submodule status`.
 
 ## 🛠️ Development Standards
 

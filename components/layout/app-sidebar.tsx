@@ -1,37 +1,49 @@
 import { Button } from "@/components/ui/button";
-import { ChevronLeft, ChevronRight } from "lucide-react";
+import { 
+  ChevronLeft, 
+  ChevronRight, 
+  MessageSquare, 
+  LayoutTemplate, 
+  Trello, 
+  Users 
+} from "lucide-react";
 import { SessionList } from "@/components/session-list";
 import { Session } from '@jules/shared';
 
 interface AppSidebarProps {
   collapsed: boolean;
   onToggleCollapse: () => void;
-  refreshKey: number;
-  onSelectSession: (session: Session | string) => void;
+  onSessionSelect: (session: Session | string) => void;
   selectedSessionId?: string;
+  currentView: 'sessions' | 'templates' | 'kanban' | 'debates';
+  onViewChange: (view: 'sessions' | 'templates' | 'kanban' | 'debates') => void;
 }
 
 export function AppSidebar({
   collapsed,
   onToggleCollapse,
-  refreshKey,
-  onSelectSession,
+  onSessionSelect,
   selectedSessionId,
+  currentView,
+  onViewChange
 }: AppSidebarProps) {
+  const navItems = [
+    { id: 'sessions', label: 'Sessions', icon: MessageSquare },
+    { id: 'templates', label: 'Templates', icon: LayoutTemplate },
+    { id: 'kanban', label: 'Kanban', icon: Trello },
+    { id: 'debates', label: 'Debates', icon: Users },
+  ] as const;
+
   return (
     <aside
       className={`hidden md:flex border-r border-white/[0.08] flex-col bg-zinc-950 transition-all duration-200 relative z-20 ${
-        collapsed ? "md:w-12" : "md:w-64 resize-x"
+        collapsed ? "md:w-12" : "md:w-64"
       }`}
-      style={{
-        minWidth: collapsed ? "3rem" : "16rem",
-        maxWidth: collapsed ? "3rem" : "40rem"
-      }}
     >
       <div className="px-3 py-2 border-b border-white/[0.08] flex items-center justify-between">
         {!collapsed && (
           <h2 className="text-[10px] font-bold text-white/40 uppercase tracking-widest">
-            SESSIONS
+            COMMAND CENTER
           </h2>
         )}
         <Button
@@ -49,13 +61,39 @@ export function AppSidebar({
           )}
         </Button>
       </div>
-      <div className="flex-1 overflow-hidden">
+
+      <div className="p-2 space-y-1">
+        {navItems.map((item) => (
+          <Button
+            key={item.id}
+            variant="ghost"
+            size={collapsed ? "icon" : "sm"}
+            className={`w-full ${collapsed ? "justify-center" : "justify-start"} gap-2 text-xs h-8 ${
+              currentView === item.id ? "bg-white/10 text-white" : "text-white/40 hover:text-white/80"
+            }`}
+            onClick={() => onViewChange(item.id)}
+          >
+            <item.icon className="h-3.5 w-3.5" />
+            {!collapsed && <span>{item.label}</span>}
+          </Button>
+        ))}
+      </div>
+
+      <div className="mt-4 flex-1 overflow-hidden border-t border-white/[0.08] flex flex-col">
         {!collapsed && (
-          <SessionList
-            key={refreshKey}
-            onSelectSession={onSelectSession}
-            selectedSessionId={selectedSessionId}
-          />
+          <>
+            <div className="px-4 py-2">
+              <h2 className="text-[10px] font-bold text-white/20 uppercase tracking-widest">
+                SESSIONS
+              </h2>
+            </div>
+            <div className="flex-1 overflow-hidden">
+              <SessionList
+                onSelectSession={onSessionSelect}
+                selectedSessionId={selectedSessionId}
+              />
+            </div>
+          </>
         )}
       </div>
     </aside>

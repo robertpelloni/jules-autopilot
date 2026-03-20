@@ -11,7 +11,6 @@ import {
 import { Button } from "@/components/ui/button";
 import { HelpCircle, ExternalLink } from "lucide-react";
 import { HELP_CONTENT } from "@/lib/help-content";
-import Link from "next/link";
 import { cn } from "@/lib/utils";
 
 interface ContextHelpProps {
@@ -45,19 +44,19 @@ export function ContextHelp({ topic = "default", className }: ContextHelpProps) 
              <h4 className="text-xs font-semibold text-white/40 uppercase tracking-wider">Related Resources</h4>
              <div className="grid gap-3">
                  {content.docSlug && (
-                   <Link href={`/docs/${content.docSlug}`} passHref>
+                   <a href={`/docs/${content.docSlug}`}>
                      <Button variant="outline" className="w-full justify-between bg-purple-500/10 border-purple-500/20 hover:bg-purple-500/20 text-purple-400 hover:text-purple-300 transition-colors h-12">
                         <span>Read Full Documentation</span>
                         <ExternalLink className="h-4 w-4 opacity-50" />
                      </Button>
-                   </Link>
+                   </a>
                  )}
-                 <Link href="/docs" passHref>
+                 <a href="/docs">
                    <Button variant="outline" className="w-full justify-between bg-white/5 border-white/10 hover:bg-white/10 text-white hover:text-white transition-colors h-12">
                       <span>Documentation Home</span>
                       <ExternalLink className="h-4 w-4 opacity-50" />
                    </Button>
-                 </Link>
+                 </a>
              </div>
           </div>
         </div>

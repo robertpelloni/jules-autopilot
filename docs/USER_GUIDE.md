@@ -10,11 +10,7 @@ Welcome to the Jules User Guide. This manual provides detailed instructions on h
 2. [Configuration](#configuration)
    - [Account Settings](#account-settings)
    - [General Preferences](#general-preferences)
-3. [System Dashboard](#system-dashboard)
-   - [Submodules](#submodules)
-   - [Task Queue](#task-queue)
-   - [MCP Server](#mcp-server)
-4. [Extensions](#extensions)
+3. [Extensions](#extensions)
    - [Plugin Marketplace](#plugin-marketplace)
 
 ---
@@ -54,27 +50,6 @@ Navigate to **Settings > General** to customize your experience.
 - **Auto-Archive:** Enable this to automatically archive sessions after 30 days of inactivity.
 - **Council Debate:** Toggle whether new sessions should start with the multi-agent debate mode enabled by default.
 - **Privacy:** Opt-in or opt-out of sharing anonymous usage data.
-
----
-
-## System Dashboard
-
-The **System Dashboard** (accessible via the sidebar or `/system`) provides a comprehensive overview of the platform's health and components.
-
-### Submodules
-Jules is built on a modular architecture. The Submodule Dashboard lists all connected components, their versions, and git status.
-- **Clicking a Submodule:** Navigates to a detailed view with specific metrics and controls.
-
-### Task Queue
-The **Task Queue** submodule (`jules-task-queue`) manages background jobs.
-- **Overview:** View the number of pending, running, and completed tasks.
-- **Control:** Pause or resume the queue processing directly from the UI.
-- **Priority:** Tasks are processed based on priority (High, Medium, Low).
-
-### MCP Server
-The **MCP Server** submodule (`jules-mcp-server`) exposes tools to the AI agent via the Model Context Protocol.
-- **Tools Registry:** View a searchable list of all available tools (e.g., `read_file`, `run_command`).
-- **Security:** Check which tools are restricted or require approval.
 
 ---
 

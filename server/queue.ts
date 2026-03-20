@@ -1,12 +1,11 @@
-import { Queue, Worker, Job } from 'bullmq';
-import IORedis from 'ioredis';
 import { prisma } from '../lib/prisma';
 import { JulesClient } from '../lib/jules/client';
 import { getProvider, summarizeSession } from '@jules/shared';
 import { emitDaemonEvent } from './index';
 import { addLog, getSupervisorState, saveSupervisorState } from './daemon';
-import { processCIFix } from './ci-fix-agent';
-import { SwarmCoordinator } from './swarm-coordinator';
+import fs from 'fs';
+import path from 'path';
+import crypto from 'crypto';
 
 interface Activity {
     role: string;
@@ -14,212 +13,279 @@ interface Activity {
     createdAt: string;
 }
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-const connection = new IORedis(process.env.REDIS_URL || 'redis://localhost:6379', {
-    maxRetriesPerRequest: null,
-}) as any;
+/**
+ * SQLite-backed Task Queue
+ * Replaces Redis/BullMQ for a Lean Core experience.
+ */
+export class TaskQueue {
+    private isRunning = false;
+    private interval: Timer | null = null;
 
-export const orchestratorQueue = new Queue('jules-orchestrator-queue', { connection });
+    constructor(private concurrency: number = 2) {}
 
-export function setupWorker() {
-    const worker = new Worker('jules-orchestrator-queue', async (job: Job) => {
-        // Route CI fix jobs to the dedicated agent
-        if (job.name === 'ci_fix') {
-            await processCIFix(job.data);
-            return { action: 'ci_fix_processed' };
+    async add(type: string, payload: any, runAt: Date = new Date()) {
+        return await prisma.queueJob.create({
+            data: {
+                type,
+                payload: JSON.stringify(payload),
+                status: 'pending',
+                runAt
+            }
+        });
+    }
+
+    start() {
+        if (this.isRunning) return;
+        this.isRunning = true;
+        console.log("[Queue] SQLite Task Queue started.");
+        
+        // Poll for jobs every 5 seconds
+        this.interval = setInterval(() => this.processJobs(), 5000);
+    }
+
+    stop() {
+        this.isRunning = false;
+        if (this.interval) {
+            clearInterval(this.interval);
+            this.interval = null;
         }
+        console.log("[Queue] SQLite Task Queue stopped.");
+    }
 
-        if (job.name === 'process_swarm_decomposition') {
-            const { swarmId } = job.data;
-            const swarm = await prisma.agentSwarm.findUnique({ where: { id: swarmId } });
-            if (!swarm) throw new Error(`Swarm ${swarmId} not found`);
+    private async processJobs() {
+        if (!this.isRunning) return;
 
-            const coordinator = new SwarmCoordinator({
-                name: swarm.name,
-                prompt: swarm.prompt
-            });
+        // Find pending jobs that are ready to run
+        const jobs = await prisma.queueJob.findMany({
+            where: {
+                status: 'pending',
+                runAt: { lte: new Date() },
+                attempts: { lt: 3 }
+            },
+            take: this.concurrency,
+            orderBy: { runAt: 'asc' }
+        });
 
-            // The decompose method internally creates SwarmTask records
-            // and updates the status to 'running'
-            await coordinator.decompose();
-            return { action: 'swarm_decomposed', swarmId };
-        }
+        if (jobs.length === 0) return;
 
-        if (job.name === 'dispatch_swarm_tasks') {
-            const { swarmId } = job.data;
-            await SwarmCoordinator.dispatchPendingTasks(swarmId);
-            return { action: 'swarm_tasks_dispatched', swarmId };
-        }
+        await Promise.all(jobs.map(job => this.executeJob(job)));
+    }
 
-        const { session, settings } = job.data;
+    private async executeJob(job: any) {
+        // Mark as processing
+        await prisma.queueJob.update({
+            where: { id: job.id },
+            data: { 
+                status: 'processing',
+                startedAt: new Date(),
+                attempts: { increment: 1 }
+            }
+        });
 
         try {
-            const apiKey = settings.julesApiKey || process.env.JULES_API_KEY;
-            if (!apiKey) throw new Error('No Jules API key found');
-            const client = new JulesClient(apiKey, 'https://jules.googleapis.com/v1alpha');
+            const payload = JSON.parse(job.payload);
+            let result;
 
-            const createdTime = new Date(session.createdAt);
-            const ageDays = (Date.now() - createdTime.getTime()) / (1000 * 60 * 60 * 24);
-            const HANDOFF_THRESHOLD_DAYS = 30;
-
-            if (ageDays >= HANDOFF_THRESHOLD_DAYS && session.status !== "completed" && session.status !== "failed") {
-                await addLog(`Session ${session.id.substring(0, 8)} is ${Math.floor(ageDays)} days old. Initiating handoff...`, "action", session.id);
-                const activities = await client.listActivities(session.id);
-                const history = (activities as Activity[]).map((a: Activity) => ({
-                    role: a.role === "agent" ? "assistant" : "user",
-                    content: a.content
-                }));
-
-                const summary = await summarizeSession(
-                    history,
-                    settings.supervisorProvider || "openai",
-                    settings.supervisorApiKey || process.env.OPENAI_API_KEY || "",
-                    settings.supervisorModel || "gpt-4o"
-                );
-
-                const newSession = await client.createSession(
-                    session.sourceId,
-                    session.prompt || "Continuing previous session",
-                    `${session.title || "Untitled"} (Part 2)`
-                );
-
-                await client.createActivity({
-                    sessionId: newSession.id,
-                    content: `*** SESSION HANDOFF ***\n\nPrevious Session Summary:\n${summary}\n\nOriginal Start Date: ${session.createdAt}`,
-                    type: "message"
-                });
-
-                await client.createActivity({
-                    sessionId: session.id,
-                    content: `*** SESSION ARCHIVED ***\n\nThis session has been handed off to ${newSession.id}. Marking as completed.`,
-                    type: "message"
-                });
-
-                emitDaemonEvent('sessions_list_updated', { reason: 'created' });
-                emitDaemonEvent('activities_updated', { sessionId: newSession.id });
-                emitDaemonEvent('activities_updated', { sessionId: session.id });
-                await addLog(`Created new session ${newSession.id.substring(0, 8)} with handoff log.`, "action", session.id);
-                return { action: 'handoff', newSessionId: newSession.id };
+            if (job.type === 'check_session') {
+                result = await this.handleCheckSession(payload.session, payload.settings);
+            } else if (job.type === 'index_codebase') {
+                result = await this.handleIndexCodebase();
+            } else {
+                throw new Error(`Unknown job type: ${job.type}`);
             }
 
-            if (settings.resumePaused && (session.status === 'paused' || session.status === 'completed' || session.status === 'failed')) {
-                await addLog(`Resuming ${session.status} session ${session.id.substring(0, 8)}...`, 'action', session.id);
-                await client.resumeSession(session.id);
-                emitDaemonEvent('session_updated', { sessionId: session.id });
-                emitDaemonEvent('sessions_list_updated', { reason: 'status_changed' });
-                return { action: 'resumed' };
-            }
-
-            if (session.status === 'awaiting_approval' || session.rawState === 'AWAITING_PLAN_APPROVAL') {
-                if (settings.smartPilotEnabled) {
-                    await addLog(`Auto-approving plan for ${session.id.substring(0, 8)}...`, 'action', session.id);
-                    await client.approvePlan(session.id);
-                    
-                    // Fire a wakeup activity to kick the agent back into the loop
-                    await client.createActivity({
-                        sessionId: session.id,
-                        content: 'Plan auto-approved by supervisor. Please proceed with execution.',
-                        type: 'message',
-                        role: 'user'
-                    });
-
-                    emitDaemonEvent('session_approved', {
-                        sessionId: session.id,
-                        sessionTitle: session.title
-                    });
-                    emitDaemonEvent('session_updated', { sessionId: session.id });
-                    emitDaemonEvent('sessions_list_updated', { reason: 'status_changed' });
-                    return { action: 'auto_approved' };
+            // Mark as completed
+            await prisma.queueJob.update({
+                where: { id: job.id },
+                data: { 
+                    status: 'completed',
+                    completedAt: new Date(),
                 }
-                return { action: 'none', reason: 'awaiting_human_approval' };
-            }
+            });
+            
+            console.log(`[Queue] Job ${job.id.substring(0, 8)} (${job.type}) completed: ${result?.action || 'done'}`);
+        } catch (error) {
+            const errorMessage = error instanceof Error ? error.message : String(error);
+            console.error(`[Queue] Job ${job.id} failed:`, errorMessage);
 
-            const lastActivityTime = session.lastActivityAt ? new Date(session.lastActivityAt) : new Date(session.updatedAt);
-            const diffMinutes = (Date.now() - lastActivityTime.getTime()) / 60000;
-            let threshold = settings.inactivityThresholdMinutes;
+            await prisma.queueJob.update({
+                where: { id: job.id },
+                data: { 
+                    status: 'pending', // Will retry if attempts < maxAttempts
+                    lastError: errorMessage
+                }
+            });
+        }
+    }
 
-            if (session.rawState === 'IN_PROGRESS') {
-                threshold = settings.activeWorkThresholdMinutes;
-                if ((Date.now() - lastActivityTime.getTime()) < 30000) return { action: 'none', reason: 'recently_active_in_progress' };
-            }
+    private async handleIndexCodebase() {
+        console.log('[Queue] Starting background codebase indexing...');
+        const settings = await prisma.keeperSettings.findUnique({ where: { id: 'default' } });
+        const apiKey = process.env.OPENAI_API_KEY || settings?.supervisorApiKey;
+        
+        if (!apiKey || apiKey === 'placeholder') {
+            return { action: 'skip', reason: 'no_api_key' };
+        }
 
-            if (diffMinutes > threshold) {
-                await addLog(`Sending nudge to ${session.id.substring(0, 8)} (${Math.round(diffMinutes)}m inactive)`, 'action', session.id);
+        const DIRECTORIES_TO_INDEX = ['src', 'lib', 'server', 'components', 'packages'];
+        const EXTENSIONS_TO_INDEX = ['.ts', '.tsx', '.js', '.jsx', '.md'];
+        const CHUNK_LINE_LIMIT = 150;
 
-                let messageToSend = "Please resume working on this task.";
-                if (settings.smartPilotEnabled) {
-                    const supervisorState = await getSupervisorState(session.id);
-                    const activities = await client.listActivities(session.id);
-                    const sortedActivities = activities.sort((a: Activity, b: Activity) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime());
-
-                    let newActivities = sortedActivities;
-                    if (supervisorState.lastProcessedActivityTimestamp) {
-                        newActivities = sortedActivities.filter((a: Activity) => new Date(a.createdAt).getTime() > new Date(supervisorState.lastProcessedActivityTimestamp!).getTime());
-                    }
-
-                    const messagesToSend: { role: 'user' | 'assistant' | 'system', content: string }[] = [];
-                    if (newActivities.length > 0) {
-                        const updates = newActivities.map((a: Activity) => `${a.role.toUpperCase()}: ${a.content}`).join('\n\n');
-                        messagesToSend.push({ role: 'user', content: `Latest updates:\n\n${updates}` });
-                        supervisorState.lastProcessedActivityTimestamp = newActivities[newActivities.length - 1]?.createdAt || supervisorState.lastProcessedActivityTimestamp;
-                    } else {
-                        messagesToSend.push({ role: 'user', content: "The agent has been inactive. Please provide a nudge." });
-                    }
-
-                    const p = getProvider(settings.supervisorProvider);
-                    if (p) {
-                        const result = await p.complete({
-                            messages: [...supervisorState.history, ...messagesToSend].slice(-settings.contextMessageCount),
-                            apiKey: settings.supervisorApiKey || process.env.OPENAI_API_KEY || "",
-                            model: settings.supervisorModel,
-                            systemPrompt: 'You are a project supervisor. provide a concise, direct instruction to reactivate the agent Jules.'
-                        });
-                        messageToSend = result.content;
-                        supervisorState.history = [...supervisorState.history, ...messagesToSend, { role: 'assistant', content: messageToSend }];
-                        await saveSupervisorState(supervisorState);
+        const getFiles = (dir: string, fileList: string[] = []): string[] => {
+            const fullDirPath = path.resolve(process.cwd(), dir);
+            if (!fs.existsSync(fullDirPath)) return fileList;
+            const files = fs.readdirSync(fullDirPath);
+            for (const file of files) {
+                const filepath = path.join(dir, file);
+                const fullFilepath = path.resolve(process.cwd(), filepath);
+                if (fs.statSync(fullFilepath).isDirectory()) {
+                    if (file !== 'node_modules' && file !== 'dist' && !file.startsWith('.')) {
+                        getFiles(filepath, fileList);
                     }
                 } else {
-                    const messages = JSON.parse(settings.messages) as string[];
-                    if (messages.length > 0) {
-                        messageToSend = messages[Math.floor(Math.random() * messages.length)] || messageToSend;
+                    if (EXTENSIONS_TO_INDEX.includes(path.extname(filepath))) {
+                        fileList.push(filepath);
                     }
                 }
+            }
+            return fileList;
+        };
 
-                await client.createActivity({
-                    sessionId: session.id,
-                    content: messageToSend,
-                    type: 'message'
+        const allFiles = DIRECTORIES_TO_INDEX.flatMap(dir => getFiles(dir));
+        let newChunks = 0;
+
+        for (const relativePath of allFiles) {
+            const fullPath = path.resolve(process.cwd(), relativePath);
+            const content = fs.readFileSync(fullPath, 'utf8');
+            if (content.length > 500000) continue;
+
+            const lines = content.split('\n');
+            for (let i = 0; i < lines.length; i += CHUNK_LINE_LIMIT) {
+                const chunkText = lines.slice(i, i + CHUNK_LINE_LIMIT).join('\n');
+                const startLine = i + 1;
+                const endLine = Math.min(i + CHUNK_LINE_LIMIT, lines.length);
+                const checksum = crypto.createHash('sha256').update(chunkText).digest('hex');
+
+                const existing = await prisma.codeChunk.findFirst({
+                    where: { filepath: relativePath, startLine, checksum }
                 });
 
-                emitDaemonEvent('activities_updated', { sessionId: session.id });
-                emitDaemonEvent('session_nudged', {
-                    sessionId: session.id,
-                    sessionTitle: session.title,
-                    inactiveMinutes: Math.round(diffMinutes),
-                    message: messageToSend
+                if (existing) continue;
+
+                // Get embedding
+                const response = await fetch("https://api.openai.com/v1/embeddings", {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json", "Authorization": `Bearer ${apiKey}` },
+                    body: JSON.stringify({ input: chunkText, model: "text-embedding-3-small" })
                 });
-                return { action: 'nudged' };
+
+                if (response.ok) {
+                    const data = await response.json();
+                    const embedding = data.data[0].embedding;
+                    const floatArray = new Float32Array(embedding);
+                    const buffer = Buffer.from(floatArray.buffer, floatArray.byteOffset, floatArray.byteLength);
+
+                    await prisma.codeChunk.upsert({
+                        where: { id: `chunk-${relativePath}-${startLine}` }, // Unique ID strategy
+                        update: { content: chunkText, embedding: buffer, checksum, endLine },
+                        create: {
+                            id: `chunk-${relativePath}-${startLine}`,
+                            workspaceId: 'default',
+                            filepath: relativePath,
+                            startLine,
+                            endLine,
+                            content: chunkText,
+                            embedding: buffer,
+                            checksum
+                        }
+                    });
+                    newChunks++;
+                }
+                await new Promise(r => setTimeout(resolve, 100)); // Rate limit
+            }
+        }
+
+        return { action: 'indexed', count: newChunks };
+    }
+
+    private async handleCheckSession(session: any, settings: any) {
+        const apiKey = settings.julesApiKey || process.env.JULES_API_KEY;
+        if (!apiKey || apiKey === 'placeholder') return { action: 'none', reason: 'no_api_key' };
+        
+        const client = new JulesClient(apiKey, 'https://jules.googleapis.com/v1alpha');
+
+        const lastActivityTime = session.lastActivityAt ? new Date(session.lastActivityAt) : new Date(session.updatedAt);
+        const diffMinutes = (Date.now() - lastActivityTime.getTime()) / 60000;
+        let threshold = settings.inactivityThresholdMinutes;
+
+        if (session.rawState === 'IN_PROGRESS') {
+            threshold = settings.activeWorkThresholdMinutes;
+            if ((Date.now() - lastActivityTime.getTime()) < 30000) return { action: 'none', reason: 'recently_active_in_progress' };
+        }
+
+        if (diffMinutes > threshold) {
+            await addLog(`Sending nudge to ${session.id.substring(0, 8)} (${Math.round(diffMinutes)}m inactive)`, 'action', session.id);
+
+            let messageToSend = "Please resume working on this task.";
+            if (settings.smartPilotEnabled) {
+                const supervisorState = await getSupervisorState(session.id);
+                const activities = await client.listActivities(session.id);
+                const sortedActivities = activities.sort((a: Activity, b: Activity) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime());
+
+                let newActivities = sortedActivities;
+                if (supervisorState.lastProcessedActivityTimestamp) {
+                    newActivities = sortedActivities.filter((a: Activity) => new Date(a.createdAt).getTime() > new Date(supervisorState.lastProcessedActivityTimestamp!).getTime());
+                }
+
+                const messagesToSend: { role: 'user' | 'assistant' | 'system', content: string }[] = [];
+                if (newActivities.length > 0) {
+                    const updates = newActivities.map((a: Activity) => `${a.role.toUpperCase()}: ${a.content}`).join('\n\n');
+                    messagesToSend.push({ role: 'user', content: `Latest updates:\n\n${updates}` });
+                    supervisorState.lastProcessedActivityTimestamp = newActivities[newActivities.length - 1]?.createdAt || supervisorState.lastProcessedActivityTimestamp;
+                } else {
+                    messagesToSend.push({ role: 'user', content: "The agent has been inactive. Please provide a nudge." });
+                }
+
+                const p = getProvider(settings.supervisorProvider);
+                if (p) {
+                    const result = await p.complete({
+                        messages: [...supervisorState.history, ...messagesToSend].slice(-settings.contextMessageCount),
+                        apiKey: settings.supervisorApiKey || process.env.OPENAI_API_KEY || "",
+                        model: settings.supervisorModel,
+                        systemPrompt: 'You are a project supervisor. provide a concise, direct instruction to reactivate the agent Jules.'
+                    });
+                    messageToSend = result.content;
+                    supervisorState.history = [...supervisorState.history, ...messagesToSend, { role: 'assistant', content: messageToSend }];
+                    await saveSupervisorState(supervisorState);
+                }
             }
 
-            return { action: 'none', reason: 'active' };
-        } catch (err) {
-            await addLog(`Error processing session ${session.id}: ${err instanceof Error ? err.message : String(err)}`, 'error', session.id);
-            throw err;
+            await client.createActivity({
+                sessionId: session.id,
+                content: messageToSend,
+                type: 'message'
+            });
+
+            emitDaemonEvent('activities_updated', { sessionId: session.id });
+            emitDaemonEvent('session_nudged', {
+                sessionId: session.id,
+                sessionTitle: session.title,
+                inactiveMinutes: Math.round(diffMinutes),
+                message: messageToSend
+            });
+            return { action: 'nudged' };
         }
-    }, {
-        connection,
-        concurrency: 4
-    });
 
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    worker.on('completed', (job: Job, returnvalue: any) => {
-        console.log(`[Worker] Job ${job.id} for session ${job.data?.session?.id?.substring(0, 8)} completed: ${returnvalue?.action}`);
-    });
+        return { action: 'none', reason: 'active' };
+    }
+}
 
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    worker.on('failed', (job: Job | undefined, err: Error) => {
-        console.error(`[Worker] Job ${job?.id} failed:`, err);
-    });
+// Global instance
+export const orchestratorQueue = new TaskQueue();
 
-    return worker;
+export function setupWorker() {
+    orchestratorQueue.start();
+    return {
+        close: () => orchestratorQueue.stop()
+    };
 }

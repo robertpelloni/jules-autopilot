@@ -35,10 +35,6 @@ This is a living document of creative improvements, refactoring ideas, and futur
 **Idea**: Implement a "Global Architecture Guard" that analyzes every Jules session against a central `ARCHITECTURE.md`. If Jules proposes a change violating a core mandate (e.g., synchronous call to async microservice), the Council blocks it.
 **Impact**: High — prevents architectural drift.
 
-### Shadow Pilot Mode
-**Idea**: Council debates silently in background while human codes. If Council reaches 90% consensus the human is about to make a critical error (e.g., committing a secret), the UI intervenes with a warning.
-**Impact**: Medium — innovative but complex to implement.
-
 ### Multi-Model Consensus Voting
 **Idea**: Before applying any generated code, route the same prompt to 3 different LLMs and use majority-vote consensus on the approach. Track agreement rates as a quality metric.
 **Impact**: High — significantly reduces single-model blind spots.
@@ -46,10 +42,6 @@ This is a living document of creative improvements, refactoring ideas, and futur
 ---
 
 ## 3. Product & UX
-
-### Routing Simulation Dashboard
-**Idea**: Build a dedicated UI page at `/dashboard/routing` consuming the `/api/routing/simulate` endpoint. Visualize cost projections, model selection logic, and budget burn-down charts.
-**Impact**: 🔥 High — makes the routing engine tangible to users.
 
 ### Plugin Marketplace UI Enhancement
 **Idea**: The plugin marketplace page should display signature verification status (✓ Verified, ⚠ Unsigned), show the ingestion API for developers, and allow filtering by capability.
@@ -75,10 +67,6 @@ This is a living document of creative improvements, refactoring ideas, and futur
 **Idea**: Create `Dockerfile` + `docker-compose.yml` with PM2 managing both the Next.js app and Bun daemon in a single container. Include health checks and auto-restart.
 **Impact**: 🔥 High — critical for self-hosting users.
 
-### One-Click Agent Scaling
-**Idea**: In the Analytics Dashboard, add a "Deploy More Agents" slider. When bottlenecks are detected in feature implementation, automatically spin up parallel Jules sessions orchestrated via batch processing.
-**Impact**: Medium — ambitious but transformative for large projects.
-
 ### CI/CD Pipeline Enhancement
 **Idea**: Add automated canary deployments. Deploy to a staging environment first, run E2E suite, then promote to production.
 **Impact**: Medium — standard but valuable.
@@ -90,10 +78,6 @@ This is a living document of creative improvements, refactoring ideas, and futur
 ### Deep Context RAG
 **Idea**: Index the local codebase using a vector database (ChromaDB, Pinecone) to give agents "god-mode" understanding of project structure. Every prompt includes relevant code context.
 **Impact**: 🔥 High — game-changing for code understanding.
-
-### Session Analytics & Trends
-**Idea**: Track session success rates, average resolution times, nudge effectiveness, and debate consensus rates over time. Display as time-series charts in the analytics dashboard.
-**Impact**: Medium — great for optimizing agent behavior.
 
 ### Workflow Automation Engine
 **Idea**: Define complex multi-step workflows (Feature → Test → PR → Merge) that the Session Keeper can execute end-to-end without manual intervention.

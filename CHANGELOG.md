@@ -2,11 +2,25 @@
 
 All notable changes to this project will be documented in this file.
 
-## [1.0.0] - 2026-02-27
+## [0.9.1] - 2026-03-18
+
+### Removed
+- **Analytics System**: Completely removed the `AnalyticsDashboard` component and `/api/analytics` endpoint to simplify the workspace.
+- **Side Logs**: Deleted the vertical logs panel and `SessionKeeper` UI components.
+- **System Dashboard**: Removed the internal system metrics and submodule status pages.
+
+### Changed
+- **UI Refactor**: Transitioned chat history (`ActivityFeed`, `ActivityItem`, `ActivityGroup`) to a fully theme-aware architecture using CSS variables instead of hardcoded dark-mode values.
+- **Version Uniformity**: Synchronized all version strings across `package.json`, `lib/version.ts`, `VERSION`, `VERSION.md`, `next.config.ts`, `docs/ARCHITECTURE.md`, and UI fallbacks to `0.9.1`.
+
+### Fixed
+- **Type Safety**: Resolved several linting warnings and fixed syntax errors in `AppLayout`.
+
+## [0.9.0] - 2026-02-27
 
 ### Added
 - **RAG Context Architecture**: Designed the impending `sqlite-vss` integration in `RAG_ARCHITECTURE.md` to offer instantaneous codebase familiarity natively to the orchestrator agents via the `query_codebase` MCP tool.
-- **Enterprise Release**: Consolidated systems, audited all plugins, fully hydrated submodule metrics, and achieved complete project stability representing the "Enterprise Foundations" roadmap target.
+- **Enterprise Foundations**: Consolidated systems, audited all plugins, fully hydrated submodule metrics, and achieved complete project stability.
 
 ### Changed
 - **Database Scalability**: Enforced `connection_limit=1` and `socket_timeout=10` on production SQLite database interactions within `lib/prisma.ts` to neutralize "database is locked" concurrency conflicts.
@@ -15,7 +29,7 @@ All notable changes to this project will be documented in this file.
 ### Fixed
 - **Authentication**: Patched an unhanded `ClientFetchError` inside the Next.js `authjs` configuration causing 500 crashes by successfully provisioning and generating `.env` secrets.
 
-## [0.9.2] - 2026-02-27
+## [0.8.1] - 2026-02-27
 
 ### Added
 - **Global Documentation Overhaul**: Rebuilt `VISION.md`, `ROADMAP.md`, `TODO.md`, and `MEMORY.md`. 

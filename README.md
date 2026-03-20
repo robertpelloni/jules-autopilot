@@ -1,120 +1,83 @@
-# Jules UI
+# Jules Autopilot (Lean Core)
 
-![Build Status](https://github.com/sbhavani/jules-app/actions/workflows/ci.yml/badge.svg)
-![Next.js](https://img.shields.io/badge/Next.js-16.0-black)
-![TypeScript](https://img.shields.io/badge/TypeScript-5.0-blue)
-![Tailwind CSS](https://img.shields.io/badge/Tailwind-4.0-38bdf8)
+> **The ultra-fast, autonomous command center for Google Jules.**
 
-![Session View](public/assets/session-screenshot.png)
+Jules Autopilot is a high-performance, minimalist orchestration platform for the Google Jules AI agent. It replaces slow official interfaces with a unified, real-time dashboard and a keyboard-driven TUI, all powered by a single zero-dependency Bun binary.
 
-**A powerful, self-hosted workspace for Google's Jules AI agent.** Transform standard agent interactions into an engineering command center with live code diffs, real-time activity monitoring, session analytics, and comprehensive terminal output inspection.
+## 🚀 The Holy Grail Stack (100% Lean)
 
-## ✨ Key Features
+This project has been pivoted to a "Lean Core" architecture to ensure maximum performance and zero friction:
 
-- 🔄 **Real-Time Updates** - Live activity feed with auto-polling
-- 🤖 **Auto-Pilot (Session Keeper)** - Keep sessions active automatically with smart nudges and plan approvals.
-- ⚖️ **Council Debate Mode** - Multi-agent debate system (Architect vs Security) to guide the primary agent.
-- 🛡️ **Deep Code Analysis** - Parallel code audits for Security, Performance, and Maintainability.
-- 📊 **Code Diff Viewer** - Visualize git patches and changes instantly
-- 📁 **Artifact Browser** - Browse and review generated files (diffs, logs, media) with one click.
-- 📋 **Kanban Board** - Visual session management (Active, Paused, Completed).
-- 💻 **Integrated Terminal** - Full web-based terminal with local machine access
-- 📈 **Analytics Dashboard** - Track session metrics and trends
-- ⚙️ **System Dashboard** - View submodules, build versions, and project structure.
-- 📱 **Mobile-First** - Fully responsive design
-- 🔒 **Secure** - Container isolation and API keys stored locally
+- **Runtime:** [Bun](https://bun.sh) (Single binary for everything)
+- **Backend:** [Hono](https://hono.dev) (High-performance API + WebSocket server)
+- **Frontend:** [Vite](https://vitejs.dev) + [React 19](https://react.dev) (Pure SPA, no SSR overhead)
+- **Database:** [Prisma](https://prisma.io) + SQLite (Zero-config local persistence)
+- **Queue:** Native SQLite-backed task queue (No Redis required)
+- **Styling:** [TailwindCSS v4](https://tailwindcss.com)
 
-## 🚀 Quick Start
+## 🛠️ Getting Started
 
-**Prerequisites:** Node.js 18+ (Node 20+ recommended), `pnpm` (required for workspaces), Jules API key.
+### Prerequisites
+- [Bun](https://bun.sh) installed globally.
+- [pnpm](https://pnpm.io) for workspace dependency management.
 
-### Option 1: Vercel Deployment
-
-Click the button below to deploy your own instance of Jules UI to Vercel:
-
-[![Deploy with Vercel](https://vercel.com/button)](https://vercel.com/new/clone?repository-url=https%3A%2F%2Fgithub.com%2Frobertpelloni%2Fjules-autopilot)
-
-**Environment Variables:**
-- `JULES_API_KEY`: Your Jules API key.
-- `OPENAI_API_KEY` (Optional): For Council Debate mode.
-- `ANTHROPIC_API_KEY` (Optional): For Claude-based analysis.
-
-### Option 2: Local Development
-
-Run the full stack locally:
-
+### Installation
 ```bash
-# Clone and install
-git clone <your-repo-url>
-cd jules-ui
+# Clone the repository
+git clone https://github.com/your-repo/jules-autopilot.git
+cd jules-autopilot
 
 # Install dependencies
-# Note: We use pnpm workspaces.
-npm install -g pnpm
 pnpm install
 
-# Start development server
-pnpm run dev
+# Initialize the database
+npx prisma db push
 ```
 
-Open [http://localhost:3000](http://localhost:3000).
+### Running the Command Center
+You can run the entire stack with two commands:
 
-### Option 3: Docker Compose
+1. **Start the API Daemon:**
+   ```bash
+   pnpm run daemon
+   ```
+2. **Start the Vite Dashboard (Dev Mode):**
+   ```bash
+   pnpm run dev
+   ```
 
-Run the app and terminal server in containers:
+## 🏗️ Architecture (Lean Core)
 
-```bash
-docker-compose -f deploy/docker-compose.yml up
+```
+┌──────────────────────────────────────────┐
+│          Browser (Vite SPA)              │
+│  http://localhost:3000 (Dev)             │
+│  http://localhost:8080 (Prod)            │
+└───────────────┬──────────────────────────┘
+                │ Proxy / WebSocket
+                ▼
+┌──────────────────────────────────────────┐
+│        Bun Daemon (Hono Server)          │
+│  • Centralized Jules API Proxy           │
+│  • SQLite Task Queue (Background Nudges) │
+│  • Local Filesystem Access               │
+│  • Multi-Agent Debate Engine             │
+└───────────────┬──────────────────────────┘
+                │
+                ▼
+┌──────────────────────────────────────────┐
+│        SQLite Database (Prisma)          │
+│  • Session State & Activity Logs         │
+│  • Task Queue Persistence                │
+│  • User Settings & Templates             │
+└──────────────────────────────────────────┘
 ```
 
-Open [http://localhost:3002](http://localhost:3002).
+## 🧪 Operational Commands
+- `pnpm run build`: Build the shared package, prisma client, and Vite SPA.
+- `pnpm run daemon`: Start the backend API and background monitoring.
+- `pnpm run lint`: Run ESLint across the source tree.
+- `pnpm run typecheck`: Strict TypeScript validation.
 
-## 🤖 Auto-Pilot (Session Keeper)
-
-The **Session Keeper** is a background utility that ensures your Jules sessions remain active and productive.
-
-*   **Smart Nudges:** Uses a Supervisor LLM (OpenAI, Anthropic, Gemini, etc.) to analyze chat history and send context-aware prompts if the agent becomes inactive.
-*   **Plan Approval:** Automatically approves plans generated by the agent to keep the workflow moving.
-*   **Council Mode:** Enables a multi-agent debate system where different personas (e.g., "Security Expert", "Performance Engineer") discuss the next step before instructing the agent.
-*   **Configurable:** Adjust check intervals, inactivity thresholds (separate for "In Progress" vs "Idle"), and customize fallback messages.
-
-Access these settings via the **Gear Icon** in the top right or the **Logs** panel at the bottom of the screen.
-
-## 🛠️ Architecture
-
-This project is a **monorepo workspace** using `pnpm` and `bun`.
-
-*   `packages/shared`: Shared types, utilities, and core orchestration logic. Built with `tsc` for cross-package usage.
-*   `app/`: Main Next.js application (Frontend + API Routes). Deployed to Vercel or Docker.
-*   `server/`: Backend services (Session Keeper Daemon). Supports both Node.js (via `@hono/node-server`) and Bun runtimes.
-*   `terminal-server/`: Dedicated WebSocket server for the integrated terminal.
-
-### Deployment Notes
-
-- **Vercel:** The project is optimized for Vercel Serverless Functions. The `postinstall` script automatically builds the `@jules/shared` workspace to ensure dependencies are available.
-- **Node vs Bun:** While optimized for Bun locally, the server logic includes runtime detection to fallback to standard Node.js on Vercel seamlessly.
-
-## 🔧 Development
-
-```bash
-pnpm run dev      # Start dev server (frontend + terminal)
-pnpm run build    # Build all workspaces (shared, app, cli)
-pnpm run lint     # Run linter
-pnpm test         # Run tests (Jest)
-```
-
-## 📚 API Integration
-
-Integrates with Jules API (`https://jules.googleapis.com/v1alpha`) for session management, activity streaming, and real-time updates.
-
-## 🤝 Contributing
-
-Contributions welcome! Feel free to submit a Pull Request.
-
-## 📄 License
-
-MIT License - see LICENSE file for details.
-
----
-
-Built with ❤️ for the Jules Community
+## 📜 License
+MIT

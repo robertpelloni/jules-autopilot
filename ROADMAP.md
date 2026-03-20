@@ -1,9 +1,16 @@
 # Project Roadmap
 
 This roadmap outlines the major structural plans and strategic milestones for the Jules Autopilot Orchestrator. 
-For granular tasks and immediate bug fixes, see `TODO.md` and `task.md`.
+For granular tasks and immediate bug fixes, see `TODO.md`.
 
-## Milestone: v0.9 (Current) — "Enterprise Foundations"
+## Milestone: v0.9.1 (Current) — "Lean Core Pivot"
+* [x] **Enterprise Feature Pruning:** Removed high-maintenance "Enterprise" modules (Analytics, Swarms, Side Logs, Submodules) to focus on a robust single-user core.
+* [x] **API Centralization:** Consolidated all backend logic into a single Bun-based daemon on port 8080 with a transparent Next.js proxy at `/api/local/`.
+* [x] **Database Optimization:** Pruned Prisma schema to essential models only, reducing query complexity and improving local performance.
+* [x] **Mock Data Fallback:** Implemented deterministic mock session/activity data when API keys are not configured, enabling zero-config dashboard exploration.
+* [x] **NextAuth Refactor:** Simplified authentication flow by removing database adapters for local development and fixing dashboard redirect loops.
+
+## Milestone: v0.9 (Legacy) — "Enterprise Foundations"
 * [x] **Agent Routing & Telemetry:** Dynamic Provider routing (OpenAI vs Anthropic) based on cost and quota caps.
 * [x] **Submodule Architecture:** Consolidation of 10 external plugins and MCP tools (Orchestrators, CLI, GitHub Actions).
 * [x] **UI Polish:** Granular plugin signature tracking, live budget dashboards, SSE real-time push events.
@@ -56,7 +63,6 @@ For granular tasks and immediate bug fixes, see `TODO.md` and `task.md`.
 * [x] **Memory Dashboard:** Interactive `/dashboard/memory` page for browsing, previewing, and managing compacted session memory snapshots.
 
 ## Milestone: v10.0 — "The Command Center"
-* [x] **Analytics Dashboard:** Comprehensive `/dashboard/analytics` page with session stats, timeline charts, repo usage, LLM cost breakdown, and keeper activity metrics.
 * [x] **Settings Hub:** Unified `/dashboard/settings` page combining keeper configuration, budget status visualization, and provider management.
 
 ## Milestone: v11.0 — "The Operator"
@@ -64,7 +70,6 @@ For granular tasks and immediate bug fixes, see `TODO.md` and `task.md`.
 * [x] **Code Review Dashboard:** Interactive `/dashboard/reviews` page with multi-provider AI code review (OpenAI/Anthropic/Gemini), review type selection (standard/security/performance/architecture), and result display with issue highlighting.
 
 ## Milestone: v12.0 — "The Architect"
-* [x] **Keeper Logs Dashboard:** Filterable `/dashboard/logs` page with type-based icons, stats bar, session ID display, and real-time refresh.
 * [x] **Workspace Switcher:** Membership-validated `/api/workspaces/switch` endpoint allowing users to change active workspace context with role verification.
 
 ## Milestone: v13.0 — "The Pipeline"
@@ -81,7 +86,6 @@ For granular tasks and immediate bug fixes, see `TODO.md` and `task.md`.
 
 ## Milestone: v16.0 — "The Lens"
 * [x] **Session Replay Dashboard:** Timeline-based `/dashboard/snapshots` page with session ID search, actor icons (user/assistant/system), event type badges, sequence numbers, and paginated browsing, backed by a new `/api/snapshots` API.
-* [x] **System Health Dashboard:** Auto-refreshing `/dashboard/system` page showing database/daemon service status, uptime, and platform-wide metrics (sessions, swarms, plugins, active jobs).
 
 ## Milestone: v17.0 — "The Circuit"
 * [x] **Session Transfers Dashboard:** Intuitive `/dashboard/transfers` page allowing users to view cross-provider context handoffs, showing source/target providers and session IDs, item counts (activities, files), and completion rules, powered by the `/api/transfers` API.

@@ -45,7 +45,7 @@ export default function Settings({ onNavigate }: SettingsProps) {
         <Text bold>Environment</Text>
         <Box marginTop={1} flexDirection="column">
           <Text dimColor>API URL: {process.env.JULES_API_URL || 'http://localhost:8080'}</Text>
-          <Text dimColor>Version: 0.8.0</Text>
+          <Text dimColor>Version: 0.9.1</Text>
         </Box>
       </Box>
 

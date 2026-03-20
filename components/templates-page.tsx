@@ -18,9 +18,10 @@ import { toast } from "sonner";
 
 interface TemplatesPageProps {
   onStartSession: (template: SessionTemplate) => void;
+  onBack?: () => void;
 }
 
-export function TemplatesPage({ onStartSession }: TemplatesPageProps) {
+export function TemplatesPage({ onStartSession, onBack }: TemplatesPageProps) {
   const { client } = useJules();
   const [templates, setTemplates] = useState<SessionTemplate[]>([]);
   const [isCreateOpen, setIsCreateOpen] = useState(false);

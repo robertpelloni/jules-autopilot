@@ -27,19 +27,6 @@ model Account {
   @@unique([provider, providerAccountId])
 }
 
-model AgentPersona {
-  id              String   @id @default(cuid())
-  name            String   @unique
-  description     String
-  systemPrompt    String
-  temperature     Float    @default(0.7)
-  modelPreference String   @default("gpt-4o")
-  isDefault       Boolean  @default(false)
-  allowedTools    String?  // JSON array of allowed tool names
-  createdAt       DateTime @default(now())
-  updatedAt       DateTime @updatedAt
-}
-
 model ApiKey {
   id           String     @id @default(cuid())
   name         String
@@ -59,18 +46,6 @@ model ApiKey {
   workspace    Workspace? @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
 }
 
-model AuditLog {
-  id String @id @default(cuid())
-  actor      String
-  action     String
-  resource   String
-  resourceId String?
-  metadata   String?
-  ipAddress  String?
-  apiKeyId   String?
-  createdAt  DateTime @default(now())
-}
-
 model Debate {
   id String @id @default(cuid())
   topic            String
@@ -85,17 +60,6 @@ model Debate {
   createdAt        DateTime   @default(now())
   updatedAt DateTime @updatedAt
   workspace Workspace? @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
-}
-
-model InstalledPlugin {
-  id          String         @id @default(cuid())
-  pluginId    String
-  workspaceId String?
-  config      String?
-  isEnabled   Boolean        @default(true)
-  installedAt DateTime       @default(now())
-  plugin      PluginManifest @relation(fields: [pluginId], references: [id])
-  workspace   Workspace?     @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
 }
 
 model KeeperLog {
@@ -123,117 +87,9 @@ model KeeperSettings {
   supervisorModel            String   @default("gpt-4o")
   contextMessageCount        Int      @default(10)
   resumePaused               Boolean  @default(false)
-  shadowPilotEnabled         Boolean  @default(false)
-  lastShadowPilotCommit      String?
   userId                     String?
   updatedAt DateTime @updatedAt
   user User?    @relation(fields: [userId], references: [id], onDelete: Cascade)
-}
-
-model MarketplacePlugin {
-  id           String    @id @default(cuid())
-  name         String    @unique
-  description  String
-  author       String
-  version      String
-  wasmUrl      String?
-  iconUrl      String?
-  signature    String?
-  tags         String?
-  capabilities String?
-  downloads    Int       @default(0)
-  installedAt  DateTime?
-  createdAt    DateTime  @default(now())
-  updatedAt    DateTime  @updatedAt
-}
-
-model McpServerLink {
-  id String @id @default(cuid())
-  name        String   @unique
-  description String?
-  url         String?
-  command     String?
-  args        String?
-  env         String?
-  isActive    Boolean  @default(true)
-  status      String   @default("disconnected")
-  createdAt   DateTime @default(now())
-  updatedAt DateTime @updatedAt
-}
-
-model PluginAuditLog {
-  id String @id @default(cuid())
-  pluginId            String
-  action              String
-  capabilityRequested String
-  success             Boolean
-  workspaceId         String
-  timestamp           DateTime  @default(now())
-  workspace Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
-}
-
-model PluginManifest {
-  id               String            @id
-  name             String
-  description      String
-  author           String
-  version          String            @default("1.0.0")
-  capabilities     String
-  configSchema     String?
-  signature        String?
-  publicKey        String?
-  status           String            @default("active")
-  wasmUrl          String?
-  wasmPayload      Bytes?
-  createdAt        DateTime          @default(now())
-  updatedAt        DateTime          @updatedAt
-  installations    InstalledPlugin[]
-}
-
-model ProviderTelemetry {
-  id String @id @default(cuid())
-  workspaceId      String
-  provider         String
-  model            String
-  promptTokens     Int
-  completionTokens Int
-  estimatedCostUSD Float
-  timestamp        DateTime  @default(now())
-  workspace Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
-}
-
-model ProviderUsageLog {
-  id               String     @id @default(cuid())
-  provider         String
-  model            String
-  taskType         String
-  promptTokens     Int
-  completionTokens Int
-  inputTokens      Int        @default(0)
-  outputTokens     Int        @default(0)
-  estimatedCostUSD Float
-  costCents        Int        @default(0)
-  latencyMs        Int        @default(0)
-  createdAt        DateTime   @default(now())
-  timestamp        DateTime   @default(now())
-  success          Boolean    @default(true)
-  sessionId        String?
-  workspaceId      String?
-  workspace        Workspace? @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
-}
-
-model RoutingPolicy {
-  id String @id @default(cuid())
-  workspaceId        String
-  taskType           String
-  preferredProvider  String?
-  preferredModel     String?
-  costEfficiencyMode Boolean   @default(false)
-  createdAt          DateTime  @default(now())
-  updatedAt DateTime @updatedAt
-  workspace Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
-
-  @@unique([workspaceId, taskType])
 }
 
 model Session {
@@ -259,36 +115,6 @@ model SessionTemplate {
   workspace Workspace? @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
 }
 
-model SessionTransfer {
-  id String @id @default(cuid())
-  sourceProvider   String
-  sourceSessionId  String
-  targetProvider   String
-  targetSessionId  String?
-  status           String     @default("queued")
-  transferredItems String     @default("{\"activities\": 0, \"files\": 0}")
-  errorReason      String?
-  userId           String?
-  workspaceId      String?
-  createdAt        DateTime   @default(now())
-  updatedAt DateTime @updatedAt
-  workspace Workspace? @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
-  user User?      @relation(fields: [userId], references: [id], onDelete: Cascade)
-}
-
-model StoredDebate {
-  id          String     @id @default(cuid())
-  topic       String
-  summary     String?
-  history     String
-  metadata    String?
-  rounds      String     @default("[]")
-  workspaceId String?
-  createdAt   DateTime   @default(now())
-  updatedAt   DateTime   @updatedAt
-  workspace   Workspace? @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
-}
-
 model SupervisorState {
   sessionId                      String   @id
   lastProcessedActivityTimestamp String?
@@ -296,14 +122,6 @@ model SupervisorState {
   openaiThreadId                 String?
   openaiAssistantId              String?
   updatedAt DateTime @updatedAt
-}
-
-model SystemMetric {
-  id String @id @default(cuid())
-  type      String
-  value     Float
-  metadata  String?
-  createdAt DateTime @default(now())
 }
 
 model User {
@@ -315,7 +133,6 @@ model User {
   accounts Account[]
   keeperSettings KeeperSettings[]
   sessions Session[]
-  sessionTransfers SessionTransfer[]
   memberships WorkspaceMember[]
 }
 
@@ -325,22 +142,6 @@ model VerificationToken {
   expires    DateTime
 
   @@unique([identifier, token])
-}
-
-model WebhookRoute {
-  id String @id @default(cuid())
-  name            String
-  source          String
-  secret          String?
-  matchPath       String
-  matchValue      String
-  actionType      String
-  actionConfig    String
-  isActive        Boolean   @default(true)
-  hitCount        Int       @default(0)
-  lastTriggeredAt DateTime?
-  createdAt       DateTime  @default(now())
-  updatedAt DateTime @updatedAt
 }
 
 model Workspace {
@@ -353,16 +154,8 @@ model Workspace {
   updatedAt DateTime @updatedAt
   apiKeys ApiKey[]
   debates Debate[]
-  installedPlugins InstalledPlugin[]
-  pluginAudits PluginAuditLog[]
-  telemetry ProviderTelemetry[]
-  providerUsageLogs ProviderUsageLog[]
-  routingPolicies RoutingPolicy[]
   templates SessionTemplate[]
-  sessionTransfers SessionTransfer[]
-  storedDebates StoredDebate[]
   members WorkspaceMember[]
-  providerConfigs ProviderConfig[]
 }
 
 model WorkspaceMember {
@@ -372,122 +165,6 @@ model WorkspaceMember {
   role        String    @default("member")
   user User      @relation(fields: [userId], references: [id], onDelete: Cascade)
   workspace Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
-
-}
-
-// ----------------------------------------------------------------------------
-// Recovered Models (Background Jobs & Swarms)
-// ----------------------------------------------------------------------------
-
-model ScheduledJob {
-  id        String    @id @default(cuid())
-  name      String
-  cronExpr  String
-  timezone  String    @default("UTC")
-  jobType   String
-  jobConfig String
-  nextRunAt DateTime?
-  lastRunAt DateTime?
-  runCount  Int       @default(0)
-  isActive  Boolean   @default(true)
-  createdAt DateTime  @default(now())
-  updatedAt DateTime  @updatedAt
-}
-
-model SessionSnapshot {
-  id        String   @id @default(cuid())
-  sessionId String
-  sequence  Int
-  eventType String
-  actor     String
-  content   String
-  metadata  String?
-  timestamp DateTime
-}
-
-model AgentSwarm {
-  id        String       @id @default(cuid())
-  name      String
-  prompt    String
-  status    String       @default("pending")
-  result    String?
-  totalTasks Int        @default(0)
-  doneTasks  Int        @default(0)
-  totalTokens Int       @default(0)
-  totalCostCents Int    @default(0)
-  priority  Int        @default(0)
-  metadata  String?
-  createdAt DateTime     @default(now())
-  updatedAt DateTime     @updatedAt
-  tasks     SwarmTask[]
-}
-
-model SwarmTask {
-  id          String     @id @default(cuid())
-  swarmId     String
-  title       String
-  description String?
-  prompt      String
-  status      String     @default("pending")
-  priority    Int        @default(0)
-  dependsOn   String?
-  assignedTo  String?
-  sessionId   String?
-  retryCount  Int        @default(0)
-  isEscalated Boolean    @default(false)
-  inputTokens Int        @default(0)
-  outputTokens Int       @default(0)
-  costCents     Int        @default(0)
-  isVerification Boolean    @default(false)
-  isRedTeam      Boolean    @default(false)
-  reviewedTaskId String?
-  reviewStatus   String?    @default("pending")
-  result        String?
-  swarm       AgentSwarm @relation(fields: [swarmId], references: [id], onDelete: Cascade)
-  createdAt   DateTime   @default(now())
-  updatedAt   DateTime   @updatedAt
-}
-
-model CIRun {
-  id           String   @id @default(cuid())
-  runId        String   @unique
-  repo         String
-  conclusion   String?
-  headSha      String?
-  workflowName String?
-  status       String   @default("completed")
-  createdAt    DateTime @default(now())
-  updatedAt    DateTime @updatedAt
-}
-
-model Notification {
-  id           String    @id @default(cuid())
-  type         String
-  title        String
-  body         String
-  severity     String    @default("info")
-  resourceType String?
-  resourceId   String?
-  isRead       Boolean   @default(false)
-  dismissedAt  DateTime?
-  createdAt    DateTime  @default(now())
-}
-
-model ProviderConfig {
-  id            String     @id @default(cuid())
-  workspaceId   String
-  providerId    String
-  apiKey        String?    // Encrypted at rest in production
-  isEnabled     Boolean    @default(true)
-  priority      Int        @default(0)
-  maxConcurrent Int        @default(3)
-  metadata      String?    // JSON for provider-specific settings
-  createdAt     DateTime   @default(now())
-  updatedAt     DateTime   @updatedAt
-  workspace     Workspace  @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
-
-  @@unique([workspaceId, providerId])
-  @@index([workspaceId])
 }
 
 model CodeChunk {
@@ -505,31 +182,19 @@ model CodeChunk {
   @@index([workspaceId, filepath])
 }
 
-model Workflow {
-  id          String         @id @default(cuid())
-  name        String
-  description String?
-  triggerType String         @default("manual") // manual | scheduled | webhook
-  status      String         @default("pending") // pending | running | completed | failed
-  metadata    String?        // JSON config
-  createdAt   DateTime       @default(now())
-  updatedAt   DateTime       @updatedAt
-  steps       WorkflowStep[]
-}
+model QueueJob {
+  id          String   @id @default(cuid())
+  type        String   // 'check_session', 'run_debate', etc.
+  payload     String   // JSON string
+  status      String   @default("pending") // 'pending', 'processing', 'completed', 'failed'
+  attempts    Int      @default(0)
+  maxAttempts Int      @default(3)
+  lastError   String?
+  runAt       DateTime @default(now())
+  startedAt   DateTime?
+  completedAt DateTime?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
 
-model WorkflowStep {
-  id         String   @id @default(cuid())
-  workflowId String
-  order      Int
-  name       String
-  stepType   String   // session | swarm | ci_check | guard_check | custom
-  config     String   @default("{}") // JSON step config (prompt, repo, etc.)
-  dependsOn  String?  // ID of step that must complete first
-  status     String   @default("pending") // pending | running | completed | failed | skipped
-  result     String?  // JSON output
-  startedAt  DateTime?
-  finishedAt DateTime?
-  workflow   Workflow @relation(fields: [workflowId], references: [id], onDelete: Cascade)
-
-  @@index([workflowId])
+  @@index([status, runAt])
 }

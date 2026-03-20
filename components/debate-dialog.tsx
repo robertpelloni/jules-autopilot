@@ -70,12 +70,6 @@ const PROVIDER_OPTIONS: Record<string, {
     models: ['gemini-1.5-pro', 'gemini-1.5-flash'],
     apiKeyKey: 'google_api_key',
     envFallback: 'NEXT_PUBLIC_GEMINI_KEY'
-  },
-  qwen: {
-    label: 'Qwen (Alibaba)',
-    models: ['qwen-max', 'qwen-plus', 'qwen-turbo'],
-    apiKeyKey: 'qwen_api_key',
-    envFallback: 'NEXT_PUBLIC_QWEN_KEY'
   }
 };
 

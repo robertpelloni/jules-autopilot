@@ -6,13 +6,11 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Github, Brain, Palette, Cloud, DollarSign } from 'lucide-react';
+import { Github, Brain, Palette } from 'lucide-react';
 import { SessionKeeperSettingsContent } from './session-keeper-settings-content';
 import { ThemeCustomizer } from './theme-customizer';
-import { CloudDevProvidersSettings } from './cloud-dev-providers-settings';
 import { useSessionKeeperStore } from '@/lib/stores/session-keeper';
 import { toast } from 'sonner';
-import { BudgetRoutingSettings } from './budget-routing-settings';
 
 interface SettingsDialogProps {
   open?: boolean;
@@ -87,14 +85,6 @@ export function SettingsDialog({ open: propOpen, onOpenChange: propOnOpenChange,
               <TabsTrigger value="supervisor" className="text-xs flex items-center gap-2">
                 <Brain className="h-3.5 w-3.5" />
                 Supervisor
-              </TabsTrigger>
-              <TabsTrigger value="cloud-dev" className="text-xs flex items-center gap-2">
-                <Cloud className="h-3.5 w-3.5" />
-                Cloud Dev
-              </TabsTrigger>
-              <TabsTrigger value="budget" className="text-xs flex items-center gap-2">
-                <DollarSign className="h-3.5 w-3.5" />
-                Budget
               </TabsTrigger>
             </TabsList>
           </div>
@@ -193,18 +183,6 @@ export function SettingsDialog({ open: propOpen, onOpenChange: propOnOpenChange,
               config={config}
               onConfigChange={setConfig}
             />
-          </TabsContent>
-
-          <TabsContent value="cloud-dev" className="flex-1 p-6 overflow-auto">
-            <div className="max-w-md">
-              <CloudDevProvidersSettings />
-            </div>
-          </TabsContent>
-
-          <TabsContent value="budget" className="flex-1 p-6 overflow-auto">
-            <div className="max-w-md">
-              <BudgetRoutingSettings />
-            </div>
           </TabsContent>
         </Tabs>
       </DialogContent>

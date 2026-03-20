@@ -2,14 +2,10 @@
 
 import { createContext, useContext, useEffect, useState, useCallback, useRef } from 'react';
 import { JulesClient } from './client';
-import { useRouter } from 'next/navigation';
 
 interface JulesContextType {
   client: JulesClient | null;
   isLoading: boolean;
-  apiKey: string | null;
-  setApiKey: (key: string) => Promise<void>;
-  clearApiKey: () => Promise<void>;
   refreshTrigger: number;
   triggerRefresh: () => void;
 }
@@ -20,35 +16,25 @@ export function JulesProvider({ children }: { children: React.ReactNode }) {
   const [client, setClient] = useState<JulesClient | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [refreshTrigger, setRefreshTrigger] = useState(0);
-  const router = useRouter();
   const initialized = useRef(false);
-  // Track apiKey presence for UI components that rely on it
-  const [hasApiKey, setHasApiKey] = useState(false);
 
   useEffect(() => {
     if (initialized.current) return;
     initialized.current = true;
 
-    const checkSession = async () => {
+    const initClient = () => {
         try {
-            const res = await fetch('/api/auth/me');
-            if (res.ok) {
-                const localJulesKey = typeof window !== 'undefined' ? localStorage.getItem('jules_api_key') : null;
-                setClient(new JulesClient(localJulesKey || undefined));
-                setHasApiKey(true);
-            } else {
-                setClient(null);
-                setHasApiKey(false);
-            }
-        } catch {
+            const localJulesKey = typeof window !== 'undefined' ? localStorage.getItem('jules_api_key') : null;
+            setClient(new JulesClient(localJulesKey || undefined));
+        } catch (e) {
+            console.error("Failed to initialize JulesClient:", e);
             setClient(null);
-            setHasApiKey(false);
         } finally {
             setIsLoading(false);
         }
     };
 
-    checkSession();
+    initClient();
 
     // Listen for storage changes to update API key dynamically
     const handleStorageChange = (e: StorageEvent) => {
@@ -62,23 +48,6 @@ export function JulesProvider({ children }: { children: React.ReactNode }) {
     return () => window.removeEventListener('storage', handleStorageChange);
   }, []);
 
-  const setApiKey = useCallback(async (key: string) => {
-    await fetch('/api/auth/login', {
-        method: 'POST',
-        body: JSON.stringify({ apiKey: key })
-    });
-    setClient(new JulesClient());
-    setHasApiKey(true);
-    router.refresh();
-  }, [router]);
-
-  const clearApiKey = useCallback(async () => {
-    await fetch('/api/auth/logout', { method: 'POST' });
-    setClient(null);
-    setHasApiKey(false);
-    router.push('/login');
-  }, [router]);
-
   const triggerRefresh = useCallback(() => {
     setRefreshTrigger(prev => prev + 1);
   }, []);
@@ -87,9 +56,6 @@ export function JulesProvider({ children }: { children: React.ReactNode }) {
     <JulesContext.Provider value={{ 
         client, 
         isLoading, 
-        apiKey: hasApiKey ? 'present' : null, // Providing a truthy value when authenticated to satisfy interface
-        setApiKey, 
-        clearApiKey, 
         refreshTrigger, 
         triggerRefresh 
     }}>

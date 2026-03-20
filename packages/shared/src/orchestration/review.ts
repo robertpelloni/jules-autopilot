@@ -65,43 +65,6 @@ export async function runCodeReview(request: ReviewRequest): Promise<string | Re
         result = completion.content;
     }
 
-    // Auto-comment on GitHub PR if configured
-    if (request.prUrl && request.githubToken && typeof result !== 'string' && 'score' in result) {
-        try {
-            const { Octokit } = await import('octokit');
-            const octokit = new Octokit({ auth: request.githubToken });
-
-            // Extract owner/repo/number from URL
-            // e.g. https://github.com/owner/repo/pull/123
-            const match = request.prUrl.match(/github\.com\/([^/]+)\/([^/]+)\/pull\/(\d+)/);
-            if (match && match[1] && match[2] && match[3]) {
-                const [_, owner, repo, numberStr] = match;
-                const number = parseInt(numberStr, 10);
-
-                const body = `## 🕵️ Jules Code Review
-**Score: ${result.score}/100**
-
-${result.summary}
-
-### Key Issues
-${result.issues.map(i => `- **[${i.severity.toUpperCase()}]** ${i.description} _(${i.file || 'General'})_`).join('\n')}
-
-_Automated review by Jules AI_`;
-
-                await octokit.rest.issues.createComment({
-                    owner,
-                    repo,
-                    issue_number: number,
-                    body
-                });
-                console.log(`Posted review comment to PR #${number}`);
-            }
-        } catch (e) {
-            console.error("Failed to post GitHub comment:", e);
-            // Don't fail the whole review request just because commenting failed
-        }
-    }
-
     return result;
 }
 

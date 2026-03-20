@@ -1,18 +1,10 @@
-import { auth } from '@/auth';
-import { encrypt, decrypt } from './session-utils';
-import { prisma } from '@/lib/prisma';
-
-export { encrypt, decrypt };
-
 /**
- * Retrieves the authenticated session with workspace context.
+ * Retrieves a mock authenticated session for local development.
  * 
- * Uses NextAuth v5 JWT session verification and eagerly resolves the
- * user's active workspace membership for data isolation queries across
- * all API routes. Returns null if the user is not authenticated.
+ * Provides a consistent dev environment without requiring real 
+ * authentication during the initial Lean Core pivot.
  * 
- * The returned `workspaceId` is the critical field used by every API
- * route to scope database queries to the correct workspace.
+ * Returns a static user and workspace ID.
  */
 export async function getSession() {
   // Always return a mock session for local development

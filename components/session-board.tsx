@@ -1,207 +1,173 @@
-'use client';
+"use client";
 
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useMemo, useEffect, useCallback } from "react";
+import { useJules } from "@/lib/jules/provider";
 import type { Session } from '@jules/shared';
-import { useJules } from '@/lib/jules/provider';
-import { useCloudDevStore } from '@/lib/stores/cloud-dev';
-import { CLOUD_DEV_PROVIDERS, type CloudDevProviderId } from '@/types/cloud-dev';
-import { DndContext, DragEndEvent, DragOverlay, closestCorners, DragStartEvent } from '@dnd-kit/core';
-import { arrayMove } from '@dnd-kit/sortable';
-import { SessionColumn } from './session-column';
-import { SessionCard } from './session-card';
-import { Button } from '@/components/ui/button';
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuCheckboxItem,
-  DropdownMenuTrigger,
-  DropdownMenuSeparator,
-  DropdownMenuLabel,
-} from '@/components/ui/dropdown-menu';
-import { Filter, Sparkles, Bot, Brain, Code2, Github, Blocks } from 'lucide-react';
+import { Card, CardContent } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { 
+  GitBranch, 
+  Clock, 
+  RefreshCw, 
+  Plus, 
+  MessageSquare,
+  AlertCircle,
+  ExternalLink
+} from "lucide-react";
+import { formatDistanceToNow, parseISO, isValid } from "date-fns";
+import { NewSessionDialog } from "./new-session-dialog";
 
-const PROVIDER_ICONS: Record<CloudDevProviderId, React.ReactNode> = {
-  jules: <Sparkles className="h-3 w-3" />,
-  devin: <Bot className="h-3 w-3" />,
-  manus: <Brain className="h-3 w-3" />,
-  openhands: <Code2 className="h-3 w-3" />,
-  'github-spark': <Github className="h-3 w-3" />,
-  blocks: <Blocks className="h-3 w-3" />,
-  'claude-code': <Code2 className="h-3 w-3" />,
-  codex: <Brain className="h-3 w-3" />,
-};
+interface SessionBoardProps {
+  onSelectSession: (session: Session) => void;
+  onOpenNewSession: () => void;
+}
 
-type Columns = {
-  [key: string]: Session[];
-};
+export function SessionBoard({ onSelectSession, onOpenNewSession }: SessionBoardProps) {
+  const { client, refreshTrigger } = useJules();
+  const [sessions, setSessions] = useState<Session[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
-export function SessionBoard() {
-  const { client } = useJules();
-  const { getConfiguredProviders, initializeProviders } = useCloudDevStore();
-  const [columns, setColumns] = useState<Columns>({
-    active: [],
-    paused: [],
-    completed: [],
-  });
-  const [activeId, setActiveId] = useState<string | null>(null);
-  const [selectedProviders, setSelectedProviders] = useState<Set<CloudDevProviderId>>(new Set(['jules']));
-
-  const configuredProviders = useMemo(() => {
-    const providers = getConfiguredProviders();
-    return providers.length > 0 ? providers : ['jules' as CloudDevProviderId];
-  }, [getConfiguredProviders]);
-
-  useEffect(() => {
-    initializeProviders();
-  }, [initializeProviders]);
-
-  useEffect(() => {
+  const loadSessions = useCallback(async () => {
     if (!client) return;
-    async function fetchSessions() {
-      if (!client) return;
-      const fetchedSessions = await client.listSessions();
-      const newColumns: Columns = {
-        active: [],
-        paused: [],
-        completed: [],
-      };
-      for (const session of fetchedSessions) {
-         const statusKey = (session.status === 'failed' ? 'completed' : session.status) as keyof Columns;
-         if (newColumns[statusKey]) {
-            newColumns[statusKey].push(session);
-         } else {
-             newColumns.active.push(session);
-         }
-      }
-      setColumns(newColumns);
+    try {
+      setLoading(true);
+      const data = await client.listSessions();
+      setSessions(data);
+      setError(null);
+    } catch (err) {
+      console.error("Failed to load sessions:", err);
+      setError("Failed to load sessions. Is the Jules API key configured?");
+    } finally {
+      setLoading(false);
     }
-    fetchSessions();
   }, [client]);
 
-  const findContainer = (id: string) => {
-    if (id in columns) {
-      return id;
-    }
-    return Object.keys(columns).find((key) => columns[key].find((item) => item.id === id));
-  };
+  useEffect(() => {
+    loadSessions();
+  }, [loadSessions, refreshTrigger]);
 
-  const handleDragStart = (event: DragStartEvent) => {
-    setActiveId(event.active.id as string);
-  };
+  const stats = useMemo(() => {
+    const active = sessions.filter(s => s.status === 'active').length;
+    const completed = sessions.filter(s => s.status === 'completed').length;
+    const failed = sessions.filter(s => s.status === 'failed').length;
+    return { active, completed, failed, total: sessions.length };
+  }, [sessions]);
 
-  const handleDragEnd = (event: DragEndEvent) => {
-    const { active, over } = event;
-    setActiveId(null);
-
-    if (!over) return;
-
-    const activeContainer = findContainer(active.id as string);
-    const overContainer = findContainer(over.id as string);
-
-    if (!activeContainer || !overContainer) {
-      return;
-    }
-
-    if (activeContainer === overContainer) {
-      setColumns((prev) => {
-        const activeItems = prev[activeContainer];
-        const oldIndex = activeItems.findIndex((item) => item.id === active.id);
-        const newIndex = activeItems.findIndex((item) => item.id === over.id);
-        return {
-          ...prev,
-          [activeContainer]: arrayMove(activeItems, oldIndex, newIndex),
-        };
-      });
-    } else {
-      let draggedSession: Session | undefined;
-      const newColumns = { ...columns };
-
-      const oldColumn = newColumns[activeContainer];
-      const activeIndex = oldColumn.findIndex((item) => item.id === active.id);
-      if (activeIndex > -1) {
-        draggedSession = oldColumn.splice(activeIndex, 1)[0];
-      }
-
-      if (draggedSession) {
-        const newColumn = newColumns[overContainer];
-        const overIndex = newColumn.findIndex((item) => item.id === over.id);
-
-        if (overIndex > -1) {
-          newColumn.splice(overIndex, 0, draggedSession);
-        } else {
-          newColumns[overContainer] = [...newColumns[overContainer], draggedSession];
-        }
-
-        const newStatus = overContainer as 'active' | 'paused' | 'completed';
-        draggedSession.status = newStatus;
-        if (client) {
-          client.updateSession(draggedSession.id, { status: newStatus });
-        }
-
-        setColumns(newColumns);
-      }
-    }
-  };
-
-  const activeSession = activeId ? Object.values(columns).flat().find((session) => session.id === activeId) : null;
-  const showMultiProvider = configuredProviders.length > 1;
-
-  const toggleProvider = (providerId: CloudDevProviderId) => {
-    setSelectedProviders(prev => {
-      const next = new Set(prev);
-      if (next.has(providerId)) {
-        if (next.size > 1) next.delete(providerId);
-      } else {
-        next.add(providerId);
-      }
-      return next;
-    });
-  };
+  if (loading && sessions.length === 0) {
+    return (
+      <div className="h-full w-full bg-black flex items-center justify-center">
+        <p className="text-sm text-white/50 animate-pulse font-mono uppercase tracking-widest">
+          Synchronizing Sessions...
+        </p>
+      </div>
+    );
+  }
 
   return (
-    <DndContext
-      onDragEnd={handleDragEnd}
-      onDragStart={handleDragStart}
-      collisionDetection={closestCorners}
-    >
-      <div className="flex-1 overflow-x-auto p-4 sm:p-6 md:p-8">
-        {showMultiProvider && (
-          <div className="mb-4 flex items-center gap-2">
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <Button variant="outline" size="sm" className="gap-2">
-                  <Filter className="h-4 w-4" />
-                  Providers ({selectedProviders.size})
-                </Button>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent align="start">
-                <DropdownMenuLabel>Filter by Provider</DropdownMenuLabel>
-                <DropdownMenuSeparator />
-                {configuredProviders.map((providerId) => (
-                  <DropdownMenuCheckboxItem
-                    key={providerId}
-                    checked={selectedProviders.has(providerId)}
-                    onCheckedChange={() => toggleProvider(providerId)}
-                  >
-                    <span className="flex items-center gap-2">
-                      {PROVIDER_ICONS[providerId]}
-                      {CLOUD_DEV_PROVIDERS[providerId].name}
-                    </span>
-                  </DropdownMenuCheckboxItem>
-                ))}
-              </DropdownMenuContent>
-            </DropdownMenu>
+    <div className="h-full w-full bg-black flex flex-col overflow-hidden">
+      <header className="px-6 py-4 border-b border-white/[0.08] flex items-center justify-between">
+        <div>
+          <h2 className="text-sm font-bold text-white uppercase tracking-widest">Sessions</h2>
+          <div className="flex gap-4 mt-1">
+            <span className="text-[10px] text-white/40 uppercase tracking-wider">
+              {stats.active} Active
+            </span>
+            <span className="text-[10px] text-white/40 uppercase tracking-wider">
+              {stats.completed} Completed
+            </span>
+            <span className="text-[10px] text-white/40 uppercase tracking-wider">
+              {stats.total} Total
+            </span>
+          </div>
+        </div>
+        <div className="flex items-center gap-2">
+          <Button variant="ghost" size="sm" onClick={loadSessions} className="h-8 text-[10px] font-mono uppercase tracking-widest text-white/60 hover:text-white hover:bg-white/5 border border-white/10">
+            <RefreshCw className="mr-2 h-3 w-3" /> Refresh
+          </Button>
+          <NewSessionDialog onSessionCreated={loadSessions} trigger={
+            <Button size="sm" className="h-8 text-[10px] font-mono uppercase tracking-widest bg-purple-600 hover:bg-purple-500 text-white border-0">
+              <Plus className="h-3 w-3 mr-1.5" /> New Session
+            </Button>
+          }/>
+        </div>
+      </header>
+
+      <div className="flex-1 overflow-y-auto p-6">
+        {error && (
+          <div className="bg-red-950/20 border border-red-900/50 p-4 rounded-lg flex items-center gap-3 mb-6">
+            <AlertCircle className="h-5 w-5 text-red-500" />
+            <p className="text-xs text-red-200">{error}</p>
           </div>
         )}
-        <div className="flex gap-6">
-          <SessionColumn id="active" title="Active" sessions={columns.active || []} showProvider={showMultiProvider} />
-          <SessionColumn id="paused" title="Paused" sessions={columns.paused || []} showProvider={showMultiProvider} />
-          <SessionColumn id="completed" title="Completed" sessions={columns.completed || []} showProvider={showMultiProvider} />
-        </div>
+
+        {sessions.length === 0 ? (
+          <div className="flex flex-col items-center justify-center h-64 border border-dashed border-white/10 rounded-xl bg-white/[0.02]">
+            <MessageSquare className="h-8 w-8 text-white/10 mb-4" />
+            <p className="text-sm text-white/40 font-mono uppercase tracking-widest mb-4">No sessions found</p>
+            <Button variant="outline" onClick={onOpenNewSession} className="border-white/10 text-white hover:bg-white/5 uppercase tracking-widest text-[10px] font-mono">
+              Create your first session
+            </Button>
+          </div>
+        ) : (
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+            {sessions.map((session) => (
+              <Card 
+                key={session.id} 
+                className="bg-zinc-900 border-white/10 hover:border-white/20 transition-all cursor-pointer group"
+                onClick={() => onSelectSession(session)}
+              >
+                <CardContent className="p-4 space-y-4">
+                  <div className="flex items-start justify-between">
+                    <div className="space-y-1">
+                      <h3 className="text-xs font-bold text-white uppercase tracking-wide group-hover:text-purple-400 transition-colors">
+                        {session.title || 'Untitled Session'}
+                      </h3>
+                      <div className="flex items-center gap-2">
+                        <Badge variant="outline" className={`text-[8px] h-4 px-1.5 font-mono uppercase border-transparent text-white font-bold ${
+                          session.status === 'active' ? 'bg-green-500' : 
+                          session.status === 'completed' ? 'bg-blue-500' : 'bg-zinc-700'
+                        }`}>
+                          {session.status}
+                        </Badge>
+                        <span className="text-[9px] text-white/30 font-mono truncate max-w-[120px]">
+                          {session.id.substring(0, 8)}
+                        </span>
+                      </div>
+                    </div>
+                    <Button variant="ghost" size="icon" className="h-6 w-6 text-white/20 group-hover:text-white">
+                      <ExternalLink className="h-3 w-3" />
+                    </Button>
+                  </div>
+
+                  <div className="space-y-2">
+                    <div className="flex items-center gap-2 text-[10px] text-white/50">
+                      <GitBranch className="h-3 w-3" />
+                      <span className="truncate">{session.sourceId}</span>
+                    </div>
+                    <div className="flex items-center gap-2 text-[10px] text-white/50">
+                      <Clock className="h-3 w-3" />
+                      <span>{formatDate(session.updatedAt)}</span>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+            ))}
+          </div>
+        )}
       </div>
-      <DragOverlay>
-        {activeSession ? <SessionCard session={activeSession} isDragging showProvider={showMultiProvider} /> : null}
-      </DragOverlay>
-    </DndContext>
+    </div>
   );
+}
+
+function formatDate(dateStr?: string) {
+  if (!dateStr) return 'Unknown';
+  try {
+    const date = parseISO(dateStr);
+    if (!isValid(date)) return 'Unknown';
+    return formatDistanceToNow(date, { addSuffix: true });
+  } catch {
+    return 'Unknown';
+  }
 }

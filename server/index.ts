@@ -3,33 +3,29 @@ declare const Bun: any;
 
 import { Hono } from 'hono';
 import { cors } from 'hono/cors';
+import { serveStatic } from 'hono/bun';
 import { EventEmitter } from 'events';
-import { getProvider } from '@jules/shared';
-import { runDebate, runConference } from '@jules/shared';
-import { runCodeReview } from '@jules/shared';
 import { startDaemon, stopDaemon } from './daemon';
 import { prisma } from '../lib/prisma';
 import { JulesClient } from '../lib/jules/client';
 import type { DaemonEventType } from '@jules/shared';
-import { createDaemonEvent } from '@jules/shared';
-import type { Prisma } from '@prisma/client';
-import { orchestratorQueue } from './queue';
+import { createDaemonEvent, runDebate, runCodeReview } from '@jules/shared';
 import { createBunWebSocket } from 'hono/bun';
 import type { ServerWebSocket } from 'bun';
-import * as pty from 'bun-pty';
+import { setupWorker } from './queue';
+import fsPromises from 'fs/promises';
 import path from 'path';
-import fs from 'fs';
 
 // MCP Integration
-import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js";
-import { mcpServer, registerWasmPluginsAsMcpTools } from "./mcp.js";
+import { registerWasmPluginsAsMcpTools } from "./mcp.js";
 
 const { upgradeWebSocket, websocket } = createBunWebSocket();
 const app = new Hono();
+const port = 8080;
 
 const eventBus = new EventEmitter();
 const wsClients = new Set<ServerWebSocket<any>>();
-const terminalSessions = new Map<string, { ptyProcess: pty.IPty, createdAt: number, ws: ServerWebSocket<any> }>();
+let workerInstance: ReturnType<typeof setupWorker> | null = null;
 
 export function broadcastToClients(message: object) {
     const payload = JSON.stringify(message);
@@ -51,23 +47,152 @@ export function emitDaemonEvent(type: DaemonEventType, data?: object) {
 app.use('*', cors({
     origin: '*',
     allowMethods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
-    allowHeaders: ['Content-Type', 'Authorization'],
+    allowHeaders: ['Content-Type', 'Authorization', 'X-Jules-Api-Key'],
 }));
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-function enrichParticipants(participants: any[], apiKey?: string) {
-    return participants.map(p => ({
-        ...p,
-        apiKey: p.apiKey || apiKey
-    }));
-}
+async function getJulesClient(c?: any) {
+    const headerKey = c?.req?.header('X-Jules-Api-Key');
+    const settings = await prisma.keeperSettings.findUnique({ where: { id: 'default' } }).catch(() => null);
+    const apiKey = headerKey || settings?.julesApiKey || process.env.JULES_API_KEY;
+    
+    // Validate API key - return null for missing, placeholders, or local dev overrides
+    const isPlaceholder = !apiKey || 
+        apiKey === 'placeholder' || 
+        apiKey === 'test-key' ||
+        apiKey === 'authenticated-via-local-dev' || 
+        apiKey.startsWith('your-') ||
+        apiKey.length < 10; // Real keys are longer
 
-async function getJulesClient() {
-    const settings = await prisma.keeperSettings.findUnique({ where: { id: 'default' } });
-    const apiKey = settings?.julesApiKey || process.env.JULES_API_KEY;
-    if (!apiKey) return null;
+    if (isPlaceholder) {
+        return null;
+    }
+    
     return new JulesClient(apiKey, 'https://jules.googleapis.com/v1alpha');
 }
+
+// ============================================================================
+// JULES PROXY ROUTES
+// ============================================================================
+
+app.get('/sessions', async (c) => {
+    try {
+        const client = await getJulesClient(c);
+        if (!client) {
+            return c.json({
+                sessions: [
+                    { id: 'mock-1', title: 'Fix broken auth', state: 'ACTIVE', createTime: new Date().toISOString(), updateTime: new Date().toISOString(), sourceContext: { source: 'sources/github/google/jules' } },
+                    { id: 'mock-2', title: 'Add unit tests', state: 'COMPLETED', createTime: new Date().toISOString(), updateTime: new Date().toISOString(), sourceContext: { source: 'sources/github/google/jules' } }
+                ]
+            });
+        }
+        const sessions = await client.listSessions();
+        return c.json({ sessions });
+    } catch (e) {
+        console.error("[Server] listSessions failed:", e);
+        const errorMessage = e instanceof Error ? e.message : "Unknown error";
+        return c.json({
+            sessions: [
+                { 
+                    id: 'mock-error-1', 
+                    title: `Auth Failed: ${errorMessage.slice(0, 50)}...`, 
+                    state: 'ACTIVE', 
+                    createTime: new Date().toISOString(), 
+                    updateTime: new Date().toISOString(), 
+                    sourceContext: { source: 'sources/github/google/jules' } 
+                }
+            ]
+        });
+    }
+});
+
+app.get('/sessions/:id', async (c) => {
+    try {
+        const id = c.req.param('id');
+        if (id.startsWith('mock-')) {
+            return c.json({ id, title: 'Mock Session', state: 'ACTIVE', createTime: new Date().toISOString(), updateTime: new Date().toISOString(), sourceContext: { source: 'sources/github/google/jules' } });
+        }
+        const client = await getJulesClient(c);
+        if (!client) return c.json({ error: 'Jules API Key not configured' }, 401);
+        const session = await client.getSession(id);
+        return c.json(session);
+    } catch (e) {
+        return c.json({ error: e instanceof Error ? e.message : 'Failed to get session' }, 500);
+    }
+});
+
+app.get('/sessions/:id/activities', async (c) => {
+    try {
+        const id = c.req.param('id');
+        if (id.startsWith('mock-')) {
+            return c.json({
+                activities: [
+                    { id: 'act-1', createTime: new Date().toISOString(), userMessage: { message: 'Hello Jules!' } },
+                    { id: 'act-2', createTime: new Date().toISOString(), agentMessaged: { agentMessage: 'I am a mock agent. Configure JULES_API_KEY to use the real one.' } }
+                ]
+            });
+        }
+        const limit = parseInt(c.req.query('pageSize') || '1000');
+        const client = await getJulesClient(c);
+        if (!client) return c.json({ error: 'Jules API Key not configured' }, 401);
+        const activities = await client.listActivities(id, limit);
+        return c.json({ activities });
+    } catch (e) {
+        console.error("[Server] listActivities failed:", e);
+        return c.json({ error: e instanceof Error ? e.message : 'Failed to list activities' }, 500);
+    }
+});
+
+app.post('/sessions', async (c) => {
+    try {
+        const body = await c.req.json();
+        const client = await getJulesClient(c);
+        if (!client) return c.json({ error: 'Jules API Key not configured' }, 401);
+        const session = await client.createSession(body.sourceContext.source, body.prompt, body.title);
+        return c.json(session);
+    } catch (e) {
+        return c.json({ error: e instanceof Error ? e.message : 'Failed to create session' }, 500);
+    }
+});
+
+app.post('/sessions/:id:sendMessage', async (c) => {
+    try {
+        const id = c.req.param('id');
+        const body = await c.req.json();
+        const client = await getJulesClient(c);
+        if (!client) return c.json({ error: 'Jules API Key not configured' }, 401);
+        const activity = await client.createActivity({ sessionId: id, content: body.prompt });
+        return c.json(activity);
+    } catch (e) {
+        return c.json({ error: e instanceof Error ? e.message : 'Failed to send message' }, 500);
+    }
+});
+
+app.post('/sessions/:id:approvePlan', async (c) => {
+    try {
+        const id = c.req.param('id');
+        const client = await getJulesClient(c);
+        if (!client) return c.json({ error: 'Jules API Key not configured' }, 401);
+        await client.approvePlan(id);
+        return c.json({ success: true });
+    } catch (e) {
+        return c.json({ error: e instanceof Error ? e.message : 'Failed to approve plan' }, 500);
+    }
+});
+
+app.get('/sources', async (c) => {
+    try {
+        const client = await getJulesClient(c);
+        if (!client) return c.json({ error: 'Jules API Key not configured' }, 401);
+        const sources = await client.listSources();
+        return c.json({ sources });
+    } catch (e) {
+        return c.json({ error: e instanceof Error ? e.message : 'Failed to list sources' }, 500);
+    }
+});
+
+// ============================================================================
+// DAEMON ROUTES
+// ============================================================================
 
 app.get('/api/daemon/status', async (c) => {
     try {
@@ -88,285 +213,55 @@ app.get('/api/daemon/status', async (c) => {
     }
 });
 
-app.post('/api/daemon/start', async (c) => {
-    try {
-        await prisma.keeperSettings.upsert({
-            where: { id: 'default' },
-            update: { isEnabled: true },
-            create: {
-                id: 'default',
-                isEnabled: true,
-                messages: '[]',
-                customMessages: '{}',
-                checkIntervalSeconds: 60,
-                inactivityThresholdMinutes: 10,
-                activeWorkThresholdMinutes: 5
-            }
-        });
-        startDaemon();
-        emitDaemonEvent('daemon_status', { status: 'running' });
-        return c.json({ success: true });
-    } catch (e) {
-        return c.json({ error: e instanceof Error ? e.message : 'Failed to start daemon' }, 500);
-    }
-});
-
-app.post('/api/daemon/stop', async (c) => {
-    try {
-        await prisma.keeperSettings.update({
-            where: { id: 'default' },
-            data: { isEnabled: false }
-        });
-        stopDaemon();
-        emitDaemonEvent('daemon_status', { status: 'stopped' });
-        return c.json({ success: true });
-    } catch (e) {
-        return c.json({ error: e instanceof Error ? e.message : 'Failed to stop daemon' }, 500);
-    }
-});
-
-app.post('/api/sessions/interrupt-all', async (c) => {
-    try {
-        const client = await getJulesClient();
-        if (!client) {
-            return c.json({ error: 'Jules API key not configured' }, 400);
-        }
-
-        const sessions = await client.listSessions();
-        const activeSessions = sessions.filter(s =>
-            s.status === 'active' || s.rawState === 'IN_PROGRESS' || s.rawState === 'PLANNING'
-        );
-
-        let interrupted = 0;
-        const errors: string[] = [];
-
-        for (const session of activeSessions) {
-            try {
-                await client.updateSession(session.id, { status: 'paused' });
-                interrupted++;
-
-                await prisma.keeperLog.create({
-                    data: {
-                        message: `Interrupted session ${session.id.substring(0, 8)}`,
-                        type: 'action',
-                        sessionId: session.id
-                    }
-                });
-            } catch (err) {
-                errors.push(`${session.id}: ${err instanceof Error ? err.message : 'Unknown error'}`);
-            }
-        }
-
-        emitDaemonEvent('sessions_interrupted', {
-            count: interrupted,
-            total: activeSessions.length,
-            errors
-        });
-
-        return c.json({
-            success: true,
-            interrupted,
-            total: activeSessions.length,
-            errors: errors.length > 0 ? errors : undefined
-        });
-    } catch (e) {
-        return c.json({ error: e instanceof Error ? e.message : 'Failed to interrupt sessions' }, 500);
-    }
-});
-
-app.post('/api/sessions/continue-all', async (c) => {
-    try {
-        const client = await getJulesClient();
-        if (!client) {
-            return c.json({ error: 'Jules API key not configured' }, 400);
-        }
-
-        const sessions = await client.listSessions();
-        const pausedSessions = sessions.filter(s =>
-            s.status === 'paused' || s.status === 'completed' || s.status === 'failed'
-        );
-
-        let continued = 0;
-        const errors: string[] = [];
-
-        for (const session of pausedSessions) {
-            try {
-                await client.resumeSession(session.id, 'Please continue working on this task.');
-                continued++;
-
-                await prisma.keeperLog.create({
-                    data: {
-                        message: `Resumed session ${session.id.substring(0, 8)}`,
-                        type: 'action',
-                        sessionId: session.id
-                    }
-                });
-            } catch (err) {
-                errors.push(`${session.id}: ${err instanceof Error ? err.message : 'Unknown error'}`);
-            }
-        }
-
-        emitDaemonEvent('sessions_continued', {
-            count: continued,
-            total: pausedSessions.length,
-            errors
-        });
-
-        return c.json({
-            success: true,
-            continued,
-            total: pausedSessions.length,
-            errors: errors.length > 0 ? errors : undefined
-        });
-    } catch (e) {
-        return c.json({ error: e instanceof Error ? e.message : 'Failed to continue sessions' }, 500);
-    }
-});
-
-app.post('/api/supervisor', async (c) => {
+app.post('/api/daemon/status', async (c) => {
     try {
         const body = await c.req.json();
-        const { messages, provider, apiKey: bodyApiKey, model, action, participants, topic, codeContext } = body;
+        const action = body.action;
 
-        const apiKey = bodyApiKey || process.env.OPENAI_API_KEY;
-
-        if (action === 'list_models') {
-            if (!apiKey || !provider) {
-                return c.json({ error: 'Missing apiKey or provider' }, 400);
-            }
-            const p = getProvider(provider);
-            if (!p) {
-                return c.json({ error: 'Invalid provider' }, 400);
-            }
-            const models = await p.listModels(apiKey);
-            return c.json({ models });
-        }
-
-        if (action === 'debate') {
-            if (!participants || !Array.isArray(participants)) {
-                return c.json({ error: 'Invalid participants' }, 400);
-            }
-            const enriched = enrichParticipants(participants, apiKey);
-            const result = await runDebate({ history: messages, participants: enriched, topic });
-            return c.json(result);
-        }
-
-        if (action === 'conference') {
-            if (!participants || !Array.isArray(participants)) {
-                return c.json({ error: 'Invalid participants' }, 400);
-            }
-            const enriched = enrichParticipants(participants, apiKey);
-            const result = await runConference({ history: messages, participants: enriched });
-            return c.json(result);
-        }
-
-        if (action === "handoff") {
-            if (!messages || messages.length === 0) {
-                return c.json({ error: "No messages to summarize" }, 400);
-            }
-            const { summarizeSession } = await import('@jules/shared');
-            const summary = await summarizeSession(messages, provider || "openai", apiKey || "", model || "gpt-4o");
-            return c.json({ content: summary });
-        }
-
-        if (action === 'review') {
-            if (!codeContext) return c.json({ error: 'Missing codeContext' }, 400);
-            const result = await runCodeReview({
-                codeContext,
-                provider: provider || 'openai',
-                model: model || 'gpt-4o',
-                apiKey: apiKey || "",
-                reviewType: body.reviewType
+        if (action === 'start') {
+            await prisma.keeperSettings.upsert({
+                where: { id: 'default' },
+                update: { isEnabled: true },
+                create: {
+                    id: 'default',
+                    isEnabled: true,
+                    messages: '[]',
+                    customMessages: '{}',
+                    checkIntervalSeconds: 60,
+                    inactivityThresholdMinutes: 10,
+                    activeWorkThresholdMinutes: 5
+                }
             });
-            return c.json({ content: result });
-        }
-
-        const p = getProvider(provider);
-        if (p) {
-            if (!apiKey) return c.json({ error: 'API Key required' }, 400);
-            const result = await p.complete({
-                messages,
-                apiKey,
-                model,
-                systemPrompt: 'You are a project supervisor. Your goal is to keep the AI agent "Jules" on track. Read the conversation history. Identify if the agent is stuck, off-track, or needs guidance. If a session is stalled, failed, or completed but needs more work, provide a concise, direct instruction to reactivate it. Do not be conversational. Be directive but polite. Focus on the next task.'
+            startDaemon();
+            if (!workerInstance) {
+                console.log("[Server] Starting SQLite Task Queue...");
+                workerInstance = setupWorker();
+            }
+            emitDaemonEvent('daemon_status', { status: 'running' });
+            return c.json({ success: true, isEnabled: true });
+        } else if (action === 'stop') {
+            await prisma.keeperSettings.update({
+                where: { id: 'default' },
+                data: { isEnabled: false }
             });
-            return c.json({ content: result.content });
+            stopDaemon();
+            if (workerInstance) {
+                console.log("[Server] Stopping Task Queue...");
+                workerInstance.close();
+                workerInstance = null;
+            }
+            emitDaemonEvent('daemon_status', { status: 'stopped' });
+            return c.json({ success: true, isEnabled: false });
         }
 
-        return c.json({ error: 'Invalid provider or action' }, 400);
-
-    } catch (error) {
-        console.error('Supervisor API Error:', error);
-        const msg = error instanceof Error ? error.message : 'Internal server error';
-        return c.json({ error: msg }, 500);
-    }
-});
-
-app.post('/api/supervisor/clear', async (c) => {
-    try {
-        const { sessionId } = await c.req.json();
-        if (!sessionId) return c.json({ error: 'Missing sessionId' }, { status: 400 });
-
-        await prisma.supervisorState.deleteMany({ where: { sessionId } });
-        return c.json({ success: true });
+        return c.json({ error: 'Invalid action' }, 400);
     } catch (e) {
-        return c.json({ error: e instanceof Error ? e.message : 'Failed to clear memory' }, { status: 500 });
+        return c.json({ error: e instanceof Error ? e.message : 'Failed to update daemon status' }, 500);
     }
 });
 
 // ============================================================================
-// SWARM ROUTES
-// ============================================================================
-
-app.post('/api/swarm/decompose', async (c) => {
-    try {
-        const body = await c.req.json();
-        const { swarmId } = body;
-
-        if (!swarmId) {
-            return c.json({ error: 'Missing swarmId' }, { status: 400 });
-        }
-
-        const swarm = await prisma.agentSwarm.findUnique({ where: { id: swarmId } });
-        if (!swarm) {
-            return c.json({ error: 'Swarm not found' }, { status: 404 });
-        }
-
-        // Add to queue for asynchronous decomposition
-        await orchestratorQueue.add('process_swarm_decomposition', { swarmId }, {
-            jobId: `swarm-decomp-${swarmId}`,
-            removeOnComplete: true
-        });
-
-        await prisma.agentSwarm.update({
-            where: { id: swarmId },
-            data: { status: 'decomposing' }
-        });
-
-        return c.json({ success: true, swarmId });
-    } catch (e) {
-        console.error('Swarm decomposition trigger failed:', e);
-        return c.json({ error: e instanceof Error ? e.message : 'Internal error' }, { status: 500 });
-    }
-});
-
-app.post('/api/swarm/refresh', async (c) => {
-    try {
-        const { swarmId } = await c.req.json();
-        if (!swarmId) return c.json({ error: 'Missing swarmId' }, 400);
-
-        const { SwarmCoordinator } = await import('./swarm-coordinator');
-        await SwarmCoordinator.dispatchPendingTasks(swarmId);
-
-        return c.json({ success: true });
-    } catch (e) {
-        console.error('Swarm refresh failed:', e);
-        return c.json({ error: e instanceof Error ? e.message : 'Internal error' }, 500);
-    }
-});
-
-// ============================================================================
-// DEBATE ROUTES
+// DEBATE & REVIEW ROUTES
 // ============================================================================
 
 app.post('/api/debate', async (c) => {
@@ -378,18 +273,16 @@ app.post('/api/debate', async (c) => {
             return c.json({ error: 'Missing required fields: topic, participants' }, 400);
         }
 
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
         const enrichedParticipants = participants.map((p: any) => {
-            let finalApiKey = p.apiKey;
-            if (finalApiKey === 'env' || finalApiKey === 'placeholder' || !finalApiKey) {
+            let apiKey = p.apiKey;
+            if (!apiKey || apiKey === 'env' || apiKey === 'placeholder') {
                 switch (p.provider) {
-                    case 'openai': finalApiKey = process.env.OPENAI_API_KEY; break;
-                    case 'anthropic': finalApiKey = process.env.ANTHROPIC_API_KEY; break;
-                    case 'gemini': finalApiKey = process.env.GEMINI_API_KEY || process.env.GOOGLE_API_KEY; break;
-                    case 'qwen': finalApiKey = process.env.QWEN_API_KEY; break;
+                    case 'openai': apiKey = process.env.OPENAI_API_KEY; break;
+                    case 'anthropic': apiKey = process.env.ANTHROPIC_API_KEY; break;
+                    case 'gemini': apiKey = process.env.GEMINI_API_KEY || process.env.GOOGLE_API_KEY; break;
                 }
             }
-            return { ...p, apiKey: finalApiKey };
+            return { ...p, apiKey };
         });
 
         const result = await runDebate({
@@ -399,22 +292,18 @@ app.post('/api/debate', async (c) => {
             topic
         });
 
-        try {
-            await prisma.debate.create({
-                data: {
-                    topic: result.topic || topic,
-                    summary: result.summary,
-                    rounds: JSON.stringify(result.rounds),
-                    history: JSON.stringify(result.history),
-                    metadata: metadata ? JSON.stringify(metadata) : null,
-                    promptTokens: result.totalUsage?.prompt_tokens || 0,
-                    completionTokens: result.totalUsage?.completion_tokens || 0,
-                    totalTokens: result.totalUsage?.total_tokens || 0,
-                }
-            });
-        } catch (dbError) {
-            console.error('Failed to persist debate:', dbError);
-        }
+        await prisma.debate.create({
+            data: {
+                topic: result.topic || topic,
+                summary: result.summary,
+                rounds: JSON.stringify(result.rounds),
+                history: JSON.stringify(result.history),
+                metadata: metadata ? JSON.stringify(metadata) : null,
+                promptTokens: result.totalUsage?.prompt_tokens || 0,
+                completionTokens: result.totalUsage?.completion_tokens || 0,
+                totalTokens: result.totalUsage?.total_tokens || 0,
+            }
+        });
 
         return c.json(result);
     } catch (error) {
@@ -423,103 +312,40 @@ app.post('/api/debate', async (c) => {
     }
 });
 
-app.get('/api/debate/history', async (c) => {
-    try {
-        const debates = await prisma.debate.findMany({
-            orderBy: { createdAt: 'desc' },
-            select: { id: true, topic: true, summary: true, createdAt: true }
-        });
-        return c.json(debates);
-    } catch {
-        return c.json({ error: 'Failed to fetch debates' }, 500);
-    }
-});
-
-app.post('/api/debate/history', async (c) => {
+app.get('/api/review', async (c) => {
     try {
         const body = await c.req.json();
-        const { topic, summary, rounds, history, metadata } = body;
+        const { codeContext, provider, model, apiKey, reviewType } = body;
+        if (!codeContext) return c.json({ error: 'Missing codeContext' }, 400);
 
-        if (!topic || !rounds || !history) {
-            return c.json({ error: 'Missing required fields: topic, rounds, history' }, 400);
-        }
-
-        const debate = await prisma.debate.create({
-            data: {
-                topic,
-                summary,
-                rounds: JSON.stringify(rounds),
-                history: JSON.stringify(history),
-                metadata: metadata ? JSON.stringify(metadata) : null,
-            },
+        const result = await runCodeReview({
+            codeContext,
+            provider: provider || 'openai',
+            model: model || 'gpt-4o',
+            apiKey: apiKey || process.env.OPENAI_API_KEY || "",
+            reviewType: reviewType || 'standard'
         });
-        return c.json(debate);
-    } catch {
-        return c.json({ error: 'Failed to save debate' }, 500);
-    }
-});
-
-app.get('/api/debate/:id', async (c) => {
-    try {
-        const id = c.req.param('id');
-        const debate = await prisma.debate.findUnique({ where: { id } });
-
-        if (!debate) return c.json({ error: 'Debate not found' }, 404);
-
-        return c.json({
-            ...debate,
-            rounds: typeof debate.rounds === 'string' ? JSON.parse(debate.rounds) : debate.rounds,
-            history: typeof debate.history === 'string' ? JSON.parse(debate.history) : debate.history,
-            metadata: debate.metadata && typeof debate.metadata === 'string' ? JSON.parse(debate.metadata) : debate.metadata,
-        });
-    } catch {
-        return c.json({ error: 'Failed to fetch debate' }, 500);
-    }
-});
-
-app.delete('/api/debate/:id', async (c) => {
-    try {
-        const id = c.req.param('id');
-        await prisma.debate.delete({ where: { id } });
-        return c.json({ success: true });
-    } catch {
-        return c.json({ error: 'Failed to delete debate' }, 500);
+        return c.json({ content: result });
+    } catch (error) {
+        return c.json({ error: error instanceof Error ? error.message : 'Review failed' }, 500);
     }
 });
 
 // ============================================================================
-// SETTINGS ROUTES
+// SETTINGS & TEMPLATES
 // ============================================================================
-
-const DEFAULT_KEEPER_SETTINGS = {
-    isEnabled: false,
-    autoSwitch: false,
-    checkIntervalSeconds: 30,
-    inactivityThresholdMinutes: 1,
-    activeWorkThresholdMinutes: 30,
-    messages: [],
-    customMessages: {},
-    smartPilotEnabled: false,
-    supervisorProvider: 'openai',
-    supervisorApiKey: '',
-    supervisorModel: 'gpt-4o',
-    contextMessageCount: 10,
-    shadowPilotEnabled: false,
-    lastShadowPilotCommit: null,
-};
 
 app.get('/api/settings/keeper', async (c) => {
     try {
         const settings = await prisma.keeperSettings.findUnique({ where: { id: 'default' } });
-        if (!settings) return c.json(DEFAULT_KEEPER_SETTINGS);
-
+        if (!settings) return c.json({ isEnabled: false });
         return c.json({
             ...settings,
             messages: JSON.parse(settings.messages),
             customMessages: JSON.parse(settings.customMessages),
         });
     } catch {
-        return c.json(DEFAULT_KEEPER_SETTINGS);
+        return c.json({ error: 'Failed to get settings' }, 500);
     }
 });
 
@@ -527,7 +353,6 @@ app.post('/api/settings/keeper', async (c) => {
     try {
         const body = await c.req.json();
         const { messages, customMessages, ...rest } = body;
-
         const settings = await prisma.keeperSettings.upsert({
             where: { id: 'default' },
             update: {
@@ -542,212 +367,130 @@ app.post('/api/settings/keeper', async (c) => {
                 customMessages: JSON.stringify(customMessages || {}),
             }
         });
-
-        return c.json({
-            ...settings,
-            messages: JSON.parse(settings.messages),
-            customMessages: JSON.parse(settings.customMessages),
-        });
+        return c.json(settings);
     } catch {
         return c.json({ error: 'Failed to save settings' }, 500);
     }
 });
 
-// ============================================================================
-// LOGS ROUTES
-// ============================================================================
-
-app.get('/api/logs/keeper', async (c) => {
-    try {
-        const logs = await prisma.keeperLog.findMany({
-            orderBy: { createdAt: 'desc' },
-            take: 100
-        });
-        return c.json(logs);
-    } catch {
-        return c.json({ error: 'Failed to fetch logs' }, 500);
-    }
-});
-
-app.post('/api/logs/keeper', async (c) => {
-    try {
-        const body = await c.req.json();
-        const log = await prisma.keeperLog.create({
-            data: {
-                sessionId: body.sessionId,
-                type: body.type,
-                message: body.message,
-                metadata: body.details ? JSON.stringify(body.details) : undefined,
-            }
-        });
-        return c.json(log);
-    } catch {
-        return c.json({ error: 'Failed to create log' }, 500);
-    }
-});
-
-// ============================================================================
-// TEMPLATES ROUTES
-// ============================================================================
-
-const DEFAULT_TEMPLATES = [
-    { name: "Feature Implementation", description: "Implement a new feature with tests and documentation", prompt: "I want to implement a new feature. Please help me plan, write code, tests, and documentation.", isPrebuilt: true, tags: "feature,dev", isFavorite: true },
-    { name: "Bug Fix", description: "Analyze and fix a bug with regression tests", prompt: "I have a bug to fix. I will provide the details. Please help me reproduce, fix, and verify it.", isPrebuilt: true, tags: "bugfix,maintenance", isFavorite: true },
-    { name: "Code Review", description: "Review code for best practices and security", prompt: "Please review the following code or diff. Look for security issues, performance problems, and style violations.", isPrebuilt: true, tags: "review,quality", isFavorite: false },
-    { name: "Refactoring", description: "Refactor code to improve structure and maintainability", prompt: "I want to refactor some code. Help me improve its structure without changing behavior.", isPrebuilt: true, tags: "refactor,cleanup", isFavorite: false }
-];
-
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-function formatTemplate(t: any) {
-    return {
-        ...t,
-        tags: t.tags ? t.tags.split(',') : [],
-        createdAt: t.createdAt instanceof Date ? t.createdAt.toISOString() : t.createdAt,
-        updatedAt: t.updatedAt instanceof Date ? t.updatedAt.toISOString() : t.updatedAt
-    };
-}
-
 app.get('/api/templates', async (c) => {
     try {
-        let templates = await prisma.sessionTemplate.findMany({ orderBy: { updatedAt: 'desc' } });
-
-        if (templates.length === 0) {
-            for (const t of DEFAULT_TEMPLATES) {
-                await prisma.sessionTemplate.create({ data: t });
-            }
-            templates = await prisma.sessionTemplate.findMany({ orderBy: { updatedAt: 'desc' } });
-        }
-
-        return c.json(templates.map(formatTemplate));
+        const templates = await prisma.sessionTemplate.findMany({ orderBy: { updatedAt: 'desc' } });
+        return c.json(templates.map(t => ({
+            ...t,
+            tags: t.tags ? t.tags.split(',') : []
+        })));
     } catch {
         return c.json({ error: 'Failed to fetch templates' }, 500);
     }
 });
 
-app.post('/api/templates', async (c) => {
+// ============================================================================
+// RAG & CODEBASE ROUTES
+// ============================================================================
+
+app.post('/api/rag/search', async (c) => {
     try {
         const body = await c.req.json();
-        const { name, description, prompt, title, tags, isFavorite } = body;
+        const { query, topK } = body;
+        if (!query) return c.json({ error: 'Missing query' }, 400);
 
-        const template = await prisma.sessionTemplate.create({
-            data: {
-                name,
-                description,
-                prompt,
-                title,
-                isFavorite: isFavorite || false,
-                tags: Array.isArray(tags) ? tags.join(',') : (tags || ''),
-            }
-        });
-
-        return c.json(formatTemplate(template));
-    } catch {
-        return c.json({ error: 'Failed to create template' }, 500);
-    }
-});
-
-app.put('/api/templates/:id', async (c) => {
-    try {
-        const id = c.req.param('id');
-        const body = await c.req.json();
-        const { name, description, prompt, title, tags, isFavorite } = body;
-
-        const template = await prisma.sessionTemplate.update({
-            where: { id },
-            data: {
-                name,
-                description,
-                prompt,
-                title,
-                isFavorite,
-                tags: Array.isArray(tags) ? tags.join(',') : (tags || ''),
-            }
-        });
-
-        return c.json(formatTemplate(template));
-    } catch {
-        return c.json({ error: 'Failed to update template' }, 500);
-    }
-});
-
-app.delete('/api/templates/:id', async (c) => {
-    try {
-        const id = c.req.param('id');
-        await prisma.sessionTemplate.delete({ where: { id } });
-        return c.json({ success: true });
-    } catch {
-        return c.json({ error: 'Failed to delete template' }, 500);
-    }
-});
-
-const port = 8080;
-
-import { setupWorker } from './queue';
-let workerInstance: ReturnType<typeof setupWorker> | null = null;
-
-prisma.keeperSettings.findUnique({ where: { id: 'default' } }).then(settings => {
-    if (settings?.isEnabled) {
-        console.log("Auto-starting Session Keeper daemon...");
-        startDaemon();
-        if (!workerInstance) {
-            console.log("Starting BullMQ Worker...");
-            workerInstance = setupWorker();
+        const settings = await prisma.keeperSettings.findUnique({ where: { id: 'default' } });
+        const apiKey = process.env.OPENAI_API_KEY || settings?.supervisorApiKey;
+        
+        if (!apiKey) {
+            return c.json({ error: 'OpenAI API key not configured for embeddings' }, 401);
         }
-    }
-}).catch(err => {
-    console.error("Failed to check auto-start settings:", err);
-});
 
-app.post('/api/daemon/start', async (c) => {
-    try {
-        await prisma.keeperSettings.upsert({
-            where: { id: 'default' },
-            update: { isEnabled: true },
-            create: {
-                id: 'default',
-                isEnabled: true,
-                messages: '[]',
-                customMessages: '{}',
-                checkIntervalSeconds: 60,
-                inactivityThresholdMinutes: 10,
-                activeWorkThresholdMinutes: 5
-            }
+        // 1. Get embedding for the query
+        const response = await fetch("https://api.openai.com/v1/embeddings", {
+            method: "POST",
+            headers: {
+                "Content-Type": "application/json",
+                "Authorization": `Bearer ${apiKey}`
+            },
+            body: JSON.stringify({
+                input: query,
+                model: "text-embedding-3-small"
+            })
         });
-        startDaemon();
-        if (!workerInstance) {
-            console.log("Starting BullMQ Worker...");
-            workerInstance = setupWorker();
+
+        if (!response.ok) {
+            throw new Error(`OpenAI API error: ${response.statusText}`);
         }
-        emitDaemonEvent('daemon_status', { status: 'running' });
-        return c.json({ success: true });
-    } catch (e) {
-        return c.json({ error: e instanceof Error ? e.message : 'Failed to start daemon' }, 500);
+
+        const data = await response.json();
+        const queryEmbedding = data.data[0].embedding;
+
+        // 2. Search local database
+        const { searchSimilar } = await import('../lib/api/rag');
+        const results = await searchSimilar(queryEmbedding, topK || 5);
+
+        return c.json({ results });
+    } catch (error) {
+        console.error('RAG search failed:', error);
+        return c.json({ error: error instanceof Error ? error.message : 'Search failed' }, 500);
     }
 });
 
-app.post('/api/daemon/stop', async (c) => {
+app.post('/api/rag/index', async (c) => {
     try {
-        await prisma.keeperSettings.update({
-            where: { id: 'default' },
-            data: { isEnabled: false }
-        });
-        stopDaemon();
-        if (workerInstance) {
-            console.log("Stopping BullMQ Worker...");
-            workerInstance.close();
-            workerInstance = null;
-        }
-        emitDaemonEvent('daemon_status', { status: 'stopped' });
-        return c.json({ success: true });
-    } catch (e) {
-        return c.json({ error: e instanceof Error ? e.message : 'Failed to stop daemon' }, 500);
+        const { orchestratorQueue } = await import('./queue');
+        await orchestratorQueue.add('index_codebase', {});
+        return c.json({ success: true, message: 'Indexing job queued' });
+    } catch (error) {
+        return c.json({ error: 'Failed to queue indexing job' }, 500);
     }
 });
-
-console.log(`Server starting on port ${port}`);
 
 // ============================================================================
-// WEBSOCKET ROUTES (Hono/Bun Native)
+// FILESYSTEM ROUTES
+// ============================================================================
+
+app.get('/api/fs/list', async (c) => {
+    try {
+        const dir = c.req.query('path') || '.';
+        const basePath = process.cwd();
+        const fullPath = path.resolve(basePath, dir);
+
+        if (!fullPath.startsWith(basePath)) {
+            return c.json({ error: 'Access denied' }, 403);
+        }
+
+        const entries = await fsPromises.readdir(fullPath, { withFileTypes: true });
+        const files = entries.map(entry => ({
+            name: entry.name,
+            isDirectory: entry.isDirectory(),
+            path: path.relative(basePath, path.join(fullPath, entry.name))
+        }));
+
+        return c.json({ files });
+    } catch (error) {
+        return c.json({ error: error instanceof Error ? error.message : 'Unknown error' }, 500);
+    }
+});
+
+app.get('/api/fs/read', async (c) => {
+    try {
+        const filePath = c.req.query('path');
+        if (!filePath) return c.json({ error: 'Missing path' }, 400);
+
+        const basePath = process.cwd();
+        const fullPath = path.resolve(basePath, filePath);
+
+        if (!fullPath.startsWith(basePath)) {
+            return c.json({ error: 'Access denied' }, 403);
+        }
+
+        const content = await fsPromises.readFile(fullPath, 'utf-8');
+        return c.json({ content });
+    } catch (error) {
+        return c.json({ error: error instanceof Error ? error.message : 'Unknown error' }, 500);
+    }
+});
+
+// ============================================================================
+// WEBSOCKET & INITIALIZATION
 // ============================================================================
 
 app.get('/ws', upgradeWebSocket((c) => {
@@ -755,131 +498,77 @@ app.get('/ws', upgradeWebSocket((c) => {
         onOpen(event, ws) {
             wsClients.add(ws as unknown as ServerWebSocket<any>);
             ws.send(JSON.stringify({ type: 'connected', timestamp: Date.now() }));
-            console.log(`[Daemon] WebSocket client connected (${wsClients.size} total)`);
+            console.log(`[WebSocket] Client connected (${wsClients.size} total)`);
         },
         onMessage(event, ws) {
             try {
                 const data = JSON.parse(event.data.toString());
-                if (data.type === 'ping') {
-                    ws.send(JSON.stringify({ type: 'pong', timestamp: Date.now() }));
-                }
+                if (data.type === 'ping') ws.send(JSON.stringify({ type: 'pong', timestamp: Date.now() }));
             } catch {
                 ws.send(JSON.stringify({ type: 'error', message: 'Invalid JSON' }));
             }
         },
         onClose(event, ws) {
             wsClients.delete(ws as unknown as ServerWebSocket<any>);
-            console.log(`[Daemon] WebSocket client disconnected (${wsClients.size} total)`);
+            console.log(`[WebSocket] Client disconnected (${wsClients.size} total)`);
         }
     };
 }));
 
-// Terminal WebSocket Route replacing terminal-server
-app.get('/terminal/ws', upgradeWebSocket((c) => {
-    const sessionId = c.req.query('sessionId');
-    const workingDir = c.req.query('workingDir');
-    const apiKey = c.req.query('apiKey');
+// ============================================================================
+// STATIC ASSETS & SPA FALLBACK
+// ============================================================================
 
-    return {
-        onOpen(event, ws) {
-            const defaultBaseDir = fs.existsSync("/workspace") ? "/workspace" : path.join(process.cwd(), "..");
-            const baseDir = process.env.WORKSPACE_DIR || defaultBaseDir;
-            const cwd = workingDir ? path.join(baseDir, workingDir) : baseDir;
+// Serve static files from Vite build
+app.use('*', serveStatic({ root: './dist' }));
 
-            const isWindows = process.platform === "win32";
-            const shell = process.env.SHELL || (isWindows ? "powershell.exe" : "/bin/bash");
+// SPA Fallback: All non-API routes serve index.html
+app.get('*', async (c) => {
+    try {
+        const indexHtml = await fsPromises.readFile(path.resolve(process.cwd(), './dist/index.html'), 'utf-8');
+        return c.html(indexHtml);
+    } catch {
+        return c.text('Vite build not found. Please run `pnpm build`.', 404);
+    }
+});
 
-            console.log(`[Terminal] Spawning PTY: ${shell} in ${cwd}`);
-
-            const ptyProcess = pty.spawn(shell, [], {
-                name: "xterm-256color",
-                cols: 80,
-                rows: 30,
-                cwd: cwd,
-                env: {
-                    ...process.env,
-                    TERM: "xterm-256color",
-                    COLORTERM: "truecolor",
-                    JULES_API_KEY: apiKey || "",
-                },
-            });
-
-            ptyProcess.onData((data) => {
-                ws.send(JSON.stringify({ type: "terminal.output", data }));
-            });
-
-            ptyProcess.onExit(({ exitCode, signal }) => {
-                console.log(`[Terminal] PTY exited: code=${exitCode}, signal=${signal}`);
-                ws.send(JSON.stringify({ type: "terminal.exit", exitCode, signal }));
-                terminalSessions.delete(sessionId || 'default');
-            });
-
-            terminalSessions.set(sessionId || 'default', {
-                ptyProcess,
-                createdAt: Date.now(),
-                ws: ws as unknown as ServerWebSocket<any>
-            });
-        },
-        onMessage(event, ws) {
-            try {
-                const payload = JSON.parse(event.data.toString());
-                const session = terminalSessions.get(sessionId || 'default');
-                if (!session) return;
-
-                if (payload.type === 'terminal.input') {
-                    session.ptyProcess.write(payload.data);
-                } else if (payload.type === 'terminal.resize') {
-                    try {
-                        session.ptyProcess.resize(payload.cols, payload.rows);
-                    } catch (e) {
-                        console.error('Resize error:', e);
-                    }
+// Auto-start if enabled
+async function autoStart() {
+    try {
+        let settings = await prisma.keeperSettings.findUnique({ where: { id: 'default' } });
+        if (!settings) {
+            settings = await prisma.keeperSettings.create({
+                data: {
+                    id: 'default',
+                    isEnabled: false,
+                    messages: '[]',
+                    customMessages: '{}',
+                    checkIntervalSeconds: 60,
+                    inactivityThresholdMinutes: 10,
+                    activeWorkThresholdMinutes: 5
                 }
-            } catch (err) {
-                console.error("Terminal WS Error:", err);
-            }
-        },
-        onClose(event, ws) {
-            const session = terminalSessions.get(sessionId || 'default');
-            if (session) {
-                session.ptyProcess.kill();
-                terminalSessions.delete(sessionId || 'default');
-                console.log(`[Terminal] Client disconnected, PTY killed`);
-            }
+            });
         }
-    };
-}));
 
-// ============================================================================
-// SERVER INITIALIZATION
-// ============================================================================
+        if (settings?.isEnabled) {
+            console.log("[Server] Auto-starting Session Keeper...");
+            startDaemon();
+            workerInstance = setupWorker();
+        }
+    } catch (e) {
+        console.error("[Server] Auto-start check failed:", e);
+    }
+}
+
+autoStart();
 
 if (typeof Bun !== 'undefined') {
-    console.log(`Using Bun Runtime`);
-    
-    // Start MCP Server Internally
-    registerWasmPluginsAsMcpTools().then(() => {
-        console.log("[MCP] Mounting Stdio Transport internally...");
-        // Although this process is an HTTP/WS server, we can still bind an internal MCP router if desired,
-        // or just let it expose standard tools to the swarm orchestration layer.
-    }).catch(console.error);
-
-    Bun.serve({
-        port,
-        fetch: app.fetch,
-        websocket,
-    });
-    console.log(`Server listening on ws://localhost:${port}/ws and ws://localhost:${port}/terminal/ws`);
+    registerWasmPluginsAsMcpTools().catch(console.error);
+    Bun.serve({ port, fetch: app.fetch, websocket });
+    console.log(`[Bun] Server listening on port ${port}`);
 } else {
-    console.log(`Using Node.js Runtime (via @hono/node-server)`);
-    // Dynamic import to avoid bundling issues in Bun-only environments if not properly tree-shaken
     import('@hono/node-server').then(({ serve }) => {
-        serve({
-            fetch: app.fetch,
-            port
-        });
-        console.log(`Node.js server listening on port ${port}`);
-    }).catch(err => {
-        console.error("Failed to start Node.js server:", err);
-    });
+        serve({ fetch: app.fetch, port });
+        console.log(`[Node] Server listening on port ${port}`);
+    }).catch(console.error);
 }
