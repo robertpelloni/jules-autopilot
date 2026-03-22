@@ -20,9 +20,9 @@ type ConnectionState = 'connecting' | 'connected' | 'disconnected' | 'reconnecti
 export function useDaemonWebSocket() {
   const wsRef = useRef<WebSocket | null>(null);
   const reconnectAttemptsRef = useRef(0);
-  const reconnectTimeoutRef = useRef<NodeJS.Timeout | null>(null);
-  const pingIntervalRef = useRef<NodeJS.Timeout | null>(null);
-  const pongTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const reconnectTimeoutRef = useRef<any>(null);
+  const pingIntervalRef = useRef<any>(null);
+  const pongTimeoutRef = useRef<any>(null);
   const lastPongRef = useRef<number>(0);
 
   useEffect(() => {
@@ -251,16 +251,16 @@ export function useDaemonWebSocket() {
 
   useEffect(() => {
     if (config.isEnabled) {
-      connect();
+      attemptConnection();
     } else {
-      // Wrap in setTimeout to avoid synchronous state update warning during effect
-      setTimeout(() => disconnect(), 0);
+      disconnect();
     }
 
     return () => {
       disconnect();
     };
-  }, [config.isEnabled, connect, disconnect]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [config.isEnabled]); // Only re-run if enabled state changes
 
   return {
     isConnected: connectionState === 'connected',

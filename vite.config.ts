@@ -12,23 +12,14 @@ export default defineConfig({
   resolve: {
     alias: {
       '@': path.resolve(__dirname, './'),
+      'react': path.resolve(__dirname, './node_modules/react'),
+      'react-dom': path.resolve(__dirname, './node_modules/react-dom'),
     },
+    dedupe: ['react', 'react-dom'],
   },
   server: {
-    port: 3000,
+    port: 3006,
     proxy: {
-      '/sessions': {
-        target: 'http://localhost:8080',
-        changeOrigin: true,
-      },
-      '/activities': {
-        target: 'http://localhost:8080',
-        changeOrigin: true,
-      },
-      '/sources': {
-        target: 'http://localhost:8080',
-        changeOrigin: true,
-      },
       '/api': {
         target: 'http://localhost:8080',
         changeOrigin: true,

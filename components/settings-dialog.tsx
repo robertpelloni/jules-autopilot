@@ -6,7 +6,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Github, Brain, Palette } from 'lucide-react';
+import { Github, Brain, Palette, Key, ShieldCheck } from 'lucide-react';
 import { SessionKeeperSettingsContent } from './session-keeper-settings-content';
 import { ThemeCustomizer } from './theme-customizer';
 import { useSessionKeeperStore } from '@/lib/stores/session-keeper';
@@ -26,26 +26,28 @@ export function SettingsDialog({ open: propOpen, onOpenChange: propOnOpenChange,
   const [anthropicKey, setAnthropicKey] = useState('');
   const [geminiKey, setGeminiKey] = useState('');
   const [julesKey, setJulesKey] = useState('');
+  const [julesAuthToken, setJulesAuthToken] = useState('');
 
   const open = propOpen !== undefined ? propOpen : internalOpen;
   const onOpenChange = propOnOpenChange || setInternalOpen;
 
-  // Initialize token from localStorage on mount if available
+  // Initialize tokens from localStorage on mount if available
   useEffect(() => {
     if (typeof window !== 'undefined') {
-      // Use setTimeout to avoid synchronous state updates during render phase
       const timer = setTimeout(() => {
         const ghToken = localStorage.getItem('github_pat');
         const oaKey = localStorage.getItem('openai_api_key');
         const antKey = localStorage.getItem('anthropic_api_key');
         const gemKey = localStorage.getItem('google_api_key');
         const julKey = localStorage.getItem('jules_api_key');
+        const julAuth = localStorage.getItem('jules_auth_token');
 
         if (ghToken) setGithubToken(ghToken);
         if (oaKey) setOpenAIKey(oaKey);
         if (antKey) setAnthropicKey(antKey);
         if (gemKey) setGeminiKey(gemKey);
         if (julKey) setJulesKey(julKey);
+        if (julAuth) setJulesAuthToken(julAuth);
       }, 0);
       return () => clearTimeout(timer);
     }
@@ -60,8 +62,16 @@ export function SettingsDialog({ open: propOpen, onOpenChange: propOnOpenChange,
     if (openAIKey) localStorage.setItem('openai_api_key', openAIKey);
     if (anthropicKey) localStorage.setItem('anthropic_api_key', anthropicKey);
     if (geminiKey) localStorage.setItem('google_api_key', geminiKey);
+    
+    // Save Jules Credentials
     if (julesKey) localStorage.setItem('jules_api_key', julesKey);
-    toast.success('LLM API Keys saved');
+    if (julesAuthToken) localStorage.setItem('jules_auth_token', julesAuthToken);
+    
+    if (julesKey || julesAuthToken) {
+      window.dispatchEvent(new Event('jules-api-key-updated'));
+    }
+    
+    toast.success('API Credentials saved');
   };
 
   return (
@@ -89,17 +99,58 @@ export function SettingsDialog({ open: propOpen, onOpenChange: propOnOpenChange,
             </TabsList>
           </div>
 
-          <TabsContent value="integrations" className="flex-1 p-6">
-            <div className="space-y-6 max-w-md">
+          <TabsContent value="integrations" className="flex-1 p-6 overflow-y-auto">
+            <div className="space-y-6 max-w-md pb-8">
               <div className="space-y-4 border border-white/10 p-4 rounded-lg bg-white/5">
                 <div className="flex items-center gap-2 mb-2">
                   <Brain className="h-5 w-5 text-purple-400" />
-                  <h3 className="text-sm font-bold">LLM Providers</h3>
+                  <h3 className="text-sm font-bold">Google Jules Credentials</h3>
                 </div>
 
                 <div className="space-y-4">
-                  {/* OpenAI */}
+                  <div className="space-y-2 text-zinc-400 text-[10px] bg-black/30 p-2 rounded border border-white/5 mb-4">
+                    <p>Google's v1alpha API requires both an API Key and an OAuth2 Token.</p>
+                    <p className="mt-1">Get your token by running: <code className="text-purple-400 bg-purple-400/10 px-1">gcloud auth print-access-token</code></p>
+                  </div>
+
                   <div className="space-y-2">
+                    <div className="flex items-center gap-2">
+                      <Key className="h-3 w-3 text-white/40" />
+                      <Label className="text-xs text-white/60 uppercase tracking-tight">API Key</Label>
+                    </div>
+                    <Input
+                      type="password"
+                      value={julesKey}
+                      onChange={e => setJulesKey(e.target.value)}
+                      placeholder="AIza..."
+                      className="bg-black/50 border-white/10 text-xs font-mono"
+                    />
+                  </div>
+
+                  <div className="space-y-2">
+                    <div className="flex items-center gap-2">
+                      <ShieldCheck className="h-3 w-3 text-white/40" />
+                      <Label className="text-xs text-white/60 uppercase tracking-tight">Auth Token</Label>
+                    </div>
+                    <Input
+                      type="password"
+                      value={julesAuthToken}
+                      onChange={e => setJulesAuthToken(e.target.value)}
+                      placeholder="ya29..."
+                      className="bg-black/50 border-white/10 text-xs font-mono"
+                    />
+                  </div>
+                </div>
+              </div>
+
+              <div className="space-y-4 border border-white/10 p-4 rounded-lg bg-white/5">
+                <div className="flex items-center gap-2 mb-2">
+                  <Key className="h-5 w-5 text-zinc-400" />
+                  <h3 className="text-sm font-bold text-zinc-400">Other LLM Providers</h3>
+                </div>
+
+                <div className="space-y-4">
+                  <div className="space-y-2 opacity-60">
                     <Label className="text-xs text-white/60">OpenAI API Key</Label>
                     <Input
                       type="password"
@@ -110,8 +161,7 @@ export function SettingsDialog({ open: propOpen, onOpenChange: propOnOpenChange,
                     />
                   </div>
 
-                  {/* Anthropic */}
-                  <div className="space-y-2">
+                  <div className="space-y-2 opacity-60">
                     <Label className="text-xs text-white/60">Anthropic API Key</Label>
                     <Input
                       type="password"
@@ -122,8 +172,8 @@ export function SettingsDialog({ open: propOpen, onOpenChange: propOnOpenChange,
                     />
                   </div>
 
-                  <div className="space-y-2">
-                    <Label className="text-xs text-white/60">Google Gemini API Key</Label>
+                  <div className="space-y-2 opacity-60">
+                    <Label className="text-xs text-white/60">Legacy Gemini API Key</Label>
                     <Input
                       type="password"
                       value={geminiKey}
@@ -133,18 +183,7 @@ export function SettingsDialog({ open: propOpen, onOpenChange: propOnOpenChange,
                     />
                   </div>
 
-                  <div className="space-y-2">
-                    <Label className="text-xs text-white/60">Jules API Key</Label>
-                    <Input
-                      type="password"
-                      value={julesKey}
-                      onChange={e => setJulesKey(e.target.value)}
-                      placeholder="jules_..."
-                      className="bg-black/50 border-white/10 text-xs font-mono"
-                    />
-                  </div>
-
-                  <Button size="sm" onClick={handleSaveLLMKeys} className="w-full mt-2">Save Keys</Button>
+                  <Button size="sm" onClick={handleSaveLLMKeys} className="w-full mt-2">Save All Credentials</Button>
                 </div>
               </div>
 

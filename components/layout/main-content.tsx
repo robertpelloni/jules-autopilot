@@ -3,15 +3,16 @@ import { KanbanBoard } from "@/components/kanban-board";
 import { ActivityFeed } from "@/components/activity-feed";
 import { CodeDiffSidebar } from "@/components/code-diff-sidebar";
 import { DebateHistoryList } from "@/components/debate-history-list";
+import { SystemLogs } from "@/components/system-logs";
 import { Session, Activity, SessionTemplate } from '@jules/shared';
 import { Button } from "@/components/ui/button";
 
 interface MainContentProps {
-  view: 'sessions' | 'templates' | 'kanban' | 'debates';
+  view: 'sessions' | 'templates' | 'kanban' | 'debates' | 'logs';
   selectedSession: Session | null;
   onSessionSelect: (session: Session | string) => void;
   onStartSessionFromTemplate: (template: SessionTemplate) => void;
-  onViewChange: (view: 'sessions' | 'templates' | 'kanban' | 'debates') => void;
+  onViewChange: (view: 'sessions' | 'templates' | 'kanban' | 'debates' | 'logs') => void;
   showCodeDiffs: boolean;
   onToggleCodeDiffs: (show: boolean) => void;
   onActivitiesChange: (activities: Activity[]) => void;
@@ -51,6 +52,8 @@ export function MainContent({
           <DebateHistoryList 
             onRefresh={onRefresh}
           />
+        ) : view === "logs" ? (
+          <SystemLogs />
         ) : selectedSession ? (
           <ActivityFeed
             session={selectedSession}

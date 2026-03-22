@@ -6,8 +6,7 @@ import { JulesClient } from './client';
 interface JulesContextType {
   client: JulesClient | null;
   isLoading: boolean;
-  refreshTrigger: number;
-  triggerRefresh: () => void;
+  refresh: () => void;
 }
 
 const JulesContext = createContext<JulesContextType | undefined>(undefined);
@@ -15,50 +14,64 @@ const JulesContext = createContext<JulesContextType | undefined>(undefined);
 export function JulesProvider({ children }: { children: React.ReactNode }) {
   const [client, setClient] = useState<JulesClient | null>(null);
   const [isLoading, setIsLoading] = useState(true);
-  const [refreshTrigger, setRefreshTrigger] = useState(0);
   const initialized = useRef(false);
+
+  const initClient = useCallback(() => {
+    try {
+      const localJulesKey = typeof window !== 'undefined' ? localStorage.getItem('jules_api_key') : null;
+      const localAuthToken = typeof window !== 'undefined' ? localStorage.getItem('jules_auth_token') : null;
+      
+      console.log(`[JulesProvider] Initializing client (API Key: ${!!localJulesKey}, Auth Token: ${!!localAuthToken})`);
+      
+      const newClient = new JulesClient(
+        localJulesKey || undefined, 
+        undefined, 
+        localAuthToken || undefined
+      );
+      
+      setClient(newClient);
+      console.log("[JulesProvider] Client initialized and set in state.");
+    } catch (e) {
+      console.error("[JulesProvider] Failed to initialize client:", e);
+      setClient(null);
+    } finally {
+      setIsLoading(false);
+    }
+  }, []);
 
   useEffect(() => {
     if (initialized.current) return;
     initialized.current = true;
 
-    const initClient = () => {
-        try {
-            const localJulesKey = typeof window !== 'undefined' ? localStorage.getItem('jules_api_key') : null;
-            setClient(new JulesClient(localJulesKey || undefined));
-        } catch (e) {
-            console.error("Failed to initialize JulesClient:", e);
-            setClient(null);
-        } finally {
-            setIsLoading(false);
-        }
-    };
-
     initClient();
 
-    // Listen for storage changes to update API key dynamically
+    // Listen for storage changes (other tabs)
     const handleStorageChange = (e: StorageEvent) => {
-      if (e.key === 'jules_api_key') {
-        const newKey = e.newValue;
-        setClient(new JulesClient(newKey || undefined));
+      if (e.key === 'jules_api_key' || e.key === 'jules_auth_token') {
+        initClient();
       }
     };
 
-    window.addEventListener('storage', handleStorageChange);
-    return () => window.removeEventListener('storage', handleStorageChange);
-  }, []);
+    // Listen for custom settings changes (this tab)
+    const handleSettingsChange = () => {
+      initClient();
+    };
 
-  const triggerRefresh = useCallback(() => {
-    setRefreshTrigger(prev => prev + 1);
-  }, []);
+    window.addEventListener('storage', handleStorageChange);
+    window.addEventListener('jules-api-key-updated', handleSettingsChange);
+    
+    return () => {
+      window.removeEventListener('storage', handleStorageChange);
+      window.removeEventListener('jules-api-key-updated', handleSettingsChange);
+    };
+  }, [initClient]);
+
+  const refresh = useCallback(() => {
+    initClient();
+  }, [initClient]);
 
   return (
-    <JulesContext.Provider value={{ 
-        client, 
-        isLoading, 
-        refreshTrigger, 
-        triggerRefresh 
-    }}>
+    <JulesContext.Provider value={{ client, isLoading, refresh }}>
       {children}
     </JulesContext.Provider>
   );

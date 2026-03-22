@@ -10,8 +10,8 @@ import type { Session } from '@jules/shared';
 
 export interface AppLayoutProps {
   children: React.ReactNode;
-  currentView: 'sessions' | 'templates' | 'kanban' | 'debates';
-  onViewChange: (view: 'sessions' | 'templates' | 'kanban' | 'debates') => void;
+  currentView: 'sessions' | 'templates' | 'kanban' | 'debates' | 'logs';
+  onViewChange: (view: 'sessions' | 'templates' | 'kanban' | 'debates' | 'logs') => void;
   selectedSessionId?: string;
   onSessionSelect: (session: Session | string) => void;
 }

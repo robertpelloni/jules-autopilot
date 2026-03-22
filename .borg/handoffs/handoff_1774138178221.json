@@ -1,0 +1,131 @@
+{
+  "version": "0.9.667",
+  "timestamp": 1774138178220,
+  "sessionId": "current",
+  "stats": {
+    "totalCount": 19,
+    "sessionCount": 6,
+    "workingCount": 13,
+    "longTermCount": 0,
+    "observationCount": 13,
+    "uniqueObservationCount": 12,
+    "promptCount": 0,
+    "sessionSummaryCount": 0,
+    "session": 6,
+    "working": 13,
+    "long_term": 0,
+    "user": 0,
+    "agent": 0,
+    "project": 19,
+    "discovery": 0,
+    "decision": 0,
+    "progress": 12,
+    "warning": 1,
+    "fix": 0
+  },
+  "recentContext": [
+    {
+      "content": "JIT tool context for get_eviction_history:\nFocus query: get_eviction_history\nPotentially relevant observations:\n- get_eviction_history completed — get_eviction_history completed in 186ms. [] (progress · get_eviction_history)\n- get_eviction_history completed — get_eviction_history completed in 184ms. [] (progress · get_eviction_history)\n- get_eviction_history completed — get_eviction_history completed in 197ms. [] (progress · get_eviction_history)\n- get_eviction_history completed — get_eviction_history completed in 186ms. [] (progress · get_eviction_history)\nUse only the parts that still match the current intent; ignore stale context.",
+      "metadata": {
+        "source": "pre_tool_context",
+        "tags": [
+          "tool-context",
+          "pre-tool",
+          "get_eviction_history"
+        ],
+        "toolName": "get_eviction_history",
+        "query": "get_eviction_history",
+        "matchedPaths": [],
+        "observationCount": 4,
+        "summaryCount": 0,
+        "preview": "JIT context: 4 observations"
+      }
+    },
+    {
+      "content": "JIT tool context for get_eviction_history:\nFocus query: get_eviction_history\nPotentially relevant observations:\n- get_eviction_history completed — get_eviction_history completed in 197ms. [] (progress · get_eviction_history)\n- get_eviction_history completed — get_eviction_history completed in 186ms. [] (progress · get_eviction_history)\n- get_eviction_history completed — get_eviction_history completed in 178ms. [] (progress · get_eviction_history)\n- get_eviction_history completed — get_eviction_history completed in 193ms. [] (progress · get_eviction_history)\nUse only the parts that still match the current intent; ignore stale context.",
+      "metadata": {
+        "source": "pre_tool_context",
+        "tags": [
+          "tool-context",
+          "pre-tool",
+          "get_eviction_history"
+        ],
+        "toolName": "get_eviction_history",
+        "query": "get_eviction_history",
+        "matchedPaths": [],
+        "observationCount": 4,
+        "summaryCount": 0,
+        "preview": "JIT context: 4 observations"
+      }
+    },
+    {
+      "content": "JIT tool context for get_eviction_history:\nFocus query: get_eviction_history\nPotentially relevant observations:\n- get_eviction_history completed — get_eviction_history completed in 178ms. [] (progress · get_eviction_history)\n- get_eviction_history completed — get_eviction_history completed in 193ms. [] (progress · get_eviction_history)\n- get_eviction_history completed — get_eviction_history completed in 196ms. [] (progress · get_eviction_history)\n- get_eviction_history completed — get_eviction_history completed in 268ms. [] (progress · get_eviction_history)\nUse only the parts that still match the current intent; ignore stale context.",
+      "metadata": {
+        "source": "pre_tool_context",
+        "tags": [
+          "tool-context",
+          "pre-tool",
+          "get_eviction_history"
+        ],
+        "toolName": "get_eviction_history",
+        "query": "get_eviction_history",
+        "matchedPaths": [],
+        "observationCount": 4,
+        "summaryCount": 0,
+        "preview": "JIT context: 4 observations"
+      }
+    },
+    {
+      "content": "JIT tool context for get_eviction_history:\nFocus query: get_eviction_history\nPotentially relevant observations:\n- get_eviction_history completed — get_eviction_history completed in 268ms. [] (progress · get_eviction_history)\n- get_eviction_history completed — get_eviction_history completed in 709ms. [] (progress · get_eviction_history)\n- get_eviction_history completed — get_eviction_history completed in 205ms. [] (progress · get_eviction_history)\n- get_eviction_history completed — get_eviction_history completed in 173ms. [] (progress · get_eviction_history)\nUse only the parts that still match the current intent; ignore stale context.",
+      "metadata": {
+        "source": "pre_tool_context",
+        "tags": [
+          "tool-context",
+          "pre-tool",
+          "get_eviction_history"
+        ],
+        "toolName": "get_eviction_history",
+        "query": "get_eviction_history",
+        "matchedPaths": [],
+        "observationCount": 4,
+        "summaryCount": 0,
+        "preview": "JIT context: 4 observations"
+      }
+    },
+    {
+      "content": "JIT tool context for get_eviction_history:\nFocus query: get_eviction_history\nPotentially relevant observations:\n- get_eviction_history completed — get_eviction_history completed in 709ms. [] (progress · get_eviction_history)\n- get_eviction_history completed — get_eviction_history completed in 205ms. [] (progress · get_eviction_history)\n- get_eviction_history completed — get_eviction_history completed in 173ms. [] (progress · get_eviction_history)\nUse only the parts that still match the current intent; ignore stale context.",
+      "metadata": {
+        "source": "pre_tool_context",
+        "tags": [
+          "tool-context",
+          "pre-tool",
+          "get_eviction_history"
+        ],
+        "toolName": "get_eviction_history",
+        "query": "get_eviction_history",
+        "matchedPaths": [],
+        "observationCount": 3,
+        "summaryCount": 0,
+        "preview": "JIT context: 3 observations"
+      }
+    },
+    {
+      "content": "JIT tool context for get_eviction_history:\nFocus query: get_eviction_history\nPotentially relevant observations:\n- get_eviction_history completed — get_eviction_history completed in 205ms. [] (progress · get_eviction_history)\n- get_eviction_history completed — get_eviction_history completed in 173ms. [] (progress · get_eviction_history)\nUse only the parts that still match the current intent; ignore stale context.",
+      "metadata": {
+        "source": "pre_tool_context",
+        "tags": [
+          "tool-context",
+          "pre-tool",
+          "get_eviction_history"
+        ],
+        "toolName": "get_eviction_history",
+        "query": "get_eviction_history",
+        "matchedPaths": [],
+        "observationCount": 2,
+        "summaryCount": 0,
+        "preview": "JIT context: 2 observations"
+      }
+    }
+  ],
+  "notes": "Automatic background handoff"
+}

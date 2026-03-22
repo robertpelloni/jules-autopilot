@@ -55,14 +55,18 @@ export function SessionList({
   };
 
   const loadSessions = useCallback(async () => {
+    console.log(`[SessionList] loadSessions called (Client ready: ${!!client})`);
     if (!client) {
       setLoading(false);
       return;
     }
 
     try {
+      setLoading(true);
       setError(null);
+      console.log("[SessionList] Fetching sessions from API...");
       const data = await client.listSessions();
+      console.log(`[SessionList] Received ${data.length} sessions.`);
       setSessions(data.sort((a, b) => new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime()));
     } catch (err) {
       console.error("Failed to load sessions:", err);

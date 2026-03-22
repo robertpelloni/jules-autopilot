@@ -5,7 +5,8 @@ import {
   MessageSquare, 
   LayoutTemplate, 
   Trello, 
-  Users 
+  Users,
+  Terminal
 } from "lucide-react";
 import { SessionList } from "@/components/session-list";
 import { Session } from '@jules/shared';
@@ -15,8 +16,8 @@ interface AppSidebarProps {
   onToggleCollapse: () => void;
   onSessionSelect: (session: Session | string) => void;
   selectedSessionId?: string;
-  currentView: 'sessions' | 'templates' | 'kanban' | 'debates';
-  onViewChange: (view: 'sessions' | 'templates' | 'kanban' | 'debates') => void;
+  currentView: 'sessions' | 'templates' | 'kanban' | 'debates' | 'logs';
+  onViewChange: (view: 'sessions' | 'templates' | 'kanban' | 'debates' | 'logs') => void;
 }
 
 export function AppSidebar({
@@ -32,6 +33,7 @@ export function AppSidebar({
     { id: 'templates', label: 'Templates', icon: LayoutTemplate },
     { id: 'kanban', label: 'Kanban', icon: Trello },
     { id: 'debates', label: 'Debates', icon: Users },
+    { id: 'logs', label: 'System Logs', icon: Terminal },
   ] as const;
 
   return (

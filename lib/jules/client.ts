@@ -138,14 +138,16 @@ export class JulesAPIError extends Error {
   }
 }
 
-const DEFAULT_API_BASE_URL = '/api/local';
+const DEFAULT_API_BASE_URL = '/api';
 
 export class JulesClient {
   private apiKey?: string;
+  private authToken?: string;
   private baseUrl: string;
 
-  constructor(apiKey?: string, baseUrl: string = DEFAULT_API_BASE_URL) {
+  constructor(apiKey?: string, baseUrl: string = DEFAULT_API_BASE_URL, authToken?: string) {
     this.apiKey = apiKey;
+    this.authToken = authToken;
     this.baseUrl = baseUrl;
   }
 
@@ -163,59 +165,83 @@ export class JulesClient {
         ? endpoint 
         : `${this.baseUrl}${endpoint}`;
 
-    
+    const headers: Record<string, string> = {
+      'Content-Type': 'application/json',
+      ...((options.headers as Record<string, string>) || {}),
+    };
+
+    const isExternal = url.includes('googleapis.com');
+
+    // Google Jules API v1alpha Auth Logic:
+    if (isExternal) {
+      if (this.authToken) {
+        // OAuth Token MUST be the only credential
+        headers['Authorization'] = `Bearer ${this.authToken}`;
+      } else if (this.apiKey) {
+        // API Key fallback
+        headers['X-Goog-Api-Key'] = this.apiKey;
+      }
+      
+      if (typeof window !== 'undefined') {
+        console.log(`[JulesClient] Requesting External: ${url.split('?')[0]}`);
+      }
+    } else {
+      // Internal daemon headers (Local Only)
+      if (this.apiKey) headers['X-Jules-Api-Key'] = this.apiKey;
+      if (this.authToken) headers['X-Jules-Auth-Token'] = this.authToken;
+      
+      if (typeof window !== 'undefined') {
+        console.log(`[JulesClient] Requesting Local: ${url}`);
+      }
+    }
+
     try {
       const response = await fetch(url, {
         ...options,
-        headers: {
-          'Content-Type': 'application/json',
-          'X-Jules-Api-Key': this.apiKey || '',
-          ...options.headers,
-        },
+        headers,
       });
 
       if (!response.ok) {
-        const error = await response.json().catch(() => ({}));
+        const errorText = await response.text().catch(() => 'No error body');
+        let errorData: any = {};
+        try { errorData = JSON.parse(errorText); } catch { /* ignore */ }
+
+        console.error(`[Jules Client] Request failed: ${response.status} ${response.statusText}`, errorText);
 
         if (response.status === 401) {
+          const detail = errorData?.error?.details?.[0]?.reason || errorData?.error?.message || '';
           throw new JulesAPIError(
-            'Invalid API key. Please check your Jules API key in settings.',
+            `Invalid Credentials. ${detail}`.trim(),
             response.status,
-            error
+            errorData
           );
         }
 
         if (response.status === 403) {
           throw new JulesAPIError(
-            'Access forbidden. Please ensure your API key has the correct permissions.',
+            'Access forbidden. Please ensure your API key and Auth Token have the correct permissions.',
             response.status,
-            error
+            errorData
           );
         }
 
         if (response.status === 404) {
           // For activities endpoint, 404 just means no activities yet (new session)
-          // Return empty array instead of throwing error
-          if (endpoint.includes("/activities")) {
-            return { activities: [] } as T;
-          }
-          if (endpoint.includes("/sessions?")) {
-            return { sessions: [] } as T;
-          }
-          if (endpoint.includes("/sources?")) {
-            return { sources: [] } as T;
-          }
+          if (endpoint.includes("/activities")) return { activities: [] } as T;
+          if (endpoint.includes("/sessions?")) return { sessions: [] } as T;
+          if (endpoint.includes("/sources?")) return { sources: [] } as T;
+          
           throw new JulesAPIError(
             'Resource not found. The requested endpoint may not exist.',
             response.status,
-            error
+            errorData
           );
         }
 
         throw new JulesAPIError(
-          error.message || `Request failed with status ${response.status}`,
+          errorData.message || `Request failed with status ${response.status}`,
           response.status,
-          error
+          errorData
         );
       }
 
@@ -377,31 +403,17 @@ export class JulesClient {
   }
 
   async createSession(sourceId: string, prompt: string, title: string = 'Untitled Session'): Promise<Session> {
-    const data: CreateSessionRequest = {
-      sourceId,
-      prompt,
-      title
-    };
-    
-    // ... logic for createSession ...
-    let finalPrompt = data.prompt;
-    if (data.autoCreatePr) {
-      finalPrompt += '\n\nIMPORTANT: Automatically create a pull request when code changes are ready.';
-    }
-
     const requestBody = {
-      prompt: finalPrompt,
+      prompt,
       sourceContext: {
-        source: data.sourceId,
+        source: sourceId,
         githubRepoContext: {
-          startingBranch: data.startingBranch || 'main' // Default to main branch
+          startingBranch: 'main'
         }
       },
-      title: data.title || 'Untitled Session',
-      requirePlanApproval: true // Enable plan approval as per requirements
+      title: title || 'Untitled Session',
+      requirePlanApproval: true
     };
-
-
 
     const response = await this.request<ApiSession>("/sessions", {
       method: "POST",
@@ -819,4 +831,3 @@ export class JulesClient {
     return contextStr;
   }
 }
-

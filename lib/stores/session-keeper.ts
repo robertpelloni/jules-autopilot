@@ -116,12 +116,12 @@ export const useSessionKeeperStore = create<SessionKeeperState>()(
       loadConfig: async () => {
         set({ isLoading: true });
         try {
-          const res = await fetch('/api/local/settings/keeper');
+          const res = await fetch('/api/settings/keeper');
           if (res.ok) {
             const config = await res.json();
             set({ config });
 
-            const statusRes = await fetch('/api/local/daemon/status');
+            const statusRes = await fetch('/api/daemon/status');
             if (statusRes.ok) {
               const statusData = await statusRes.json();
               set((state) => ({
@@ -137,7 +137,7 @@ export const useSessionKeeperStore = create<SessionKeeperState>()(
             }
           }
         } catch {
-          console.warn('Session Keeper: Backend not reachable. Is the server running? (bun run server/index.ts)');
+          console.warn('Session Keeper: Backend not reachable. Is the server running?');
         } finally {
           set({ isLoading: false });
         }
@@ -148,13 +148,13 @@ export const useSessionKeeperStore = create<SessionKeeperState>()(
       saveConfig: async (config) => {
         set({ config, isLoading: true });
         try {
-          await fetch('/api/local/settings/keeper', {
+          await fetch('/api/settings/keeper', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify(config),
           });
 
-          await fetch('/api/local/daemon/status', {
+          await fetch('/api/daemon/status', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ action: config.isEnabled ? 'start' : 'stop' })
@@ -169,7 +169,7 @@ export const useSessionKeeperStore = create<SessionKeeperState>()(
 
       loadLogs: async () => {
         try {
-          const res = await fetch('/api/local/daemon/status');
+          const res = await fetch('/api/daemon/status');
           if (res.ok) {
             const statusData = await res.json();
             const mappedLogs: Log[] = statusData.logs.map((l: { id: string; createdAt: string | number | Date; message: string; type: string; metadata?: string }) => ({
