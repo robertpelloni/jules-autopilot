@@ -6,7 +6,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Github, Brain, Palette, Key, ShieldCheck } from 'lucide-react';
+import { Github, Brain, Palette, Key, ShieldCheck, Database, Download, Upload } from 'lucide-react';
 import { SessionKeeperSettingsContent } from './session-keeper-settings-content';
 import { ThemeCustomizer } from './theme-customizer';
 import { useSessionKeeperStore } from '@/lib/stores/session-keeper';
@@ -26,6 +26,8 @@ export function SettingsDialog({ open: propOpen, onOpenChange: propOnOpenChange,
   const [anthropicKey, setAnthropicKey] = useState('');
   const [geminiKey, setGeminiKey] = useState('');
   const [julesKey, setJulesKey] = useState('');
+  const [julesAuthToken, setJulesAuthToken] = useState('');
+  const [isImporting, setIsImporting] = useState(false);
 
   const open = propOpen !== undefined ? propOpen : internalOpen;
   const onOpenChange = propOnOpenChange || setInternalOpen;
@@ -39,12 +41,14 @@ export function SettingsDialog({ open: propOpen, onOpenChange: propOnOpenChange,
         const antKey = localStorage.getItem('anthropic_api_key');
         const gemKey = localStorage.getItem('google_api_key');
         const julKey = localStorage.getItem('jules_api_key');
+        const julAuth = localStorage.getItem('jules_auth_token');
 
         if (ghToken) setGithubToken(ghToken);
         if (oaKey) setOpenAIKey(oaKey);
         if (antKey) setAnthropicKey(antKey);
         if (gemKey) setGeminiKey(gemKey);
         if (julKey) setJulesKey(julKey);
+        if (julAuth) setJulesAuthToken(julAuth);
       }, 0);
       return () => clearTimeout(timer);
     }
@@ -62,12 +66,63 @@ export function SettingsDialog({ open: propOpen, onOpenChange: propOnOpenChange,
     
     // Save Jules Credentials
     if (julesKey) localStorage.setItem('jules_api_key', julesKey);
+    if (julesAuthToken) localStorage.setItem('jules_auth_token', julesAuthToken);
     
-    if (julesKey) {
+    if (julesKey || julesAuthToken) {
       window.dispatchEvent(new Event('jules-api-key-updated'));
     }
     
     toast.success('API Credentials saved');
+  };
+
+  const handleExport = async () => {
+    try {
+      const response = await fetch('/api/export');
+      if (!response.ok) throw new Error('Export failed');
+      const data = await response.json();
+      
+      const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `jules-autopilot-backup-${new Date().toISOString().split('T')[0]}.json`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+      
+      toast.success('Database backup downloaded');
+    } catch (err) {
+      console.error(err);
+      toast.error('Failed to export data');
+    }
+  };
+
+  const handleImport = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    try {
+      setIsImporting(true);
+      const text = await file.text();
+      const data = JSON.parse(text);
+
+      const response = await fetch('/api/import', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(data),
+      });
+
+      if (!response.ok) throw new Error('Import failed');
+      
+      toast.success('Data imported successfully. Reloading...');
+      setTimeout(() => window.location.reload(), 1500);
+    } catch (err) {
+      console.error(err);
+      toast.error('Failed to import data. Check file format.');
+    } finally {
+      setIsImporting(false);
+    }
   };
 
   return (
@@ -92,6 +147,10 @@ export function SettingsDialog({ open: propOpen, onOpenChange: propOnOpenChange,
                 <Brain className="h-3.5 w-3.5" />
                 Supervisor
               </TabsTrigger>
+              <TabsTrigger value="system" className="text-xs flex items-center gap-2">
+                <Database className="h-3.5 w-3.5" />
+                System
+              </TabsTrigger>
             </TabsList>
           </div>
 
@@ -105,7 +164,8 @@ export function SettingsDialog({ open: propOpen, onOpenChange: propOnOpenChange,
 
                 <div className="space-y-4">
                   <div className="space-y-2 text-zinc-400 text-[10px] bg-black/30 p-2 rounded border border-white/5 mb-4">
-                    <p>Only a standard Google API Key is required for authentication.</p>
+                    <p>Google's v1alpha API requires both an API Key and an OAuth2 Token.</p>
+                    <p className="mt-1">Get your token by running: <code className="text-purple-400 bg-purple-400/10 px-1">gcloud auth print-access-token</code></p>
                   </div>
 
                   <div className="space-y-2">
@@ -118,6 +178,20 @@ export function SettingsDialog({ open: propOpen, onOpenChange: propOnOpenChange,
                       value={julesKey}
                       onChange={e => setJulesKey(e.target.value)}
                       placeholder="AIza..."
+                      className="bg-black/50 border-white/10 text-xs font-mono"
+                    />
+                  </div>
+
+                  <div className="space-y-2">
+                    <div className="flex items-center gap-2">
+                      <ShieldCheck className="h-3 w-3 text-white/40" />
+                      <Label className="text-xs text-white/60 uppercase tracking-tight">Auth Token</Label>
+                    </div>
+                    <Input
+                      type="password"
+                      value={julesAuthToken}
+                      onChange={e => setJulesAuthToken(e.target.value)}
+                      placeholder="ya29..."
                       className="bg-black/50 border-white/10 text-xs font-mono"
                     />
                   </div>
@@ -203,6 +277,57 @@ export function SettingsDialog({ open: propOpen, onOpenChange: propOnOpenChange,
               config={config}
               onConfigChange={setConfig}
             />
+          </TabsContent>
+
+          <TabsContent value="system" className="flex-1 p-6 overflow-y-auto">
+            <div className="space-y-6 max-w-md">
+              <div className="space-y-4 border border-white/10 p-4 rounded-lg bg-white/5">
+                <div className="flex items-center gap-2 mb-2">
+                  <Database className="h-5 w-5 text-blue-400" />
+                  <h3 className="text-sm font-bold">Database Portability</h3>
+                </div>
+                
+                <p className="text-xs text-zinc-400 leading-relaxed">
+                  Export or import your entire local configuration, including session templates, 
+                  debate history, and API settings.
+                </p>
+
+                <div className="grid grid-cols-2 gap-3 pt-2">
+                  <Button variant="outline" onClick={handleExport} className="border-white/10 hover:bg-white/5 text-xs font-mono uppercase tracking-widest h-9">
+                    <Download className="mr-2 h-3.5 w-3.5" /> Export
+                  </Button>
+                  
+                  <div className="relative">
+                    <Input
+                      type="file"
+                      accept=".json"
+                      onChange={handleImport}
+                      className="hidden"
+                      id="import-upload"
+                      disabled={isImporting}
+                    />
+                    <Button 
+                      asChild 
+                      variant="outline" 
+                      className="w-full border-white/10 hover:bg-white/5 text-xs font-mono uppercase tracking-widest h-9"
+                      disabled={isImporting}
+                    >
+                      <label htmlFor="import-upload" className="cursor-pointer">
+                        {isImporting ? <Loader2 className="mr-2 h-3.5 w-3.5 animate-spin" /> : <Upload className="mr-2 h-3.5 w-3.5" />}
+                        Import
+                      </label>
+                    </Button>
+                  </div>
+                </div>
+              </div>
+
+              <div className="p-4 border border-yellow-500/20 rounded-lg bg-yellow-500/5">
+                <h4 className="text-[10px] font-bold text-yellow-500 uppercase tracking-widest mb-1">Warning</h4>
+                <p className="text-[10px] text-yellow-500/70 leading-normal font-mono">
+                  Importing data will overwrite your existing local database. This action is atomic but non-reversible without a backup.
+                </p>
+              </div>
+            </div>
           </TabsContent>
         </Tabs>
       </DialogContent>

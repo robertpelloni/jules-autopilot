@@ -1,5 +1,6 @@
 import { TemplatesPage } from "@/components/templates-page";
 import { KanbanBoard } from "@/components/kanban-board";
+import { SessionBoard } from "@/components/session-board";
 import { ActivityFeed } from "@/components/activity-feed";
 import { CodeDiffSidebar } from "@/components/code-diff-sidebar";
 import { DebateHistoryList } from "@/components/debate-history-list";
@@ -64,16 +65,10 @@ export function MainContent({
             onSaveTemplate={onSaveTemplate}
           />
         ) : (
-          <div className="flex flex-col items-center justify-center h-full text-zinc-500 gap-4">
-            <p className="text-xs font-mono uppercase tracking-widest">Select a session to begin</p>
-            <Button 
-              variant="outline" 
-              className="border-white/10 text-white/40 hover:text-white"
-              onClick={() => onViewChange('templates')}
-            >
-              Start from Template
-            </Button>
-          </div>
+          <SessionBoard 
+            onSelectSession={(s) => onSessionSelect(s)}
+            onOpenNewSession={() => onViewChange('templates')}
+          />
         )}
       </main>
 

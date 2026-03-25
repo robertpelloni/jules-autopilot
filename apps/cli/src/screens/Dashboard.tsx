@@ -1,5 +1,5 @@
 import React, { useEffect } from 'react';
-import { Box, Text, useInput } from 'ink';
+import { Box, Text } from 'ink';
 import { useAppStore } from '../hooks/useAppState.js';
 
 interface DashboardProps {
@@ -7,19 +7,13 @@ interface DashboardProps {
 }
 
 export default function Dashboard({ onNavigate }: DashboardProps) {
-  const { stats, isConnected, daemonStatus, refreshStatus, indexCodebase } = useAppStore();
+  const { stats, isConnected, daemonStatus, fetchStatus } = useAppStore();
 
   useEffect(() => {
-    refreshStatus();
-    const interval = setInterval(refreshStatus, 10000);
+    fetchStatus();
+    const interval = setInterval(fetchStatus, 10000);
     return () => clearInterval(interval);
   }, []);
-
-  useInput((input) => {
-    if (input === 'i') {
-      indexCodebase();
-    }
-  });
 
   return (
     <Box flexDirection="column">
@@ -48,12 +42,6 @@ export default function Dashboard({ onNavigate }: DashboardProps) {
         <Text>Pending: {stats.awaitingApproval}</Text>
       </Box>
 
-      <Box flexDirection="column" borderStyle="single" borderColor="green" paddingX={1} marginBottom={1}>
-        <Text bold color="green">Knowledge Base (RAG)</Text>
-        <Text>Status: Ready</Text>
-        <Text dimColor>Press [I] to re-index codebase</Text>
-      </Box>
-
       <Box flexDirection="column" flexGrow={1}>
         <Text bold color="blue">Recent Logs</Text>
         <Box flexDirection="column" marginTop={1}>
@@ -64,7 +52,7 @@ export default function Dashboard({ onNavigate }: DashboardProps) {
               <Box key={idx} gap={1}>
                 <Text color="gray">{new Date(log.createdAt).toLocaleTimeString()}</Text>
                 <Text color={log.type === 'error' ? 'red' : 'white'} bold>[{log.type.toUpperCase()}]</Text>
-                <Text wrap="truncate-end">{log.message}</Text>
+                <Text truncate>{log.message}</Text>
               </Box>
             ))
           )}

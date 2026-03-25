@@ -40,6 +40,44 @@ export async function calculateRiskScore(
   }
 }
 
+export async function evaluatePlanRisk(
+  planText: string,
+  provider: string,
+  apiKey: string,
+  model: string
+): Promise<number> {
+  const prompt = `
+    Analyze the following implementation plan and provide a risk score between 0 and 100.
+    100 = Extremely High Risk (Modifying critical database schemas, core auth logic, or deleting large swathes of code without clear boundaries).
+    0 = Extremely Low Risk (Updating README, adding comments, minor UI text changes).
+
+    Plan:
+    ${planText}
+    
+    Consider:
+    1. Are the changes destructive or additive?
+    2. Is the scope tightly bounded or sweeping across the repo?
+    3. Does it touch security, auth, or state management?
+
+    Respond with ONLY the numerical score (0-100).
+  `;
+
+  try {
+    const response = await generateText({
+      provider,
+      apiKey,
+      model,
+      messages: [{ role: 'user', content: prompt }]
+    });
+    
+    const score = parseInt(response.trim().replace(/[^0-9]/g, ''));
+    return isNaN(score) ? 50 : Math.min(Math.max(score, 0), 100);
+  } catch (error) {
+    console.error("Error evaluating plan risk:", error);
+    return 50; // Default to medium risk on error
+  }
+}
+
 /**
  * Decides whether a debate result should be automatically approved.
  */
@@ -54,7 +92,8 @@ export async function decideNextAction(
   provider: string,
   apiKey: string,
   model: string,
-  context: string
+  context: string,
+  history?: { role: string, content: string }[]
 ): Promise<string> {
   const systemPrompt = `You are a supervisor for an AI agent.
   The agent has been inactive.
@@ -62,15 +101,26 @@ export async function decideNextAction(
   Keep the message short, direct, and professional.
   Do not mention that you are a supervisor. Just speak as if you are the user giving a command.`;
 
+  const messages: { role: 'system' | 'user' | 'assistant', content: string }[] = [
+    { role: 'system', content: systemPrompt }
+  ];
+
+  if (history && history.length > 0) {
+      const formattedHistory = history.map(h => ({ 
+          role: h.role as 'user' | 'assistant' | 'system', 
+          content: h.content 
+      }));
+      messages.push(...formattedHistory);
+  }
+
+  messages.push({ role: 'user', content: context });
+
   try {
     const response = await generateText({
       provider,
       apiKey,
       model,
-      messages: [
-        { role: 'system', content: systemPrompt },
-        { role: 'user', content: context }
-      ]
+      messages
     });
 
     return response || "Please continue.";

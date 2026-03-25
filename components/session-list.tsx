@@ -8,8 +8,7 @@ import type { Session } from '@jules/shared';
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Search, Loader2, Sparkles, RefreshCw, Megaphone } from "lucide-react";
-import { BroadcastDialog } from "./broadcast-dialog";
+import { Search, Loader2, Sparkles, RefreshCw } from "lucide-react";
 import {
   Tooltip,
   TooltipContent,
@@ -67,8 +66,15 @@ export function SessionList({
       setError(null);
       console.log("[SessionList] Fetching sessions from API...");
       const data = await client.listSessions();
-      console.log(`[SessionList] Received ${data.length} sessions.`);
-      setSessions(data.sort((a, b) => new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime()));
+      console.log(`[SessionList] Received ${data.length} sessions:`, JSON.stringify(data));
+      
+      const sorted = [...data].sort((a, b) => {
+        const timeA = new Date(a.updatedAt || a.createdAt || 0).getTime();
+        const timeB = new Date(b.updatedAt || b.createdAt || 0).getTime();
+        return timeB - timeA;
+      });
+      
+      setSessions(sorted);
     } catch (err) {
       console.error("Failed to load sessions:", err);
       setError(err instanceof Error ? err.message : "Failed to load sessions");
@@ -137,13 +143,16 @@ export function SessionList({
   };
 
   const visibleSessions = useMemo(() => {
-    return sessions.filter((session) => {
+    console.log(`[SessionList] Computing visibleSessions. Total sessions: ${sessions.length}`);
+    const filtered = sessions.filter((session) => {
       if (!searchQuery) return true;
       const query = searchQuery.toLowerCase();
       const title = (session.title || "").toLowerCase();
       const repo = (session.sourceId || "").toLowerCase();
       return title.includes(query) || repo.includes(query);
     });
+    console.log(`[SessionList] visibleSessions count: ${filtered.length}`);
+    return filtered;
   }, [sessions, searchQuery]);
 
   if (loading && sessions.length === 0) {
@@ -185,12 +194,9 @@ export function SessionList({
         <div className="px-3 py-2 border-b border-white/[0.08] shrink-0 space-y-2">
           <div className="flex items-center justify-between mb-1">
              <span className="text-[10px] font-bold text-white/40 uppercase tracking-widest">Navigation</span>
-             <div className="flex items-center gap-1">
-                <BroadcastDialog sessions={sessions} />
-                <Button variant="ghost" size="icon" onClick={loadSessions} className="h-7 w-7 text-white/20 hover:text-white hover:bg-white/5">
-                    <RefreshCw className="h-3 w-3" />
-                </Button>
-             </div>
+             <Button variant="ghost" size="icon" onClick={loadSessions} className="h-5 w-5 text-white/20 hover:text-white hover:bg-white/5">
+                <RefreshCw className="h-3 w-3" />
+             </Button>
           </div>
           <div className="relative">
             <Search className="absolute left-2 top-1/2 h-3 w-3 -translate-y-1/2 text-muted-foreground" />
@@ -261,7 +267,18 @@ export function SessionList({
             
             {visibleSessions.length === 0 && !loading && (
                <div className="p-4 text-center">
-                  <p className="text-[10px] text-white/20 uppercase tracking-widest">No matching sessions</p>
+                  <p className="text-[10px] text-white/20 uppercase tracking-widest font-mono">No matching sessions</p>
+                  <details className="mt-4 text-left">
+                    <summary className="text-[8px] text-white/10 cursor-pointer">Debug Data</summary>
+                    <pre className="text-[8px] text-white/20 overflow-auto max-h-32 mt-2 bg-black/50 p-2 rounded">
+                      {JSON.stringify({ 
+                        sessionsCount: sessions.length, 
+                        visibleCount: visibleSessions.length,
+                        searchQuery,
+                        sessions: sessions.map(s => ({ id: s.id, status: s.status, title: s.title }))
+                      }, null, 2)}
+                    </pre>
+                  </details>
                </div>
             )}
           </div>

@@ -1,4 +1,4 @@
-# Development TODOs (v0.9.3 -> v1.0.0)
+# Development TODOs (v0.9.2 -> v1.0.0)
 
 This document tracks granular bugs, missing features, and technical debt. For epic-level milestones, see `ROADMAP.md`.
 

@@ -142,10 +142,12 @@ const DEFAULT_API_BASE_URL = '/api';
 
 export class JulesClient {
   private apiKey?: string;
+  private authToken?: string;
   private baseUrl: string;
 
-  constructor(apiKey?: string, baseUrl: string = DEFAULT_API_BASE_URL) {
+  constructor(apiKey?: string, baseUrl: string = DEFAULT_API_BASE_URL, authToken?: string) {
     this.apiKey = apiKey;
+    this.authToken = authToken;
     this.baseUrl = baseUrl;
   }
 
@@ -157,57 +159,48 @@ export class JulesClient {
   }
 
   private async request<T>(endpoint: string, options: RequestInit = {}): Promise<T> {
-    let url = endpoint.startsWith('http') 
+    const url = endpoint.startsWith('http') 
       ? endpoint 
       : endpoint.startsWith(this.baseUrl) 
         ? endpoint 
         : `${this.baseUrl}${endpoint}`;
 
+    const isGoogleApi = url.includes('googleapis.com');
+
+    // CONSTRUCT CLEAN HEADERS FROM SCRATCH
     const headers: Record<string, string> = {
       'Content-Type': 'application/json',
-      ...((options.headers as Record<string, string>) || {}),
     };
 
-    const isExternal = url.includes('googleapis.com');
-
-    if (isExternal) {
-      /**
-       * MANDATORY AUTH PROTOCOL FOR JULES PORTAL TOKENS (AQ.A...):
-       * 
-       * 1. DO NOT send 'Authorization' header. Google's Labs gateway flags it 
-       *    as 'API_KEY_SERVICE_BLOCKED' when paired with portal session tokens.
-       * 2. USE 'x-goog-api-key' header. This is the only verified way to 
-       *    authenticate high-privilege session tokens from jules.google.com.
-       * 3. AVOID query parameters (?key=). They trigger security poisoning blocks.
-       */
-      delete headers['Authorization'];
-      delete headers['authorization'];
-      
-      if (this.apiKey) {
-        headers['x-goog-api-key'] = this.apiKey;
+    // Google Jules API v1alpha Auth Logic:
+    if (isGoogleApi) {
+      if (this.authToken) {
+        headers['Authorization'] = `Bearer ${this.authToken}`;
+      } else if (this.apiKey) {
+        headers['X-Goog-Api-Key'] = this.apiKey;
       }
       
-      if (typeof window !== 'undefined') {
-        console.log(`[JulesClient] Verified Portal Auth: ${url.split('?')[0]}`);
+      // LOG THE CLEAN HEADERS (MASKED)
+      if (typeof window === 'undefined') {
+        const maskedToken = this.authToken ? `${this.authToken.slice(0, 4)}...${this.authToken.slice(-4)}` : 'None';
+        const maskedKey = this.apiKey ? `${this.apiKey.slice(0, 4)}...${this.apiKey.slice(-4)}` : 'None';
+        console.log(`[JulesClient] Outgoing to Google: auth=${!!this.authToken} key=${!!this.apiKey}`);
       }
     } else {
+      // Local daemon headers
       if (this.apiKey) headers['X-Jules-Api-Key'] = this.apiKey;
+      if (this.authToken) headers['X-Jules-Auth-Token'] = this.authToken;
     }
 
     try {
+      // USE MANUAL FETCH WITHOUT MIDDLEWARE SPREADING
       const response = await fetch(url, {
-        ...options,
+        method: options.method || 'GET',
+        body: options.body,
         headers,
       });
 
       if (!response.ok) {
-        if (response.status === 404) {
-          const lowerEndpoint = endpoint.toLowerCase();
-          if (lowerEndpoint.includes("/activities")) return { activities: [] } as T;
-          if (lowerEndpoint.includes("/sessions")) return { sessions: [] } as T;
-          if (lowerEndpoint.includes("/sources")) return { sources: [] } as T;
-        }
-
         const errorText = await response.text().catch(() => 'No error body');
         let errorData: any = {};
         try { errorData = JSON.parse(errorText); } catch { /* ignore */ }
@@ -216,31 +209,40 @@ export class JulesClient {
 
         if (response.status === 401) {
           const detail = errorData?.error?.details?.[0]?.reason || errorData?.error?.message || '';
-          throw new JulesAPIError(`Invalid Credentials. ${detail}`.trim(), response.status, errorData);
+          throw new JulesAPIError(
+            `Invalid Credentials. ${detail}`.trim(),
+            response.status,
+            errorData
+          );
         }
 
         if (response.status === 403) {
-          throw new JulesAPIError('Access forbidden. Please check your API key permissions.', response.status, errorData);
+          throw new JulesAPIError(
+            'Access forbidden. Please ensure your API key and Auth Token have the correct permissions.',
+            response.status,
+            errorData
+          );
         }
 
-        throw new JulesAPIError(errorData.message || `Request failed with status ${response.status}`, response.status, errorData);
+        if (response.status === 404) {
+          if (endpoint.includes("/activities")) return { activities: [] } as T;
+          if (endpoint.includes("/sessions?")) return { sessions: [] } as T;
+          if (endpoint.includes("/sources?")) return { sources: [] } as T;
+          throw new JulesAPIError('Resource not found.', response.status, errorData);
+        }
+
+        throw new JulesAPIError(
+          errorData.message || `Request failed with status ${response.status}`,
+          response.status,
+          errorData
+        );
       }
 
       return response.json();
     } catch (error) {
       if (error instanceof JulesAPIError) throw error;
-
-      // Handle network errors with helpful messages
-      if (error instanceof TypeError && error.message === "Failed to fetch") {
-        throw new JulesAPIError(
-          'Unable to connect to the server. Please check your internet connection and try again.',
-          undefined,
-          error
-        );
-      }
-
       throw new JulesAPIError(
-        error instanceof Error ? error.message : 'Network request failed. Please try again.',
+        error instanceof Error ? error.message : 'Network request failed.',
         undefined,
         error
       );
@@ -273,30 +275,17 @@ export class JulesClient {
     } while (pageToken);
 
     const sources = allSources.map((source: ApiSource) => {
-      // Extract repo name from source field (e.g., "sources/github/owner/repo")
       const sourcePath = source.source || source.name || "";
       const match = sourcePath.match(/sources\/github\/(.+)/);
       const repoPath = (match ? match[1] : sourcePath) || "Unknown Source";
 
       return {
-        id: sourcePath, // Keep full path for API calls
-        name: repoPath, // Use short name for display
+        id: sourcePath,
+        name: repoPath,
         type: "github" as const,
         metadata: source as Record<string, unknown>,
       };
     });
-
-    // Temporary fix: Add missing repo if not present
-    const missingRepo = "sbhavani/dgx-spark-playbooks";
-    const missingRepoId = `sources/github/${missingRepo}`;
-    if (!sources.some(s => s.id === missingRepoId)) {
-      sources.push({
-        id: missingRepoId,
-        name: missingRepo,
-        type: 'github',
-        metadata: { source: missingRepoId, name: missingRepoId }
-      });
-    }
 
     // Sort by latest activity if possible
     try {
@@ -304,33 +293,18 @@ export class JulesClient {
       const latestActivityMap = new Map<string, string>();
       for (const session of allSessions) {
         const sourceId = `sources/github/${session.sourceId}`;
-        const activityTime =
-          session.lastActivityAt || session.updatedAt || session.createdAt;
-
-        if (
-          !latestActivityMap.has(sourceId) ||
-          (activityTime && activityTime > latestActivityMap.get(sourceId)!)
-        ) {
+        const activityTime = session.lastActivityAt || session.updatedAt || session.createdAt;
+        if (!latestActivityMap.has(sourceId) || (activityTime && activityTime > latestActivityMap.get(sourceId)!)) {
           latestActivityMap.set(sourceId, activityTime);
         }
       }
       sources.sort((a, b) => {
         const aTime = latestActivityMap.get(a.id) || "";
         const bTime = latestActivityMap.get(b.id) || "";
-
-        // Sources with activity come before those without
-        if (aTime && !bTime) return -1;
-        if (!aTime && bTime) return 1;
         return bTime.localeCompare(aTime);
       });
-
-
     } catch (error) {
-      console.error(
-        "[Jules Client] Failed to sort sources by activity:",
-        error,
-      );
-      // Continue with unsorted sources if session fetch fails
+      console.error("[Jules Client] Failed to sort sources:", error);
     }
 
     return sources;
@@ -358,12 +332,13 @@ export class JulesClient {
   }
 
   private transformSession(session: ApiSession): Session {
+      console.log(`[Jules Client] Transforming session: ${session.id}`, JSON.stringify(session));
       const outputs: SessionOutput[] = (session.outputs || []).map(o => ({
           pullRequest: o.pullRequest,
           ...o
       }));
 
-      return {
+      const transformed = {
         id: session.id,
         sourceId: session.sourceContext?.source?.replace('sources/github/', '') || '',
         title: session.title || '',
@@ -375,6 +350,8 @@ export class JulesClient {
         branch: session.sourceContext?.githubRepoContext?.startingBranch || 'main',
         outputs: outputs.length > 0 ? outputs : undefined
       };
+      console.log(`[Jules Client] Transformed session: ${transformed.id}`, JSON.stringify(transformed));
+      return transformed;
   }
 
   async getSession(id: string): Promise<Session> {
@@ -409,7 +386,6 @@ export class JulesClient {
     const body: Record<string, unknown> = {};
     const updateMaskParts: string[] = [];
 
-    // Map frontend 'status' to backend 'state'
     if (updates.status) {
       const stateMap: Record<string, string> = {
         'active': 'ACTIVE',
@@ -466,7 +442,7 @@ export class JulesClient {
         
         if (Array.isArray(response)) {
           allActivities = response;
-          break; // Legacy or direct array response
+          break;
         } else {
           if (response.activities) {
             allActivities = allActivities.concat(response.activities);
@@ -490,11 +466,14 @@ export class JulesClient {
     let bashOutput: string | undefined;
     let media: { data: string; mimeType: string } | undefined;
 
-    if (activity.userMessage || activity.userMessaged) {
+    if (activity.userMessage || activity.userMessage) {
       type = 'message';
       role = 'user';
-      content = activity.userMessage?.message || activity.userMessage?.content || 
-                activity.userMessaged?.message || activity.userMessaged?.content || '';
+      content = activity.userMessage?.message || activity.userMessage?.content || '';
+    } else if (activity.userMessaged) {
+      type = 'message';
+      role = 'user';
+      content = activity.userMessaged.message || activity.userMessaged.content || '';
     } else if (activity.agentMessaged) {
       type = 'message';
       role = 'agent';
@@ -550,7 +529,6 @@ export class JulesClient {
     
     try {
         if (params.type === 'message' || !params.type) {
-            // Try the direct action endpoint first as it's more specific for "sending a message to the agent"
           const response = await this.request<ApiActivity>(`/sessions/${normalizedSessionId}:sendMessage`, {
                 method: 'POST',
                 body: JSON.stringify({
@@ -558,7 +536,6 @@ export class JulesClient {
                 }),
             });
             
-            // If response is empty (void), construct a manual activity for optimistic UI
             if (!response || Object.keys(response).length === 0) {
                 return {
                     id: `temp-${Date.now()}`,
@@ -573,8 +550,6 @@ export class JulesClient {
             
             return this.transformActivity(response, normalizedSessionId);
         } else {
-             // For other types like 'result' or explicit role setting, we use the manual creation if supported
-             // Fallback to original implementation which allows more flexibility
             const body: Record<string, unknown> = {
                 content: params.content
             };
@@ -582,9 +557,8 @@ export class JulesClient {
             if (params.role === 'user') {
                 body.userMessage = { message: params.content };
             } else if (params.role === 'agent') {
-                 // The backend structure for agent messages:
                  if (params.type === 'result') {
-                     body.sessionCompleted = { message: params.content }; // closest mapping
+                     body.sessionCompleted = { message: params.content };
                  } else {
                      body.agentMessaged = { message: params.content };
                  }
@@ -613,15 +587,8 @@ export class JulesClient {
         }
 
     } catch (e) {
-        console.warn("Failed to create activity via standard methods, attempting fallback", e);
-        
-        // Fallback to original implementation
-        const body = {
-            userMessage: {
-                message: params.content
-            }
-        };
-
+        console.warn("Failed to create activity, attempting fallback", e);
+        const body = { userMessage: { message: params.content } };
         const response = await this.request<ApiActivity>(`/sessions/${normalizedSessionId}/activities`, {
             method: 'POST',
             body: JSON.stringify(body),
@@ -663,21 +630,17 @@ export class JulesClient {
 
         for (const activity of activities) {
             const rawActivity = activity.metadata as ApiActivity | undefined;
-            
             if (!rawActivity) continue;
-
             const activityArtifacts: ApiArtifact[] = [
                  ...(rawActivity.artifacts || []),
                  ...(rawActivity.progressUpdated?.artifacts || []),
                  ...(rawActivity.sessionCompleted?.artifacts || [])
             ];
-
             for (const apiArtifact of activityArtifacts) {
                 artifacts.push({
                     id: `art-${activity.id}-${artifacts.length}`,
                     createTime: activity.createdAt,
                     name: `Artifact from ${activity.type}`,
-                    
                     changeSet: apiArtifact.changeSet ? {
                         source: apiArtifact.changeSet.source,
                         gitPatch: apiArtifact.changeSet.gitPatch ? {
@@ -685,15 +648,13 @@ export class JulesClient {
                             baseCommitId: apiArtifact.changeSet.gitPatch.baseCommitId,
                             suggestedCommitMessage: apiArtifact.changeSet.gitPatch.suggestedCommitMessage
                         } : undefined,
-                        unidiffPatch: apiArtifact.changeSet.unidiffPatch // Legacy support
+                        unidiffPatch: apiArtifact.changeSet.unidiffPatch
                     } : undefined,
-
                     bashOutput: apiArtifact.bashOutput ? {
                         command: apiArtifact.bashOutput.command,
                         output: apiArtifact.bashOutput.output,
                         exitCode: apiArtifact.bashOutput.exitCode
                     } : undefined,
-
                     media: apiArtifact.media ? {
                         data: apiArtifact.media.data,
                         mimeType: apiArtifact.media.mimeType
@@ -701,13 +662,11 @@ export class JulesClient {
                 });
             }
         }
-
         pageToken = response.nextPageToken;
       } while (pageToken);
-      
       return artifacts;
     } catch (e) {
-      console.error("Failed to list artifacts via activities:", e);
+      console.error("Failed to list artifacts:", e);
       return [];
     }
   }
@@ -725,8 +684,6 @@ export class JulesClient {
   }
 
   async resumeSession(sessionId: string, message?: string): Promise<void> {
-    // No direct 'resume' endpoint found in SDK, using createActivity to wake it up.
-    // This is a common pattern for resuming paused/completed sessions in agentic workflows.
     await this.createActivity({
       sessionId,
       content: message || 'Please resume working on this task.',
@@ -734,7 +691,6 @@ export class JulesClient {
     });
   }
 
-  // Template Management (Local API)
   private async fetchLocal<T>(endpoint: string, options: RequestInit = {}): Promise<T> {
       const res = await fetch(endpoint, {
           ...options,
@@ -768,7 +724,6 @@ export class JulesClient {
     });
   }
 
-  // Filesystem (Local API)
   async listFiles(path: string = '.'): Promise<{ name: string; isDirectory: boolean; path: string }[]> {
     const res = await this.fetchLocal<{ files: { name: string; isDirectory: boolean; path: string }[] }>(
       `/api/fs/list?path=${encodeURIComponent(path)}`
@@ -796,8 +751,6 @@ export class JulesClient {
       const files = await this.listFiles(path);
       const tree = files.map(f => f.isDirectory ? `[DIR] ${f.path}` : f.path).slice(0, 50).join('\n');
       contextStr += `\nFile Structure (partial):\n${tree}\n`;
-
-      // Try to read key config files
       const keyFiles = ['package.json', 'README.md', 'tsconfig.json', 'pyproject.toml', 'Cargo.toml'];
       for (const file of keyFiles) {
         if (files.some(f => f.path === file)) {

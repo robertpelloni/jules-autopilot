@@ -1,6 +1,6 @@
 import { prisma } from '../lib/prisma';
 import { JulesClient } from '../lib/jules/client';
-import { getProvider, summarizeSession } from '@jules/shared';
+import { getProvider, summarizeSession, evaluatePlanRisk, decideNextAction } from '@jules/shared';
 import { emitDaemonEvent } from './index';
 import { addLog, getSupervisorState, saveSupervisorState } from './daemon';
 import fs from 'fs';
@@ -8,6 +8,7 @@ import path from 'path';
 import crypto from 'crypto';
 
 interface Activity {
+    type?: string;
     role: string;
     content: string;
     createdAt: string;
@@ -240,6 +241,40 @@ export class TaskQueue {
             emitDaemonEvent('activities_updated', { sessionId: session.id });
         }
 
+        // --- COUNCIL SUPERVISOR: PLAN APPROVAL LOGIC ---
+        if (session.rawState === 'AWAITING_PLAN_APPROVAL' && settings.smartPilotEnabled) {
+            const activities = await client.listActivities(session.id);
+            const planActivity = activities.find((a: Activity) => a.type === 'plan');
+            
+            if (planActivity) {
+                await addLog(`Evaluating plan risk for ${session.id.substring(0, 8)}...`, 'info', session.id);
+                
+                const supervisorKey = settings.supervisorApiKey || process.env.OPENAI_API_KEY || "";
+                
+                if (supervisorKey) {
+                    const riskScore = await evaluatePlanRisk(
+                        planActivity.content, 
+                        settings.supervisorProvider, 
+                        supervisorKey, 
+                        settings.supervisorModel
+                    );
+
+                    await addLog(`Plan Risk Score for ${session.id.substring(0, 8)} is ${riskScore}/100`, 'info', session.id);
+
+                    if (riskScore < 40) { // Configurable threshold, defaulting to 40 for "low-medium" risk
+                        await addLog(`Auto-approving low-risk plan (Score: ${riskScore})`, 'action', session.id);
+                        await client.approvePlan(session.id);
+                        emitDaemonEvent('activities_updated', { sessionId: session.id });
+                        return { action: 'plan_approved', riskScore };
+                    } else {
+                        await addLog(`Plan requires manual review (Score: ${riskScore})`, 'info', session.id);
+                        return { action: 'plan_flagged', riskScore };
+                    }
+                }
+            }
+        }
+
+        // --- COUNCIL SUPERVISOR: INACTIVITY NUDGE LOGIC ---
         const diffMinutes = (Date.now() - lastActivityTime.getTime()) / 60000;
         let threshold = settings.inactivityThresholdMinutes;
 
@@ -248,10 +283,11 @@ export class TaskQueue {
             if ((Date.now() - lastActivityTime.getTime()) < 30000) return { action: 'none', reason: 'recently_active_in_progress' };
         }
 
-        if (diffMinutes > threshold) {
+        if (diffMinutes > threshold && session.rawState !== 'AWAITING_PLAN_APPROVAL') {
             await addLog(`Sending nudge to ${session.id.substring(0, 8)} (${Math.round(diffMinutes)}m inactive)`, 'action', session.id);
 
             let messageToSend = "Please resume working on this task.";
+            
             if (settings.smartPilotEnabled) {
                 const activities = await client.listActivities(session.id);
                 const sortedActivities = activities.sort((a: Activity, b: Activity) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime());
@@ -261,25 +297,24 @@ export class TaskQueue {
                     newActivities = sortedActivities.filter((a: Activity) => new Date(a.createdAt).getTime() > new Date(supervisorState.lastProcessedActivityTimestamp!).getTime());
                 }
 
-                const messagesToSend: { role: 'user' | 'assistant' | 'system', content: string }[] = [];
+                let contextStr = "The agent has been inactive. Please provide a nudge.";
                 if (newActivities.length > 0) {
                     const updates = newActivities.map((a: Activity) => `${a.role.toUpperCase()}: ${a.content}`).join('\n\n');
-                    messagesToSend.push({ role: 'user', content: `Latest updates:\n\n${updates}` });
+                    contextStr = `Latest updates:\n\n${updates}`;
                     supervisorState.lastProcessedActivityTimestamp = newActivities[newActivities.length - 1]?.createdAt || supervisorState.lastProcessedActivityTimestamp;
-                } else {
-                    messagesToSend.push({ role: 'user', content: "The agent has been inactive. Please provide a nudge." });
                 }
 
-                const p = getProvider(settings.supervisorProvider);
-                if (p) {
-                    const result = await p.complete({
-                        messages: [...supervisorState.history, ...messagesToSend].slice(-settings.contextMessageCount),
-                        apiKey: settings.supervisorApiKey || process.env.OPENAI_API_KEY || "",
-                        model: settings.supervisorModel,
-                        systemPrompt: 'You are a project supervisor. provide a concise, direct instruction to reactivate the agent Jules.'
-                    });
-                    messageToSend = result.content;
-                    supervisorState.history = [...supervisorState.history, ...messagesToSend, { role: 'assistant', content: messageToSend }];
+                const supervisorKey = settings.supervisorApiKey || process.env.OPENAI_API_KEY || "";
+                if (supervisorKey) {
+                    messageToSend = await decideNextAction(
+                        settings.supervisorProvider,
+                        supervisorKey,
+                        settings.supervisorModel,
+                        contextStr,
+                        supervisorState.history.slice(-settings.contextMessageCount)
+                    );
+                    
+                    supervisorState.history = [...supervisorState.history, { role: 'user', content: contextStr }, { role: 'assistant', content: messageToSend }];
                     await saveSupervisorState(supervisorState);
                 }
             }

@@ -2,20 +2,17 @@
 
 All notable changes to this project will be documented in this file.
 
-## [0.9.3] - 2026-03-24
+## [0.9.4] - 2026-03-24
 
 ### Added
-- **Authentication Protocol**: Formalized the verified header strategy for Jules Portal (`AQ.A`) tokens in `docs/AUTHENTICATION.md`.
-- **Safety Bridge**: Implemented a `triggerRefresh` alias in `JulesProvider` to ensure zero-downtime compatibility across browser cache refreshes.
+- **Autonomous Plan Approval**: Integrated the Council Supervisor into the background daemon. The Autopilot now intercepts Jules sessions in `AWAITING_PLAN_APPROVAL`, evaluates the risk of the proposed plan using an LLM (`evaluatePlanRisk`), and autonomously approves plans that score below the risk threshold (<40).
+- **Cognitive Nudging**: Upgraded the Autopilot's background polling to use context-aware generative nudging (`decideNextAction`). Nudges are now contextually relevant to the specific activities the agent was performing before stalling.
+- **Borg Integration Protocol**: Created `docs/BORG_INTEGRATION.md` to establish the API and daemon contracts for assimilation into the Borg ecosystem.
 
-### Fixed
-- **Jules Portal Auth**: Resolved `API_KEY_SERVICE_BLOCKED` errors by strictly using `x-goog-api-key` and explicitly removing the `Authorization` header for portal session tokens.
-- **Mass-Messaging Reliability**: Added a 500ms delay between broadcast messages to prevent `429 Too Many Requests` from external services.
-- **Backend Routing**: Fixed 404 errors when sending custom actions (e.g., `:sendMessage`) by correctly parsing URLs with colons.
-- **Server Stability**: Implemented a bypass for the `critical-err` session ID to prevent backend crashes when loading error logs in the UI.
-- **Build Synchronization**: Added unique build timestamps to `main.tsx` to force fresh production bundle hashes and clear stale browser caches.
+### Changed
+- **Shared Intelligence Base**: Fully centralized the AI orchestration and evaluation logic into the `@jules/shared` package so it can be natively invoked by the SQLite background queue.
 
-## [0.9.2] - 2026-03-22
+## [0.9.3] - 2026-03-24
 
 ### Removed
 - **Analytics System**: Completely removed the `AnalyticsDashboard` component and `/api/analytics` endpoint to simplify the workspace.

@@ -80,7 +80,7 @@ const HOTKEY_REFRESH_COOLDOWN_MS = 1500;
 const FORCE_REFRESH_TOAST_COOLDOWN_MS = 3000;
 
 export function BroadcastDialog({ sessions }: BroadcastDialogProps) {
-  const { client, refresh, refreshTrigger } = useJules();
+  const { client, triggerRefresh } = useJules();
   const [open, setOpen] = useState(false);
   const [message, setMessage] = useState("");
   const [sending, setSending] = useState(false);
@@ -227,7 +227,7 @@ export function BroadcastDialog({ sessions }: BroadcastDialogProps) {
         return;
       }
 
-      refresh();
+      triggerRefresh();
       const now = Date.now();
       setLastAvailabilityRefreshAt(now);
       setNextAutoRefreshAt(now + autoRefreshRecoveredIntervalMs);
@@ -241,7 +241,7 @@ export function BroadcastDialog({ sessions }: BroadcastDialogProps) {
     open,
     refreshingRecoveredAvailability,
     sending,
-    refresh,
+    triggerRefresh,
     autoRefreshRecoveredIntervalMs,
   ]);
 
@@ -284,11 +284,6 @@ export function BroadcastDialog({ sessions }: BroadcastDialogProps) {
       try {
         await sendMessageWithRetry(session.id, content);
         successSessions.push(target);
-        
-        // Add a small delay between sessions to prevent 429 rate limits
-        if (i < sessionsToSend.length - 1) {
-          await new Promise(resolve => setTimeout(resolve, 500));
-        }
       } catch (error) {
         console.error(`Failed to send to session ${session.id}:`, error);
         failedSessions.push(target);
@@ -384,7 +379,7 @@ export function BroadcastDialog({ sessions }: BroadcastDialogProps) {
     }
 
     if (successCount > 0) {
-      refresh();
+      triggerRefresh();
     }
 
     if (failCount === 0) {
@@ -419,14 +414,14 @@ export function BroadcastDialog({ sessions }: BroadcastDialogProps) {
 
     if (successCount > 0 && failCount === 0) {
       toast.success(`Retry delivered to all ${successCount} failed session${successCount === 1 ? '' : 's'}.`);
-      refresh();
+      triggerRefresh();
       setOpen(false);
       setMessage("");
       return;
     }
 
     if (successCount > 0) {
-      refresh();
+      triggerRefresh();
       const preview = report.failedSessions.slice(0, 2).map(s => s.label).join(', ');
       const suffix = report.failedSessions.length > 2 ? ', …' : '';
       toast.warning(`Retry sent to ${successCount} session${successCount === 1 ? '' : 's'}, ${failCount} still failed (${preview}${suffix}).`);
@@ -516,7 +511,7 @@ export function BroadcastDialog({ sessions }: BroadcastDialogProps) {
 
     if (successCount > 0) {
       setLastAvailabilityRefreshAt(Date.now());
-      refresh();
+      triggerRefresh();
     }
 
     if (successCount > 0 && failCount === 0) {
@@ -547,7 +542,7 @@ export function BroadcastDialog({ sessions }: BroadcastDialogProps) {
     }
 
     setRefreshingRecoveredAvailability(true);
-    refresh();
+    triggerRefresh();
 
     await new Promise((resolve) => {
       window.setTimeout(resolve, 300);
@@ -670,7 +665,7 @@ export function BroadcastDialog({ sessions }: BroadcastDialogProps) {
     const failCount = report.failedSessions.length;
 
     if (successCount > 0) {
-      refresh();
+      triggerRefresh();
     }
 
     if (successCount > 0 && failCount === 0) {

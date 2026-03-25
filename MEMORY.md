@@ -4,7 +4,7 @@
 
 ## 1. The Daemon vs. Next.js API Split-Brain
 **Observation:** The project originally spawned a standalone Hono server (`server/index.ts`) running on port 8080 to handle background tasks and LLM execution. Later, Next.js App Router API endpoints were introduced (`app/api/`). 
-**Current State:** In v0.9.3, we formalized the **Jules Portal Authentication Protocol** (see `docs/AUTHENTICATION.md`). Tokens starting with `AQ.A` MUST use the `x-goog-api-key` header and MUST NOT use standard Bearer Authorization. We also implemented a "Safety Bridge" in the provider to handle function renaming without breaking the browser cache. **Future agents must maintain this header strategy to avoid API_KEY_SERVICE_BLOCKED errors.**
+**Current State:** In v0.9.2, we introduced `lib/api/daemon-proxy.ts` to bridge these two worlds. The Next.js API now acts as a front-facing proxy for the daemon. **Future agents must prefer calling Next.js `/api/` endpoints.**
 
 ## 2. Docker Execution Strategy
 **Observation:** The application relies natively on Docker Multi-Stage builds (deps -> builder -> runner). 
