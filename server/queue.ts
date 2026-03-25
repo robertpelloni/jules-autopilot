@@ -4,6 +4,7 @@ import { getProvider, summarizeSession, evaluatePlanRisk, decideNextAction, runD
 import type { Participant } from '@jules/shared';
 import { emitDaemonEvent } from './index';
 import { addLog, getSupervisorState, saveSupervisorState } from './daemon';
+import { queryCodebase } from './rag';
 import fs from 'fs';
 import path from 'path';
 import crypto from 'crypto';
@@ -345,6 +346,27 @@ export class TaskQueue {
             await addLog(`Sending nudge to ${session.id.substring(0, 8)} (${Math.round(diffMinutes)}m inactive)`, 'action', session.id);
 
             let messageToSend = "Please resume working on this task.";
+            let ragContext = "";
+            
+            const supervisorKey = settings.supervisorApiKey || process.env.OPENAI_API_KEY || "";
+
+            // --- RAG CONTEXT INJECTION ---
+            if (settings.smartPilotEnabled && supervisorKey) {
+                try {
+                    // Query codebase using the session title/context
+                    const query = session.title || "recent development activity";
+                    const ragResults = await queryCodebase(query, supervisorKey, 3);
+                    
+                    if (ragResults.length > 0) {
+                        ragContext = "\n\n[LOCAL_CONTEXT] - I found these relevant patterns in your codebase that might help:\n\n";
+                        ragResults.forEach(res => {
+                            ragContext += `File: ${res.filepath} (Lines ${res.startLine}-${res.endLine})\n\`\`\`\n${res.content}\n\`\`\`\n\n`;
+                        });
+                    }
+                } catch (ragErr) {
+                    console.warn(`[Queue] RAG injection failed for session ${session.id}:`, ragErr);
+                }
+            }
             
             if (settings.smartPilotEnabled) {
                 const activities = await client.listActivities(session.id);
@@ -362,7 +384,6 @@ export class TaskQueue {
                     supervisorState.lastProcessedActivityTimestamp = newActivities[newActivities.length - 1]?.createdAt || supervisorState.lastProcessedActivityTimestamp;
                 }
 
-                const supervisorKey = settings.supervisorApiKey || process.env.OPENAI_API_KEY || "";
                 if (supervisorKey) {
                     messageToSend = await decideNextAction(
                         settings.supervisorProvider,
@@ -377,9 +398,12 @@ export class TaskQueue {
                 }
             }
 
+            // Combine RAG context with the generated message
+            const finalMessage = ragContext ? `${messageToSend}${ragContext}` : messageToSend;
+
             await client.createActivity({
                 sessionId: session.id,
-                content: messageToSend,
+                content: finalMessage,
                 type: 'message'
             });
 
@@ -388,7 +412,7 @@ export class TaskQueue {
                 sessionId: session.id,
                 sessionTitle: session.title,
                 inactiveMinutes: Math.round(diffMinutes),
-                message: messageToSend
+                message: messageToSend // Log the base message
             });
             return { action: 'nudged' };
         }
