@@ -123,19 +123,19 @@ export function PlanContent({ content }: PlanContentProps) {
       </div>
 
       {Array.isArray(parsed) && (
-        <div className="space-y-2 pr-6">
+        <div className="space-y-3 pr-6">
           {parsed.map((item: PlanStep, index: number) => (
-            <div key={index} className="pl-3 border-l-2 border-primary/30">
+            <div key={index} className="pl-3 border-l-2 border-purple-500/50">
               {item.title && (
-                <div className="font-medium text-xs">{item.title}</div>
+                <div className="font-bold text-sm text-white tracking-wide">{item.title}</div>
               )}
               {item.description && (
-                <div className="text-muted-foreground text-[11px] mt-0.5 leading-relaxed">
+                <div className="text-white/90 text-sm mt-1 leading-relaxed">
                   {item.description}
                 </div>
               )}
               {!item.title && !item.description && (
-                <div className="text-xs">
+                <div className="text-sm text-white/80">
                   {typeof item === "string" ? item : JSON.stringify(item)}
                 </div>
               )}
@@ -145,19 +145,19 @@ export function PlanContent({ content }: PlanContentProps) {
       )}
 
       {parsed.steps && Array.isArray(parsed.steps) && (
-        <div className="space-y-2 pr-6">
+        <div className="space-y-3 pr-6">
           {parsed.description && (
-            <div className="mb-2 text-xs">{parsed.description}</div>
+            <div className="mb-3 text-sm text-white font-medium">{parsed.description}</div>
           )}
           {parsed.steps.map((step: PlanStep, index: number) => (
-            <div key={index} className="pl-3 border-l-2 border-primary/30">
-              <div className="font-medium text-xs">
+            <div key={index} className="pl-3 border-l-2 border-purple-500/50">
+              <div className="font-bold text-sm text-white tracking-wide">
                 Step {index + 1}:{" "}
                 {step.title ||
                   (typeof step === "string" ? step : JSON.stringify(step))}
               </div>
               {step.description && (
-                <div className="text-muted-foreground text-[11px] mt-0.5 leading-relaxed">
+                <div className="text-white/90 text-sm mt-1 leading-relaxed">
                   {step.description}
                 </div>
               )}

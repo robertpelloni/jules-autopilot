@@ -63,9 +63,9 @@ export function SessionCard({ session, isSelected, onClick }: SessionCardProps) 
               </Badge>
               
               {session.sourceId && (
-                <div className="flex items-center gap-1 text-[9px] text-white/30 font-mono truncate">
-                  <GitBranch className="h-2.5 w-2.5" />
-                  <span className="truncate max-w-[100px]">{session.sourceId}</span>
+                <div className="flex items-center gap-1 px-1.5 py-0.5 bg-white/5 rounded text-[8px] text-purple-400/80 uppercase font-bold tracking-tighter truncate max-w-[120px] border border-white/5">
+                  <Sparkles className="h-2 w-2" />
+                  <span className="truncate">{session.sourceId.split('/').pop()}</span>
                 </div>
               )}
             </div>

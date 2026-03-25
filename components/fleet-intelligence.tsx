@@ -1,0 +1,168 @@
+'use client';
+
+import { useState, useEffect } from 'react';
+import { useSessionKeeperStore } from '@/lib/stores/session-keeper';
+import { 
+  Brain, 
+  Cpu, 
+  Search, 
+  ShieldCheck, 
+  Zap, 
+  History,
+  Activity,
+  Layers,
+  ChevronRight,
+  Loader2
+} from 'lucide-react';
+import { cn } from '@/lib/utils';
+import { Progress } from '@/components/ui/progress';
+import { Badge } from '@/components/ui/badge';
+
+interface QueueStats {
+  pending: number;
+  processing: number;
+}
+
+export function FleetIntelligence() {
+  const { isEnabled, logs, queue } = useSessionKeeperStore();
+  const [stats, setStats] = useState<QueueStats>({ pending: 0, processing: 0 });
+
+  useEffect(() => {
+    if (queue) {
+      setStats(queue);
+    }
+  }, [queue]);
+
+  // Filter logs for Council or RAG related events
+  const intelligenceLogs = logs.filter(log => 
+    log.message.toLowerCase().includes('council') || 
+    log.message.toLowerCase().includes('plan risk') || 
+    log.message.toLowerCase().includes('indexing') ||
+    log.message.toLowerCase().includes('rag')
+  ).slice(0, 10);
+
+  return (
+    <div className="space-y-6">
+      {/* 1. Fleet Status Overview */}
+      <div className="grid grid-cols-2 gap-4">
+        <div className="bg-zinc-900 border border-white/5 rounded-xl p-4 space-y-3">
+          <div className="flex items-center justify-between text-zinc-500">
+            <div className="flex items-center gap-2">
+              <Cpu className="h-3.5 w-3.5" />
+              <span className="text-[10px] font-mono uppercase tracking-widest">Autonomous Core</span>
+            </div>
+            {isEnabled ? (
+              <Badge className="bg-green-500/10 text-green-400 border-green-500/20 text-[8px] h-4">ONLINE</Badge>
+            ) : (
+              <Badge className="bg-zinc-500/10 text-zinc-400 border-zinc-500/20 text-[8px] h-4">OFFLINE</Badge>
+            )}
+          </div>
+          <div className="flex items-end justify-between">
+            <div className="text-2xl font-bold text-white font-mono tracking-tighter">
+              {stats.processing > 0 ? "COGNITIVE" : "IDLE"}
+            </div>
+            <div className="text-[10px] text-zinc-500 font-mono">
+              {stats.processing} ACTIVE JOBS
+            </div>
+          </div>
+        </div>
+
+        <div className="bg-zinc-900 border border-white/5 rounded-xl p-4 space-y-3">
+          <div className="flex items-center justify-between text-zinc-500">
+            <div className="flex items-center gap-2">
+              <Layers className="h-3.5 w-3.5" />
+              <span className="text-[10px] font-mono uppercase tracking-widest">Job Queue</span>
+            </div>
+            <Activity className={cn("h-3.5 w-3.5", stats.processing > 0 && "text-purple-500 animate-pulse")} />
+          </div>
+          <div className="flex items-end justify-between">
+            <div className="text-2xl font-bold text-white font-mono tracking-tighter">
+              {stats.pending}
+            </div>
+            <div className="text-[10px] text-zinc-500 font-mono uppercase">
+              Pending in SQLite
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* 2. RAG Indexing Progress */}
+      <div className="bg-zinc-900 border border-white/5 rounded-xl p-5 space-y-4">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-2.5">
+            <div className="p-2 bg-purple-500/10 rounded-lg">
+              <Search className="h-4 w-4 text-purple-400" />
+            </div>
+            <div>
+              <h3 className="text-xs font-bold text-white uppercase tracking-wider">Semantic Knowledge Base</h3>
+              <p className="text-[10px] text-zinc-500 font-mono mt-0.5">Continuous Codebase Vectorization</p>
+            </div>
+          </div>
+          {stats.processing > 0 && intelligenceLogs.some(l => l.message.includes('indexing')) ? (
+            <div className="flex items-center gap-2 text-[10px] text-purple-400 font-mono animate-pulse">
+              <Loader2 className="h-3 w-3 animate-spin" />
+              INDEXING...
+            </div>
+          ) : (
+            <div className="flex items-center gap-2 text-[10px] text-zinc-500 font-mono">
+              <ShieldCheck className="h-3 w-3 text-green-500" />
+              SYNCHRONIZED
+            </div>
+          )}
+        </div>
+        
+        <div className="space-y-2">
+          <div className="flex justify-between text-[9px] font-mono uppercase tracking-widest text-zinc-500">
+            <span>Context Freshness</span>
+            <span>100%</span>
+          </div>
+          <Progress value={100} className="h-1 bg-white/5" />
+        </div>
+      </div>
+
+      {/* 3. Live Intelligence Feed */}
+      <div className="bg-zinc-900 border border-white/5 rounded-xl overflow-hidden">
+        <div className="px-4 py-3 border-b border-white/5 bg-white/[0.02] flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            <Brain className="h-3.5 w-3.5 text-zinc-400" />
+            <span className="text-[10px] font-bold text-white uppercase tracking-widest">Cognitive Events</span>
+          </div>
+          <History className="h-3.5 w-3.5 text-zinc-600" />
+        </div>
+        
+        <div className="divide-y divide-white/5 max-h-[200px] overflow-y-auto font-mono text-[10px]">
+          {intelligenceLogs.length === 0 ? (
+            <div className="p-8 text-center text-zinc-600 uppercase tracking-tighter">
+              No recent cognitive activity detected.
+            </div>
+          ) : (
+            intelligenceLogs.map(log => (
+              <div key={log.id} className="p-3 flex items-start gap-3 hover:bg-white/[0.01] transition-colors group">
+                <div className={cn(
+                  "mt-1 h-1.5 w-1.5 rounded-full shrink-0",
+                  log.message.toLowerCase().includes('approved') ? "bg-green-500" : 
+                  log.message.toLowerCase().includes('risk') ? "bg-purple-500" : "bg-zinc-600"
+                )} />
+                <div className="flex-1 space-y-1">
+                  <div className="flex justify-between">
+                    <span className="text-zinc-300 leading-relaxed">{log.message}</span>
+                    <span className="text-[8px] text-zinc-600 group-hover:text-zinc-500">{log.time}</span>
+                  </div>
+                </div>
+                <ChevronRight className="h-3 w-3 text-zinc-800 group-hover:text-zinc-600 mt-0.5" />
+              </div>
+            ))
+          )}
+        </div>
+      </div>
+
+      {/* 4. Borg Integration Hint */}
+      <div className="flex items-center gap-3 p-4 bg-purple-500/5 border border-purple-500/10 rounded-xl">
+        <Zap className="h-4 w-4 text-purple-500 shrink-0" />
+        <p className="text-[10px] text-purple-300/80 leading-relaxed font-mono">
+          Borg Meta-Orchestrator detected. Jules Autopilot is acting as the primary Cloud Session node. RAG context is being shared across all local processes.
+        </p>
+      </div>
+    </div>
+  );
+}

@@ -80,58 +80,54 @@ export const ActivityItem = memo(function ActivityItem({
       </Avatar>
       
       {activity.role === "user" ? (
-        <Card className="flex-1 min-w-0 border-primary/20 bg-primary/10">
-          <CardContent className="p-3 group/card relative text-card-foreground">
-            <div className="flex items-center gap-2 mb-2">
+        <Card className="flex-1 min-w-0 border-purple-500/30 bg-purple-600/20 shadow-lg">
+          <CardContent className="p-4 group/card relative text-white">
+            <div className="flex items-center gap-2 mb-3">
               <Badge
                 variant="outline"
-                className={`text-[9px] h-4 px-1.5 font-mono uppercase tracking-wider ${getActivityTypeColor(activity.type)} border-transparent text-white font-bold`}
+                className={`text-[10px] h-5 px-2 font-mono uppercase tracking-wider ${getActivityTypeColor(activity.type)} border-transparent text-white font-bold`}
               >
                 {activity.type}
               </Badge>
-              <span className="text-[9px] font-mono text-muted-foreground tracking-wide">
+              <span className="text-[10px] font-mono text-zinc-400 tracking-wider">
                 {formatDate(activity.createdAt)}
               </span>
               <Button
                 variant="ghost"
                 size="icon"
-                className="h-4 w-4 ml-auto opacity-0 group-hover/card:opacity-100 transition-opacity"
+                className="h-5 w-5 ml-auto opacity-0 group-hover/card:opacity-100 transition-opacity text-zinc-400 hover:text-white"
                 onClick={handleCopy}
               >
-                {copied ? <Check className="h-3 w-3 text-green-500" /> : <Copy className="h-3 w-3 text-muted-foreground" />}
+                {copied ? <Check className="h-3.5 w-3.5 text-green-500" /> : <Copy className="h-3.5 w-3.5" />}
               </Button>
             </div>
-            <div className="text-[11px] leading-relaxed break-words">
+            <div className="text-white leading-relaxed">
               <ActivityContent content={activity.content} metadata={activity.metadata} />
             </div>
           </CardContent>
         </Card>
       ) : (
-        <BorderGlow
-          className="flex-1 min-w-0"
-          containerClassName="bg-muted/50"
-        >
-          <Card className="border-0 bg-transparent text-card-foreground">
-            <CardContent className="p-3 group/card relative">
-              <div className="flex items-center gap-2 mb-2">
-                <Badge
-                  variant="outline"
-                  className={`text-[9px] h-4 px-1.5 font-mono uppercase tracking-wider ${getActivityTypeColor(activity.type)} border-transparent text-white font-bold`}
-                >
-                  {activity.type}
-                </Badge>
-                <span className="text-[9px] font-mono text-muted-foreground tracking-wide">
-                  {formatDate(activity.createdAt)}
-                </span>
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  className="h-4 w-4 ml-auto opacity-0 group-hover/card:opacity-100 transition-opacity"
-                  onClick={handleCopy}
-                >
-                  {copied ? <Check className="h-3 w-3 text-green-500" /> : <Copy className="h-3 w-3 text-muted-foreground" />}
-                </Button>
-              </div>
+        <Card className="flex-1 min-w-0 border-white/5 bg-zinc-900 shadow-2xl">
+          <CardContent className="p-4 group/card relative">
+            <div className="flex items-center gap-2 mb-3">
+              <Badge
+                variant="outline"
+                className={`text-[10px] h-5 px-2 font-mono uppercase tracking-wider ${getActivityTypeColor(activity.type)} border-transparent text-white font-bold`}
+              >
+                {activity.type}
+              </Badge>
+              <span className="text-[10px] font-mono text-zinc-400 tracking-wider">
+                {formatDate(activity.createdAt)}
+              </span>
+              <Button
+                variant="ghost"
+                size="icon"
+                className="h-5 w-5 ml-auto opacity-0 group-hover/card:opacity-100 transition-opacity text-zinc-400 hover:text-white"
+                onClick={handleCopy}
+              >
+                {copied ? <Check className="h-3.5 w-3.5 text-green-500" /> : <Copy className="h-3.5 w-3.5" />}
+              </Button>
+            </div>
 
               {activity.media && activity.media.data && (
                   <div className="mb-2 rounded overflow-hidden border border-border">
@@ -143,7 +139,7 @@ export const ActivityItem = memo(function ActivityItem({
                   </div>
               )}
 
-              <div className="text-[11px] leading-relaxed break-words">
+              <div className="text-sm leading-relaxed text-zinc-100 break-words">
                 <ActivityContent content={activity.content} metadata={activity.metadata} />
               </div>
 
@@ -188,7 +184,6 @@ export const ActivityItem = memo(function ActivityItem({
               )}
             </CardContent>
           </Card>
-        </BorderGlow>
       )}
     </div>
   );

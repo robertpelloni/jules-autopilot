@@ -32,9 +32,7 @@ import {
 import { useVirtualizer } from '@tanstack/react-virtual';
 import { ActivityInput } from './activity-input';
 import { SessionHealthBadge } from './session-health-badge';
-import ReactMarkdown from 'react-markdown';
-import remarkGfm from 'remark-gfm';
-import { PlanContent } from './plan-content';
+import { ActivityContent } from './activity-content';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -84,29 +82,6 @@ export function ActivityFeed({
     } catch {
       return 'Unknown date';
     }
-  };
-
-  const formatContent = (content: string, metadata?: Record<string, unknown>) => {
-    if (!content && !metadata) return null;
-    
-    const trimmedContent = content?.trim();
-    if (trimmedContent === '[userMessaged]') return <span className="text-muted-foreground italic">Message sent</span>;
-    if (trimmedContent === '[agentMessaged]') return <span className="text-muted-foreground italic">Agent working...</span>;
-
-    if (content.startsWith('{') || content.startsWith('[')) {
-        try {
-          const parsed = JSON.parse(content);
-          if (Array.isArray(parsed) || (parsed.steps && Array.isArray(parsed.steps))) {
-             return <PlanContent content={parsed} />;
-          }
-        } catch { }
-    }
-
-    return (
-        <div className="prose prose-sm dark:prose-invert max-w-none break-words prose-p:text-xs prose-p:leading-relaxed prose-p:break-words prose-headings:text-xs prose-headings:font-semibold prose-headings:mb-1 prose-headings:mt-2 prose-ul:text-xs prose-ol:text-xs prose-li:text-xs prose-li:my-0.5 prose-code:text-[11px] prose-code:bg-muted prose-code:px-1 prose-code:py-0.5 prose-code:rounded prose-code:break-all prose-pre:text-[11px] prose-pre:bg-muted prose-pre:p-2 prose-pre:overflow-x-auto prose-blockquote:text-xs prose-blockquote:border-l-primary prose-strong:font-semibold">
-          <ReactMarkdown remarkPlugins={[remarkGfm]}>{content}</ReactMarkdown>
-        </div>
-    );
   };
 
   const loadActivities = useCallback(async (isInitialLoad = true) => {
@@ -376,6 +351,11 @@ export function ActivityFeed({
     }
   };
 
+  const getRepoShortName = (sourceId: string) => {
+    const parts = sourceId.split("/");
+    return parts[parts.length - 1] || sourceId;
+  };
+
   if (loading && activities.length === 0) {
     return (
       <div className="flex flex-col items-center justify-center h-full bg-background gap-3">
@@ -403,10 +383,12 @@ export function ActivityFeed({
             <div className="flex items-center gap-3 text-[9px] font-mono text-muted-foreground uppercase tracking-wide">
               <span>Started {formatDate(session.createdAt)}</span>
               <span>•</span>
-              <div className="flex items-center gap-1 text-muted-foreground/80">
-                <Book className="h-3 w-3" />
-                <span>{session.sourceId}</span>
-              </div>
+              {session.sourceId && (
+                <div className="flex items-center gap-1 px-1.5 py-0.5 bg-white/5 rounded text-[8px] text-purple-400 font-bold tracking-tighter border border-white/5 uppercase">
+                  <Sparkles className="h-2 w-2" />
+                  <span>{getRepoShortName(session.sourceId)}</span>
+                </div>
+              )}
               <span>•</span>
               <div className="flex items-center gap-1">
                 <GitBranch className="h-3 w-3" />
@@ -491,17 +473,19 @@ export function ActivityFeed({
                 <div key={virtualItem.key} data-index={virtualItem.index} ref={virtualizer.measureElement} className="absolute top-0 left-0 w-full" style={{ transform: `translateY(${virtualItem.start}px)`, paddingBottom: '10px' }}>
                   {Array.isArray(item) ? (
                     <div className="flex gap-2.5 px-3">
-                      <Avatar className="h-6 w-6 shrink-0 mt-0.5 bg-muted border border-border">{getActivityIcon(item[0])}</Avatar>
-                      <Card className="flex-1 border-border bg-card/50">
+                      <Avatar className="h-6 w-6 shrink-0 mt-0.5 bg-zinc-800 border border-white/10">{getActivityIcon(item[0])}</Avatar>
+                      <Card className="flex-1 border-white/5 bg-zinc-900/90 shadow-xl">
                         <CardContent className="p-3">
                           <div className="flex items-center gap-2 mb-2">
                             <Badge variant="outline" className="text-[9px] h-4 px-1.5 font-mono uppercase tracking-wider bg-yellow-500/90 border-transparent text-black font-bold">progress</Badge>
-                            <span className="text-[9px] font-mono text-muted-foreground tracking-wide">{item.length} updates</span>
+                            <span className="text-[9px] font-mono text-white/40 tracking-wide">{item.length} updates</span>
                           </div>
                           <div className="space-y-2">
                             {item.map((activity, idx) => (
-                              <div key={activity.id} className={idx > 0 ? 'pt-2 border-t border-border' : ''}>
-                                <div className="text-[11px] leading-relaxed text-foreground break-words">{formatContent(activity.content, activity.metadata)}</div>
+                              <div key={activity.id} className={idx > 0 ? 'pt-2 border-t border-white/5' : ''}>
+                                <div className="text-sm leading-relaxed text-zinc-100 break-words">
+                                  <ActivityContent content={activity.content} metadata={activity.metadata} />
+                                </div>
                               </div>
                             ))}
                           </div>
@@ -510,17 +494,19 @@ export function ActivityFeed({
                     </div>
                   ) : (
                     <div className={`flex gap-2.5 px-3 ${item.role === 'user' ? 'flex-row-reverse' : ''}`}>
-                      <Avatar className="h-6 w-6 shrink-0 mt-0.5 bg-muted border border-border">{getActivityIcon(item)}</Avatar>
-                      <Card className={`flex-1 border-border ${item.role === 'user' ? 'bg-primary/10 border-primary/20' : 'bg-card/50'}`}>
+                      <Avatar className="h-6 w-6 shrink-0 mt-0.5 bg-zinc-800 border border-white/10">{getActivityIcon(item)}</Avatar>
+                      <Card className={`flex-1 border-white/5 shadow-xl ${item.role === 'user' ? 'bg-purple-500/20 border-purple-500/30' : 'bg-zinc-900/90'}`}>
                         <CardContent className="p-3 group/card relative">
                           <div className="flex items-center gap-2 mb-2">
                             <Badge variant="outline" className={`text-[9px] h-4 px-1.5 font-mono uppercase tracking-wider ${getActivityTypeColor(item.type)} border-transparent text-white font-bold`}>{item.type}</Badge>
-                            <span className="text-[9px] font-mono text-muted-foreground tracking-wide">{formatDate(item.createdAt)}</span>
-                            <Button variant="ghost" size="icon" className="h-4 w-4 ml-auto opacity-0 group-hover/card:opacity-100 transition-opacity" onClick={() => handleCopy(item.content, item.id)}>
-                              {copiedId === item.id ? <Check className="h-3 w-3 text-green-500" /> : <Copy className="h-3 w-3 text-muted-foreground" />}
+                            <span className="text-[9px] font-mono text-white/40 tracking-wide">{formatDate(item.createdAt)}</span>
+                            <Button variant="ghost" size="icon" className="h-4 w-4 ml-auto opacity-0 group-hover/card:opacity-100 transition-opacity text-white/40 hover:text-white" onClick={() => handleCopy(item.content, item.id)}>
+                              {copiedId === item.id ? <Check className="h-3 w-3 text-green-500" /> : <Copy className="h-3 w-3" />}
                             </Button>
                           </div>
-                          <div className="text-[11px] leading-relaxed text-foreground break-words">{formatContent(item.content, item.metadata)}</div>
+                          <div className="text-sm leading-relaxed text-zinc-100 break-words">
+                            <ActivityContent content={item.content} metadata={item.metadata} />
+                          </div>
                           {item.diff && (
                             <div className="mt-3 pt-3 border-t border-border">
                                <p className="text-[10px] font-mono text-blue-500 mb-2 uppercase tracking-widest">Git Patch Included</p>

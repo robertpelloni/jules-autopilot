@@ -60,9 +60,9 @@
   .dark {
     --background: 0 0% 0%;
     --foreground: 0 0% 100%;
-    --card: 0 0% 3%;
+    --card: 0 0% 7%;
     --card-foreground: 0 0% 100%;
-    --popover: 0 0% 3%;
+    --popover: 0 0% 7%;
     --popover-foreground: 0 0% 100%;
     --primary: 263.4 70% 50.4%;
     --primary-foreground: 210 40% 98%;
@@ -74,7 +74,7 @@
     --accent-foreground: 0 0% 98%;
     --destructive: 0 62.8% 30.6%;
     --destructive-foreground: 0 0% 98%;
-    --border: 240 3.7% 15.9%;
+    --border: 240 3.7% 20%;
     --input: 240 3.7% 15.9%;
     --ring: 263.4 70% 50.4%;
   }

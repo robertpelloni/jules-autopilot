@@ -61,7 +61,16 @@ const formatContent = (content: string, metadata?: Record<string, any>): React.R
 
   // 3. Render as Markdown
   return (
-      <div className="prose prose-sm dark:prose-invert max-w-none break-words whitespace-pre-wrap prose-p:text-xs prose-p:leading-relaxed prose-p:break-words prose-headings:text-xs prose-headings:font-semibold prose-headings:mb-1 prose-headings:mt-2 prose-ul:text-xs prose-ol:text-xs prose-li:text-xs prose-li:my-0.5 prose-code:text-[11px] prose-code:bg-muted prose-code:px-1 prose-code:py-0.5 prose-code:rounded prose-code:break-all prose-pre:text-[11px] prose-pre:bg-muted prose-pre:p-2 prose-pre:overflow-x-auto prose-pre:whitespace-pre-wrap prose-pre:break-all prose-blockquote:text-xs prose-blockquote:border-l-primary prose-strong:font-semibold overflow-hidden">
+      <div className="prose prose-sm dark:prose-invert max-w-none break-words whitespace-pre-wrap 
+        prose-p:text-base prose-p:leading-relaxed prose-p:text-zinc-100 
+        prose-headings:text-base prose-headings:font-bold prose-headings:text-white prose-headings:mt-6 prose-headings:mb-3
+        prose-ul:text-base prose-ul:text-zinc-200 prose-ol:text-base prose-ol:text-zinc-200
+        prose-li:my-2 prose-li:leading-relaxed
+        prose-code:text-[13px] prose-code:bg-black prose-code:text-purple-300 prose-code:px-1.5 prose-code:py-0.5 prose-code:rounded prose-code:before:content-none prose-code:after:content-none
+        prose-pre:text-[13px] prose-pre:bg-zinc-950 prose-pre:p-4 prose-pre:rounded-xl prose-pre:border prose-pre:border-white/10 prose-pre:overflow-x-auto
+        prose-blockquote:text-base prose-blockquote:border-l-purple-500 prose-blockquote:text-zinc-400 prose-blockquote:italic
+        prose-strong:font-bold prose-strong:text-white
+        overflow-hidden">
         <ReactMarkdown remarkPlugins={[remarkGfm]}>{content}</ReactMarkdown>
       </div>
   );

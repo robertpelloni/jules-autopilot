@@ -6,11 +6,12 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Github, Brain, Palette, Key, ShieldCheck, Database, Download, Upload, Loader2 } from 'lucide-react';
+import { Github, Brain, Palette, Key, ShieldCheck, Database, Download, Upload, Loader2, Zap } from 'lucide-react';
 import { SessionKeeperSettingsContent } from './session-keeper-settings-content';
 import { ThemeCustomizer } from './theme-customizer';
 import { useSessionKeeperStore } from '@/lib/stores/session-keeper';
 import { toast } from 'sonner';
+import { FleetIntelligence } from './fleet-intelligence';
 
 interface SettingsDialogProps {
   open?: boolean;
@@ -23,56 +24,33 @@ export function SettingsDialog({ open: propOpen, onOpenChange: propOnOpenChange,
   const [internalOpen, setInternalOpen] = useState(false);
   const [githubToken, setGithubToken] = useState('');
   const [openAIKey, setOpenAIKey] = useState('');
-  const [anthropicKey, setAnthropicKey] = useState('');
-  const [geminiKey, setGeminiKey] = useState('');
   const [julesKey, setJulesKey] = useState('');
-  const [julesAuthToken, setJulesAuthToken] = useState('');
   const [isImporting, setIsImporting] = useState(false);
 
   const open = propOpen !== undefined ? propOpen : internalOpen;
   const onOpenChange = propOnOpenChange || setInternalOpen;
 
-  // Initialize tokens from localStorage on mount if available
+  // Initialize tokens from localStorage on mount
   useEffect(() => {
     if (typeof window !== 'undefined') {
-      const timer = setTimeout(() => {
-        const ghToken = localStorage.getItem('github_pat');
-        const oaKey = localStorage.getItem('openai_api_key');
-        const antKey = localStorage.getItem('anthropic_api_key');
-        const gemKey = localStorage.getItem('google_api_key');
-        const julKey = localStorage.getItem('jules_api_key');
-        const julAuth = localStorage.getItem('jules_auth_token');
-
-        if (ghToken) setGithubToken(ghToken);
-        if (oaKey) setOpenAIKey(oaKey);
-        if (antKey) setAnthropicKey(antKey);
-        if (gemKey) setGeminiKey(gemKey);
-        if (julKey) setJulesKey(julKey);
-        if (julAuth) setJulesAuthToken(julAuth);
-      }, 0);
-      return () => clearTimeout(timer);
+      setGithubToken(localStorage.getItem('github_pat') || '');
+      setOpenAIKey(localStorage.getItem('openai_api_key') || '');
+      setJulesKey(localStorage.getItem('jules_api_key') || '');
     }
-  }, []);
+  }, [open]);
 
-  const handleSaveGithub = () => {
+  const handleSaveIntegrations = () => {
     localStorage.setItem('github_pat', githubToken);
-    toast.success('GitHub token saved');
-  };
-
-  const handleSaveLLMKeys = () => {
-    if (openAIKey) localStorage.setItem('openai_api_key', openAIKey);
-    if (anthropicKey) localStorage.setItem('anthropic_api_key', anthropicKey);
-    if (geminiKey) localStorage.setItem('google_api_key', geminiKey);
+    localStorage.setItem('openai_api_key', openAIKey);
     
-    // Save Jules Credentials
-    if (julesKey) localStorage.setItem('jules_api_key', julesKey);
-    if (julesAuthToken) localStorage.setItem('jules_auth_token', julesAuthToken);
+    const oldJulesKey = localStorage.getItem('jules_api_key');
+    localStorage.setItem('jules_api_key', julesKey);
     
-    if (julesKey || julesAuthToken) {
+    if (oldJulesKey !== julesKey) {
       window.dispatchEvent(new Event('jules-api-key-updated'));
     }
     
-    toast.success('API Credentials saved');
+    toast.success('Integration settings saved');
   };
 
   const handleExport = async () => {
@@ -128,9 +106,9 @@ export function SettingsDialog({ open: propOpen, onOpenChange: propOnOpenChange,
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       {trigger && <DialogTrigger asChild>{trigger}</DialogTrigger>}
-      <DialogContent className="max-w-3xl bg-zinc-950 border-white/10 text-white h-[80vh] flex flex-col p-0">
+      <DialogContent className="max-w-3xl bg-zinc-950 border-white/10 text-white h-[80vh] flex flex-col p-0 shadow-2xl">
         <DialogHeader className="px-6 py-4 border-b border-white/10">
-          <DialogTitle>Settings</DialogTitle>
+          <DialogTitle>Core Configuration</DialogTitle>
         </DialogHeader>
         <Tabs defaultValue="integrations" className="flex-1 flex flex-col min-h-0">
           <div className="px-6 pt-4">
@@ -139,13 +117,17 @@ export function SettingsDialog({ open: propOpen, onOpenChange: propOnOpenChange,
                 <Github className="h-3.5 w-3.5" />
                 Integrations
               </TabsTrigger>
-              <TabsTrigger value="appearance" className="text-xs flex items-center gap-2">
-                <Palette className="h-3.5 w-3.5" />
-                Appearance
+              <TabsTrigger value="fleet" className="text-xs flex items-center gap-2">
+                <Zap className="h-3.5 w-3.5 text-purple-400" />
+                Fleet
               </TabsTrigger>
               <TabsTrigger value="supervisor" className="text-xs flex items-center gap-2">
                 <Brain className="h-3.5 w-3.5" />
                 Supervisor
+              </TabsTrigger>
+              <TabsTrigger value="appearance" className="text-xs flex items-center gap-2">
+                <Palette className="h-3.5 w-3.5" />
+                Appearance
               </TabsTrigger>
               <TabsTrigger value="system" className="text-xs flex items-center gap-2">
                 <Database className="h-3.5 w-3.5" />
@@ -159,39 +141,25 @@ export function SettingsDialog({ open: propOpen, onOpenChange: propOnOpenChange,
               <div className="space-y-4 border border-white/10 p-4 rounded-lg bg-white/5">
                 <div className="flex items-center gap-2 mb-2">
                   <Brain className="h-5 w-5 text-purple-400" />
-                  <h3 className="text-sm font-bold">Google Jules Credentials</h3>
+                  <h3 className="text-sm font-bold">Google Jules Portal</h3>
                 </div>
 
                 <div className="space-y-4">
-                  <div className="space-y-2 text-zinc-400 text-[10px] bg-black/30 p-2 rounded border border-white/5 mb-4">
-                    <p>Google's v1alpha API requires both an API Key and an OAuth2 Token.</p>
-                    <p className="mt-1">Get your token by running: <code className="text-purple-400 bg-purple-400/10 px-1">gcloud auth print-access-token</code></p>
+                  <div className="space-y-2 text-zinc-400 text-[10px] bg-black/30 p-2 rounded border border-white/5 mb-4 font-mono leading-relaxed">
+                    <p className="text-purple-300 font-bold uppercase">Auth Protocol Verified:</p>
+                    <p className="mt-1">Jules Portal principals (`AQ.A...`) are strictly incompatible with standard Bearer tokens. This orchestrator enforces the correct `x-goog-api-key` strategy automatically.</p>
                   </div>
 
                   <div className="space-y-2">
                     <div className="flex items-center gap-2">
                       <Key className="h-3 w-3 text-white/40" />
-                      <Label className="text-xs text-white/60 uppercase tracking-tight">API Key</Label>
+                      <Label className="text-xs text-white/60 uppercase tracking-tight">Session Token (AQ.A)</Label>
                     </div>
                     <Input
                       type="password"
                       value={julesKey}
                       onChange={e => setJulesKey(e.target.value)}
-                      placeholder="AIza..."
-                      className="bg-black/50 border-white/10 text-xs font-mono"
-                    />
-                  </div>
-
-                  <div className="space-y-2">
-                    <div className="flex items-center gap-2">
-                      <ShieldCheck className="h-3 w-3 text-white/40" />
-                      <Label className="text-xs text-white/60 uppercase tracking-tight">Auth Token</Label>
-                    </div>
-                    <Input
-                      type="password"
-                      value={julesAuthToken}
-                      onChange={e => setJulesAuthToken(e.target.value)}
-                      placeholder="ya29..."
+                      placeholder="AQ.A..."
                       className="bg-black/50 border-white/10 text-xs font-mono"
                     />
                   </div>
@@ -200,45 +168,19 @@ export function SettingsDialog({ open: propOpen, onOpenChange: propOnOpenChange,
 
               <div className="space-y-4 border border-white/10 p-4 rounded-lg bg-white/5">
                 <div className="flex items-center gap-2 mb-2">
-                  <Key className="h-5 w-5 text-zinc-400" />
-                  <h3 className="text-sm font-bold text-zinc-400">Other LLM Providers</h3>
+                  <ShieldCheck className="h-5 w-5 text-blue-400" />
+                  <h3 className="text-sm font-bold">Supervisor Access</h3>
                 </div>
-
-                <div className="space-y-4">
-                  <div className="space-y-2 opacity-60">
-                    <Label className="text-xs text-white/60">OpenAI API Key</Label>
-                    <Input
-                      type="password"
-                      value={openAIKey}
-                      onChange={e => setOpenAIKey(e.target.value)}
-                      placeholder="sk-..."
-                      className="bg-black/50 border-white/10 text-xs font-mono"
-                    />
-                  </div>
-
-                  <div className="space-y-2 opacity-60">
-                    <Label className="text-xs text-white/60">Anthropic API Key</Label>
-                    <Input
-                      type="password"
-                      value={anthropicKey}
-                      onChange={e => setAnthropicKey(e.target.value)}
-                      placeholder="sk-ant-..."
-                      className="bg-black/50 border-white/10 text-xs font-mono"
-                    />
-                  </div>
-
-                  <div className="space-y-2 opacity-60">
-                    <Label className="text-xs text-white/60">Legacy Gemini API Key</Label>
-                    <Input
-                      type="password"
-                      value={geminiKey}
-                      onChange={e => setGeminiKey(e.target.value)}
-                      placeholder="AIza..."
-                      className="bg-black/50 border-white/10 text-xs font-mono"
-                    />
-                  </div>
-
-                  <Button size="sm" onClick={handleSaveLLMKeys} className="w-full mt-2">Save All Credentials</Button>
+                <div className="space-y-2">
+                  <Label className="text-xs text-white/60">OpenAI API Key</Label>
+                  <Input
+                    type="password"
+                    value={openAIKey}
+                    onChange={e => setOpenAIKey(e.target.value)}
+                    placeholder="sk-..."
+                    className="bg-black/50 border-white/10 text-xs font-mono"
+                  />
+                  <p className="text-[10px] text-zinc-500 italic">Powering RAG indexing and Council Debates.</p>
                 </div>
               </div>
 
@@ -257,19 +199,19 @@ export function SettingsDialog({ open: propOpen, onOpenChange: propOnOpenChange,
                     className="bg-black/50 border-white/10 text-xs font-mono"
                   />
                   <p className="text-[10px] text-white/40">
-                    Required to fetch issues and create pull requests directly from Jules.
-                    Token needs <code>repo</code> scope.
+                    Required for the Autopilot to monitor and fix repository issues.
                   </p>
-                  <Button size="sm" onClick={handleSaveGithub} className="w-full mt-2">Save Token</Button>
                 </div>
               </div>
+
+              <Button onClick={handleSaveIntegrations} className="w-full bg-purple-600 hover:bg-purple-500 text-white font-bold uppercase tracking-widest text-[10px] h-10">
+                Synchronize Integrations
+              </Button>
             </div>
           </TabsContent>
 
-          <TabsContent value="appearance" className="flex-1 p-6">
-            <div className="max-w-md">
-              <ThemeCustomizer />
-            </div>
+          <TabsContent value="fleet" className="flex-1 p-6 overflow-y-auto">
+            <FleetIntelligence />
           </TabsContent>
 
           <TabsContent value="supervisor" className="flex-1 min-h-0 overflow-hidden">
@@ -277,6 +219,12 @@ export function SettingsDialog({ open: propOpen, onOpenChange: propOnOpenChange,
               config={config}
               onConfigChange={setConfig}
             />
+          </TabsContent>
+
+          <TabsContent value="appearance" className="flex-1 p-6">
+            <div className="max-w-md">
+              <ThemeCustomizer />
+            </div>
           </TabsContent>
 
           <TabsContent value="system" className="flex-1 p-6 overflow-y-auto">

@@ -8,7 +8,7 @@ import type { Session } from '@jules/shared';
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Search, Loader2, Sparkles, RefreshCw } from "lucide-react";
+import { Search, Loader2, Sparkles, RefreshCw, Megaphone } from "lucide-react";
 import {
   Tooltip,
   TooltipContent,
@@ -18,6 +18,7 @@ import {
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { formatDistanceToNow, parseISO, isValid, isToday, differenceInDays } from "date-fns";
 import { cn } from "@/lib/utils";
+import { BroadcastDialog } from "./broadcast-dialog";
 
 function truncateText(text: string, maxLength: number) {
   if (!text) return "";
@@ -194,9 +195,12 @@ export function SessionList({
         <div className="px-3 py-2 border-b border-white/[0.08] shrink-0 space-y-2">
           <div className="flex items-center justify-between mb-1">
              <span className="text-[10px] font-bold text-white/40 uppercase tracking-widest">Navigation</span>
-             <Button variant="ghost" size="icon" onClick={loadSessions} className="h-5 w-5 text-white/20 hover:text-white hover:bg-white/5">
-                <RefreshCw className="h-3 w-3" />
-             </Button>
+             <div className="flex items-center gap-1">
+                <BroadcastDialog sessions={sessions} />
+                <Button variant="ghost" size="icon" onClick={loadSessions} className="h-5 w-5 text-white/20 hover:text-white hover:bg-white/5">
+                    <RefreshCw className="h-3 w-3" />
+                </Button>
+             </div>
           </div>
           <div className="relative">
             <Search className="absolute left-2 top-1/2 h-3 w-3 -translate-y-1/2 text-muted-foreground" />
@@ -255,7 +259,7 @@ export function SessionList({
                       {daysOld !== null && daysOld > 0 && <span>({daysOld}d)</span>}
                     </div>
                     {session.sourceId && (
-                      <div className="flex items-center gap-1 text-[8px] text-white/20 uppercase font-bold tracking-tighter truncate max-w-[80px]">
+                      <div className="flex items-center gap-1 px-1.5 py-0.5 bg-white/5 rounded text-[8px] text-purple-400/80 uppercase font-bold tracking-tighter truncate max-w-[100px] border border-white/5">
                         <Sparkles className="h-2 w-2" />
                         <span>{getRepoShortName(session.sourceId)}</span>
                       </div>
