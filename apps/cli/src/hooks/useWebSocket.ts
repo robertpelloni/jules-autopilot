@@ -8,6 +8,7 @@ import type {
   SessionsContinuedPayload,
   SessionNudgedPayload,
   SessionApprovedPayload,
+  ActivitiesUpdatedPayload,
 } from '@jules/shared';
 import { WS_DEFAULTS } from '@jules/shared';
 
@@ -106,6 +107,20 @@ export function useWebSocket() {
               createdAt: new Date().toISOString()
             }, ...state.logs].slice(0, 100)
           }));
+          break;
+        }
+
+        case 'activities_updated': {
+          const payload = message.data as ActivitiesUpdatedPayload;
+          const { selectedSession, fetchActivities } = useAppStore.getState();
+          if (payload?.sessionId === selectedSession?.id || !selectedSession) {
+            fetchActivities(payload?.sessionId || 'unknown');
+          }
+          break;
+        }
+
+        case 'sessions_list_updated': {
+          useAppStore.getState().refreshSessions();
           break;
         }
 

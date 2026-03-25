@@ -8,8 +8,8 @@ let isRunning = false;
 let checkTimeout: ReturnType<typeof setTimeout> | null = null;
 
 async function getJulesClient(settings: KeeperSettings) {
-    const apiKey = settings.julesApiKey || process.env.JULES_API_KEY;
-    if (!apiKey) return null;
+    const apiKey = process.env.JULES_API_KEY || process.env.GOOGLE_API_KEY || settings.julesApiKey;
+    if (!apiKey || apiKey === 'placeholder') return null;
     return new JulesClient(apiKey, 'https://jules.googleapis.com/v1alpha');
 }
 

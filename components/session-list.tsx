@@ -8,7 +8,8 @@ import type { Session } from '@jules/shared';
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Search, Loader2, Sparkles, RefreshCw } from "lucide-react";
+import { Search, Loader2, Sparkles, RefreshCw, Megaphone } from "lucide-react";
+import { BroadcastDialog } from "./broadcast-dialog";
 import {
   Tooltip,
   TooltipContent,
@@ -184,9 +185,12 @@ export function SessionList({
         <div className="px-3 py-2 border-b border-white/[0.08] shrink-0 space-y-2">
           <div className="flex items-center justify-between mb-1">
              <span className="text-[10px] font-bold text-white/40 uppercase tracking-widest">Navigation</span>
-             <Button variant="ghost" size="icon" onClick={loadSessions} className="h-5 w-5 text-white/20 hover:text-white hover:bg-white/5">
-                <RefreshCw className="h-3 w-3" />
-             </Button>
+             <div className="flex items-center gap-1">
+                <BroadcastDialog sessions={sessions} />
+                <Button variant="ghost" size="icon" onClick={loadSessions} className="h-7 w-7 text-white/20 hover:text-white hover:bg-white/5">
+                    <RefreshCw className="h-3 w-3" />
+                </Button>
+             </div>
           </div>
           <div className="relative">
             <Search className="absolute left-2 top-1/2 h-3 w-3 -translate-y-1/2 text-muted-foreground" />

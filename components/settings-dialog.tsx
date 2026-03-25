@@ -26,7 +26,6 @@ export function SettingsDialog({ open: propOpen, onOpenChange: propOnOpenChange,
   const [anthropicKey, setAnthropicKey] = useState('');
   const [geminiKey, setGeminiKey] = useState('');
   const [julesKey, setJulesKey] = useState('');
-  const [julesAuthToken, setJulesAuthToken] = useState('');
 
   const open = propOpen !== undefined ? propOpen : internalOpen;
   const onOpenChange = propOnOpenChange || setInternalOpen;
@@ -40,14 +39,12 @@ export function SettingsDialog({ open: propOpen, onOpenChange: propOnOpenChange,
         const antKey = localStorage.getItem('anthropic_api_key');
         const gemKey = localStorage.getItem('google_api_key');
         const julKey = localStorage.getItem('jules_api_key');
-        const julAuth = localStorage.getItem('jules_auth_token');
 
         if (ghToken) setGithubToken(ghToken);
         if (oaKey) setOpenAIKey(oaKey);
         if (antKey) setAnthropicKey(antKey);
         if (gemKey) setGeminiKey(gemKey);
         if (julKey) setJulesKey(julKey);
-        if (julAuth) setJulesAuthToken(julAuth);
       }, 0);
       return () => clearTimeout(timer);
     }
@@ -65,9 +62,8 @@ export function SettingsDialog({ open: propOpen, onOpenChange: propOnOpenChange,
     
     // Save Jules Credentials
     if (julesKey) localStorage.setItem('jules_api_key', julesKey);
-    if (julesAuthToken) localStorage.setItem('jules_auth_token', julesAuthToken);
     
-    if (julesKey || julesAuthToken) {
+    if (julesKey) {
       window.dispatchEvent(new Event('jules-api-key-updated'));
     }
     
@@ -109,8 +105,7 @@ export function SettingsDialog({ open: propOpen, onOpenChange: propOnOpenChange,
 
                 <div className="space-y-4">
                   <div className="space-y-2 text-zinc-400 text-[10px] bg-black/30 p-2 rounded border border-white/5 mb-4">
-                    <p>Google's v1alpha API requires both an API Key and an OAuth2 Token.</p>
-                    <p className="mt-1">Get your token by running: <code className="text-purple-400 bg-purple-400/10 px-1">gcloud auth print-access-token</code></p>
+                    <p>Only a standard Google API Key is required for authentication.</p>
                   </div>
 
                   <div className="space-y-2">
@@ -123,20 +118,6 @@ export function SettingsDialog({ open: propOpen, onOpenChange: propOnOpenChange,
                       value={julesKey}
                       onChange={e => setJulesKey(e.target.value)}
                       placeholder="AIza..."
-                      className="bg-black/50 border-white/10 text-xs font-mono"
-                    />
-                  </div>
-
-                  <div className="space-y-2">
-                    <div className="flex items-center gap-2">
-                      <ShieldCheck className="h-3 w-3 text-white/40" />
-                      <Label className="text-xs text-white/60 uppercase tracking-tight">Auth Token</Label>
-                    </div>
-                    <Input
-                      type="password"
-                      value={julesAuthToken}
-                      onChange={e => setJulesAuthToken(e.target.value)}
-                      placeholder="ya29..."
                       className="bg-black/50 border-white/10 text-xs font-mono"
                     />
                   </div>

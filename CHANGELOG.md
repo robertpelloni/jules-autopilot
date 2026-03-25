@@ -2,7 +2,20 @@
 
 All notable changes to this project will be documented in this file.
 
-## [0.9.1] - 2026-03-18
+## [0.9.3] - 2026-03-24
+
+### Added
+- **Authentication Protocol**: Formalized the verified header strategy for Jules Portal (`AQ.A`) tokens in `docs/AUTHENTICATION.md`.
+- **Safety Bridge**: Implemented a `triggerRefresh` alias in `JulesProvider` to ensure zero-downtime compatibility across browser cache refreshes.
+
+### Fixed
+- **Jules Portal Auth**: Resolved `API_KEY_SERVICE_BLOCKED` errors by strictly using `x-goog-api-key` and explicitly removing the `Authorization` header for portal session tokens.
+- **Mass-Messaging Reliability**: Added a 500ms delay between broadcast messages to prevent `429 Too Many Requests` from external services.
+- **Backend Routing**: Fixed 404 errors when sending custom actions (e.g., `:sendMessage`) by correctly parsing URLs with colons.
+- **Server Stability**: Implemented a bypass for the `critical-err` session ID to prevent backend crashes when loading error logs in the UI.
+- **Build Synchronization**: Added unique build timestamps to `main.tsx` to force fresh production bundle hashes and clear stale browser caches.
+
+## [0.9.2] - 2026-03-22
 
 ### Removed
 - **Analytics System**: Completely removed the `AnalyticsDashboard` component and `/api/analytics` endpoint to simplify the workspace.

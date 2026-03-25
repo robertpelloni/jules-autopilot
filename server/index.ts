@@ -1,21 +1,40 @@
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-declare const Bun: any;
-
+import { JulesClient, JulesAPIError } from '../lib/jules/client';
+import { prisma } from '../lib/prisma';
 import { Hono } from 'hono';
 import { cors } from 'hono/cors';
 import { EventEmitter } from 'events';
 import { startDaemon, stopDaemon } from './daemon';
-import { prisma } from '../lib/prisma';
-import { JulesClient } from '../lib/jules/client';
-import type { DaemonEventType } from '@jules/shared';
-import { createDaemonEvent } from '@jules/shared';
+import { queryCodebase } from './rag';
 import { createBunWebSocket } from 'hono/bun';
 import type { ServerWebSocket } from 'bun';
-import { setupWorker } from './queue';
+import { setupWorker, orchestratorQueue } from './queue';
 import fs from 'fs';
 import path from 'path';
+import type { DaemonEventType } from '@jules/shared';
+import { createDaemonEvent } from '@jules/shared';
 
-console.log(`[Server] Initializing Lean Core Command Center...`);
+console.log(`[Server] Initializing Lean Core (Routing Fix Mode)...`);
+
+// Force load .env into process.env
+try {
+    const envPath = path.resolve(process.cwd(), '.env');
+    if (fs.existsSync(envPath)) {
+        const envContent = fs.readFileSync(envPath, 'utf8');
+        envContent.split(/\r?\n/).forEach(line => {
+            const match = line.match(/^\s*([\w.-]+)\s*=\s*(.*)?\s*$/);
+            if (match) {
+                const key = match[1];
+                if (key) {
+                    let value = (match[2] || '').trim();
+                    if (value.startsWith('"') && value.endsWith('"')) value = value.substring(1, value.length - 1); 
+                    if (value.startsWith("'") && value.endsWith("'")) value = value.substring(1, value.length - 1); 
+                    process.env[key] = value;
+                }
+            }
+        });
+        console.log('[Server] Manually loaded .env file');
+    }
+} catch (e) { console.error('[Server] Failed to manually load .env:', e); }
 
 const { upgradeWebSocket, websocket } = createBunWebSocket();
 const app = new Hono();
@@ -47,63 +66,85 @@ export function emitDaemonEvent(type: DaemonEventType, data?: object) {
 app.use('*', cors({
     origin: '*',
     allowMethods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
-    allowHeaders: ['Content-Type', 'Authorization', 'X-Jules-Api-Key', 'X-Jules-Auth-Token'],
+    allowHeaders: ['Content-Type', 'Authorization', 'X-Jules-Api-Key', 'X-Jules-Auth-Token', 'X-Goog-Api-Key'],     
 }));
 
+app.onError((err, c) => {
+    console.error(`[Fatal Server Error] ${err.message}`, err.stack);
+    return c.json({ error: err.message, status: 500 }, 500);
+});
+
 async function getJulesClient(c?: any) {
-    const headerKey = c?.req?.header('X-Jules-Api-Key');
-    const headerAuth = c?.req?.header('X-Jules-Auth-Token');
-    const settings = await prisma.keeperSettings.findUnique({ where: { id: 'default' } }).catch(() => null);
-    
-    // Resolve credentials
-    const apiKey = headerKey || settings?.googleApiKey || process.env.GOOGLE_API_KEY;
-    const authToken = headerAuth || settings?.julesApiKey || process.env.JULES_API_KEY;
+    try {
+        const headerKey = c?.req?.header('X-Jules-Api-Key') || c?.req?.header('X-Goog-Api-Key');
+        const settings = await prisma.keeperSettings.findUnique({ where: { id: 'default' } }).catch(() => null);    
 
-    // Detect if we have a real OAuth token
-    const hasToken = authToken && authToken.startsWith('ya29');
+        const julesKey = process.env.JULES_API_KEY;
+        const googleKey = process.env.GOOGLE_API_KEY;
 
-    // SECURITY: If we have a token, we MUST NOT send a project API Key 
-    // to avoid "The API Key and the authentication credential are from different projects" error.
-    if (hasToken) {
-        console.log(`[Auth] Using Pure OAuth Identity (Token Length: ${authToken.length})`);
-        return new JulesClient(undefined, 'https://jules.googleapis.com/v1alpha', authToken);
+        let apiKey: string | undefined;
+        const isInvalid = (val?: string) => !val || val === 'placeholder' || val === 'undefined' || val === 'null' || val.length < 5;
+
+        // PRIORITIZE your environment key
+        if (!isInvalid(julesKey)) apiKey = julesKey;
+        else if (!isInvalid(googleKey)) apiKey = googleKey;
+        else if (!isInvalid(headerKey)) apiKey = headerKey;
+        else if (settings?.julesApiKey && !isInvalid(settings.julesApiKey)) apiKey = settings.julesApiKey;
+
+        if (apiKey) {
+            // CRITICAL: Jules Portal tokens (AQ.A) MUST use x-goog-api-key and 
+            // MUST NOT use Bearer Authorization. JulesClient handles this internally.
+            return new JulesClient(apiKey, 'https://jules.googleapis.com/v1alpha');
+        }
+    } catch (e) {
+        console.error(`[Auth] Client initialization error:`, e);
     }
-
-    // Fallback to API Key only if no token is present
-    const finalApiKey = apiKey || authToken; // Support legacy single-field use
-    const isPlaceholder = !finalApiKey || finalApiKey === 'placeholder' || finalApiKey.startsWith('your-');
-
-    if (isPlaceholder) {
-        console.log(`[Auth] No valid credentials found. Falling back to MOCK mode.`);
-        return null;
-    }
-
-    console.log(`[Auth] Using API Key Identity`);
-    return new JulesClient(finalApiKey, 'https://jules.googleapis.com/v1alpha');
+    return null;
 }
+
+const getMockSessions = () => [
+    {
+        id: 'mock-1',
+        title: 'Fix broken auth',
+        status: 'active',
+        rawState: 'ACTIVE',
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
+        sourceId: 'google/jules',
+        branch: 'main'
+    }
+];
+
+// PING ENDPOINT
+api.get('/ping', (c) => c.json({ status: 'ok', time: new Date().toISOString() }));
 
 // API ROUTES
 api.get('/sessions', async (c) => {
     try {
         const client = await getJulesClient(c);
-        if (!client) {
-            return c.json({
-                sessions: [
-                    { id: 'mock-1', title: 'Fix broken auth', state: 'ACTIVE', createTime: new Date().toISOString(), updateTime: new Date().toISOString(), sourceContext: { source: 'sources/github/google/jules' } },
-                    { id: 'mock-2', title: 'Add unit tests', state: 'COMPLETED', createTime: new Date().toISOString(), updateTime: new Date().toISOString(), sourceContext: { source: 'sources/github/google/jules' } }
-                ]
-            });
-        }
+        if (!client) return c.json({ sessions: getMockSessions() });
+
         const sessions = await client.listSessions();
         return c.json({ sessions });
-    } catch (e) {
-        console.error("[API] listSessions failed:", e);
-        let title = `Auth Failed: ${e instanceof Error ? e.message : 'Unknown'}`;
-        if (title.includes('API_KEY_SERVICE_BLOCKED')) {
-            title = "Auth Failed: Jules API is not enabled for this key. Please enable it in Google Cloud Console.";
-        }
-        return c.json({
-            sessions: [{ id: 'mock-err', title, state: 'ACTIVE', createTime: new Date().toISOString(), updateTime: new Date().toISOString(), sourceContext: { source: 'sources/github/google/jules' } }]
+    } catch (e: any) {
+        const errorMessage = e?.message || String(e);
+        console.error(`[API] listSessions failed: ${errorMessage}`);
+
+        return c.json({ 
+            sessions: [
+                {
+                    id: 'critical-err',
+                    title: `API Error: ${errorMessage}`,
+                    status: 'failed',
+                    rawState: 'FAILED',
+                    createdAt: new Date().toISOString(),
+                    updatedAt: new Date().toISOString(),
+                    sourceId: 'system',
+                    branch: 'none',
+                    metadata: { error: e?.response || errorMessage }
+                },
+                ...getMockSessions()
+            ]
         });
     }
 });
@@ -111,6 +152,7 @@ api.get('/sessions', async (c) => {
 api.get('/sessions/:id', async (c) => {
     try {
         const id = c.req.param('id');
+        if (id === 'critical-err') return c.json({ id, title: 'API Error Log', state: 'FAILED' });
         if (id.startsWith('mock-')) return c.json({ id, title: 'Mock Session', state: 'ACTIVE' });
         const client = await getJulesClient(c);
         if (!client) return c.json({ error: 'Auth required' }, 401);
@@ -121,17 +163,90 @@ api.get('/sessions/:id', async (c) => {
 api.get('/sessions/:id/activities', async (c) => {
     try {
         const id = c.req.param('id');
-        if (id.startsWith('mock-')) return c.json({ activities: [] });
+        if (id === 'critical-err' || id.startsWith('mock-')) return c.json({ activities: [] });
         const client = await getJulesClient(c);
         if (!client) return c.json({ error: 'Auth required' }, 401);
         return c.json({ activities: await client.listActivities(id) });
     } catch (e) { return c.json({ error: String(e) }, 500); }
 });
 
+// ROUTE FIX: Handle URLs with colons (Custom Methods) correctly
+api.post('/sessions/:idAndAction', async (c) => {
+    try {
+        const idAndAction = c.req.param('idAndAction');
+        const [id, action] = idAndAction.includes(':') ? idAndAction.split(':') : [idAndAction, null];
+        
+        if (!action) return c.notFound();
+
+        const client = await getJulesClient(c);
+        if (!client) return c.json({ error: 'Auth required' }, 401);
+
+        if (action === 'sendMessage') {
+            const body = await c.req.json();
+            return c.json(await client.createActivity({ sessionId: id, content: body.prompt }));
+        }
+
+        if (action === 'approvePlan') {
+            await client.approvePlan(id);
+            return c.json({ success: true });
+        }
+
+        return c.json({ error: 'Invalid action' }, 400);
+    } catch (e) { return c.json({ error: String(e) }, 500); }
+});
+
+api.post('/sessions/:id/activities', async (c) => {
+    try {
+        const id = c.req.param('id');
+        const body = await c.req.json();
+        const client = await getJulesClient(c);
+        if (!client) return c.json({ error: 'Auth required' }, 401);
+        return c.json(await client.createActivity({
+            sessionId: id,
+            content: body.content || body.userMessage?.message || '',
+            role: body.role,
+            type: body.type
+        }));
+    } catch (e) { return c.json({ error: String(e) }, 500); }
+});
+
 api.get('/daemon/status', async (c) => {
-    const settings = await prisma.keeperSettings.findUnique({ where: { id: 'default' } }).catch(() => null);
-    const logs = await prisma.keeperLog.findMany({ orderBy: { createdAt: 'desc' }, take: 50 }).catch(() => []);
+    const settings = await prisma.keeperSettings.findUnique({ where: { id: 'default' } }).catch(() => null);        
+    const logs = await prisma.keeperLog.findMany({ orderBy: { createdAt: 'desc' }, take: 50 }).catch(() => []);     
     return c.json({ isEnabled: settings?.isEnabled || false, logs, wsClients: wsClients.size });
+});
+
+// FILE SYSTEM ENDPOINTS
+api.get('/fs/list', async (c) => {
+    try {
+        const queryPath = c.req.query('path') || '.';
+        const targetPath = path.resolve(process.cwd(), queryPath);
+        if (!targetPath.startsWith(process.cwd())) return c.json({ error: 'Access denied' }, 403);
+
+        const entries = fs.readdirSync(targetPath, { withFileTypes: true });
+        const files = entries
+            .filter(e => !e.name.startsWith('.') && e.name !== 'node_modules')
+            .map(e => ({
+                name: e.name,
+                isDirectory: e.isDirectory(),
+                path: path.relative(process.cwd(), path.join(targetPath, e.name))
+            }));
+
+        return c.json({ files });
+    } catch (e) { return c.json({ error: String(e) }, 500); }
+});
+
+api.get('/fs/read', async (c) => {
+    try {
+        const queryPath = c.req.query('path');
+        if (!queryPath) return c.json({ error: 'Path required' }, 400);
+        const targetPath = path.resolve(process.cwd(), queryPath);
+        if (!targetPath.startsWith(process.cwd())) return c.json({ error: 'Access denied' }, 403);
+        if (!fs.existsSync(targetPath) || !fs.statSync(targetPath).isFile()) return c.json({ error: 'File not found' }, 404);
+
+        const content = fs.readFileSync(targetPath, 'utf8');
+        return c.json({ content });
+    } catch (e) { return c.json({ error: String(e) }, 500); }
 });
 
 // Mount API
@@ -151,8 +266,7 @@ app.get('/ws', upgradeWebSocket(() => ({
 // STATIC FILE SERVING
 app.get('*', async (c) => {
     const reqPath = c.req.path === '/' ? '/index.html' : c.req.path;
-    const filePath = path.resolve(process.cwd(), 'dist', reqPath.startsWith('/') ? reqPath.slice(1) : reqPath);
-    
+    const filePath = path.resolve(process.cwd(), 'dist', reqPath.startsWith('/') ? reqPath.slice(1) : reqPath);     
     if (fs.existsSync(filePath) && fs.statSync(filePath).isFile()) {
         const content = fs.readFileSync(filePath);
         let contentType = 'text/plain';
@@ -161,47 +275,29 @@ app.get('*', async (c) => {
         else if (reqPath.endsWith('.html')) contentType = 'text/html; charset=utf-8';
         else if (reqPath.endsWith('.svg')) contentType = 'image/svg+xml';
         else if (reqPath.endsWith('.ico')) contentType = 'image/x-icon';
-        
-        return new Response(content, {
-            headers: { 
-                'Content-Type': contentType,
-                'Content-Length': String(content.length),
-                'Access-Control-Allow-Origin': '*'
-            }
-        });
+        return new Response(content, { headers: { 'Content-Type': contentType, 'Access-Control-Allow-Origin': '*' } });
     }
-
-    // SPA Fallback
     if (!reqPath.startsWith('/api') && !reqPath.startsWith('/ws')) {
         const indexPath = path.resolve(process.cwd(), 'dist/index.html');
         if (fs.existsSync(indexPath)) {
             const content = fs.readFileSync(indexPath);
-            return new Response(content, {
-                headers: { 'Content-Type': 'text/html; charset=utf-8', 'Content-Length': String(content.length) }
-            });
+            return new Response(content, { status: 200, headers: { 'Content-Type': 'text/html; charset=utf-8' } }); 
         }
     }
-
     return c.notFound();
 });
 
 // BUN SERVE
 if (typeof Bun !== 'undefined') {
-    Bun.serve({
-        port,
-        fetch: app.fetch,
-        websocket,
-    });
+    Bun.serve({ port, fetch: app.fetch, websocket });
     console.log(`[Bun] Command Center running at http://localhost:${port}`);
-    
-    // Auto-start background monitoring
     setTimeout(async () => {
         try {
             const settings = await prisma.keeperSettings.findUnique({ where: { id: 'default' } }).catch(() => null);
             if (settings?.isEnabled) {
                 console.log("[Server] Auto-starting Session Keeper...");
                 startDaemon();
-                workerInstance = setupWorker(eventBus);
+                workerInstance = setupWorker();
             }
         } catch (e) { console.error("[Server] Auto-start failed:", e); }
     }, 1000);

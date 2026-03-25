@@ -1,28 +1,31 @@
-# Project Handoff: Jules Autopilot (v0.9.1 - Lean Core)
+# Project Handoff: Jules Autopilot (v0.9.3 - Stabilized Auth & Messaging)
 
-## Current State Fast-Forward
-We have just completed a major architectural shift: the **Lean Core Pivot**. The project has been stripped of its "Enterprise" bloat (Analytics, Swarms, Side Logs, Submodules) to focus on a high-performance, single-workspace Jules orchestration experience.
+## 1. Executive Summary
+This session successfully restored core functionality for the Jules Autopilot system, specifically targeting the high-privilege session tokens from the Jules Portal. We resolved critical authentication blocks, fixed cascading server failures, and hardened the mass-messaging (broadcast) system for high-scale environments.
 
-The architecture is now centralized: a high-performance Bun-based API daemon (port 8080) handles all logic, including Jules API proxying and filesystem access, while the Next.js frontend integrates via a transparent proxy at `/api/local/`.
+### Recent Wins (v0.9.3)
+- **Verified Authentication Protocol**: Identified that Jules Portal tokens (`AQ.A...`) are strictly incompatible with the standard `Authorization: Bearer` header. They now exclusively use `x-goog-api-key` header with all other auth headers stripped. (See `docs/AUTHENTICATION.md`)
+- **Mass-Messaging Safety**: Implemented a **500ms mandatory delay** between broadcast messages in `BroadcastDialog.tsx`. This successfully prevents `429 Too Many Requests` when communicating with 30+ sessions.
+- **Routing Reliability**: Fixed backend routing in `server/index.ts` to correctly parse custom actions like `sessions/ID:sendMessage`, which previously returned 404s.
+- **Zero-Downtime Provider Bridge**: Added a "Safety Bridge" alias in `JulesProvider.tsx` (`triggerRefresh: refresh`) to prevent `ReferenceError` crashes caused by browser-cached JS bundles.
+- **Backend Stability**: Added bypass logic for the `critical-err` session ID to prevent the server from crashing when the UI attempts to load metadata for error log entries.
 
-## Major Accomplishments This Session
-1. **Enterprise Feature Pruning:** Deleted the `external/` directory and all associated submodule logic. Excised heavy analytics and multi-agent swarm components.
-2. **API Centralization:** Moved core logic into `server/index.ts`. Implemented native proxies for `/sessions` and `/activities` to bypass official Jules UI lag.
-3. **Mock Data Fallback:** The daemon now automatically serves deterministic mock data if no Jules API key is configured, allowing immediate dashboard exploration.
-4. **Resilient Infrastructure:** Made Redis and BullMQ optional to ensure the daemon starts reliably in any environment. Fixed Prisma engine file-locking issues.
-5. **Auth Optimization:** Consolidated NextAuth configuration into root `auth.ts`. Removed database adapters for local development to prevent schema conflict loops.
-6. **Documentation Overhaul:** Updated `ROADMAP.md`, `VISION.md`, and `UNIVERSAL_LLM_INSTRUCTIONS.md` to reflect the minimalist, "Lean Core" philosophy.
+## 2. Technical State
+- **Frontend**: Fully theme-aware React SPA served from `dist/` by the Bun/Hono backend.
+- **Backend**: Hono server on port 8080. Manually loads `.env` to ensure environment variable consistency.
+- **Authentication**: Using "Strict x-goog-api-key Mode" for all external Jules API calls.
+- **Build**: Current production bundle is forced with a unique build timestamp in `src/main.tsx` to invalidate caches.
 
-## Current Environment
-- **Frontend:** Next.js 15 on port 3006 (or 3000).
-- **Backend:** Bun/Hono on port 8080 (Proxied via `/api/local/`).
-- **Database:** Prisma + SQLite (`prisma/dev.db`).
-- **Shared Package:** Types and utilities extracted to `@jules/shared`.
+## 3. Current Focus & Blockers
+- **Monitoring**: The system is stable, but we should monitor for any new Google gateway policy changes.
+- **Borg Readiness**: The project is now stable and documented enough for assimilation into the Borg ecosystem. The `AQ.A` token protocol is the most critical piece of knowledge to preserve.
 
-## Next Agent Objectives (See `TODO.md`)
-- **Action 1:** Refine the TUI experience in `apps/cli` to use the new centralized `/api/local` endpoints.
-- **Action 2:** Implement native RAG integration in the Bun daemon for deep codebase context.
-- **Action 3:** Enhance the session view to support real-time WebSocket updates for activity logs.
+## 4. Immediate Next Steps
+1.  **Borg Assimilation**: Trigger the Borg assimilation process now that the state is clean and documented.
+2.  **Telemetry**: Consider adding real-time telemetry for the 500ms messaging delays to visualize broadcast progress.
+3.  **RAG Integration**: Resume work on the `sqlite-vss` integration described in `RAG_ARCHITECTURE.md`.
 
-## Critical Instructions for Inheriting Agent
-The project is now a "Lean Core." Do not re-add enterprise bloat unless explicitly requested. Always use the `/api/local/` proxy for frontend-to-daemon communication. **Run `npx tsc --noEmit` after changes to ensure type safety.** The backend is designed to be "always functional" via mock fallbacks; maintain this pattern.
+## 5. Knowledge Nuggets
+- **Header Poisoning**: Sending both `Authorization` and `x-goog-api-key` to Jules v1alpha causes a service block.
+- **Colon Routing**: Hono requires explicit regex or parameter parsing to handle URLs containing colons (`:`).
+- **AQ.A Tokens**: These are not standard API keys; they are high-privilege session principals.

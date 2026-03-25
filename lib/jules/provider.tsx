@@ -7,6 +7,8 @@ interface JulesContextType {
   client: JulesClient | null;
   isLoading: boolean;
   refresh: () => void;
+  triggerRefresh: () => void;
+  refreshTrigger: number;
 }
 
 const JulesContext = createContext<JulesContextType | undefined>(undefined);
@@ -14,19 +16,17 @@ const JulesContext = createContext<JulesContextType | undefined>(undefined);
 export function JulesProvider({ children }: { children: React.ReactNode }) {
   const [client, setClient] = useState<JulesClient | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+  const [refreshTrigger, setRefreshTrigger] = useState(0);
   const initialized = useRef(false);
 
   const initClient = useCallback(() => {
     try {
       const localJulesKey = typeof window !== 'undefined' ? localStorage.getItem('jules_api_key') : null;
-      const localAuthToken = typeof window !== 'undefined' ? localStorage.getItem('jules_auth_token') : null;
       
-      console.log(`[JulesProvider] Initializing client (API Key: ${!!localJulesKey}, Auth Token: ${!!localAuthToken})`);
+      console.log(`[JulesProvider] Initializing client (API Key: ${!!localJulesKey})`);
       
       const newClient = new JulesClient(
-        localJulesKey || undefined, 
-        undefined, 
-        localAuthToken || undefined
+        localJulesKey || undefined
       );
       
       setClient(newClient);
@@ -47,7 +47,7 @@ export function JulesProvider({ children }: { children: React.ReactNode }) {
 
     // Listen for storage changes (other tabs)
     const handleStorageChange = (e: StorageEvent) => {
-      if (e.key === 'jules_api_key' || e.key === 'jules_auth_token') {
+      if (e.key === 'jules_api_key') {
         initClient();
       }
     };
@@ -67,11 +67,18 @@ export function JulesProvider({ children }: { children: React.ReactNode }) {
   }, [initClient]);
 
   const refresh = useCallback(() => {
+    setRefreshTrigger(prev => prev + 1);
     initClient();
   }, [initClient]);
 
   return (
-    <JulesContext.Provider value={{ client, isLoading, refresh }}>
+    <JulesContext.Provider value={{ 
+      client, 
+      isLoading, 
+      refresh, 
+      triggerRefresh: refresh, 
+      refreshTrigger 
+    }}>
       {children}
     </JulesContext.Provider>
   );

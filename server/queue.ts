@@ -201,7 +201,7 @@ export class TaskQueue {
                     });
                     newChunks++;
                 }
-                await new Promise(r => setTimeout(resolve, 100)); // Rate limit
+                await new Promise(r => setTimeout(r, 100)); // Rate limit
             }
         }
 
@@ -209,12 +209,37 @@ export class TaskQueue {
     }
 
     private async handleCheckSession(session: any, settings: any) {
-        const apiKey = settings.julesApiKey || process.env.JULES_API_KEY;
-        if (!apiKey || apiKey === 'placeholder') return { action: 'none', reason: 'no_api_key' };
+        const julesKey = process.env.JULES_API_KEY;
+        const googleKey = process.env.GOOGLE_API_KEY;
+        const dbKey = settings.julesApiKey;
+
+        const isInvalid = (val?: string) => !val || val === 'placeholder' || val === 'undefined' || val === 'null' || val.length < 5;
+
+        let apiKey: string | undefined;
+
+        // Strictly API Key identification
+        if (!isInvalid(dbKey)) apiKey = dbKey;
+        else if (!isInvalid(julesKey)) apiKey = julesKey;
+        else if (!isInvalid(googleKey)) apiKey = googleKey;
+
+        if (!apiKey) return { action: 'none', reason: 'no_api_key' };
         
         const client = new JulesClient(apiKey, 'https://jules.googleapis.com/v1alpha');
 
         const lastActivityTime = session.lastActivityAt ? new Date(session.lastActivityAt) : new Date(session.updatedAt);
+        const supervisorState = await getSupervisorState(session.id);
+        
+        // Emit update if new activities detected since last process
+        if (supervisorState.lastProcessedActivityTimestamp) {
+            const lastProcessed = new Date(supervisorState.lastProcessedActivityTimestamp);
+            if (lastActivityTime > lastProcessed) {
+                emitDaemonEvent('activities_updated', { sessionId: session.id });
+            }
+        } else {
+            // First time seeing this session, emit anyway to be safe
+            emitDaemonEvent('activities_updated', { sessionId: session.id });
+        }
+
         const diffMinutes = (Date.now() - lastActivityTime.getTime()) / 60000;
         let threshold = settings.inactivityThresholdMinutes;
 
@@ -228,7 +253,6 @@ export class TaskQueue {
 
             let messageToSend = "Please resume working on this task.";
             if (settings.smartPilotEnabled) {
-                const supervisorState = await getSupervisorState(session.id);
                 const activities = await client.listActivities(session.id);
                 const sortedActivities = activities.sort((a: Activity, b: Activity) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime());
 
@@ -274,6 +298,18 @@ export class TaskQueue {
                 message: messageToSend
             });
             return { action: 'nudged' };
+        }
+
+        // If we didn't nudge, we might still want to update lastProcessedActivityTimestamp if we saw new activities
+        if (supervisorState.lastProcessedActivityTimestamp) {
+             const lastProcessed = new Date(supervisorState.lastProcessedActivityTimestamp);
+             if (lastActivityTime > lastProcessed) {
+                 supervisorState.lastProcessedActivityTimestamp = lastActivityTime.toISOString();
+                 await saveSupervisorState(supervisorState);
+             }
+        } else {
+             supervisorState.lastProcessedActivityTimestamp = lastActivityTime.toISOString();
+             await saveSupervisorState(supervisorState);
         }
 
         return { action: 'none', reason: 'active' };

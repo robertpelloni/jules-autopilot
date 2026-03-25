@@ -1,3 +1,7 @@
+/**
+ * Jules Autopilot Main Entry
+ * Build: 2026-03-24T22:13:47Z
+ */
 import React from 'react';
 import ReactDOM from 'react-dom/client';
 import App from './App';
