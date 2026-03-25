@@ -210,6 +210,30 @@ api.post('/sessions/:id/activities', async (c) => {
     } catch (e) { return c.json({ error: String(e) }, 500); }
 });
 
+api.post('/rag/query', async (c) => {
+    try {
+        const body = await c.req.json();
+        const { query, topK } = body;
+        
+        if (!query) {
+            return c.json({ error: 'Query is required' }, 400);
+        }
+
+        const settings = await prisma.keeperSettings.findUnique({ where: { id: 'default' } }).catch(() => null);
+        const apiKey = process.env.OPENAI_API_KEY || settings?.supervisorApiKey;
+
+        if (!apiKey || apiKey === 'placeholder') {
+            return c.json({ error: 'OpenAI API key is required for RAG' }, 401);
+        }
+
+        const results = await queryCodebase(query, apiKey, topK || 5);
+        return c.json({ results });
+    } catch (e) {
+        console.error('[API] RAG Query failed:', e);
+        return c.json({ error: String(e) }, 500);
+    }
+});
+
 api.get('/daemon/status', async (c) => {
     const settings = await prisma.keeperSettings.findUnique({ where: { id: 'default' } }).catch(() => null);        
     const logs = await prisma.keeperLog.findMany({ orderBy: { createdAt: 'desc' }, take: 50 }).catch(() => []);     

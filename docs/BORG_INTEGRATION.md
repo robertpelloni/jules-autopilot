@@ -15,6 +15,7 @@ Borg instances can issue commands to the Jules Autopilot daemon via its local Ho
 *   `POST /api/sessions`: Create a new cloud session for a specific repo and branch.
 *   `POST /api/sessions/:id/sendMessage`: Send an instruction to a specific session.
 *   `POST /api/sessions/:id/approvePlan`: Force-approve a pending implementation plan.
+*   `POST /api/rag/query`: Semantically search the entire codebase. Accepts `{ "query": "string", "topK": number }`. Borg should use this endpoint to fetch deep repository context before giving instructions to Jules agents.
 
 ### 2. The Autopilot Daemon (`server/queue.ts`)
 Borg does **not** need to manually poll sessions. The Autopilot daemon runs continuously in the background and implements the **Council Supervisor**:

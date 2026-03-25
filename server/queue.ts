@@ -1,6 +1,7 @@
 import { prisma } from '../lib/prisma';
 import { JulesClient } from '../lib/jules/client';
-import { getProvider, summarizeSession, evaluatePlanRisk, decideNextAction } from '@jules/shared';
+import { getProvider, summarizeSession, evaluatePlanRisk, decideNextAction, runDebate } from '@jules/shared';
+import type { Participant } from '@jules/shared';
 import { emitDaemonEvent } from './index';
 import { addLog, getSupervisorState, saveSupervisorState } from './daemon';
 import fs from 'fs';
@@ -267,8 +268,65 @@ export class TaskQueue {
                         emitDaemonEvent('activities_updated', { sessionId: session.id });
                         return { action: 'plan_approved', riskScore };
                     } else {
-                        await addLog(`Plan requires manual review (Score: ${riskScore})`, 'info', session.id);
-                        return { action: 'plan_flagged', riskScore };
+                        await addLog(`Plan risk is ${riskScore}. Escalating to Council Debate...`, 'info', session.id);
+                        
+                        // Construct participants from settings for the debate
+                        const participants: Participant[] = [
+                            {
+                                id: 'security-architect',
+                                name: 'Security Architect',
+                                role: 'Security & Architecture Reviewer',
+                                systemPrompt: 'You are a strict security architect. Review the proposed implementation plan for vulnerabilities, data leaks, and architectural flaws. If the plan modifies core logic without adequate testing, reject it. If it is safe, approve it.',
+                                provider: settings.supervisorProvider as any,
+                                model: settings.supervisorModel,
+                                apiKey: supervisorKey
+                            },
+                            {
+                                id: 'senior-engineer',
+                                name: 'Senior Engineer',
+                                role: 'Code Quality Reviewer',
+                                systemPrompt: 'You are a senior frontend/backend engineer. Review the plan for code quality, edge cases, and best practices. Suggest improvements or point out missing steps. If the plan is sound, approve it.',
+                                provider: settings.supervisorProvider as any,
+                                model: settings.supervisorModel,
+                                apiKey: supervisorKey
+                            }
+                        ];
+
+                        const debateResult = await runDebate({
+                            history: [{ role: 'user', content: `Please review the following implementation plan:\n\n${planActivity.content}` }],
+                            participants,
+                            rounds: 1,
+                            topic: `Review Plan for Session ${session.id}`
+                        });
+
+                        const finalRisk = debateResult.riskScore ?? 50;
+                        await addLog(`Council Debate concluded. Final Risk Score: ${finalRisk}`, 'info', session.id);
+
+                        if (finalRisk < 40 || debateResult.approvalStatus === 'approved') {
+                            await addLog(`Council approved plan after debate. Auto-approving...`, 'action', session.id);
+                            await client.approvePlan(session.id);
+                            
+                            // Optionally send the debate summary to the agent
+                            await client.createActivity({
+                                sessionId: session.id,
+                                content: `Council Supervisor Debate Summary:\n\n${debateResult.summary}\n\nThe plan has been approved. Proceed with implementation.`,
+                                type: 'message'
+                            });
+                            
+                            emitDaemonEvent('activities_updated', { sessionId: session.id });
+                            return { action: 'plan_approved_by_council', riskScore: finalRisk };
+                        } else {
+                            await addLog(`Council rejected plan (Score: ${finalRisk}). Manual review required.`, 'error', session.id);
+                            
+                            // Send the rejection summary to the agent to ask for a revised plan
+                            await client.createActivity({
+                                sessionId: session.id,
+                                content: `The Council Supervisor flagged the implementation plan as high-risk.\n\nDebate Summary:\n${debateResult.summary}\n\nPlease revise the plan addressing these concerns and submit for approval again.`,
+                                type: 'message'
+                            });
+
+                            return { action: 'plan_flagged_by_council', riskScore: finalRisk };
+                        }
                     }
                 }
             }
