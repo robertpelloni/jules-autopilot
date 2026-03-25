@@ -93,6 +93,8 @@ export class TaskQueue {
                 result = await this.handleCheckSession(payload.session, payload.settings);
             } else if (job.type === 'index_codebase') {
                 result = await this.handleIndexCodebase();
+            } else if (job.type === 'check_issues') {
+                result = await this.handleCheckIssues(payload.sourceId, payload.settings);
             } else {
                 throw new Error(`Unknown job type: ${job.type}`);
             }
@@ -209,6 +211,87 @@ export class TaskQueue {
         }
 
         return { action: 'indexed', count: newChunks };
+    }
+
+    private async handleCheckIssues(sourceId: string, settings: any) {
+        const julesKey = process.env.JULES_API_KEY || settings.julesApiKey;
+        const supervisorKey = settings.supervisorApiKey || process.env.OPENAI_API_KEY || "";
+        
+        if (!julesKey || !supervisorKey) return { action: 'none', reason: 'missing_keys' };
+
+        const client = new JulesClient(julesKey, 'https://jules.googleapis.com/v1alpha');
+        
+        await addLog(`Checking GitHub issues for ${sourceId}...`, 'info', 'global');
+        const issues = await client.listIssues(sourceId);
+        
+        if (issues.length === 0) return { action: 'none', reason: 'no_issues' };
+
+        // Fetch active sessions to prevent duplicates
+        const sessions = await client.listSessions();
+        const activeTitles = sessions.map(s => s.title.toLowerCase());
+
+        for (const issue of issues) {
+            // Basic duplicate check by title
+            if (activeTitles.some(title => title.includes(issue.title.toLowerCase()) || issue.title.toLowerCase().includes(title))) {
+                continue;
+            }
+
+            // --- COUNCIL SUPERVISOR: ISSUE EVALUATION ---
+            const evaluationPrompt = `
+                Evaluate if the following GitHub issue is "Self-Healable" by an AI coding agent.
+                Target Repository: ${sourceId}
+                Issue Title: ${issue.title}
+                Issue Body: ${issue.body}
+
+                Criteria for "Self-Healable":
+                1. Clear bug description or feature request.
+                2. Non-ambiguous requirements.
+                3. Does not require complex multi-step human interaction (e.g. physical device testing).
+
+                Respond with a JSON object:
+                {
+                    "isFixable": boolean,
+                    "confidence": number (0-100),
+                    "suggestedTitle": "Short descriptive title for the session",
+                    "reasoning": "Short explanation"
+                }
+            `;
+
+            try {
+                const p = getProvider(settings.supervisorProvider);
+                if (!p) continue;
+
+                const evalResult = await p.complete({
+                    messages: [{ role: 'user', content: evaluationPrompt }],
+                    apiKey: supervisorKey,
+                    model: settings.supervisorModel,
+                    systemPrompt: 'You are a technical lead evaluating project issues.'
+                });
+
+                // Extract JSON from response
+                const jsonMatch = evalResult.content.match(/\{[\s\S]*\}/);
+                if (!jsonMatch) continue;
+                
+                const evaluation = JSON.parse(jsonMatch[0]);
+
+                if (evaluation.isFixable && evaluation.confidence > 70) {
+                    await addLog(`Autonomous session spawn for issue: ${issue.title}`, 'action', 'global');
+                    
+                    const newSession = await client.createSession(
+                        sourceId, 
+                        `Fix issue #${issue.number}: ${issue.title}\n\nContext:\n${issue.body}`,
+                        evaluation.suggestedTitle || `Issue #${issue.number}: ${issue.title}`
+                    );
+
+                    emitDaemonEvent('sessions_list_updated', {});
+                    return { action: 'session_spawned', sessionId: newSession.id, issue: issue.number };
+                }
+            } catch (err) {
+                console.error(`[Queue] Failed to evaluate issue ${issue.number}:`, err);
+            }
+        }
+
+        return { action: 'none', reason: 'no_suitable_issues' };
     }
 
     private async handleCheckSession(session: any, settings: any) {

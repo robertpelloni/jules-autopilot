@@ -676,6 +676,39 @@ export class JulesClient {
     return this.request<Artifact>(`/sessions/${normalizedSessionId}/artifacts/${artifactId}`);
   }
 
+  // GitHub Integration
+  async listIssues(sourceId: string): Promise<any[]> {
+    // sourceId format: "sources/github/owner/repo"
+    const match = sourceId.match(/sources\/github\/(.+)/);
+    if (!match) throw new Error("Invalid sourceId format for GitHub issues");
+    const repo = match[1];
+
+    const githubToken = typeof window !== 'undefined' 
+      ? localStorage.getItem('github_pat') 
+      : process.env.GITHUB_PAT || process.env.GITHUB_TOKEN;
+
+    if (!githubToken) {
+      console.warn("[JulesClient] No GitHub token found for listIssues");
+      return [];
+    }
+
+    try {
+      const response = await fetch(`https://api.github.com/repos/${repo}/issues?state=open&sort=updated`, {
+        headers: {
+          'Authorization': `token ${githubToken}`,
+          'Accept': 'application/vnd.github.v3+json',
+          'User-Agent': 'Jules-Autopilot'
+        }
+      });
+
+      if (!response.ok) throw new Error(`GitHub API Error: ${response.statusText}`);
+      return await response.json();
+    } catch (e) {
+      console.error("[JulesClient] Failed to fetch GitHub issues:", e);
+      return [];
+    }
+  }
+
   async approvePlan(sessionId: string): Promise<void> {
     const normalizedSessionId = this.normalizeSessionId(sessionId);
     return this.request<void>(`/sessions/${normalizedSessionId}:approvePlan`, {

@@ -237,7 +237,22 @@ api.post('/rag/query', async (c) => {
 api.get('/daemon/status', async (c) => {
     const settings = await prisma.keeperSettings.findUnique({ where: { id: 'default' } }).catch(() => null);        
     const logs = await prisma.keeperLog.findMany({ orderBy: { createdAt: 'desc' }, take: 50 }).catch(() => []);     
-    return c.json({ isEnabled: settings?.isEnabled || false, logs, wsClients: wsClients.size });
+    
+    // Get queue stats
+    const [pendingJobs, processingJobs] = await Promise.all([
+        prisma.queueJob.count({ where: { status: 'pending' } }),
+        prisma.queueJob.count({ where: { status: 'processing' } })
+    ]);
+
+    return c.json({ 
+        isEnabled: settings?.isEnabled || false, 
+        logs, 
+        wsClients: wsClients.size,
+        queue: {
+            pending: pendingJobs,
+            processing: processingJobs
+        }
+    });
 });
 
 // FILE SYSTEM ENDPOINTS

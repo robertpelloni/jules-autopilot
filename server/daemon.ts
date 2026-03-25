@@ -88,6 +88,7 @@ export async function runLoop() {
             return;
         }
 
+        // 1. Session Monitoring
         const sessions = await client.listSessions();
         let queuedCount = 0;
 
@@ -98,6 +99,27 @@ export async function runLoop() {
             } catch (err) {
                 console.error(`[Daemon] Failed to enqueue session ${session.id}`, err);
             }
+        }
+
+        // 2. Autonomous Issue Conversion (GitHub)
+        if (settings.smartPilotEnabled) {
+            try {
+                const sources = await client.listSources();
+                for (const source of sources) {
+                    await orchestratorQueue.add('check_issues', { sourceId: source.id, settings });
+                }
+            } catch (err) {
+                console.error(`[Daemon] Failed to enqueue issue checks`, err);
+            }
+        }
+
+        // 3. Periodic Codebase Indexing (RAG)
+        // Only enqueue if no other indexing job is pending
+        const pendingIndexJob = await prisma.queueJob.findFirst({
+            where: { type: 'index_codebase', status: 'pending' }
+        });
+        if (!pendingIndexJob) {
+            await orchestratorQueue.add('index_codebase', {});
         }
 
         if (queuedCount > 0) {

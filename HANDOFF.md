@@ -1,29 +1,31 @@
-# Project Handoff: Jules Autopilot (v0.9.4 - The Cognitive Fleet)
+# Project Handoff: Jules Autopilot (v0.9.5 - Deep Autonomous)
 
 ## 1. Executive Summary
-This session achieved a major structural breakthrough: the true activation of the **Council Supervisor** within the background daemon. The Jules Autopilot is no longer just a UI or a dumb polling loop; it is now a fully autonomous intelligence that evaluates risk and coordinates agents without human intervention. The project is officially stable and ready to be assimilated as the core "Cloud Session Orchestrator" for the Borg ecosystem.
+This session finalized the transformation of Jules Autopilot into a proactive, cognitive orchestrator. We have achieved "Deep Autonomous" status, where the system not only monitors sessions but actively seeks out work (GitHub issues), maintains its own knowledge base (RAG indexing), and cross-checks its own reasoning (Autonomous Debates).
 
-### Recent Wins (v0.9.4)
-- **Autonomous Plan Approval**: The Autopilot now intercepts Jules sessions in the `AWAITING_PLAN_APPROVAL` state. It extracts the generated implementation plan and uses the Council Supervisor's AI (`evaluatePlanRisk`) to calculate a risk score (0-100). If the score is low (<40), it autonomously issues an approval, enabling zero-click CI/CD workflows.
-- **Cognitive Nudging**: Replaced generic "please continue" polling with the contextual `decideNextAction` logic. The Autopilot now reads the recent activity stream and generates specific, intelligent nudges based on what the agent was actually doing.
-- **Shared Intelligence Base**: Centralized all AI orchestration logic into the `@jules/shared` package, allowing both the UI and the backend Daemon to utilize the same evaluation models.
-- **Verified Authentication Protocol**: Solidified the `x-goog-api-key` requirement for high-privilege `AQ.A` session tokens. (See `docs/AUTHENTICATION.md`)
+### Recent Wins (v0.9.5)
+- **Autonomous Issue Conversion**: The background daemon now periodically fetches open GitHub issues. It uses the Council Supervisor to evaluate if an issue is "Self-Healable" and autonomously spawns new Jules sessions to fix confirmed bugs.
+- **Continuous RAG Indexing**: Implemented a periodic background job that chunks and embeds the entire repository into SQLite. The Autopilot's "Long-Term Memory" is now always in sync with the latest code changes.
+- **Autonomous Multi-Agent Debates**: High-risk implementation plans now trigger a background debate between a Security Architect and a Senior Engineer. Consensus is required before the Autopilot issues an automatic approval.
+- **Queue Telemetry**: The `/api/daemon/status` endpoint now provides real-time counts of pending and processing jobs, allowing Borg to monitor the fleet's workload.
+- **Safety Bridge**: Formalized the `triggerRefresh` / `refresh` alias in the Jules Provider to ensure zero-downtime across browser cache refreshes.
 
 ## 2. Technical State
-- **Frontend**: Fully theme-aware React SPA served from `dist/` by the Bun/Hono backend.
-- **Backend (The Daemon)**: Hono server on port 8080. It runs a continuous SQLite-backed queue (`server/queue.ts`) that manages active sessions.
-- **Authentication**: Using "Strict x-goog-api-key Mode" for all external Jules API calls.
+- **Frontend**: Clean production build in `dist/`. New telemetry for the background queue is available.
+- **Backend**: Hono server on port 8080. Multi-threaded SQLite Task Queue handles indexing, monitoring, and issue conversion.
+- **Intelligence**: Centralized in `@jules/shared`. Both the UI and the Daemon use the same validated AI logic.
 
-## 3. Borg Assimilation Readiness
-The Jules Autopilot is now functionally complete as a standalone orchestrator. It is ready to be absorbed by Borg.
-- **Role in Borg**: It will serve as the external interaction layer, managing remote cloud coding sessions (Jules, Devin, etc.) while Borg handles the meta-orchestration.
-- **Integration Seam**: Borg can interface directly with the local REST API running on `localhost:8080/api/` to spawn new sessions, broadcast protocols, and ingest unified activity streams.
+## 3. Borg Integration
+The system is ready for assimilation. Borg can now:
+1.  **Spawn Sessions**: via `POST /api/sessions`.
+2.  **Context Injection**: via `POST /api/rag/query`.
+3.  **Monitor Health**: via `GET /api/daemon/status`.
+4.  **Control Autonomy**: via `KeeperSettings` in the SQLite database.
 
-## 4. Immediate Next Steps
-1. **Trigger Borg Assimilation**: Begin linking Borg's core loops to the Jules Autopilot API.
-2. **Monitor the Fleet**: Watch the new Autonomous Plan Approvals in production to ensure the risk-scoring threshold (<40) is properly calibrated.
-3. **RAG Integration**: Continue the `sqlite-vss` integration described in `RAG_ARCHITECTURE.md` to give both Borg and Jules agents instantaneous codebase familiarity.
+## 4. Next Steps
+1.  **Distributed Expansion**: If scaling beyond a single machine, migrate the SQLite queue to a shared Borg-level Postgres/Redis instance.
+2.  **Telemetry Visualizer**: Add a Gantt chart or progress bar to the UI to visualize the 500ms broadcast delays and background indexing progress.
 
 ## 5. Knowledge Nuggets
-- **Header Poisoning**: Sending both `Authorization` and `x-goog-api-key` to Jules v1alpha causes a service block.
-- **Risk Scoring**: The `evaluatePlanRisk` function evaluates destructive vs additive changes. If an AI proposes modifying auth logic, it will flag for human review. If it proposes updating a README, it will auto-approve.
+- **Protocol Banning**: Standard `Authorization` headers remain strictly banned for `AQ.A` tokens.
+- **Context Pushing**: The "Knowledge Drop" method is our primary way of giving Jules codebase context without requiring external tool support.
