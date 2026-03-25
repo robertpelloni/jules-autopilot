@@ -26,6 +26,7 @@ interface QueueStats {
 export function FleetIntelligence() {
   const { isEnabled, logs, queue } = useSessionKeeperStore();
   const [stats, setStats] = useState<QueueStats>({ pending: 0, processing: 0 });
+  const [isReindexing, setIsReindexing] = useState(false);
 
   useEffect(() => {
     if (queue) {
@@ -33,41 +34,56 @@ export function FleetIntelligence() {
     }
   }, [queue]);
 
+  const handleReindex = async () => {
+    try {
+      setIsReindexing(true);
+      const response = await fetch('/api/rag/reindex', { method: 'POST' });
+      if (!response.ok) throw new Error('Failed to trigger re-index');
+      toast.success('Codebase re-indexing job enqueued');
+    } catch (err) {
+      console.error(err);
+      toast.error('Failed to trigger re-index');
+    } finally {
+      setTimeout(() => setIsReindexing(false), 2000);
+    }
+  };
+
   // Filter logs for Council or RAG related events
   const intelligenceLogs = logs.filter(log => 
     log.message.toLowerCase().includes('council') || 
     log.message.toLowerCase().includes('plan risk') || 
     log.message.toLowerCase().includes('indexing') ||
-    log.message.toLowerCase().includes('rag')
+    log.message.toLowerCase().includes('rag') ||
+    log.message.toLowerCase().includes('self-healing')
   ).slice(0, 10);
 
   return (
     <div className="space-y-6">
       {/* 1. Fleet Status Overview */}
       <div className="grid grid-cols-2 gap-4">
-        <div className="bg-zinc-900 border border-white/5 rounded-xl p-4 space-y-3">
+        <div className="bg-zinc-900 border border-white/5 rounded-xl p-4 space-y-3 shadow-xl">
           <div className="flex items-center justify-between text-zinc-500">
             <div className="flex items-center gap-2">
               <Cpu className="h-3.5 w-3.5" />
               <span className="text-[10px] font-mono uppercase tracking-widest">Autonomous Core</span>
             </div>
             {isEnabled ? (
-              <Badge className="bg-green-500/10 text-green-400 border-green-500/20 text-[8px] h-4">ONLINE</Badge>
+              <Badge className="bg-green-500/10 text-green-400 border-green-500/20 text-[8px] h-4 font-bold">ONLINE</Badge>
             ) : (
-              <Badge className="bg-zinc-500/10 text-zinc-400 border-zinc-500/20 text-[8px] h-4">OFFLINE</Badge>
+              <Badge className="bg-zinc-500/10 text-zinc-400 border-zinc-500/20 text-[8px] h-4 font-bold">OFFLINE</Badge>
             )}
           </div>
           <div className="flex items-end justify-between">
             <div className="text-2xl font-bold text-white font-mono tracking-tighter">
-              {stats.processing > 0 ? "COGNITIVE" : "IDLE"}
+              {stats.processing > 0 ? "COGNITIVE" : "WATCHING"}
             </div>
-            <div className="text-[10px] text-zinc-500 font-mono">
-              {stats.processing} ACTIVE JOBS
+            <div className="text-[10px] text-zinc-500 font-mono uppercase tracking-tighter">
+              {stats.processing} Active
             </div>
           </div>
         </div>
 
-        <div className="bg-zinc-900 border border-white/5 rounded-xl p-4 space-y-3">
+        <div className="bg-zinc-900 border border-white/5 rounded-xl p-4 space-y-3 shadow-xl">
           <div className="flex items-center justify-between text-zinc-500">
             <div className="flex items-center gap-2">
               <Layers className="h-3.5 w-3.5" />
@@ -79,41 +95,53 @@ export function FleetIntelligence() {
             <div className="text-2xl font-bold text-white font-mono tracking-tighter">
               {stats.pending}
             </div>
-            <div className="text-[10px] text-zinc-500 font-mono uppercase">
-              Pending in SQLite
+            <div className="text-[10px] text-zinc-500 font-mono uppercase tracking-tighter">
+              Pending Tasks
             </div>
           </div>
         </div>
       </div>
 
       {/* 2. RAG Indexing Progress */}
-      <div className="bg-zinc-900 border border-white/5 rounded-xl p-5 space-y-4">
+      <div className="bg-zinc-900 border border-white/5 rounded-xl p-5 space-y-4 shadow-xl">
         <div className="flex items-center justify-between">
-          <div className="flex items-center gap-2.5">
-            <div className="p-2 bg-purple-500/10 rounded-lg">
+          <div className="flex items-center gap-3">
+            <div className="p-2.5 bg-purple-500/10 rounded-xl border border-purple-500/20">
               <Search className="h-4 w-4 text-purple-400" />
             </div>
             <div>
               <h3 className="text-xs font-bold text-white uppercase tracking-wider">Semantic Knowledge Base</h3>
-              <p className="text-[10px] text-zinc-500 font-mono mt-0.5">Continuous Codebase Vectorization</p>
+              <p className="text-[10px] text-zinc-500 font-mono mt-0.5 uppercase tracking-tighter">Local Codebase Vectorization</p>
             </div>
           </div>
-          {stats.processing > 0 && intelligenceLogs.some(l => l.message.includes('indexing')) ? (
-            <div className="flex items-center gap-2 text-[10px] text-purple-400 font-mono animate-pulse">
-              <Loader2 className="h-3 w-3 animate-spin" />
-              INDEXING...
-            </div>
-          ) : (
-            <div className="flex items-center gap-2 text-[10px] text-zinc-500 font-mono">
-              <ShieldCheck className="h-3 w-3 text-green-500" />
-              SYNCHRONIZED
-            </div>
-          )}
+          
+          <Button 
+            variant="outline" 
+            size="sm" 
+            onClick={handleReindex}
+            disabled={isReindexing || stats.processing > 0}
+            className="h-8 border-white/10 hover:bg-white/5 text-[9px] font-mono uppercase tracking-widest"
+          >
+            {isReindexing ? (
+              <>
+                <Loader2 className="mr-2 h-3 w-3 animate-spin" />
+                Processing
+              </>
+            ) : (
+              <>
+                <RefreshCw className="mr-2 h-3 w-3" />
+                Sync Code
+              </>
+            )}
+          </Button>
         </div>
         
         <div className="space-y-2">
           <div className="flex justify-between text-[9px] font-mono uppercase tracking-widest text-zinc-500">
-            <span>Context Freshness</span>
+            <div className="flex items-center gap-2">
+              <div className="h-1 w-1 rounded-full bg-purple-500" />
+              <span>Intelligence Freshness</span>
+            </div>
             <span>100%</span>
           </div>
           <Progress value={100} className="h-1 bg-white/5" />

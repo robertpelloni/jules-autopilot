@@ -5,6 +5,7 @@ import { cors } from 'hono/cors';
 import { EventEmitter } from 'events';
 import { startDaemon, stopDaemon } from './daemon';
 import { queryCodebase } from './rag';
+import { handleBorgWebhook } from './webhooks';
 import { createBunWebSocket } from 'hono/bun';
 import type { ServerWebSocket } from 'bun';
 import { setupWorker, orchestratorQueue } from './queue';
@@ -119,6 +120,63 @@ const getMockSessions = () => [
 api.get('/ping', (c) => c.json({ status: 'ok', time: new Date().toISOString() }));
 
 // API ROUTES
+api.get('/manifest', (c) => {
+    return c.json({
+        id: 'jules-autopilot-node-1',
+        name: 'Jules Autopilot Orchestrator',
+        version: '0.9.7',
+        capabilities: [
+            'cloud_session_management',
+            'autonomous_plan_approval',
+            'semantic_rag_indexing',
+            'council_supervisor_debate',
+            'automatic_self_healing',
+            'github_issue_conversion'
+        ],
+        endpoints: {
+            sessions: '/api/sessions',
+            summary: '/api/fleet/summary',
+            rag: '/api/rag/query',
+            reindex: '/api/rag/reindex'
+        },
+        borgCompatible: true
+    });
+});
+
+api.get('/sessions/:id/replay', async (c) => {
+    try {
+        const id = c.req.param('id');
+        const client = await getJulesClient(c);
+        if (!client) return c.json({ error: 'Auth required' }, 401);
+
+        const [session, activities] = await Promise.all([
+            client.getSession(id),
+            client.listActivities(id)
+        ]);
+
+        // Transform activities into a structured replay timeline
+        const timeline = activities.map(a => ({
+            id: activity.id,
+            timestamp: a.createdAt,
+            role: a.role,
+            type: a.type,
+            content: a.content,
+            hasDiff: !!a.diff,
+            hasCommand: !!a.bashOutput
+        }));
+
+        return c.json({
+            sessionId: id,
+            title: session.title,
+            status: session.status,
+            createdAt: session.createdAt,
+            timeline
+        });
+    } catch (e) {
+        return c.json({ error: String(e) }, 500);
+    }
+});
+
 api.get('/sessions', async (c) => {
     try {
         const client = await getJulesClient(c);
@@ -210,6 +268,15 @@ api.post('/sessions/:id/activities', async (c) => {
     } catch (e) { return c.json({ error: String(e) }, 500); }
 });
 
+api.post('/webhooks/borg', async (c) => {
+    try {
+        const body = await c.req.json();
+        return c.json(await handleBorgWebhook(body));
+    } catch (e) {
+        return c.json({ error: String(e) }, 500);
+    }
+});
+
 api.post('/rag/query', async (c) => {
     try {
         const body = await c.req.json();
@@ -230,6 +297,72 @@ api.post('/rag/query', async (c) => {
         return c.json({ results });
     } catch (e) {
         console.error('[API] RAG Query failed:', e);
+        return c.json({ error: String(e) }, 500);
+    }
+});
+
+api.post('/rag/reindex', async (c) => {
+    try {
+        const settings = await prisma.keeperSettings.findUnique({ where: { id: 'default' } }).catch(() => null);
+        const apiKey = process.env.OPENAI_API_KEY || settings?.supervisorApiKey;
+
+        if (!apiKey || apiKey === 'placeholder') {
+            return c.json({ error: 'OpenAI API key is required for RAG' }, 401);
+        }
+
+        await orchestratorQueue.add('index_codebase', {});
+        return c.json({ success: true, message: 'Re-indexing job enqueued' });
+    } catch (e) {
+        return c.json({ error: String(e) }, 500);
+    }
+});
+
+api.get('/fleet/summary', async (c) => {
+    try {
+        const [
+            sessions,
+            pendingJobs,
+            processingJobs,
+            recentActions,
+            chunkCount
+        ] = await Promise.all([
+            prisma.session.findMany({ select: { status: true } }),
+            prisma.queueJob.count({ where: { status: 'pending' } }),
+            prisma.queueJob.count({ where: { status: 'processing' } }),
+            prisma.keeperLog.findMany({ 
+                where: { type: 'action' },
+                orderBy: { createdAt: 'desc' },
+                take: 5
+            }),
+            prisma.codeChunk.count()
+        ]);
+
+        const statusCounts = sessions.reduce((acc: Record<string, number>, s) => {
+            acc[s.status] = (acc[s.status] || 0) + 1;
+            return acc;
+        }, {});
+
+        return c.json({
+            timestamp: new Date().toISOString(),
+            fleet: {
+                total: sessions.length,
+                byStatus: statusCounts
+            },
+            orchestrator: {
+                queueDepth: pendingJobs + processingJobs,
+                isActive: processingJobs > 0,
+                recentAutonomousActions: recentActions.map(a => ({
+                    message: a.message,
+                    time: a.createdAt
+                }))
+            },
+            knowledgeBase: {
+                totalChunks: chunkCount,
+                isIndexed: chunkCount > 0
+            },
+            borgReady: true
+        });
+    } catch (e) {
         return c.json({ error: String(e) }, 500);
     }
 });

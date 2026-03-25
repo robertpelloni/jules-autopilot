@@ -182,6 +182,19 @@ model CodeChunk {
   @@index([workspaceId, filepath])
 }
 
+model MemoryChunk {
+  id          String   @id @default(cuid())
+  sessionId   String
+  type        String   // 'result', 'learned_pattern', 'fix'
+  content     String   // The text being indexed
+  embedding   Bytes?   // 1536 dims
+  metadata    String?  // JSON string
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@index([sessionId])
+}
+
 model QueueJob {
   id          String   @id @default(cuid())
   type        String   // 'check_session', 'run_debate', etc.

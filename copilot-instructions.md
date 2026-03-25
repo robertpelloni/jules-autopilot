@@ -13,3 +13,6 @@
 2. **Context Window Limitations:**
    - Understand that you are operating within a constrained inline editor context. You will not see the holistic architecture. 
    - Trust and utilize the imports and variable names present in the active file, assuming they follow the overarching project structure defined in the universal instructions.
+
+3. **Global Updates Awareness:**
+   - Even though you act inline, remind the user to increment the version in the global `VERSION` file, update `CHANGELOG.md`, and include the version number in their commit messages after making significant logic changes.

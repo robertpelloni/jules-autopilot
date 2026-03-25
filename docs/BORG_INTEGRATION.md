@@ -11,11 +11,14 @@ While Borg manages local tasks, file manipulation, and high-level reasoning acro
 ### 1. The Local API (`http://localhost:8080/api`)
 Borg instances can issue commands to the Jules Autopilot daemon via its local Hono API.
 
+*   `GET /api/manifest`: **[NEW v0.9.7]** Official node discovery endpoint. Returns version, capabilities, and endpoint map.
 *   `GET /api/sessions`: Returns all currently active cloud sessions and their raw states.
+*   `GET /api/sessions/:id/replay`: **[NEW v0.9.7]** Returns a structured, audit-ready timeline of every agent thought and user interaction.
 *   `POST /api/sessions`: Create a new cloud session for a specific repo and branch.
 *   `POST /api/sessions/:id/sendMessage`: Send an instruction to a specific session.
 *   `POST /api/sessions/:id/approvePlan`: Force-approve a pending implementation plan.
-*   `POST /api/rag/query`: Semantically search the entire codebase. Accepts `{ "query": "string", "topK": number }`. Borg should use this endpoint to fetch deep repository context before giving instructions to Jules agents.
+*   `POST /api/rag/query`: Semantically search the entire codebase. Accepts `{ "query": "string", "topK": number }`. 
+*   `POST /api/rag/reindex`: Manually trigger a background codebase vectorization job.
 
 ### 2. The Autopilot Daemon (`server/queue.ts`)
 Borg does **not** need to manually poll sessions. The Autopilot daemon runs continuously in the background and implements the **Council Supervisor**:

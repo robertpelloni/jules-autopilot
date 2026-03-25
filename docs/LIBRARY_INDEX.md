@@ -1,22 +1,54 @@
 # Universal Library & Function Index
 
-*Generated: 2026-01-09*  
-*Version: 0.7.1*
+*Generated: 2026-03-25*  
+*Version: 0.9.9*
 
 ---
 
 ## Table of Contents
 
+- [Project Architecture & Directory Layout](#project-architecture--directory-layout)
+- [Key Libraries & Tech Stack](#key-libraries--tech-stack)
 - [Submodules](#submodules)
-  - [Jules Integration & Orchestration](#jules-integration--orchestration)
-  - [MCP Servers](#mcp-servers)
-  - [GitHub Integration](#github-integration)
-  - [Documentation & Prompts](#documentation--prompts)
-- [Key Libraries](#key-libraries)
-  - [UI & Animation Libraries](#ui--animation-libraries)
-  - [State Management](#state-management)
-  - [Database & Storage](#database--storage)
-  - [Real-time Communication](#real-time-communication)
+
+---
+
+## Project Architecture & Directory Layout
+
+The Jules Autopilot project is designed with a "Lean Core" philosophy, centralizing the intelligence into shared packages while maintaining a strict boundary between the UI and the background daemon.
+
+### Directory Structure:
+*   `app/` - The Next.js 15 App Router frontend. Contains page routes and global layouts.
+*   `components/` - React components, primarily utilizing ShadCN UI and TailwindCSS v4.
+    *   `ui/` - Foundational, reusable UI elements (buttons, dialogs, inputs).
+    *   `layout/` - Structural components like `AppSidebar` and `AppLayout`.
+*   `lib/` - Frontend utilities, Zustand stores (`stores/session-keeper.ts`), API clients (`jules/client.ts`), and React hooks (`hooks/use-daemon-events.ts`).
+*   `packages/shared/` - The absolute core of the application's intelligence. Contains all universal types, the `Supervisor` logic, and the `Debate` engine. This is compiled into both the frontend and the backend.
+*   `server/` - The Bun-based daemon.
+    *   `index.ts` - Hono REST API and WebSocket server.
+    *   `queue.ts` - The SQLite-backed background task queue.
+    *   `daemon.ts` - The background polling loop.
+    *   `rag.ts` - The semantic search and vectorization engine.
+    *   `webhooks.ts` - The Borg Event Gateway.
+*   `prisma/` - Database schema and migrations.
+*   `docs/` - Comprehensive documentation (including this file).
+*   `.borg/` - Directory for Borg meta-orchestrator state assimilation.
+
+---
+
+## Key Libraries & Tech Stack
+
+| Library | Status | Description |
+|---------|--------|-------------|
+| **Next.js 15** | **Active** | Core frontend framework utilizing App Router. |
+| **Bun** | **Active** | High-performance JS runtime powering the backend daemon and server. |
+| **Hono** | **Active** | Ultra-fast routing framework used for the backend REST API (`server/index.ts`). |
+| **Prisma (SQLite)** | **Active** | Database ORM. Manages sessions, queue jobs, logs, and RAG vector chunks. |
+| **Zustand** | **Active** | State management library. Powers `useSessionKeeperStore` for global frontend state sync. |
+| **Framer Motion** | **Active** | Used for micro-interactions and smooth UI transitions. |
+| **@tanstack/react-virtual** | **Active** | Essential for rendering massive session chat histories without lagging the DOM. |
+| **Lucide React** | **Active** | Primary iconography library. |
+| **React Markdown** | **Active** | Renders agent responses and code blocks with `remark-gfm` for tables. |
 
 ---
 
@@ -26,111 +58,34 @@
 
 #### 1. **antigravity-jules-orchestration**
 *(https://github.com/Scarmonit/antigravity-jules-orchestration)*
-
-**Core Functionality:**
-- Autonomous AI orchestration architecture combining **Google Antigravity** with **Jules API** for hands-free development workflows.
-- Leverages Model Context Protocol (MCP) for seamless agent coordination.
-- **65 MCP tools** across multiple categories: Jules Core API, Session Management, Session Templates, PR Integration, Session Queue, Batch Processing, Analytics, Monitoring & Cache, Ollama Local LLM, RAG, Semantic Memory, Render Integration, Suggested Tasks.
-
-**Why Selected:**
-- Provides **comprehensive AI orchestration layer** beyond simple Jules API integration.
-- Enables multi-agent workflows with browser automation and coding tasks.
-- Latest version (2.6.2) includes advanced features like Render Auto-Fix and Semantic Memory Integration.
-
----
+- **Status:** Integrated internally via shared concepts.
 
 #### 2. **gemini-cli-jules**
 *(https://github.com/gemini-cli-extensions/jules)*
-
-**Core Functionality:**
-- Gemini CLI extension enabling coding task delegation directly from the terminal.
-- Supports bug fixing, refactoring, and documentation maintenance in the background.
-
-**Why Selected:**
-- Terminal-based workflow aligns with the "Command Center" philosophy.
-- Enables **async task delegation** without blocking the main terminal session.
-
----
+- **Status:** Integrated internally via shared concepts.
 
 ### MCP Servers
 
 #### 3. **google-jules-mcp**
 *(https://github.com/samihalawa/google-jules-mcp)*
-
-**Core Functionality:**
-- MCP server for automating Google Jules with **5 session management modes**: fresh, chrome-profile, cookies, persistent, browserbase.
-- Supports cloud deployments via Browserbase.
-
-**Why Selected:**
-- Most **comprehensive session management** with multiple authentication modes.
-- Screenshot support and browser automation for complex debugging.
-
----
+- **Status:** Integrated internally via shared concepts.
 
 #### 4. **jules-mcp-server**
 *(https://github.com/CodeAgentBridge/jules-mcp-server)*
-
-**Core Functionality:**
-- FastMCP framework exposing Jules Agent operations.
-- Stateless architecture optimized for compatibility with multiple MCP clients (Cursor, Claude Desktop).
-
-**Why Selected:**
-- Optimized for **stateless compatibility** and clean architecture.
-- Type-safe validation using Joi schemas.
-
----
+- **Status:** Integrated internally via shared concepts.
 
 ### GitHub Integration
 
 #### 5. **jules-action**
 *(https://github.com/google-labs-code/jules-action)*
-
-**Core Functionality:**
-- GitHub Action that triggers the Jules agent from GitHub events (issues, PRs, schedules).
-- Powered by Gemini 3 Pro.
-
-**Why Selected:**
-- **Native GitHub integration** for automated CI/CD and bot-driven refactoring.
-- Measurable targets (e.g., "Open PR only if performance improves by 20%").
-
----
+- **Status:** Integrated internally via shared concepts.
 
 #### 6. **jules-task-queue**
 *(https://github.com/iHildy/jules-task-queue)*
-
-**Core Functionality:**
-- Solves the Jules "3 concurrent task" bottleneck by automatically queuing tasks.
-- Label-based automation (`jules` and `jules-queue`).
-
-**Why Selected:**
-- Transforms Jules into a "set it and forget it" automation tool.
-- **Intelligent retry logic** ensures 100% daily quota utilization.
-
----
+- **Status:** Subsumed and highly enhanced by our native `server/queue.ts` SQLite engine.
 
 ### Documentation & Prompts
 
 #### 7. **jules-awesome-list**
 *(https://github.com/google-labs-code/jules-awesome-list)*
-
-**Core Functionality:**
-- Curated collection of effective prompts categorized by task (Debugging, Testing, etc.).
-
-**Why Selected:**
-- **Highest community engagement** (2700+ stars).
-- Reduces trial-and-error for complex agent instructions.
-
----
-
-## Key Libraries (Available for Integration)
-
-| Library | Status | Recommendation |
-|---------|--------|----------------|
-| **@tanstack/react-virtual** | Available | Use for Activity Feed & Session History virtualization. |
-| **dnd-kit** | Available | Use for Kanban board & reorderable lists. |
-| **zustand** | Not Yet Installed | Recommended for global application state & filters. |
-| **framer-motion** | Not Yet Installed | Recommended for micro-interactions & smooth transitions. |
-| **socket.io-client** | **Active** | Used for real-time Terminal and Activity streaming. |
-| **libsql/client** | **Active** | Used via Prisma for local SQLite database. |
-
----
+- **Status:** Concepts assimilated into `UNIVERSAL_LLM_INSTRUCTIONS.md` and system prompts.

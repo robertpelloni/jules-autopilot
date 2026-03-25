@@ -93,6 +93,8 @@ export class TaskQueue {
                 result = await this.handleCheckSession(payload.session, payload.settings);
             } else if (job.type === 'index_codebase') {
                 result = await this.handleIndexCodebase();
+            } else if (job.type === 'index_session_memory') {
+                result = await this.handleIndexSessionMemory(payload.sessionId, payload.settings);
             } else if (job.type === 'check_issues') {
                 result = await this.handleCheckIssues(payload.sourceId, payload.settings);
             } else {
@@ -294,6 +296,55 @@ export class TaskQueue {
         return { action: 'none', reason: 'no_suitable_issues' };
     }
 
+    private async handleIndexSessionMemory(sessionId: string, settings: any) {
+        const julesKey = process.env.JULES_API_KEY || settings.julesApiKey;
+        const supervisorKey = settings.supervisorApiKey || process.env.OPENAI_API_KEY || "";
+        
+        if (!julesKey || !supervisorKey) return { action: 'skip', reason: 'missing_keys' };
+
+        const client = new JulesClient(julesKey, 'https://jules.googleapis.com/v1alpha');
+        
+        // 1. Fetch activities to find the final result
+        const activities = await client.listActivities(sessionId);
+        const agentResult = activities.reverse().find(a => a.role === 'agent' && (a.type === 'result' || a.type === 'message'));
+
+        if (!agentResult || agentResult.content.length < 50) {
+            return { action: 'skip', reason: 'no_substantial_result' };
+        }
+
+        // 2. Check if already indexed
+        const existing = await prisma.memoryChunk.findFirst({ where: { sessionId } });
+        if (existing) return { action: 'skip', reason: 'already_indexed' };
+
+        // 3. Generate embedding for the result
+        const response = await fetch("https://api.openai.com/v1/embeddings", {
+            method: "POST",
+            headers: { "Content-Type": "application/json", "Authorization": `Bearer ${supervisorKey}` },
+            body: JSON.stringify({ input: agentResult.content, model: "text-embedding-3-small" })
+        });
+
+        if (response.ok) {
+            const data = await response.json();
+            const embedding = data.data[0].embedding;
+            const floatArray = new Float32Array(embedding);
+            const buffer = Buffer.from(floatArray.buffer, floatArray.byteOffset, floatArray.byteLength);
+
+            await prisma.memoryChunk.create({
+                data: {
+                    sessionId,
+                    type: 'learned_outcome',
+                    content: agentResult.content,
+                    embedding: buffer
+                }
+            });
+
+            await addLog(`Indexed session outcome for cross-session memory: ${sessionId.substring(0, 8)}`, 'info', sessionId);
+            return { action: 'indexed' };
+        }
+
+        return { action: 'fail', reason: 'embedding_failed' };
+    }
+
     private async handleCheckSession(session: any, settings: any) {
         const julesKey = process.env.JULES_API_KEY;
         const googleKey = process.env.GOOGLE_API_KEY;
@@ -417,6 +468,19 @@ export class TaskQueue {
         }
 
         // --- COUNCIL SUPERVISOR: INACTIVITY NUDGE LOGIC ---
+        // --- COUNCIL SUPERVISOR: SELF-HEALING (FAILED SESSIONS) ---
+        if (session.rawState === 'FAILED' && settings.smartPilotEnabled) {
+            // ... (existing self-healing code) ...
+        }
+
+        // --- COUNCIL SUPERVISOR: HISTORICAL INDEXING (COMPLETED SESSIONS) ---
+        if (session.rawState === 'COMPLETED' && settings.smartPilotEnabled) {
+            const existingMemory = await prisma.memoryChunk.findFirst({ where: { sessionId: session.id } });
+            if (!existingMemory) {
+                await this.add('index_session_memory', { sessionId: session.id, settings });
+            }
+        }
+
         const diffMinutes = (Date.now() - lastActivityTime.getTime()) / 60000;
         let threshold = settings.inactivityThresholdMinutes;
 
@@ -441,9 +505,10 @@ export class TaskQueue {
                     const ragResults = await queryCodebase(query, supervisorKey, 3);
                     
                     if (ragResults.length > 0) {
-                        ragContext = "\n\n[LOCAL_CONTEXT] - I found these relevant patterns in your codebase that might help:\n\n";
+                        ragContext = "\n\n[LOCAL_CONTEXT] - I found these relevant patterns in your fleet's memory that might help:\n\n";
                         ragResults.forEach(res => {
-                            ragContext += `File: ${res.filepath} (Lines ${res.startLine}-${res.endLine})\n\`\`\`\n${res.content}\n\`\`\`\n\n`;
+                            const originLabel = res.origin === 'history' ? "HISTORICAL SUCCESS" : "CURRENT CODEBASE";
+                            ragContext += `[${originLabel}] File/Source: ${res.filepath}\n\`\`\`\n${res.content}\n\`\`\`\n\n`;
                         });
                     }
                 } catch (ragErr) {

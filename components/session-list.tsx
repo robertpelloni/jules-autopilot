@@ -8,7 +8,7 @@ import type { Session } from '@jules/shared';
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Search, Loader2, Sparkles, RefreshCw, Megaphone } from "lucide-react";
+import { Search, Loader2, Sparkles, RefreshCw, Megaphone, History } from "lucide-react";
 import {
   Tooltip,
   TooltipContent,
@@ -19,6 +19,7 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { formatDistanceToNow, parseISO, isValid, isToday, differenceInDays } from "date-fns";
 import { cn } from "@/lib/utils";
 import { BroadcastDialog } from "./broadcast-dialog";
+import { SessionReplayDialog } from "./session-replay-dialog";
 
 function truncateText(text: string, maxLength: number) {
   if (!text) return "";
@@ -43,6 +44,7 @@ export function SessionList({
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState("");
+  const [replaySessionId, setReplaySessionId] = useState<string | null>(null);
 
   const formatDate = (dateString: string) => {
     if (!dateString) return "Unknown date";
@@ -192,6 +194,12 @@ export function SessionList({
   return (
     <TooltipProvider>
       <div className={cn("h-full flex flex-col bg-zinc-950 overflow-hidden border-r border-white/[0.08]", className)}>
+        <SessionReplayDialog 
+          sessionId={replaySessionId} 
+          open={!!replaySessionId} 
+          onOpenChange={(open) => !open && setReplaySessionId(null)} 
+        />
+        
         <div className="px-3 py-2 border-b border-white/[0.08] shrink-0 space-y-2">
           <div className="flex items-center justify-between mb-1">
              <span className="text-[10px] font-bold text-white/40 uppercase tracking-widest">Navigation</span>
@@ -248,9 +256,22 @@ export function SessionList({
                         </Tooltip>
                       </div>
                     </div>
-                    <Badge className="shrink-0 text-[8px] px-1 py-0 h-3.5 font-mono border-0 rounded-sm bg-white/5 text-white/50 group-hover:bg-white/10">
-                      {getStatusLabel(session.status)}
-                    </Badge>
+                    <div className="flex items-center gap-1">
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="h-4 w-4 text-white/20 hover:text-purple-400 hover:bg-purple-500/10 opacity-0 group-hover:opacity-100 transition-all"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setReplaySessionId(session.id);
+                        }}
+                      >
+                        <History className="h-2.5 w-2.5" />
+                      </Button>
+                      <Badge className="shrink-0 text-[8px] px-1 py-0 h-3.5 font-mono border-0 rounded-sm bg-white/5 text-white/50 group-hover:bg-white/10">
+                        {getStatusLabel(session.status)}
+                      </Badge>
+                    </div>
                   </div>
                   
                   <div className="flex items-center justify-between gap-2">

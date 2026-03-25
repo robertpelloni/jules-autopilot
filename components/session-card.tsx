@@ -62,6 +62,18 @@ export function SessionCard({ session, isSelected, onClick }: SessionCardProps) 
                 <Sparkles className="h-2 w-2 mr-1" /> Jules
               </Badge>
               
+              {session.status === 'failed' && (
+                <Badge variant="outline" className="h-4 px-1.5 text-[8px] border-red-500/50 bg-red-500/20 text-red-400 font-mono font-bold uppercase tracking-tighter animate-pulse">
+                  Healing
+                </Badge>
+              )}
+
+              {session.status === 'awaiting_approval' && (
+                <Badge variant="outline" className="h-4 px-1.5 text-[8px] border-orange-500/50 bg-orange-500/20 text-orange-400 font-mono font-bold uppercase tracking-tighter animate-pulse">
+                  Evaluating
+                </Badge>
+              )}
+              
               {session.sourceId && (
                 <div className="flex items-center gap-1 px-1.5 py-0.5 bg-white/5 rounded text-[8px] text-purple-400/80 uppercase font-bold tracking-tighter truncate max-w-[120px] border border-white/5">
                   <Sparkles className="h-2 w-2" />

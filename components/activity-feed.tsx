@@ -326,9 +326,20 @@ export function ActivityFeed({
   const virtualizer = useVirtualizer({
     count: groupedActivities.length,
     getScrollElement: () => parentRef.current,
-    estimateSize: () => 100,
-    overscan: 5,
+    estimateSize: () => 250,
+    overscan: 10,
   });
+
+  // Auto-scroll to bottom on new activities
+  useEffect(() => {
+    if (parentRef.current && activities.length > 0) {
+      const scrollElement = parentRef.current;
+      // Use requestAnimationFrame to ensure the virtualizer has finished rendering
+      requestAnimationFrame(() => {
+        scrollElement.scrollTop = scrollElement.scrollHeight;
+      });
+    }
+  }, [activities.length]);
 
   const hasDiffs = activities.some(activity => activity.diff);
 
@@ -464,7 +475,7 @@ export function ActivityFeed({
 
       <div className="flex-1 overflow-hidden relative group">
         <ScrollArea className="h-full" ref={parentRef} id="activity-feed-scroll-area">
-          <div className="p-3 relative" style={{ height: `${virtualizer.getTotalSize()}px`, width: '100%' }}>
+          <div className="p-3 pb-40 relative" style={{ height: `${virtualizer.getTotalSize()}px`, width: '100%' }}>
             {virtualizer.getVirtualItems().map((virtualItem) => {
               const item = groupedActivities[virtualItem.index];
               if (!item) return null;
@@ -514,7 +525,8 @@ export function ActivityFeed({
                           )}
                           {item.type === 'plan' && session.status === 'awaiting_approval' && !isArchived && (
                             <div className="mt-3 pt-3 border-t border-border">
-                              <Button onClick={handleApprovePlan} disabled={approvingPlan} size="sm" className="h-7 px-3 text-[9px] font-mono uppercase tracking-widest bg-primary hover:bg-primary/90 text-primary-foreground border-0">
+                              <Button onClick={handleApprovePlan} disabled={approvingPlan} size="sm" className="h-7 px-3 text-[9px] font-mono uppercase tracking-widest bg-purple-600 hover:bg-purple-500 text-white border-0"
+                              >
                                 {approvingPlan ? 'Approving...' : 'Approve Plan'}
                               </Button>
                             </div>
