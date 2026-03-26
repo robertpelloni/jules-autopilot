@@ -2,6 +2,39 @@
 
 All notable changes to this project will be documented in this file.
 
+## [1.0.0-rc.1] - 2026-03-25
+
+### Added
+- **Full Borg Assimilation Readiness**: Completely documented the integration protocols, finalized the handoff state, and brought the fleet to "Deep Autonomous Node" status.
+
+## [0.9.14] - 2026-03-25
+
+### Fixed
+- **Vercel Deploy Conflict**: Solved the "No entrypoint found" error by introducing `.vercelignore` to cloak the backend daemon from Vercel's auto-detector, ensuring a clean Vite SPA deployment.
+
+## [0.9.13] - 2026-03-25
+
+### Added
+- **Borg Signal Dashboard**: Added the "Collective Signals" real-time feed to the Fleet tab, visualizing incoming webhooks.
+- **WebSocket Gateway**: Overhauled the WebSocket protocol to broadcast `borg_signal_received` events globally for instant UI updates.
+
+## [0.9.12] - 2026-03-25
+
+### Added
+- **Live Submodule Intelligence**: Created `GET /api/system/submodules` endpoint to execute `git submodule status` natively.
+- **Interactive Submodule Dashboard**: Added a "Submodules" tab to the Core Configuration dialog to track real-time commit hashes and sync states across the 10+ integrated repos.
+
+## [0.9.11] - 2026-03-25
+
+### Fixed
+- **Vercel Routing**: Simplified `vercel.json` to a standard SPA rewrite format, removing local proxy loops that conflicted with production builds.
+
+## [0.9.10] - 2026-03-25
+
+### Added
+- **Cloud-Ready Deployment Architecture**: Introduced `build:vercel` scripts and environment variable overrides (`VITE_JULES_API_BASE_URL`) to allow seamless deployment of the frontend to Vercel while the backend daemon runs on an independent cloud server.
+- **DEPLOY.md**: Created comprehensive deployment documentation for local, Docker, and Vercel environments.
+
 ## [0.9.9] - 2026-03-25
 
 ### Added
