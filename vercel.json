@@ -1,0 +1,22 @@
+{
+  "version": 2,
+  "rewrites": [
+    {
+      "source": "/api/:path*",
+      "destination": "http://localhost:8080/api/:path*"
+    },
+    {
+      "source": "/ws",
+      "destination": "http://localhost:8080/ws"
+    },
+    {
+      "source": "/(.*)",
+      "destination": "/index.html"
+    }
+  ],
+  "build": {
+    "env": {
+      "VITE_JULES_API_BASE_URL": "/api"
+    }
+  }
+}

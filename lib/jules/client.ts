@@ -138,7 +138,7 @@ export class JulesAPIError extends Error {
   }
 }
 
-const DEFAULT_API_BASE_URL = '/api';
+const DEFAULT_API_BASE_URL = (import.meta as any).env?.VITE_JULES_API_BASE_URL || '/api';
 
 export class JulesClient {
   private apiKey?: string;

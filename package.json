@@ -15,6 +15,7 @@
     "build:shared": "pnpm --filter @jules/shared build",
     "build:cli": "pnpm --filter @jules/cli build",
     "build:all": "pnpm run build:shared && pnpm run build && pnpm run build:cli",
+    "build:vercel": "pnpm run build:shared && vite build",
     "preview": "vite preview",
     "daemon": "bun run server/index.ts",
     "index": "bun run scripts/index-repo.ts",
