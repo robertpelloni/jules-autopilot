@@ -122,6 +122,18 @@ export function useDaemonWebSocket() {
           break;
         }
 
+        case 'borg_signal_received': {
+          const payload = message.data as any;
+          useSessionKeeperStore.getState().addBorgSignal({
+            id: String(Date.now()),
+            type: payload.type,
+            timestamp: payload.timestamp,
+            source: payload.source || 'collective',
+            data: payload.data
+          });
+          break;
+        }
+
         case 'pong': {
           lastPongRef.current = Date.now();
           if (pongTimeoutRef.current) {

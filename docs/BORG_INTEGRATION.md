@@ -19,6 +19,7 @@ Borg instances can issue commands to the Jules Autopilot daemon via its local Ho
 *   `POST /api/sessions/:id/approvePlan`: Force-approve a pending implementation plan.
 *   `POST /api/rag/query`: Semantically search the entire codebase. Accepts `{ "query": "string", "topK": number }`. 
 *   `POST /api/rag/reindex`: Manually trigger a background codebase vectorization job.
+*   `GET /api/system/submodules`: **[NEW v0.9.12]** Official submodule intelligence endpoint. Returns real-time commit hashes and sync status for the entire plugin architecture.
 
 ### 2. The Autopilot Daemon (`server/queue.ts`)
 Borg does **not** need to manually poll sessions. The Autopilot daemon runs continuously in the background and implements the **Council Supervisor**:

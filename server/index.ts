@@ -271,7 +271,17 @@ api.post('/sessions/:id/activities', async (c) => {
 api.post('/webhooks/borg', async (c) => {
     try {
         const body = await c.req.json();
-        return c.json(await handleBorgWebhook(body));
+        const result = await handleBorgWebhook(body);
+        
+        // Broadcast the signal to all connected UI clients
+        emitDaemonEvent('borg_signal_received', {
+            type: body.type,
+            source: body.source || 'collective',
+            data: body.data,
+            timestamp: new Date().toISOString()
+        });
+
+        return c.json(result);
     } catch (e) {
         return c.json({ error: String(e) }, 500);
     }
@@ -364,6 +374,37 @@ api.get('/fleet/summary', async (c) => {
         });
     } catch (e) {
         return c.json({ error: String(e) }, 500);
+    }
+});
+
+api.get('/system/submodules', async (c) => {
+    try {
+        const { execSync } = await import('child_process');
+        const output = execSync('git submodule status', { encoding: 'utf8' });
+        
+        const submodules = output.split('\n')
+            .filter(line => line.trim())
+            .map(line => {
+                // git submodule status output format: [status_char][hash] [path] ([tag/branch])
+                const match = line.match(/^([\s+-])([a-f0-9]+)\s+([^\s]+)(?:\s+\((.+)\))?$/);
+                if (!match) return null;
+                
+                const [_, statusChar, hash, path, ref] = match;
+                return {
+                    name: path.split('/').pop(),
+                    path,
+                    hash: hash.substring(0, 7),
+                    fullHash: hash,
+                    ref: ref || 'unknown',
+                    status: statusChar === ' ' ? 'synced' : statusChar === '+' ? 'modified' : 'uninitialized'
+                };
+            })
+            .filter(Boolean);
+
+        return c.json({ submodules });
+    } catch (e) {
+        console.error('[API] Failed to fetch submodules:', e);
+        return c.json({ submodules: [] }); // Fallback to empty list
     }
 });
 

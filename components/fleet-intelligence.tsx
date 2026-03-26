@@ -24,7 +24,7 @@ interface QueueStats {
 }
 
 export function FleetIntelligence() {
-  const { isEnabled, logs, queue } = useSessionKeeperStore();
+  const { isEnabled, logs, queue, borgSignals } = useSessionKeeperStore();
   const [stats, setStats] = useState<QueueStats>({ pending: 0, processing: 0 });
   const [isReindexing, setIsReindexing] = useState(false);
 
@@ -54,7 +54,8 @@ export function FleetIntelligence() {
     log.message.toLowerCase().includes('plan risk') || 
     log.message.toLowerCase().includes('indexing') ||
     log.message.toLowerCase().includes('rag') ||
-    log.message.toLowerCase().includes('self-healing')
+    log.message.toLowerCase().includes('self-healing') ||
+    log.message.toLowerCase().includes('memory')
   ).slice(0, 10);
 
   return (
@@ -102,7 +103,41 @@ export function FleetIntelligence() {
         </div>
       </div>
 
-      {/* 2. RAG Indexing Progress */}
+      {/* 2. Borg Collective Signals */}
+      <div className="bg-zinc-900 border border-purple-500/20 rounded-xl overflow-hidden shadow-2xl">
+        <div className="px-4 py-3 border-b border-white/5 bg-purple-500/5 flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            <Zap className="h-3.5 w-3.5 text-purple-400" />
+            <span className="text-[10px] font-bold text-white uppercase tracking-widest">Collective Signals</span>
+          </div>
+          <Badge className="bg-purple-500/10 text-purple-400 border-purple-500/20 text-[8px] h-4 font-bold uppercase">Webhooks</Badge>
+        </div>
+        
+        <div className="divide-y divide-white/5 max-h-[150px] overflow-y-auto font-mono text-[10px]">
+          {borgSignals?.length === 0 ? (
+            <div className="p-6 text-center text-zinc-600 uppercase tracking-tighter italic">
+              Awaiting signals from the Borg meta-orchestrator...
+            </div>
+          ) : (
+            borgSignals?.map(sig => (
+              <div key={sig.id} className="p-3 flex items-start gap-3 hover:bg-white/[0.01] transition-colors group">
+                <div className="mt-1 p-1 bg-purple-500/10 rounded">
+                  <Zap className="h-2.5 w-2.5 text-purple-500" />
+                </div>
+                <div className="flex-1 space-y-1">
+                  <div className="flex justify-between">
+                    <span className="text-purple-300 font-bold uppercase tracking-tighter">{sig.type}</span>
+                    <span className="text-[8px] text-zinc-600">{new Date(sig.timestamp).toLocaleTimeString()}</span>
+                  </div>
+                  <p className="text-zinc-500 leading-tight">Source: {sig.source}</p>
+                </div>
+              </div>
+            ))
+          )}
+        </div>
+      </div>
+
+      {/* 3. RAG Indexing Progress */}
       <div className="bg-zinc-900 border border-white/5 rounded-xl p-5 space-y-4 shadow-xl">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-3">
@@ -111,7 +146,7 @@ export function FleetIntelligence() {
             </div>
             <div>
               <h3 className="text-xs font-bold text-white uppercase tracking-wider">Semantic Knowledge Base</h3>
-              <p className="text-[10px] text-zinc-500 font-mono mt-0.5 uppercase tracking-tighter">Local Codebase Vectorization</p>
+              <p className="text-[10px] text-zinc-500 font-mono mt-0.5 uppercase tracking-tighter">Cross-Session History Enabled</p>
             </div>
           </div>
           
@@ -148,8 +183,8 @@ export function FleetIntelligence() {
         </div>
       </div>
 
-      {/* 3. Live Intelligence Feed */}
-      <div className="bg-zinc-900 border border-white/5 rounded-xl overflow-hidden">
+      {/* 4. Live Intelligence Feed */}
+      <div className="bg-zinc-900 border border-white/5 rounded-xl overflow-hidden shadow-xl">
         <div className="px-4 py-3 border-b border-white/5 bg-white/[0.02] flex items-center justify-between">
           <div className="flex items-center gap-2">
             <Brain className="h-3.5 w-3.5 text-zinc-400" />
@@ -169,7 +204,8 @@ export function FleetIntelligence() {
                 <div className={cn(
                   "mt-1 h-1.5 w-1.5 rounded-full shrink-0",
                   log.message.toLowerCase().includes('approved') ? "bg-green-500" : 
-                  log.message.toLowerCase().includes('risk') ? "bg-purple-500" : "bg-zinc-600"
+                  log.message.toLowerCase().includes('risk') ? "bg-purple-500" : 
+                  log.message.toLowerCase().includes('memory') ? "bg-blue-500" : "bg-zinc-600"
                 )} />
                 <div className="flex-1 space-y-1">
                   <div className="flex justify-between">
@@ -184,7 +220,7 @@ export function FleetIntelligence() {
         </div>
       </div>
 
-      {/* 4. Borg Integration Hint */}
+      {/* 5. Borg Integration Hint */}
       <div className="flex items-center gap-3 p-4 bg-purple-500/5 border border-purple-500/10 rounded-xl">
         <Zap className="h-4 w-4 text-purple-500 shrink-0" />
         <p className="text-[10px] text-purple-300/80 leading-relaxed font-mono">

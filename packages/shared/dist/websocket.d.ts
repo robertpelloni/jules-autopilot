@@ -1,4 +1,4 @@
-export type DaemonEventType = 'connected' | 'daemon_status' | 'log_added' | 'sessions_interrupted' | 'sessions_continued' | 'session_updated' | 'session_nudged' | 'session_approved' | 'activities_updated' | 'sessions_list_updated' | 'ping' | 'pong';
+export type DaemonEventType = 'connected' | 'daemon_status' | 'log_added' | 'sessions_interrupted' | 'sessions_continued' | 'session_updated' | 'session_nudged' | 'session_approved' | 'activities_updated' | 'sessions_list_updated' | 'borg_signal_received' | 'ping' | 'pong';
 export interface DaemonEvent<T = unknown> {
     type: DaemonEventType;
     timestamp?: number;

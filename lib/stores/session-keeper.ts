@@ -48,12 +48,22 @@ export interface SessionKeeperStats {
   totalDebates: number;
 }
 
+export interface BorgSignal {
+  id: string;
+  type: string;
+  timestamp: string;
+  source: string;
+  data?: any;
+}
+
 interface SessionKeeperState {
   config: SessionKeeperConfig;
   logs: Log[];
   debates: DebateResult[];
+  borgSignals: BorgSignal[];
   statusSummary: StatusSummary;
   sessionStates: Record<string, SessionState>;
+  queue?: { pending: number; processing: number };
   stats: SessionKeeperStats;
   isLoading: boolean;
   isPausedAll: boolean;
@@ -67,6 +77,7 @@ interface SessionKeeperState {
   loadLogs: () => Promise<void>;
   addLog: (message: string, type: Log['type'], details?: Record<string, unknown>) => void;
   addDebate: (debate: DebateResult) => void;
+  addBorgSignal: (signal: BorgSignal) => void;
 
   clearLogs: () => void;
   refreshSessionStates: () => void;
@@ -106,6 +117,7 @@ export const useSessionKeeperStore = create<SessionKeeperState>()(
       config: DEFAULT_CONFIG,
       logs: [],
       debates: [],
+      borgSignals: [],
       statusSummary: { monitoringCount: 0, lastAction: 'None', nextCheckIn: 0 },
       sessionStates: {},
       stats: { totalNudges: 0, totalApprovals: 0, totalDebates: 0 },
@@ -126,6 +138,7 @@ export const useSessionKeeperStore = create<SessionKeeperState>()(
               const statusData = await statusRes.json();
               set((state) => ({
                 config: { ...state.config, isEnabled: statusData.isEnabled },
+                queue: statusData.queue,
                 logs: statusData.logs.map((l: { id: string; createdAt: string | number | Date; message: string; type: string; metadata?: string }) => ({
                   id: l.id,
                   time: new Date(l.createdAt).toLocaleTimeString(),
@@ -179,7 +192,7 @@ export const useSessionKeeperStore = create<SessionKeeperState>()(
               type: l.type as Log['type'],
               details: l.metadata ? JSON.parse(l.metadata) : undefined
             }));
-            set({ logs: mappedLogs });
+            set({ logs: mappedLogs, queue: statusData.queue });
           }
         } catch {
           // Silent fail for logs polling/loading if backend is down
@@ -204,6 +217,10 @@ export const useSessionKeeperStore = create<SessionKeeperState>()(
 
       addDebate: (debate) => set((state) => ({
         debates: [debate, ...state.debates].slice(0, 50)
+      })),
+
+      addBorgSignal: (signal) => set((state) => ({
+        borgSignals: [signal, ...state.borgSignals].slice(0, 50)
       })),
 
       clearLogs: () => set({ logs: [] }),

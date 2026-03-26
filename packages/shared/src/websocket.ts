@@ -9,6 +9,7 @@ export type DaemonEventType =
   | 'session_approved'
   | 'activities_updated'
   | 'sessions_list_updated'
+  | 'borg_signal_received'
   | 'ping'
   | 'pong';
 

@@ -12,6 +12,7 @@ import { ThemeCustomizer } from './theme-customizer';
 import { useSessionKeeperStore } from '@/lib/stores/session-keeper';
 import { toast } from 'sonner';
 import { FleetIntelligence } from './fleet-intelligence';
+import { SubmoduleList } from './submodule-list';
 
 interface SettingsDialogProps {
   open?: boolean;
@@ -121,6 +122,10 @@ export function SettingsDialog({ open: propOpen, onOpenChange: propOnOpenChange,
                 <Zap className="h-3.5 w-3.5 text-purple-400" />
                 Fleet
               </TabsTrigger>
+              <TabsTrigger value="submodules" className="text-xs flex items-center gap-2">
+                <Github className="h-3.5 w-3.5 text-blue-400" />
+                Submodules
+              </TabsTrigger>
               <TabsTrigger value="supervisor" className="text-xs flex items-center gap-2">
                 <Brain className="h-3.5 w-3.5" />
                 Supervisor
@@ -212,6 +217,10 @@ export function SettingsDialog({ open: propOpen, onOpenChange: propOnOpenChange,
 
           <TabsContent value="fleet" className="flex-1 p-6 overflow-y-auto">
             <FleetIntelligence />
+          </TabsContent>
+
+          <TabsContent value="submodules" className="flex-1 p-6 overflow-y-auto">
+            <SubmoduleList />
           </TabsContent>
 
           <TabsContent value="supervisor" className="flex-1 min-h-0 overflow-hidden">
