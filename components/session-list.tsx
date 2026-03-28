@@ -6,7 +6,7 @@ import type { Session } from "@/types/jules";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Search } from "lucide-react";
+import { Search, X } from "lucide-react";
 import {
   Tooltip,
   TooltipContent,
@@ -153,20 +153,6 @@ export function SessionList({
 
 
 
-  if (visibleSessions.length === 0) {
-    return (
-      <div className="flex items-center justify-center p-6">
-        <p className="text-xs text-muted-foreground text-center leading-relaxed">
-          {searchQuery
-            ? "No sessions match your search."
-            : sessions.length === 0
-              ? "No sessions yet. Create one to get started!"
-              : "All sessions are archived."}
-        </p>
-      </div>
-    );
-  }
-
   const sessionLimit = 100;
   // Calculate usage based on sessions created today, regardless of search/archive status
   const dailySessionCount = sessions.filter((session) => {
@@ -188,17 +174,38 @@ export function SessionList({
             <Input
               placeholder="Search for repo or sessions"
               aria-label="Search sessions"
-              className="h-7 w-full bg-black/50 pl-7 text-[10px] border-white/10 focus-visible:ring-purple-500/50 placeholder:text-muted-foreground/50"
+              className="h-7 w-full bg-black/50 pl-7 pr-7 text-[10px] border-white/10 focus-visible:ring-purple-500/50 placeholder:text-muted-foreground/50"
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
             />
+            {searchQuery && (
+              <button
+                type="button"
+                aria-label="Clear search"
+                onClick={() => setSearchQuery("")}
+                className="absolute right-2 top-1/2 -translate-y-1/2 h-4 w-4 rounded-sm flex items-center justify-center text-muted-foreground hover:text-white hover:bg-white/10 transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-purple-500/50"
+              >
+                <X className="h-3 w-3" />
+              </button>
+            )}
           </div>
         </div>
-        <ScrollArea className="flex-1 min-h-0">
-          <div className="p-2 space-y-1">
-            {visibleSessions.map((session) => (
-              <CardSpotlight
-                key={session.id}
+        {visibleSessions.length === 0 ? (
+          <div className="flex-1 flex items-center justify-center p-6 min-h-0">
+            <p className="text-xs text-muted-foreground text-center leading-relaxed">
+              {searchQuery
+                ? "No sessions match your search."
+                : sessions.length === 0
+                  ? "No sessions yet. Create one to get started!"
+                  : "All sessions are archived."}
+            </p>
+          </div>
+        ) : (
+          <ScrollArea className="flex-1 min-h-0">
+            <div className="p-2 space-y-1">
+              {visibleSessions.map((session) => (
+                <CardSpotlight
+                  key={session.id}
                 radius={250}
                 color={selectedSessionId === session.id ? "#a855f7" : "#404040"}
                 className={`relative ${
@@ -248,10 +255,11 @@ export function SessionList({
                     </div>
                   </div>
                 </div>
-              </CardSpotlight>
-            ))}
-          </div>
-        </ScrollArea>
+                </CardSpotlight>
+              ))}
+            </div>
+          </ScrollArea>
+        )}
 
         {/* Session Limit Indicator */}
         <div className="border-t border-white/[0.08] px-3 py-2.5 bg-black/50 shrink-0">
