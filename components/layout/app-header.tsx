@@ -6,9 +6,12 @@ import {
   Terminal,
   User
 } from "lucide-react";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { SettingsDialog } from "@/components/settings-dialog";
+import { BroadcastDialog } from "@/components/broadcast-dialog";
+import { useJules } from "@/lib/jules/provider";
 import { Badge } from "@/components/ui/badge";
+import type { Session } from "@jules/shared";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -26,6 +29,21 @@ interface AppHeaderProps {
 
 export function AppHeader({ onSearchClick, onNewSession }: AppHeaderProps) {
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
+  const { client, refreshTrigger } = useJules();
+  const [sessions, setSessions] = useState<Session[]>([]);
+
+  useEffect(() => {
+    const fetchSessions = async () => {
+      if (!client) return;
+      try {
+        const data = await client.listSessions();
+        setSessions(data);
+      } catch (err) {
+        console.error("[AppHeader] Failed to fetch sessions for broadcast:", err);
+      }
+    };
+    fetchSessions();
+  }, [client, refreshTrigger]);
 
   return (
     <header className="h-12 border-b border-white/[0.08] bg-zinc-950 flex items-center justify-between px-4 shrink-0 z-30">
@@ -58,6 +76,8 @@ export function AppHeader({ onSearchClick, onNewSession }: AppHeaderProps) {
         </Button>
 
         <div className="h-4 w-[1px] bg-white/10 mx-1" />
+
+        <BroadcastDialog sessions={sessions} />
 
         <Button
           size="sm"

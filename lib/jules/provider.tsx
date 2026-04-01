@@ -2,6 +2,7 @@
 
 import { createContext, useContext, useEffect, useState, useCallback, useRef } from 'react';
 import { JulesClient } from './client';
+import { safeLocalStorage } from '@/lib/utils';
 
 interface JulesContextType {
   client: JulesClient | null;
@@ -21,7 +22,7 @@ export function JulesProvider({ children }: { children: React.ReactNode }) {
 
   const initClient = useCallback(() => {
     try {
-      const localJulesKey = typeof window !== 'undefined' ? localStorage.getItem('jules_api_key') : null;
+      const localJulesKey = typeof window !== 'undefined' ? safeLocalStorage.getItem('jules_api_key') : null;
       
       console.log(`[JulesProvider] Initializing client (API Key: ${!!localJulesKey})`);
       

@@ -1,3 +1,4 @@
+import { safeLocalStorage } from '@/lib/utils';
 import type {
   Source,
   Session,
@@ -332,10 +333,8 @@ export class JulesClient {
   }
 
   private transformSession(session: ApiSession): Session {
-      console.log(`[Jules Client] Transforming session: ${session.id}`, JSON.stringify(session));
       const outputs: SessionOutput[] = (session.outputs || []).map(o => ({
-          pullRequest: o.pullRequest,
-          ...o
+          pullRequest: o.pullRequest
       }));
 
       const transformed = {
@@ -350,7 +349,6 @@ export class JulesClient {
         branch: session.sourceContext?.githubRepoContext?.startingBranch || 'main',
         outputs: outputs.length > 0 ? outputs : undefined
       };
-      console.log(`[Jules Client] Transformed session: ${transformed.id}`, JSON.stringify(transformed));
       return transformed;
   }
 
@@ -684,7 +682,7 @@ export class JulesClient {
     const repo = match[1];
 
     const githubToken = typeof window !== 'undefined' 
-      ? localStorage.getItem('github_pat') 
+      ? safeLocalStorage.getItem('github_pat') 
       : process.env.GITHUB_PAT || process.env.GITHUB_TOKEN;
 
     if (!githubToken) {
