@@ -4,13 +4,16 @@ import {
   Plus, 
   Settings as SettingsIcon, 
   Terminal,
-  User
+  User,
+  Brain,
+  RefreshCw
 } from "lucide-react";
 import { useState, useEffect } from "react";
 import { SettingsDialog } from "@/components/settings-dialog";
 import { BroadcastDialog } from "@/components/broadcast-dialog";
 import { useJules } from "@/lib/jules/provider";
 import { Badge } from "@/components/ui/badge";
+import { toast } from "sonner";
 import type { Session } from "@jules/shared";
 import {
   DropdownMenu,
@@ -29,6 +32,7 @@ interface AppHeaderProps {
 
 export function AppHeader({ onSearchClick, onNewSession }: AppHeaderProps) {
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
+  const [isSyncing, setIsSyncing] = useState(false);
   const { client, refreshTrigger } = useJules();
   const [sessions, setSessions] = useState<Session[]>([]);
 
@@ -44,6 +48,24 @@ export function AppHeader({ onSearchClick, onNewSession }: AppHeaderProps) {
     };
     fetchSessions();
   }, [client, refreshTrigger]);
+
+  const handleFleetSync = async () => {
+    try {
+      setIsSyncing(true);
+      const response = await fetch('/api/fleet/sync', { method: 'POST' });
+      const result = await response.json();
+      if (response.ok) {
+        toast.success(`Fleet sync started: ${result.message}`);
+      } else {
+        toast.error(`Fleet sync failed: ${result.error}`);
+      }
+    } catch (err) {
+      console.error("Fleet sync request failed:", err);
+      toast.error("Fleet sync failed");
+    } finally {
+      setIsSyncing(false);
+    }
+  };
 
   return (
     <header className="h-12 border-b border-white/[0.08] bg-zinc-950 flex items-center justify-between px-4 shrink-0 z-30">
@@ -76,6 +98,18 @@ export function AppHeader({ onSearchClick, onNewSession }: AppHeaderProps) {
         </Button>
 
         <div className="h-4 w-[1px] bg-white/10 mx-1" />
+
+        <Button
+          variant="ghost"
+          size="sm"
+          className={`h-8 gap-2 px-3 ${isSyncing ? 'text-primary' : 'text-white/40 hover:text-white hover:bg-white/5'}`}
+          onClick={handleFleetSync}
+          disabled={isSyncing}
+          title="Sync All Repo Memories & Sessions"
+        >
+          {isSyncing ? <RefreshCw className="w-3.5 h-3.5 animate-spin" /> : <Brain className="w-3.5 h-3.5" />}
+          <span className="text-[10px] font-medium uppercase tracking-wider hidden lg:inline">Sync All</span>
+        </Button>
 
         <BroadcastDialog sessions={sessions} />
 
