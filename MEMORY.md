@@ -17,14 +17,15 @@
 - **RAG**: Chunks and embeddings are stored in `CodeChunk` and `MemoryChunk` tables. 
 - **Performance**: In-memory cosine similarity search across ~5,000 chunks takes <50ms, making it faster and cheaper than cloud-only vector solutions for this node size.
 
-## 4. Frontend Resilience (Stale Bundles)
-**Observation:** Vite aggressively caches JS bundles in the browser, leading to `ReferenceError` when we update the store or provider signatures.
-**Fix:** We have implemented a "Safety Bridge" by aliasing `triggerRefresh: refresh` in `JulesProvider`. We also force a re-hash by updating a `Build: [Timestamp]` string in `src/main.tsx` during every build cycle.
+## 4. Frontend Resilience & Performance
+**Observation:** Vite aggressively caches JS bundles.
+**Fix:** We use a `Build: [Timestamp]` string in `src/main.tsx` to force hash refreshes.
+**Live Data:** We utilize **SWR** for high-frequency polling of system metadata (like submodule status), ensuring the UI reflects the Git state without manual refreshes.
 
 ## 5. UI Readability Standards
 **Requirement:** The session chat history must remain high-contrast.
 **Rules:**
-- Use **solid backgrounds** (`bg-zinc-900`) for agent bubbles instead of semi-transparent layers.
+- Use **solid backgrounds** (`bg-zinc-900`) for agent bubbles.
 - Forced text color: `zinc-100` for all chat content.
 - Base font size for chat: `16px` (`text-base`).
 - Use the **Sparkles badge** to indicate repository context in the header.
