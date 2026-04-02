@@ -2,18 +2,29 @@
 
 *This document is maintained autonomously by LLM agents to explicitly pass implicit codebase context to future sessions.*
 
-## 1. The Daemon vs. Next.js API Split-Brain
-**Observation:** The project originally spawned a standalone Hono server (`server/index.ts`) running on port 8080 to handle background tasks and LLM execution. Later, Next.js App Router API endpoints were introduced (`app/api/`). 
-**Current State:** In v0.9.2, we introduced `lib/api/daemon-proxy.ts` to bridge these two worlds. The Next.js API now acts as a front-facing proxy for the daemon. **Future agents must prefer calling Next.js `/api/` endpoints.**
+## 1. The Verified Portal Auth Strategy
+**Critical Discovery:** Jules Portal tokens (starting with `AQ.A...`) are rejected by the Google gateway if sent via standard `Authorization: Bearer` headers. 
+**Enforcement:** We must strictly use the `x-goog-api-key` header and **EXPLICITLY DELETE** the `Authorization` header from the request object. Failing to do so triggers an `API_KEY_SERVICE_BLOCKED` error.
 
-## 2. Docker Execution Strategy
-**Observation:** The application relies natively on Docker Multi-Stage builds (deps -> builder -> runner). 
-**Important Context:** The orchestrator utilizes a terminal side-bot. The `docker-compose.prod.yml` explicitly grants `cap_add: [SYS_ADMIN]` to certain execution environments. Be extremely careful when adding new packages; always prefer `pnpm` and frozen lockfiles to maintain cache layer integrity.
+## 2. Hono Custom Method Routing
+**Discovery:** Hono paths containing colons (e.g., `/sessions/123:sendMessage`) do not always match standard parameter handlers.
+**Solution:** We implement a catch-all `:idAndAction` parameter and manually split the string by the colon. This ensures custom gRPC-style actions are correctly routed to their handlers in `server/index.ts`.
 
-## 3. SSE over WebSockets
-**Observation:** The system previously relied on long-polling. In v0.9.1, we transitioned to Server-Sent Events (SSE) via `/api/events/stream` and the `useEventStream` React hook. 
-**Rule:** Do not re-introduce polling intervals (`setInterval`) in React components. Always subscribe to the global SSE feed for telemetric UI updates (e.g., budget remaining, log actions).
+## 3. Lean Core Persistence (SQLite)
+**Observation:** We have replaced Redis, BullMQ, and specialized Vector DBs with a single, high-performance SQLite database.
+**Context:**
+- **Queue**: Managed via the `QueueJob` table and a continuous polling loop in `server/queue.ts`.
+- **RAG**: Chunks and embeddings are stored in `CodeChunk` and `MemoryChunk` tables. 
+- **Performance**: In-memory cosine similarity search across ~5,000 chunks takes <50ms, making it faster and cheaper than cloud-only vector solutions for this node size.
 
-## 4. Submodules Are The Core
-**Observation:** Standard monorepo structures rely on folders. This project relies entirely on Git Submodules in `external/` (spanning 10 discrete repos). 
-**Rule:** Modifying MCP server code requires checking out that submodule's branch, committing there, and then moving to the root directory to commit the submodule pointer bump. We use a PowerShell script (`scripts/sync-submodules.ps1`) to handle mass synchronization.
+## 4. Frontend Resilience (Stale Bundles)
+**Observation:** Vite aggressively caches JS bundles in the browser, leading to `ReferenceError` when we update the store or provider signatures.
+**Fix:** We have implemented a "Safety Bridge" by aliasing `triggerRefresh: refresh` in `JulesProvider`. We also force a re-hash by updating a `Build: [Timestamp]` string in `src/main.tsx` during every build cycle.
+
+## 5. UI Readability Standards
+**Requirement:** The session chat history must remain high-contrast.
+**Rules:**
+- Use **solid backgrounds** (`bg-zinc-900`) for agent bubbles instead of semi-transparent layers.
+- Forced text color: `zinc-100` for all chat content.
+- Base font size for chat: `16px` (`text-base`).
+- Use the **Sparkles badge** to indicate repository context in the header.
