@@ -1,6 +1,6 @@
 import { JulesClient, JulesAPIError } from '../lib/jules/client';
 import { prisma } from '../lib/prisma';
-import { Hono } from 'hono';
+import { Hono, type Context } from 'hono';
 import { cors } from 'hono/cors';
 import { EventEmitter } from 'events';
 import { startDaemon, stopDaemon } from './daemon';
@@ -268,7 +268,7 @@ api.post('/sessions/:id/activities', async (c) => {
     } catch (e) { return c.json({ error: String(e) }, 500); }
 });
 
-api.post('/webhooks/borg', async (c) => {
+const handleWebhookSignal = async (c: Context) => {
     try {
         const body = await c.req.json();
         const result = await handleBorgWebhook(body);
@@ -285,7 +285,10 @@ api.post('/webhooks/borg', async (c) => {
     } catch (e) {
         return c.json({ error: String(e) }, 500);
     }
-});
+};
+
+api.post('/webhooks/borg', handleWebhookSignal);
+api.post('/webhooks/hypercode', handleWebhookSignal);
 
 api.post('/rag/query', async (c) => {
     try {
