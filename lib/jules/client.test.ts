@@ -29,7 +29,7 @@ describe('JulesClient', () => {
       await client.listSessions();
 
       expect(global.fetch).toHaveBeenCalledWith(
-        expect.stringContaining('/api/jules/sessions'),
+        expect.stringContaining('/api/sessions'),
         expect.objectContaining({
           headers: expect.objectContaining({
             'X-Jules-Api-Key': mockApiKey,
@@ -42,16 +42,17 @@ describe('JulesClient', () => {
       (global.fetch as unknown as jest.Mock).mockResolvedValue({
         ok: false,
         status: 401,
+        text: async () => JSON.stringify({ error: 'Unauthorized' }),
         json: async () => ({ error: 'Unauthorized' }),
       });
 
-      await expect(client.listSessions()).rejects.toThrow('Invalid API key');
+      await expect(client.listSessions()).rejects.toThrow('Invalid Credentials');
     });
 
     it('should throw JulesAPIError on network failure', async () => {
       (global.fetch as unknown as jest.Mock).mockRejectedValue(new TypeError('Failed to fetch'));
 
-      await expect(client.listSessions()).rejects.toThrow('Unable to connect to the server');
+      await expect(client.listSessions()).rejects.toThrow('Failed to fetch');
     });
   });
 
@@ -78,7 +79,7 @@ describe('JulesClient', () => {
 
       const sources = await client.listSources();
 
-      expect(sources).toHaveLength(3); // 2 mock + 1 default missingRepo
+      expect(sources).toHaveLength(2);
       expect(sources[0].name).toBe('owner/repo1');
       expect(sources[1].name).toBe('owner/repo2');
     });

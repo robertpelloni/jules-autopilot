@@ -41,10 +41,6 @@ jest.mock('./gemini', () => ({
   geminiProvider: { id: 'gemini', complete: jest.fn(), listModels: jest.fn() }
 }));
 
-jest.mock('./qwen', () => ({
-  qwenProvider: { id: 'qwen', complete: jest.fn(), listModels: jest.fn() }
-}));
-
 // Import the mocked objects to assert on them
 import { openaiProvider } from './openai';
 

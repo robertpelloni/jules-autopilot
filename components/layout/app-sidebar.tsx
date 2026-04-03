@@ -142,7 +142,7 @@ export function AppSidebar({
                   "w-1 h-1 rounded-full",
                   isEnabled ? "bg-green-500" : "bg-zinc-700"
                 )} />
-                <span className="text-[8px] font-mono text-zinc-500 uppercase tracking-tighter">Borg Node</span>
+                <span className="text-[8px] font-mono text-zinc-500 uppercase tracking-tighter">HyperCode Node</span>
               </div>
             </div>
             

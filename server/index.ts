@@ -268,7 +268,7 @@ api.post('/sessions/:id/activities', async (c) => {
     } catch (e) { return c.json({ error: String(e) }, 500); }
 });
 
-api.post('/webhooks/borg', async (c) => {
+api.post('/webhooks/hypercode', async (c) => {
     try {
         const body = await c.req.json();
         const result = await handleBorgWebhook(body);

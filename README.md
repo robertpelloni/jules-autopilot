@@ -1,8 +1,8 @@
-# Jules Autopilot (Lean Core)
+# cloud-orchestrator (Lean Core)
 
-> **The ultra-fast, autonomous command center for Google Jules.**
+> **The ultra-fast cloud command center for remote agents, including Jules and adjacent cloud workflows.**
 
-Jules Autopilot is a high-performance, minimalist orchestration platform for the Google Jules AI agent. It replaces slow official interfaces with a unified, real-time dashboard and a keyboard-driven TUI, all powered by a single zero-dependency Bun binary.
+cloud-orchestrator is a high-performance, minimalist orchestration platform for remote-agent workflows, including Google Jules and adjacent cloud operators. It replaces slower fragmented interfaces with a unified, real-time dashboard and a keyboard-driven TUI, all powered by a single zero-dependency Bun binary.
 
 ## 🚀 The Holy Grail Stack (100% Lean)
 
@@ -24,8 +24,8 @@ This project has been pivoted to a "Lean Core" architecture to ensure maximum pe
 ### Installation
 ```bash
 # Clone the repository
-git clone https://github.com/your-repo/jules-autopilot.git
-cd jules-autopilot
+git clone https://github.com/your-repo/cloud-orchestrator.git
+cd cloud-orchestrator
 
 # Install dependencies
 pnpm install
@@ -58,7 +58,7 @@ You can run the entire stack with two commands:
                 ▼
 ┌──────────────────────────────────────────┐
 │        Bun Daemon (Hono Server)          │
-│  • Centralized Jules API Proxy           │
+│  • Centralized cloud-agent API Proxy     │
 │  • SQLite Task Queue (Background Nudges) │
 │  • Local Filesystem Access               │
 │  • Multi-Agent Debate Engine             │

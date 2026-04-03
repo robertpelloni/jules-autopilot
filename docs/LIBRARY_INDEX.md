@@ -29,10 +29,10 @@ The Jules Autopilot project is designed with a "Lean Core" philosophy, centraliz
     *   `queue.ts` - The SQLite-backed background task queue.
     *   `daemon.ts` - The background polling loop.
     *   `rag.ts` - The semantic search and vectorization engine.
-    *   `webhooks.ts` - The Borg Event Gateway.
+    *   `webhooks.ts` - The HyperCode Event Gateway.
 *   `prisma/` - Database schema and migrations.
 *   `docs/` - Comprehensive documentation (including this file).
-*   `.borg/` - Directory for Borg meta-orchestrator state assimilation.
+*   `.hypercode/` - Directory for HyperCode meta-orchestrator state assimilation.
 
 ---
 

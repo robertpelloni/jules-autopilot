@@ -103,7 +103,7 @@ export function FleetIntelligence() {
         </div>
       </div>
 
-      {/* 2. Borg Collective Signals */}
+      {/* 2. HyperCode Collective Signals */}
       <div className="bg-zinc-900 border border-purple-500/20 rounded-xl overflow-hidden shadow-2xl">
         <div className="px-4 py-3 border-b border-white/5 bg-purple-500/5 flex items-center justify-between">
           <div className="flex items-center gap-2">
@@ -116,7 +116,7 @@ export function FleetIntelligence() {
         <div className="divide-y divide-white/5 max-h-[150px] overflow-y-auto font-mono text-[10px]">
           {borgSignals?.length === 0 ? (
             <div className="p-6 text-center text-zinc-600 uppercase tracking-tighter italic">
-              Awaiting signals from the Borg meta-orchestrator...
+              Awaiting signals from the HyperCode meta-orchestrator...
             </div>
           ) : (
             borgSignals?.map(sig => (
@@ -220,11 +220,11 @@ export function FleetIntelligence() {
         </div>
       </div>
 
-      {/* 5. Borg Integration Hint */}
+      {/* 5. HyperCode Integration Hint */}
       <div className="flex items-center gap-3 p-4 bg-purple-500/5 border border-purple-500/10 rounded-xl">
         <Zap className="h-4 w-4 text-purple-500 shrink-0" />
         <p className="text-[10px] text-purple-300/80 leading-relaxed font-mono">
-          Borg Meta-Orchestrator detected. Jules Autopilot is acting as the primary Cloud Session node. RAG context is being shared across all local processes.
+          HyperCode Meta-Orchestrator detected. Jules Autopilot is acting as the primary Cloud Session node. RAG context is being shared across all local processes.
         </p>
       </div>
     </div>
