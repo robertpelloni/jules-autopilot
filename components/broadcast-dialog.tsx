@@ -721,6 +721,12 @@ export function BroadcastDialog({ sessions }: BroadcastDialogProps) {
               id="message"
               value={message}
               onChange={(e) => setMessage(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter' && (e.shiftKey || e.ctrlKey || e.metaKey)) {
+                  e.preventDefault();
+                  handleSend();
+                }
+              }}
               placeholder="Type your message here..."
               className="bg-zinc-900 border-white/10 text-white min-h-[100px]"
             />

@@ -7,10 +7,21 @@ global.fetch = jest.fn() as unknown as typeof fetch;
 describe('JulesClient', () => {
   let client: JulesClient;
   const mockApiKey = 'test-api-key';
+  const originalBaseUrl = process.env.VITE_JULES_API_BASE_URL;
 
   beforeEach(() => {
     jest.clearAllMocks();
+    delete process.env.VITE_JULES_API_BASE_URL;
     client = new JulesClient(mockApiKey);
+  });
+
+  afterAll(() => {
+    if (originalBaseUrl === undefined) {
+      delete process.env.VITE_JULES_API_BASE_URL;
+      return;
+    }
+
+    process.env.VITE_JULES_API_BASE_URL = originalBaseUrl;
   });
 
   describe('Constructor', () => {
@@ -38,15 +49,31 @@ describe('JulesClient', () => {
       );
     });
 
+    it('should fall back to process env for the API base URL outside Vite', async () => {
+      process.env.VITE_JULES_API_BASE_URL = 'https://example.test';
+      const envClient = new JulesClient(mockApiKey);
+
+      (global.fetch as unknown as jest.Mock).mockResolvedValue({
+        ok: true,
+        json: async () => ({ sessions: [] }),
+      });
+
+      await envClient.listSessions();
+
+      expect(global.fetch).toHaveBeenCalledWith(
+        expect.stringContaining('https://example.test/sessions'),
+        expect.any(Object)
+      );
+    });
+
     it('should throw JulesAPIError on 401', async () => {
       (global.fetch as unknown as jest.Mock).mockResolvedValue({
         ok: false,
         status: 401,
-        text: async () => JSON.stringify({ error: 'Unauthorized' }),
-        json: async () => ({ error: 'Unauthorized' }),
+        text: async () => JSON.stringify({ error: { message: 'Unauthorized' } }),
       });
 
-      await expect(client.listSessions()).rejects.toThrow('Invalid Credentials');
+      await expect(client.listSessions()).rejects.toThrow('Invalid Credentials. Unauthorized');
     });
 
     it('should throw JulesAPIError on network failure', async () => {

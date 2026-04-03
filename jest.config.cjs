@@ -2,7 +2,6 @@ const { createDefaultPreset } = require("ts-jest");
 
 const tsJestTransformCfg = createDefaultPreset().transform;
 
-// Add any custom config to be passed to Jest
 module.exports = {
   setupFilesAfterEnv: ["<rootDir>/jest.setup.cjs"],
   testEnvironment: "node",

@@ -27,7 +27,11 @@ import {
   Loader2, 
   Users, 
   LayoutTemplate, 
-  Sparkles 
+  Sparkles,
+  ArrowUp,
+  ArrowDown,
+  FileText,
+  Brain
 } from 'lucide-react';
 import { useVirtualizer } from '@tanstack/react-virtual';
 import { ActivityInput } from './activity-input';
@@ -161,7 +165,30 @@ export function ActivityFeed({
 
   useEffect(() => {
     onActivitiesChange(activities);
-  }, [activities, onActivitiesChange]);
+
+    // Auto-sync memory if [PROJECT_MEMORY] is detected
+    const lastActivity = activities[activities.length - 1];
+    if (lastActivity && lastActivity.role === 'agent' && lastActivity.content.includes('[PROJECT_MEMORY]')) {
+      const content = lastActivity.content.replace('[PROJECT_MEMORY]', '').trim();
+      if (content) {
+        const syncMemory = async () => {
+          try {
+            const res = await fetch(`/api/sessions/${session.id}/save-memory`, {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ content })
+            });
+            if (res.ok) {
+              toast.success("Project memory automatically synced to repo!");
+            }
+          } catch (err) {
+            console.error("Auto-sync memory failed:", err);
+          }
+        };
+        syncMemory();
+      }
+    }
+  }, [activities, onActivitiesChange, session.id]);
 
   const handleApprovePlan = async () => {
     if (!client || approvingPlan || isArchived) return;
@@ -275,21 +302,73 @@ export function ActivityFeed({
     onToggleCodeDiffs(!showCodeDiffs);
   };
 
+  const handleSyncMemory = async () => {
+    if (!client || sending) return;
+    try {
+      setSending(true);
+      toast.info("Requesting project memory from Jules...");
+      
+      const prompt = "Please provide a comprehensive summary of everything you've learned about this project's architecture, patterns, and decisions in Markdown format. Start your response with [PROJECT_MEMORY].";
+      
+      await client.createActivity({
+        sessionId: session.id,
+        content: prompt,
+        role: 'user',
+        type: 'message'
+      });
+
+      // The backend logic will handle the [PROJECT_MEMORY] tag later,
+      // but for now, we just trigger the request.
+      setTimeout(() => loadActivities(false), 3000);
+    } catch (err) {
+      console.error("Failed to sync memory:", err);
+      toast.error("Failed to sync memory");
+    } finally {
+      setSending(false);
+    }
+  };
+
   const handleCopy = (text: string, id: string) => {
     navigator.clipboard.writeText(text);
     setCopiedId(id);
     setTimeout(() => setCopiedId(null), 2000);
   };
 
-  const handleExport = (format: 'json' | 'txt' | 'md') => {
+  const handleExport = async (format: 'json' | 'txt' | 'md') => {
     if (format === 'json') {
       exportSessionToJSON(session, activities);
     } else {
       exportSessionToMarkdown(session, activities);
+      
+      if (format === 'md') {
+        try {
+          const response = await fetch(`/api/sessions/${session.id}/export-to-repo`, {
+            method: 'POST'
+          });
+          if (response.ok) {
+            const result = await response.json();
+            toast.success(`Session automatically saved to repo: ${result.path}`);
+          }
+        } catch (err) {
+          console.error("Failed to auto-save to repo:", err);
+        }
+      }
     }
   };
 
   const parentRef = useRef<HTMLDivElement>(null);
+
+  const handleJumpToTop = () => {
+    if (parentRef.current) {
+      parentRef.current.scrollTop = 0;
+    }
+  };
+
+  const handleJumpToBottom = () => {
+    if (parentRef.current) {
+      parentRef.current.scrollTop = parentRef.current.scrollHeight;
+    }
+  };
 
   const filteredActivities = useMemo(() => activities.filter((activity) => {
     if (activity.bashOutput || activity.diff || activity.media) return true;
@@ -408,6 +487,14 @@ export function ActivityFeed({
             </div>
           </div>
           <div className="flex items-center gap-1 shrink-0">
+            <Button variant="ghost" size="icon" onClick={handleSyncMemory} disabled={sending} className="h-7 w-7 hover:bg-accent text-muted-foreground" title="Sync Internal Memory to Repo">
+              <Brain className="h-3.5 w-3.5" />
+            </Button>
+
+            <Button variant="ghost" size="icon" onClick={() => handleExport('md')} className="h-7 w-7 hover:bg-accent text-muted-foreground" title="Export to Markdown">
+              <FileText className="h-3.5 w-3.5" />
+            </Button>
+
             {hasDiffs && (
               <Button variant="ghost" size="icon" onClick={toggleCodeDiffsSidebar} className={`h-7 w-7 hover:bg-accent ${showCodeDiffs ? 'bg-primary/20 text-primary' : 'text-muted-foreground'}`}>
                 <Code className="h-3.5 w-3.5" />
@@ -474,6 +561,26 @@ export function ActivityFeed({
       </div>
 
       <div className="flex-1 overflow-hidden relative group">
+        <div className="absolute bottom-6 right-6 flex flex-col gap-2 z-20 opacity-0 group-hover:opacity-100 transition-opacity duration-200">
+          <Button
+            variant="secondary"
+            size="icon"
+            onClick={handleJumpToTop}
+            className="h-8 w-8 rounded-full bg-zinc-900/80 backdrop-blur-md border border-white/10 shadow-2xl hover:bg-primary hover:text-white transition-all"
+            title="Jump to Top"
+          >
+            <ArrowUp className="h-4 w-4" />
+          </Button>
+          <Button
+            variant="secondary"
+            size="icon"
+            onClick={handleJumpToBottom}
+            className="h-8 w-8 rounded-full bg-zinc-900/80 backdrop-blur-md border border-white/10 shadow-2xl hover:bg-primary hover:text-white transition-all"
+            title="Jump to Bottom"
+          >
+            <ArrowDown className="h-4 w-4" />
+          </Button>
+        </div>
         <ScrollArea className="h-full" ref={parentRef} id="activity-feed-scroll-area">
           <div className="p-3 pb-40 relative" style={{ height: `${virtualizer.getTotalSize()}px`, width: '100%' }}>
             {virtualizer.getVirtualItems().map((virtualItem) => {

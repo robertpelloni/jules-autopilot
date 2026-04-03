@@ -2,6 +2,17 @@
 
 All notable changes to this project will be documented in this file.
 
+## [1.0.0] - 2026-03-25
+
+### Added
+- **Full Borg Assimilation (Release)**: Completed the journey to a "Deep Autonomous Node". The node is fully self-aware, self-healing, and self-learning.
+- **Live Submodule UI Hook**: Integrated `useSWR` into the Submodule Dashboard. The UI now auto-refreshes architectural data every 30s using native Git SHAs from the daemon.
+- **Borg Discovery Handshake**: Added `GET /api/manifest` and `GET /api/fleet/summary` for collective node auditing.
+- **Session Replay Engine**: Structured JSON audit trails and a high-fidelity visual timeline dialog.
+- **Collective Signal Gateway**: Real-time webhook processing and WebSocket broadcasting for Borg collective signals.
+- **Cross-Session Memory**: Semantic RAG indexing of successful task outcomes across the entire fleet.
+- **Autonomous Self-Healing**: Automated failure detection and recovery plan generation via the Council Supervisor.
+
 ## [1.0.0-rc.1] - 2026-03-25
 
 ### Added

@@ -1,3 +1,4 @@
+import { safeLocalStorage } from '@/lib/utils';
 import type {
   Source,
   Session,
@@ -151,15 +152,12 @@ function getDefaultApiBaseUrl(): string {
     || process.env.VITE_JULES_API_BASE_URL
     || '/api';
 }
-
-const DEFAULT_API_BASE_URL = getDefaultApiBaseUrl();
-
 export class JulesClient {
   private apiKey?: string;
   private authToken?: string;
   private baseUrl: string;
 
-  constructor(apiKey?: string, baseUrl: string = DEFAULT_API_BASE_URL, authToken?: string) {
+  constructor(apiKey?: string, baseUrl: string = getDefaultApiBaseUrl(), authToken?: string) {
     this.apiKey = apiKey;
     this.authToken = authToken;
     this.baseUrl = baseUrl;
@@ -346,10 +344,8 @@ export class JulesClient {
   }
 
   private transformSession(session: ApiSession): Session {
-      console.log(`[Jules Client] Transforming session: ${session.id}`, JSON.stringify(session));
       const outputs: SessionOutput[] = (session.outputs || []).map(o => ({
-          pullRequest: o.pullRequest,
-          ...o
+          pullRequest: o.pullRequest
       }));
 
       const transformed = {
@@ -364,7 +360,6 @@ export class JulesClient {
         branch: session.sourceContext?.githubRepoContext?.startingBranch || 'main',
         outputs: outputs.length > 0 ? outputs : undefined
       };
-      console.log(`[Jules Client] Transformed session: ${transformed.id}`, JSON.stringify(transformed));
       return transformed;
   }
 
@@ -698,7 +693,7 @@ export class JulesClient {
     const repo = match[1];
 
     const githubToken = typeof window !== 'undefined' 
-      ? localStorage.getItem('github_pat') 
+      ? safeLocalStorage.getItem('github_pat') 
       : process.env.GITHUB_PAT || process.env.GITHUB_TOKEN;
 
     if (!githubToken) {
