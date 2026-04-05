@@ -27,14 +27,6 @@ func main() {
 	// Setup API Routes
 	api.SetupRoutes(app)
 
-	// API Manifest Endpoint
-	app.Get("/api/manifest", func(c *fiber.Ctx) error {
-		return c.JSON(fiber.Map{
-			"capabilities": []string{"rag", "debate"},
-			"version":      "1.0.0-rc.1",
-		})
-	})
-
 	// WebSocket Middleware
 	app.Use("/ws", func(c *fiber.Ctx) error {
 		if websocket.IsWebSocketUpgrade(c) {
@@ -78,6 +70,6 @@ func main() {
 		}
 	}))
 
-	// Start server on port 8085
-	log.Fatal(app.Listen(":8085"))
+	// Match the TypeScript daemon default port for smoother drop-in parity.
+	log.Fatal(app.Listen(":8080"))
 }

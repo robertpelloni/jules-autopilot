@@ -4,6 +4,8 @@ import (
 	"fmt"
 	"log"
 	"os"
+	"os/exec"
+	"path/filepath"
 	"strings"
 	"sync"
 	"time"
@@ -35,9 +37,226 @@ func Broadcast(message interface{}) {
 	}
 }
 
+func getVersion() string {
+	versionPath := filepath.Clean(filepath.Join("..", "VERSION"))
+	content, err := os.ReadFile(versionPath)
+	if err != nil {
+		return "unknown"
+	}
+	return strings.TrimSpace(string(content))
+}
+
+func getPing(c *fiber.Ctx) error {
+	return c.JSON(fiber.Map{"status": "ok", "time": time.Now().Format(time.RFC3339)})
+}
+
+func getManifest(c *fiber.Ctx) error {
+	return c.JSON(fiber.Map{
+		"id":      "jules-autopilot-go-node-1",
+		"name":    "Jules Autopilot Go Backend",
+		"version": getVersion(),
+		"capabilities": []string{
+			"cloud_session_management",
+			"semantic_rag_indexing",
+			"queue_telemetry",
+			"session_replay",
+			"submodule_intelligence",
+			"webhook_ingestion",
+		},
+		"endpoints": fiber.Map{
+			"sessions":   "/api/sessions",
+			"summary":    "/api/fleet/summary",
+			"replay":     "/api/sessions/:id/replay",
+			"submodules": "/api/system/submodules",
+		},
+		"borgCompatible": true,
+	})
+}
+
+func getFleetSummary(c *fiber.Ctx) error {
+	var sessions []models.JulesSession
+	if err := db.DB.Find(&sessions).Error; err != nil {
+		return c.Status(500).JSON(fiber.Map{"error": err.Error()})
+	}
+
+	statusCounts := map[string]int{}
+	for _, session := range sessions {
+		statusCounts[session.Status]++
+	}
+
+	var pendingCount, processingCount, chunkCount int64
+	db.DB.Model(&models.QueueJob{}).Where("status = ?", "pending").Count(&pendingCount)
+	db.DB.Model(&models.QueueJob{}).Where("status = ?", "processing").Count(&processingCount)
+	db.DB.Model(&models.CodeChunk{}).Count(&chunkCount)
+
+	var recentLogs []models.KeeperLog
+	db.DB.Where("type = ?", "action").Order("created_at desc").Limit(5).Find(&recentLogs)
+
+	actions := make([]fiber.Map, 0, len(recentLogs))
+	for _, entry := range recentLogs {
+		actions = append(actions, fiber.Map{
+			"message": entry.Message,
+			"time":    entry.CreatedAt,
+		})
+	}
+
+	return c.JSON(fiber.Map{
+		"timestamp": time.Now().Format(time.RFC3339),
+		"fleet": fiber.Map{
+			"total":    len(sessions),
+			"byStatus": statusCounts,
+		},
+		"orchestrator": fiber.Map{
+			"queueDepth":               pendingCount + processingCount,
+			"isActive":                 processingCount > 0,
+			"recentAutonomousActions": actions,
+		},
+		"knowledgeBase": fiber.Map{
+			"totalChunks": chunkCount,
+			"isIndexed":   chunkCount > 0,
+		},
+		"borgReady": true,
+	})
+}
+
+func getSystemSubmodules(c *fiber.Ctx) error {
+	cmd := exec.Command("git", "submodule", "status")
+	cmd.Dir = filepath.Clean("..")
+	output, err := cmd.Output()
+	if err != nil {
+		log.Printf("failed to fetch submodules: %v", err)
+		return c.JSON(fiber.Map{"submodules": []fiber.Map{}})
+	}
+
+	var submodules []fiber.Map
+	for _, line := range strings.Split(strings.TrimSpace(string(output)), "\n") {
+		if strings.TrimSpace(line) == "" {
+			continue
+		}
+		parts := strings.Fields(line)
+		if len(parts) < 2 {
+			continue
+		}
+		statusChar := string(line[0])
+		fullHash := strings.TrimLeft(parts[0], " +-")
+		pathValue := parts[1]
+		ref := "unknown"
+		if len(parts) > 2 {
+			ref = strings.Trim(strings.Join(parts[2:], " "), "()")
+		}
+		status := "uninitialized"
+		if statusChar == " " {
+			status = "synced"
+		} else if statusChar == "+" {
+			status = "modified"
+		}
+		hash := fullHash
+		if len(hash) > 7 {
+			hash = hash[:7]
+		}
+		submodules = append(submodules, fiber.Map{
+			"name":     filepath.Base(pathValue),
+			"path":     pathValue,
+			"hash":     hash,
+			"fullHash": fullHash,
+			"ref":      ref,
+			"status":   status,
+		})
+	}
+
+	return c.JSON(fiber.Map{"submodules": submodules})
+}
+
+func getSessionReplay(c *fiber.Ctx) error {
+	id := c.Params("id")
+	client := services.NewJulesClient()
+
+	session, err := client.GetSession(id)
+	if err != nil {
+		return c.Status(500).JSON(fiber.Map{"error": err.Error()})
+	}
+
+	activities, err := client.ListActivities(id)
+	if err != nil {
+		return c.Status(500).JSON(fiber.Map{"error": err.Error()})
+	}
+
+	timeline := make([]fiber.Map, 0, len(activities))
+	for _, activity := range activities {
+		timeline = append(timeline, fiber.Map{
+			"id":         activity.ID,
+			"timestamp":  activity.CreatedAt,
+			"role":       activity.Role,
+			"type":       activity.Type,
+			"content":    activity.Content,
+			"hasDiff":    activity.Diff != "",
+			"hasCommand": activity.BashOutput != "",
+		})
+	}
+
+	return c.JSON(fiber.Map{
+		"sessionId": id,
+		"title":     session.Title,
+		"status":    session.Status,
+		"createdAt": session.CreatedAt,
+		"timeline":  timeline,
+	})
+}
+
+func postBorgWebhook(c *fiber.Ctx) error {
+	var payload struct {
+		Type   string                 `json:"type"`
+		Source string                 `json:"source"`
+		Data   map[string]interface{} `json:"data"`
+	}
+	if err := c.BodyParser(&payload); err != nil {
+		return c.Status(400).JSON(fiber.Map{"error": "Invalid request body"})
+	}
+
+	logMessage := fmt.Sprintf("Received collective signal: %s from %s", payload.Type, payload.Source)
+	if payload.Source == "" {
+		logMessage = fmt.Sprintf("Received collective signal: %s", payload.Type)
+	}
+
+	entry := models.KeeperLog{
+		ID:        fmt.Sprintf("hook-%d", time.Now().UnixNano()),
+		SessionID: "global",
+		Type:      "info",
+		Message:   logMessage,
+		CreatedAt: time.Now(),
+	}
+	db.DB.Create(&entry)
+	Broadcast(fiber.Map{"type": "log_added", "data": fiber.Map{"log": entry}})
+	Broadcast(fiber.Map{"type": "borg_signal_received", "data": fiber.Map{
+		"type":      payload.Type,
+		"source":    payload.Source,
+		"data":      payload.Data,
+		"timestamp": time.Now().Format(time.RFC3339),
+	}})
+
+	if payload.Type == "repo_updated" {
+		_, _ = services.AddJob("index_codebase", map[string]string{})
+	}
+	if payload.Type == "fleet_command" {
+		if action, ok := payload.Data["action"].(string); ok && action == "reindex_all" {
+			_, _ = services.AddJob("index_codebase", map[string]string{})
+		}
+	}
+
+	return c.JSON(fiber.Map{"success": true, "processed": true})
+}
+
 // SetupRoutes registers all API routes
 func SetupRoutes(app *fiber.App) {
 	api := app.Group("/api")
+
+	api.Get("/ping", getPing)
+	api.Get("/manifest", getManifest)
+	api.Get("/fleet/summary", getFleetSummary)
+	api.Get("/system/submodules", getSystemSubmodules)
+	api.Get("/sessions/:id/replay", getSessionReplay)
+	api.Post("/webhooks/borg", postBorgWebhook)
+	api.Post("/webhooks/hypercode", postBorgWebhook)
 
 	// Daemon routes
 	api.Get("/daemon/status", getDaemonStatus)

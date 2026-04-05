@@ -1,134 +1,134 @@
-# Project Handoff: Jules Autopilot (v1.0.8 — Keeper Event Detail Streaming)
+# Project Handoff: Jules Autopilot (v1.0.9 — Go Backend Parity Pass #1)
 
 ## 1. Session Summary
-This session focused on stabilizing the current `main` branch without interrupting any running daemons or background processes.
+This session continued the transition from maintenance work into backend parity work, with a specific focus on making the Go backend materially more useful and closer to the TypeScript/Bun daemon without interrupting any running processes.
 
-### Completed Work
-- Bumped the project version through `1.0.7` and finalized this session at `1.0.8`.
-- Re-established `VERSION` as the canonical source of truth.
-- Added `VERSION.md` as a compatibility mirror because existing repo scripts and docs still referenced it.
-- Updated runtime version surfaces so the same build number now appears in:
+## 2. Completed Work
+### 2.1 Versioning & Documentation
+- Bumped the project version from `1.0.8` to `1.0.9`.
+- Synced version surfaces through the canonical `VERSION` workflow:
+  - `VERSION`
+  - `VERSION.md`
   - `package.json`
   - `apps/cli/package.json`
   - `packages/shared/package.json`
   - `lib/version.ts`
-  - `components/layout/app-header.tsx`
-  - `apps/cli/src/screens/Settings.tsx`
-  - `server/index.ts` manifest output
-- Hardened version tooling:
-  - `scripts/update-version.js` now reads from `VERSION`, updates all package manifests, updates `lib/version.ts`, and writes `VERSION.md`.
-  - `scripts/check-version-sync.js` was rewritten for ESM compatibility and now validates `VERSION`, `VERSION.md`, root package, CLI package, shared package, and `lib/version.ts`.
-- Fixed UI/store typing regressions introduced by prior in-progress edits:
-  - `components/fleet-intelligence.tsx` now reads `config.isEnabled` correctly.
-  - Duplicate `toast` import removed.
-  - `components/layout/app-sidebar.tsx` now reads `config.isEnabled` correctly.
-- Preserved and validated the new fleet controls already in progress:
-  - Fleet sync button in `components/layout/app-header.tsx`
-  - RAG re-index button in `components/fleet-intelligence.tsx`
-- Improved persistence safety in `lib/stores/session-keeper.ts` by probing `localStorage` and falling back to in-memory storage when browser storage is blocked.
-- Fixed backend correctness issues in `server/index.ts`:
-  - `/api/manifest` now reports `APP_VERSION` instead of a stale literal.
-  - Session replay timeline uses `a.id` correctly.
-  - `/api/sessions` now degrades gracefully to mock/error payloads instead of crashing the UI on auth/backend failure.
-  - `POST /api/fleet/sync` remains available for manual synchronization.
-  - Hypercode cloud integration is merged in: the daemon now accepts both `/api/webhooks/borg` and `/api/webhooks/hypercode` through the shared webhook handler.
-- Repaired the Jest harness under the current ESM/Vite/Bun reality by adopting the working CJS `ts-jest` configuration from upstream and keeping local test fixes.
-- Fixed `packages/shared/src/orchestration/providers/index.test.ts` by removing a mock for a non-existent `qwen` provider module.
-- Merged upstream `lib/jules/client` compatibility fixes so tests can resolve the API base URL via `process.env.VITE_JULES_API_BASE_URL` outside a Vite runtime.
-- Restored lint execution by adding a real ESLint v9 flat config (`eslint.config.js`) plus the required workspace-root dev dependencies:
-  - `@eslint/js`
-  - `typescript-eslint`
-  - `globals`
-  - `eslint-plugin-react-hooks`
-  - `eslint-plugin-react-refresh`
-- Cleaned `src/main.tsx` by removing an unused `React` import caught by the new lint pipeline.
-- Expanded the root lint surface from `src/` to `src/`, `components/`, `lib/`, and `server/`.
-- Converted the noisiest legacy rules to warning-first enforcement for the expanded surface:
-  - `@typescript-eslint/no-unused-vars`
-  - `@typescript-eslint/no-explicit-any`
-  - `no-empty`
-- Executed Warning Burn-Down Pass #1 and removed a broad batch of low-risk issues:
-  - unused imports in UI and server modules
-  - unused helper functions
-  - unused props passed through components
-  - unused state setters
-  - unused destructured values in review and RAG helpers
-- Executed Warning Burn-Down Pass #2 and cleaned the remaining actionable warning set:
-  - stabilized the recovered-availability refresh handler in `components/broadcast-dialog.tsx` with `useCallback`
-  - replaced lingering `any` usage across websocket, webhook, queue, and client error surfaces with concrete or narrower types
-  - calibrated the React refresh export rule away from utility/provider files where the warning was not actionable for this repo structure
-- Executed Warning Burn-Down Pass #3 and tightened the type surface further:
-  - introduced explicit Borg webhook payload typing in `server/webhooks.ts`
-  - replaced websocket event payload casts in `lib/hooks/use-daemon-websocket.ts` with shared payload types and structured timer refs
-  - narrowed server queue job/session/settings types in `server/queue.ts`
-  - narrowed daemon websocket and client init types in `server/index.ts`
-  - added explicit API error and GitHub issue response typing in `lib/jules/client.ts`
-  - replaced remaining unsafe provider casts in debate/session-keeper settings UIs with shared type-driven casts
-- Added a product-facing real-time UX improvement in `components/activity-feed.tsx`:
-  - subscribed to `useDaemonEvent('log_added')`
-  - extended keeper log records with `sessionId`
-  - rendered a live session/global Keeper feed directly inside the active session view
-  - highlighted newly streamed Keeper events so operator-visible background actions are obvious without refresh
-- Extended that live feed with richer session event context:
-  - `session_nudged` websocket events now keep `sessionId`, `sessionTitle`, `inactiveMinutes`, and the nudge message in the client log store
-  - `session_approved` websocket events now keep `sessionId` and `sessionTitle` in the client log store
-  - the session view Keeper feed now renders inline event badges plus target/session message context for these automation events
-- Kept the expanded lint backlog at 0 warnings while improving the underlying type quality.
-- Updated project docs and operational docs:
+- Updated project documentation and handoff records:
   - `CHANGELOG.md`
   - `ROADMAP.md`
   - `TODO.md`
-  - `IDEAS.md`
   - `docs/VISION.md`
   - `docs/ARCHITECTURE.md`
+  - `backend-go/PORTING_STATUS.md`
 
-## 2. Validation Results
+### 2.2 TypeScript Runtime UX Improvements Preserved
+- Extended the session-view Keeper feed so council/debate lifecycle events can now be streamed and contextualized more richly.
+- Added new shared daemon event payloads in `packages/shared/src/websocket.ts` for:
+  - `session_debate_escalated`
+  - `session_debate_resolved`
+- Updated `server/queue.ts` so auto-approval/debate flows emit stronger event coverage:
+  - `session_approved` now fires consistently for low-risk and council-approved plans
+  - debate escalation/resolution now emit dedicated lifecycle events
+- Updated `lib/hooks/use-daemon-websocket.ts` to translate those new daemon events into client-side Keeper log entries.
+- Updated `components/activity-feed.tsx` to render richer inline session automation context such as:
+  - risk scores
+  - approval decisions
+  - debate summaries
+  - nudge details
+
+### 2.3 Go Backend Parity Pass #1
+The largest new body of work in this session was porting a practical, high-value slice of the backend from TypeScript/Bun assumptions into the Go backend.
+
+#### Ported / Added in `backend-go/api/routes.go`
+- `GET /api/ping`
+- `GET /api/manifest`
+- `GET /api/fleet/summary`
+- `GET /api/system/submodules`
+- `GET /api/sessions/:id/replay`
+- `POST /api/webhooks/borg`
+- `POST /api/webhooks/hypercode`
+
+#### Go Backend Runtime Alignment
+- Updated `backend-go/main.go` to listen on `:8080` instead of `:8085` so the Go backend can move toward drop-in parity with the TypeScript daemon defaults.
+- Removed the hardcoded manifest stub from `main.go` and centralized manifest serving through the route layer.
+- Added root-version reading in the Go API so the Go backend manifest reports the canonical project version from `../VERSION`.
+
+#### Go Queue / Model Fixes
+- Fixed Go build blockers in `backend-go/services/queue.go` by restoring missing imports used by the existing partial implementation.
+- Fixed the malformed struct tag in `backend-go/models/models.go` for `QueueJob.UpdatedAt`.
+- Verified that `cd backend-go && go test ./...` now passes.
+
+### 2.4 Go Porting Documentation
+- Added `backend-go/PORTING_STATUS.md` documenting:
+  - what is now ported
+  - what Go already covered before this pass
+  - what remains unported
+  - the next recommended Go migration steps
+
+## 3. Validation Results
 ### Passing
 - `pnpm run lint`
 - `pnpm run typecheck`
 - `pnpm run test`
 - `node scripts/check-version-sync.js`
+- `cd backend-go && go test ./...`
 
-### Remaining Follow-Up
-- Revisit the warning-first lint rule downgrades and progressively tighten them back toward stricter enforcement now that the backlog is cleared.
+### Important Note on Test Output
+The Jest suite still prints expected console warnings/errors from mocked failure-path tests (review parsing failures, provider failures, unauthorized client requests), but the suite passes completely. These are test-intent outputs, not validation failures.
 
-## 3. Important Findings
-### Toolchain Drift
-The repository had accumulated version/tooling drift in several places:
-- Runtime surfaces were split between `0.9.1`, `0.9.7`, `1.0.0`, and package-local literals.
-- Version scripts assumed `VERSION.md`, while higher-level agent instructions pointed to `VERSION`.
-- Jest was wired for a Next.js-based setup even though the current workspace is effectively running as a Vite/Bun stack.
-- ESLint had been upgraded to v9 without a flat config, which meant `pnpm run lint` failed before analyzing any source code.
-- Once linting was restored, the broader app surface revealed a significant but manageable legacy warning backlog outside `src/`.
-- A large percentage of the backlog was low-risk cleanup, which made an immediate warning burn-down pass worthwhile before tackling harder typing issues.
+## 4. Key Findings
+### 4.1 The Go Backend Was Closer Than It Looked
+The repository already had a substantial `backend-go/` scaffold with:
+- Fiber routing
+- SQLite/GORM persistence
+- Jules API client basics
+- queue worker structure
+- daemon/websocket basics
 
-### Current Practical Resolution
-- `VERSION` is now the canonical source.
-- `VERSION.md` exists only as a compatibility mirror for legacy references.
-- The full currently configured Jest suite is running again, including `lib/jules/client.test.ts`.
-- `lib/jules/client.ts` now safely falls back to `process.env.VITE_JULES_API_BASE_URL` when no Vite runtime env is available.
-- `pnpm run lint` is operational again through a proper ESLint v9 flat config.
-- Lint coverage now includes the main app surface (`src`, `components`, `lib`, `server`) with warning-first enforcement to avoid destabilizing active development.
-- The warning backlog has now been reduced from 60 to 0, proving the ratchet can improve code health incrementally without breaking momentum.
-- The latest passes shifted from simple cleanup to type-surface hardening and then back into product-facing real-time UX, reducing future drift while improving operator visibility.
-- Session automation events now carry enough structured context to be meaningfully displayed rather than appearing as opaque generic log lines.
+However, it was not yet a true parity backend because:
+- key routes from `server/index.ts` were missing
+- some queue code did not compile
+- manifest/version handling was stale
+- the runtime port did not match the primary backend port
 
-## 4. Files Intentionally Left Uncommitted/Live
-The live SQLite WAL files are still changing because processes were not interrupted:
-- `prisma/dev.db-shm`
-- `prisma/dev.db-wal`
+This session addressed those foundational gaps first.
 
-These should stay out of the commit unless there is an explicit reason to snapshot live database state.
+### 4.2 Reasonable Porting Strategy
+A full “everything possible” port is too large for one pass, so the most reasonable migration strategy is:
+1. **Port high-signal route parity first**
+2. **Make the Go backend compile and pass tests**
+3. **Port queue intelligence and automation logic next**
+4. **Only then consider Go as the primary runtime**
 
-## 5. Recommended Next Steps
-1. Add a proper `eslint.config.js` flat config and any required parser/plugin dependencies so `pnpm run lint` becomes real and enforceable.
-2. Revisit stricter lint enforcement in targeted batches, starting with whether `@typescript-eslint/no-explicit-any` can move back toward stricter behavior without hurting velocity.
-3. Extend the live session feed further by wiring debate/recovery/self-healing events into more explicit operator-visible session timeline artifacts if desired.
-4. If the daemon/UI is actively being used, keep avoiding destructive process management; continue patching in-place.
+That is the strategy now underway.
 
-## 6. Commit Guidance
-Recommended commit message:
-- `feat: extend session view keeper feed with nudges and approvals (v1.0.8)`
+## 5. Remaining Work
+### Highest-Value Go Port Targets Next
+1. Port `handleCheckSession` from `server/queue.ts` into `backend-go/services/queue.go`
+2. Port `handleIndexCodebase`
+3. Port `handleCheckIssues`
+4. Port daemon event parity for approval/nudge/debate/recovery lifecycle updates directly from Go-side automation paths
+5. Decide whether the Go backend becomes:
+   - the primary runtime, or
+   - a parity/migration track while Bun remains primary
 
-## 7. Session Intent
-No processes were killed. Changes were made in place around the running environment, and live DB WAL artifacts were intentionally left alone.
+### Product-Facing Follow-Up
+- The active session Keeper feed is now richer, but could still evolve into explicit operator timeline cards for:
+  - debate escalation
+  - recovery/self-healing
+  - autonomous issue conversion
+  - indexing lifecycle events
+
+## 6. Process Safety
+- No processes were killed.
+- Live database sidecar files were intentionally left unstaged:
+  - `prisma/dev.db-shm`
+  - `prisma/dev.db-wal`
+
+## 7. Recommended Next Step
+Recommended next move:
+- continue **Go Backend Parity Pass #2** by porting `handleCheckSession` from TypeScript to Go, because that unlocks the most meaningful autonomous behavior migration.
+
+## 8. Commit Guidance
+Recommended commit message for this session:
+- `feat: port high-value backend routes and parity scaffolding to Go (v1.0.9)`

@@ -7,6 +7,8 @@ export type DaemonEventType =
   | 'session_updated'
   | 'session_nudged'
   | 'session_approved'
+  | 'session_debate_escalated'
+  | 'session_debate_resolved'
   | 'activities_updated'
   | 'sessions_list_updated'
   | 'borg_signal_received'
@@ -52,6 +54,20 @@ export interface SessionNudgedPayload {
 export interface SessionApprovedPayload {
   sessionId: string;
   sessionTitle?: string;
+}
+
+export interface SessionDebateEscalatedPayload {
+  sessionId: string;
+  sessionTitle?: string;
+  riskScore: number;
+}
+
+export interface SessionDebateResolvedPayload {
+  sessionId: string;
+  sessionTitle?: string;
+  riskScore: number;
+  approvalStatus?: 'approved' | 'rejected' | 'pending';
+  summary?: string;
 }
 
 export interface ActivitiesUpdatedPayload {

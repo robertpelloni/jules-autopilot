@@ -2,6 +2,18 @@
 
 All notable changes to this project will be documented in this file.
 
+## [1.0.9] - 2026-04-05
+
+### Added
+- **Debate Escalation Streaming**: Added dedicated daemon events for debate escalation and resolution so the active session Keeper feed can show council-review lifecycle updates, risk scores, and resolution summaries.
+
+### Changed
+- **Approval Event Coverage**: Auto-approval paths now emit `session_approved` consistently for both low-risk approvals and council-approved plans.
+- **Keeper Feed Context Enrichment**: The session view Keeper strip now renders debate resolution metadata inline, including decision and risk score when available.
+
+### Notes
+- **Validation Status**: `pnpm run lint`, `pnpm run typecheck`, `pnpm run test`, and `node scripts/check-version-sync.js` all pass at `1.0.9`.
+
 ## [1.0.8] - 2026-04-05
 
 ### Added

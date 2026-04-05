@@ -7,6 +7,7 @@ This document tracks granular bugs, missing features, and technical debt. For ep
 - [x] **Daemon API Discovery:** Formally established `/api/manifest` for node capability discovery.
 - [x] **SSE/WebSocket Log Streaming:** Injected `useDaemonEvent('log_added')` into the session activity view and surfaced a live Keeper feed for session/global daemon events without manual refresh.
 - [ ] **Session Event Timeline Enrichment:** Optionally render richer structured cards for debate/escalation/recovery events beyond the current Keeper feed strip.
+- [ ] **Go Backend Parity Pass #2:** Port queue intelligence (`handleCheckSession`, `handleIndexCodebase`, `handleCheckIssues`) from TypeScript/Bun into `backend-go/services/queue.go`.
 - [x] **Tooling Stabilization:** Added a working ESLint v9 flat config and aligned the Jest harness with the current Vite/Bun + shared-package runtime assumptions.
 - [x] **Lint Coverage Expansion:** Extended the lint command to cover `src/`, `components/`, `lib/`, and `server/` with a staged warning-first rollout.
 - [x] **Lint Warning Burn-Down:** Completed two warning burn-down passes and brought the expanded lint surface to zero warnings.

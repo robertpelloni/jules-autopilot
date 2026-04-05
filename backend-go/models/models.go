@@ -281,6 +281,6 @@ type QueueJob struct {
 	StartedAt   *time.Time     `json:"startedAt"`
 	CompletedAt *time.Time     `json:"completedAt"`
 	CreatedAt   time.Time      `json:"createdAt"`
-	UpdatedAt   time.Time      `updatedAt" json:"updatedAt"`
+	UpdatedAt   time.Time      `json:"updatedAt"`
 	DeletedAt   gorm.DeletedAt `gorm:"index" json:"-"`
 }

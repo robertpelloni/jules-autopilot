@@ -66,6 +66,9 @@ interface KeeperEventDetails {
   nudgeMessage?: string;
   sessionTitle?: string;
   inactiveMinutes?: number;
+  riskScore?: number;
+  approvalStatus?: 'approved' | 'rejected' | 'pending';
+  summary?: string;
 }
 
 export function ActivityFeed({ 
@@ -631,13 +634,22 @@ export function ActivityFeed({
                     </div>
                   </div>
                   <p className="mt-1.5 leading-relaxed">{log.message}</p>
-                  {(eventDetails?.sessionTitle || eventDetails?.nudgeMessage) && (
+                  {(eventDetails?.sessionTitle || eventDetails?.nudgeMessage || eventDetails?.summary || typeof eventDetails?.riskScore === 'number' || eventDetails?.approvalStatus) && (
                     <div className="mt-2 space-y-1 text-[9px] text-zinc-400">
                       {eventDetails.sessionTitle && (
                         <p className="truncate uppercase tracking-wide">Target: {eventDetails.sessionTitle}</p>
                       )}
+                      {typeof eventDetails.riskScore === 'number' && (
+                        <p className="uppercase tracking-wide">Risk Score: {eventDetails.riskScore}/100</p>
+                      )}
+                      {eventDetails.approvalStatus && (
+                        <p className="uppercase tracking-wide">Decision: {eventDetails.approvalStatus}</p>
+                      )}
                       {eventDetails.nudgeMessage && (
                         <p className="line-clamp-2 normal-case tracking-normal text-zinc-300/90">{eventDetails.nudgeMessage}</p>
+                      )}
+                      {eventDetails.summary && (
+                        <p className="line-clamp-3 normal-case tracking-normal text-zinc-300/90">{eventDetails.summary}</p>
                       )}
                     </div>
                   )}

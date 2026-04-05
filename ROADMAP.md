@@ -24,6 +24,7 @@ For granular tasks and immediate bug fixes, see `TODO.md`.
 * [x] **Warning Backlog Reduction Pass #3**: Replaced residual ad-hoc casts with typed webhook, websocket, queue, and client error payloads while keeping the expanded validation surface clean.
 * [x] **Live Keeper Feed in Session View**: Streamed daemon `log_added` events directly into the session activity view so background Keeper actions appear without manual refresh.
 * [x] **Keeper Event Detail Streaming**: Preserved session scoping and event metadata for nudges/approvals so the active session view can show richer operator context inline.
+* [x] **Council Debate Lifecycle Streaming**: Added dedicated escalation/resolution daemon events so the active session feed can surface debate state changes, risk scores, and outcomes without refresh.
 
 ## Milestone: v1.5 — "Shadow Pilot"
 * [ ] **Background Anomaly Detection:** Agents silently monitoring `git diffs` background tasks, fixing failing CI pipelines before human review.

@@ -402,9 +402,18 @@ export class TaskQueue {
                         await addLog(`Auto-approving low-risk plan (Score: ${riskScore})`, 'action', session.id);
                         await client.approvePlan(session.id);
                         emitDaemonEvent('activities_updated', { sessionId: session.id });
+                        emitDaemonEvent('session_approved', {
+                            sessionId: session.id,
+                            sessionTitle: session.title,
+                        });
                         return { action: 'plan_approved', riskScore };
                     } else {
                         await addLog(`Plan risk is ${riskScore}. Escalating to Council Debate...`, 'info', session.id);
+                        emitDaemonEvent('session_debate_escalated', {
+                            sessionId: session.id,
+                            sessionTitle: session.title,
+                            riskScore,
+                        });
                         
                         // Construct participants from settings for the debate
                         const participants: Participant[] = [
@@ -437,6 +446,13 @@ export class TaskQueue {
 
                         const finalRisk = debateResult.riskScore ?? 50;
                         await addLog(`Council Debate concluded. Final Risk Score: ${finalRisk}`, 'info', session.id);
+                        emitDaemonEvent('session_debate_resolved', {
+                            sessionId: session.id,
+                            sessionTitle: session.title,
+                            riskScore: finalRisk,
+                            approvalStatus: debateResult.approvalStatus,
+                            summary: debateResult.summary,
+                        });
 
                         if (finalRisk < 40 || debateResult.approvalStatus === 'approved') {
                             await addLog(`Council approved plan after debate. Auto-approving...`, 'action', session.id);
@@ -450,6 +466,10 @@ export class TaskQueue {
                             });
                             
                             emitDaemonEvent('activities_updated', { sessionId: session.id });
+                            emitDaemonEvent('session_approved', {
+                                sessionId: session.id,
+                                sessionTitle: session.title,
+                            });
                             return { action: 'plan_approved_by_council', riskScore: finalRisk };
                         } else {
                             await addLog(`Council rejected plan (Score: ${finalRisk}). Manual review required.`, 'error', session.id);
