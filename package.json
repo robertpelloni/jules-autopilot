@@ -1,7 +1,7 @@
 {
   "name": "jules-ui",
   "description": "The modern, developer-first interface for Google's Jules AI agent. Features live code diffs, interactive terminal outputs, and a streamlined pure React experience.",
-  "version": "1.0.2",
+  "version": "1.0.3",
   "private": true,
   "type": "module",
   "workspaces": [
@@ -19,7 +19,7 @@
     "preview": "vite preview",
     "daemon": "bun run server/index.ts",
     "index": "bun run scripts/index-repo.ts",
-    "lint": "eslint src",
+    "lint": "eslint src components lib server",
     "test": "jest",
     "test:e2e": "playwright test",
     "typecheck": "tsc --noEmit && pnpm --filter @jules/shared typecheck",

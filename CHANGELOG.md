@@ -2,6 +2,16 @@
 
 All notable changes to this project will be documented in this file.
 
+## [1.0.3] - 2026-04-05
+
+### Changed
+- **Lint Coverage Expansion**: Expanded the root lint command from `src` to `src`, `components`, `lib`, and `server`, bringing the main application surface back under a single validation command.
+- **Staged Rule Adoption**: Tuned the initial legacy-code rollout so `no-unused-vars`, `no-explicit-any`, and `no-empty` report as warnings while broader lint coverage is established safely.
+
+### Notes
+- **Validation Status**: `pnpm run lint`, `pnpm run typecheck`, `pnpm run test`, and `node scripts/check-version-sync.js` all pass at `1.0.3`.
+- **Warning Backlog**: The expanded lint run currently reports 60 warnings across legacy areas, concentrated in unused imports/params, `any` usage, and a small number of hook-dependency warnings.
+
 ## [1.0.2] - 2026-04-05
 
 ### Added

@@ -18,6 +18,7 @@ For granular tasks and immediate bug fixes, see `TODO.md`.
 * [x] **Queue Telemetry**: Added real-time counts of pending and processing jobs to `/api/daemon/status`.
 * [x] **Version Uniformity Hardening**: Synced the canonical runtime version across the daemon manifest, header badge, CLI settings screen, shared packages, and compatibility version files.
 * [x] **Developer Tooling Recovery**: Restored a working Jest harness and added an ESLint v9 flat configuration so core validation commands are operational again.
+* [x] **Lint Surface Re-Expansion**: Reintroduced `components/`, `lib/`, and `server/` to the primary lint workflow using a warning-first rollout for legacy hotspots.
 
 ## Milestone: v1.5 — "Shadow Pilot"
 * [ ] **Background Anomaly Detection:** Agents silently monitoring `git diffs` background tasks, fixing failing CI pipelines before human review.

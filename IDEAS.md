@@ -8,6 +8,7 @@ This document serves as a brainstorming hub for future features, architectural s
 * **Pluggable Vector Databases:** Currently, RAG uses SQLite with in-memory cosine similarity. A major improvement would be an abstract vector interface that supports Qdrant, Milvus, or Pinecone for massive-scale codebases.
 * **Component Restructuring:** The React frontend could be migrated from a standard Vite SPA to a Next.js static export or a Tauri/Electron desktop application to provide deeper system-level integration (e.g., native file system access without API proxies).
 * **Toolchain Convergence:** Unify the current mixed Vite/Next/Bun assumptions into one officially supported lint/test/build toolchain so versioning, Jest/Vitest, and daemon/web UI workflows cannot drift apart again.
+* **Validation Ratchet:** Track warning counts per directory and automatically fail CI only when a PR increases the lint backlog, allowing gradual cleanup without blocking active development.
 
 ## 2. Feature Enhancements
 * **Voice-Activated Command Center:** Integrate WebRTC and a local Whisper model to allow users to issue verbal commands to the fleet ("Autopilot, review the latest PR on the frontend repo and suggest fixes").

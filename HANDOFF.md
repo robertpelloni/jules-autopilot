@@ -1,10 +1,10 @@
-# Project Handoff: Jules Autopilot (v1.0.2 — Tooling Recovery & Version Uniformity)
+# Project Handoff: Jules Autopilot (v1.0.3 — Validation Surface Expansion)
 
 ## 1. Session Summary
 This session focused on stabilizing the current `main` branch without interrupting any running daemons or background processes.
 
 ### Completed Work
-- Bumped the project version through `1.0.1` and finalized this session at `1.0.2`.
+- Bumped the project version through `1.0.2` and finalized this session at `1.0.3`.
 - Re-established `VERSION` as the canonical source of truth.
 - Added `VERSION.md` as a compatibility mirror because existing repo scripts and docs still referenced it.
 - Updated runtime version surfaces so the same build number now appears in:
@@ -42,6 +42,12 @@ This session focused on stabilizing the current `main` branch without interrupti
   - `eslint-plugin-react-hooks`
   - `eslint-plugin-react-refresh`
 - Cleaned `src/main.tsx` by removing an unused `React` import caught by the new lint pipeline.
+- Expanded the root lint surface from `src/` to `src/`, `components/`, `lib/`, and `server/`.
+- Converted the noisiest legacy rules to warning-first enforcement for the expanded surface:
+  - `@typescript-eslint/no-unused-vars`
+  - `@typescript-eslint/no-explicit-any`
+  - `no-empty`
+- Measured the resulting warning backlog: 60 warnings concentrated in legacy unused imports/params, `any` usage, and a few hook dependency warnings.
 - Updated project docs and operational docs:
   - `CHANGELOG.md`
   - `ROADMAP.md`
@@ -58,7 +64,7 @@ This session focused on stabilizing the current `main` branch without interrupti
 - `node scripts/check-version-sync.js`
 
 ### Remaining Follow-Up
-- Expand lint coverage beyond the current `src/` command target when the repo is ready for a larger rule rollout across `components/`, `lib/`, and `server`.
+- Burn down the current 60-warning lint backlog and progressively tighten warning-first rules back toward stricter enforcement.
 
 ## 3. Important Findings
 ### Toolchain Drift
@@ -67,6 +73,7 @@ The repository had accumulated version/tooling drift in several places:
 - Version scripts assumed `VERSION.md`, while higher-level agent instructions pointed to `VERSION`.
 - Jest was wired for a Next.js-based setup even though the current workspace is effectively running as a Vite/Bun stack.
 - ESLint had been upgraded to v9 without a flat config, which meant `pnpm run lint` failed before analyzing any source code.
+- Once linting was restored, the broader app surface revealed a significant but manageable legacy warning backlog outside `src/`.
 
 ### Current Practical Resolution
 - `VERSION` is now the canonical source.
@@ -74,6 +81,7 @@ The repository had accumulated version/tooling drift in several places:
 - The full currently configured Jest suite is running again, including `lib/jules/client.test.ts`.
 - `lib/jules/client.ts` now safely falls back to `process.env.VITE_JULES_API_BASE_URL` when no Vite runtime env is available.
 - `pnpm run lint` is operational again through a proper ESLint v9 flat config.
+- Lint coverage now includes the main app surface (`src`, `components`, `lib`, `server`) with warning-first enforcement to avoid destabilizing active development.
 
 ## 4. Files Intentionally Left Uncommitted/Live
 The live SQLite WAL files are still changing because processes were not interrupted:
@@ -84,13 +92,13 @@ These should stay out of the commit unless there is an explicit reason to snapsh
 
 ## 5. Recommended Next Steps
 1. Add a proper `eslint.config.js` flat config and any required parser/plugin dependencies so `pnpm run lint` becomes real and enforceable.
-2. Expand lint coverage beyond `src/` in controlled steps so `components/`, `lib/`, and `server` can join the validation loop without destabilizing the active branch.
+2. Burn down the current lint warning backlog in targeted batches, starting with low-risk unused imports/params and obvious `any` sites.
 3. Consider replacing remaining hardcoded version strings in secondary docs/backends outside the primary web/CLI/shared surfaces.
 4. If the daemon/UI is actively being used, keep avoiding destructive process management; continue patching in-place.
 
 ## 6. Commit Guidance
 Recommended commit message:
-- `chore: restore ESLint flat config and validation workflow (v1.0.2)`
+- `chore: expand lint coverage across app surfaces (v1.0.3)`
 
 ## 7. Session Intent
 No processes were killed. Changes were made in place around the running environment, and live DB WAL artifacts were intentionally left alone.

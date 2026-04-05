@@ -7,7 +7,8 @@ This document tracks granular bugs, missing features, and technical debt. For ep
 - [x] **Daemon API Discovery:** Formally established `/api/manifest` for node capability discovery.
 - [ ] **SSE/WebSocket Log Streaming:** Inject the `useDaemonEvent` hook into the `SessionView` so that the background `KeeperLog` messages stream in real-time without needing a manual refresh.
 - [x] **Tooling Stabilization:** Added a working ESLint v9 flat config and aligned the Jest harness with the current Vite/Bun + shared-package runtime assumptions.
-- [ ] **Lint Coverage Expansion:** Extend lint coverage beyond `src/` into `components/`, `lib/`, and `server/` once the repo is ready to absorb the broader rule surface.
+- [x] **Lint Coverage Expansion:** Extended the lint command to cover `src/`, `components/`, `lib/`, and `server/` with a staged warning-first rollout.
+- [ ] **Lint Warning Burn-Down:** Reduce the current warning backlog across unused imports/params, `any` usage, and hook dependency issues until the expanded lint surface can be promoted to stricter enforcement.
 - [x] **Borg Collective UI:** Implemented the "Collective Signals" feed in the Fleet tab to visualize incoming Borg signals.
 
 ## Technical Debt & Refactoring

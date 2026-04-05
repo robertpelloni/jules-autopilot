@@ -15,7 +15,12 @@ export default tseslint.config(
     ],
   },
   {
-    files: ['src/**/*.{ts,tsx}'],
+    files: [
+      'src/**/*.{ts,tsx}',
+      'components/**/*.{ts,tsx}',
+      'lib/**/*.{ts,tsx}',
+      'server/**/*.ts',
+    ],
     extends: [js.configs.recommended, ...tseslint.configs.recommended],
     languageOptions: {
       ecmaVersion: 2022,
@@ -36,6 +41,16 @@ export default tseslint.config(
     },
     rules: {
       ...reactHooks.configs.recommended.rules,
+      '@typescript-eslint/no-explicit-any': 'warn',
+      '@typescript-eslint/no-unused-vars': [
+        'warn',
+        {
+          argsIgnorePattern: '^_',
+          varsIgnorePattern: '^_',
+          caughtErrorsIgnorePattern: '^_',
+        },
+      ],
+      'no-empty': 'warn',
       'react-refresh/only-export-components': ['warn', { allowConstantExport: true }],
     },
   }
