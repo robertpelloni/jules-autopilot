@@ -1,10 +1,10 @@
-# Project Handoff: Jules Autopilot (v1.0.5 — Warning Burn-Down Pass #2)
+# Project Handoff: Jules Autopilot (v1.0.6 — Warning Burn-Down Pass #3)
 
 ## 1. Session Summary
 This session focused on stabilizing the current `main` branch without interrupting any running daemons or background processes.
 
 ### Completed Work
-- Bumped the project version through `1.0.4` and finalized this session at `1.0.5`.
+- Bumped the project version through `1.0.5` and finalized this session at `1.0.6`.
 - Re-established `VERSION` as the canonical source of truth.
 - Added `VERSION.md` as a compatibility mirror because existing repo scripts and docs still referenced it.
 - Updated runtime version surfaces so the same build number now appears in:
@@ -57,7 +57,14 @@ This session focused on stabilizing the current `main` branch without interrupti
   - stabilized the recovered-availability refresh handler in `components/broadcast-dialog.tsx` with `useCallback`
   - replaced lingering `any` usage across websocket, webhook, queue, and client error surfaces with concrete or narrower types
   - calibrated the React refresh export rule away from utility/provider files where the warning was not actionable for this repo structure
-- Reduced the expanded lint backlog from 60 warnings to 0 warnings without shrinking lint coverage.
+- Executed Warning Burn-Down Pass #3 and tightened the type surface further:
+  - introduced explicit Borg webhook payload typing in `server/webhooks.ts`
+  - replaced websocket event payload casts in `lib/hooks/use-daemon-websocket.ts` with shared payload types and structured timer refs
+  - narrowed server queue job/session/settings types in `server/queue.ts`
+  - narrowed daemon websocket and client init types in `server/index.ts`
+  - added explicit API error and GitHub issue response typing in `lib/jules/client.ts`
+  - replaced remaining unsafe provider casts in debate/session-keeper settings UIs with shared type-driven casts
+- Kept the expanded lint backlog at 0 warnings while improving the underlying type quality.
 - Updated project docs and operational docs:
   - `CHANGELOG.md`
   - `ROADMAP.md`
@@ -94,6 +101,7 @@ The repository had accumulated version/tooling drift in several places:
 - `pnpm run lint` is operational again through a proper ESLint v9 flat config.
 - Lint coverage now includes the main app surface (`src`, `components`, `lib`, `server`) with warning-first enforcement to avoid destabilizing active development.
 - The warning backlog has now been reduced from 60 to 0, proving the ratchet can improve code health incrementally without breaking momentum.
+- The latest pass shifted from simple cleanup to type-surface hardening, reducing future drift and suppressions.
 
 ## 4. Files Intentionally Left Uncommitted/Live
 The live SQLite WAL files are still changing because processes were not interrupted:
@@ -105,12 +113,12 @@ These should stay out of the commit unless there is an explicit reason to snapsh
 ## 5. Recommended Next Steps
 1. Add a proper `eslint.config.js` flat config and any required parser/plugin dependencies so `pnpm run lint` becomes real and enforceable.
 2. Revisit stricter lint enforcement in targeted batches, starting with whether `@typescript-eslint/no-explicit-any` can move back toward stricter behavior without hurting velocity.
-3. Consider replacing remaining hardcoded version strings in secondary docs/backends outside the primary web/CLI/shared surfaces.
+3. Continue with the next product-facing TODO: real-time session/log streaming improvements where event coverage is still incomplete.
 4. If the daemon/UI is actively being used, keep avoiding destructive process management; continue patching in-place.
 
 ## 6. Commit Guidance
 Recommended commit message:
-- `chore: finalize warning burn-down across app surfaces (v1.0.5)`
+- `chore: harden typed validation surfaces after warning burn-down (v1.0.6)`
 
 ## 7. Session Intent
 No processes were killed. Changes were made in place around the running environment, and live DB WAL artifacts were intentionally left alone.

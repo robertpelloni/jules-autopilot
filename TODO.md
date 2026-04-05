@@ -9,7 +9,7 @@ This document tracks granular bugs, missing features, and technical debt. For ep
 - [x] **Tooling Stabilization:** Added a working ESLint v9 flat config and aligned the Jest harness with the current Vite/Bun + shared-package runtime assumptions.
 - [x] **Lint Coverage Expansion:** Extended the lint command to cover `src/`, `components/`, `lib/`, and `server/` with a staged warning-first rollout.
 - [x] **Lint Warning Burn-Down:** Completed two warning burn-down passes and brought the expanded lint surface to zero warnings.
-- [ ] **Lint Strictness Ratchet:** Revisit warning-first rule downgrades (`no-explicit-any`, `no-unused-vars`, `no-empty`) and progressively tighten them once the team is ready for stricter enforcement.
+- [ ] **Lint Strictness Ratchet:** Revisit warning-first rule downgrades (`no-explicit-any`, `no-unused-vars`, `no-empty`) and progressively tighten them once the team is ready for stricter enforcement. The actionable backlog is cleared; next step is policy tightening rather than cleanup.
 - [x] **Borg Collective UI:** Implemented the "Collective Signals" feed in the Fleet tab to visualize incoming Borg signals.
 
 ## Technical Debt & Refactoring

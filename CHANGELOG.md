@@ -2,6 +2,16 @@
 
 All notable changes to this project will be documented in this file.
 
+## [1.0.6] - 2026-04-05
+
+### Changed
+- **Warning Burn-Down Pass #3**: Finished the remaining actionable warning cleanup by tightening daemon/webhook/queue types, stabilizing the broadcast refresh callback, and replacing ad-hoc casts with shared typed payloads.
+- **Validation Policy Cleanup**: Kept the expanded lint surface intact while reducing the need for warning suppression through concrete typing improvements.
+
+### Notes
+- **Validation Status**: `pnpm run lint`, `pnpm run typecheck`, `pnpm run test`, and `node scripts/check-version-sync.js` all pass at `1.0.6`.
+- **Lint Status**: The expanded lint surface still reports `0 warnings` and `0 errors` after the additional typing pass.
+
 ## [1.0.5] - 2026-04-05
 
 ### Changed
