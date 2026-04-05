@@ -98,10 +98,16 @@ export function useDaemonWebSocket() {
           const payload = message.data as SessionNudgedPayload;
           const nudgeLog: Log = {
             id: String(Date.now()),
+            sessionId: payload?.sessionId,
             time: new Date().toLocaleTimeString(),
             message: `Nudged session ${payload?.sessionId?.slice(0, 8)} (${payload?.inactiveMinutes ?? 0}m inactive)`,
             type: 'action',
-            details: { nudgeMessage: payload?.message }
+            details: {
+              event: 'session_nudged',
+              nudgeMessage: payload?.message,
+              sessionTitle: payload?.sessionTitle,
+              inactiveMinutes: payload?.inactiveMinutes,
+            }
           };
           useSessionKeeperStore.setState((state) => ({
             logs: [nudgeLog, ...state.logs].slice(0, 100)
@@ -116,9 +122,14 @@ export function useDaemonWebSocket() {
           const payload = message.data as SessionApprovedPayload;
           const approveLog: Log = {
             id: String(Date.now()),
+            sessionId: payload?.sessionId,
             time: new Date().toLocaleTimeString(),
             message: `Auto-approved plan for ${payload?.sessionId?.slice(0, 8)}`,
-            type: 'action'
+            type: 'action',
+            details: {
+              event: 'session_approved',
+              sessionTitle: payload?.sessionTitle,
+            }
           };
           useSessionKeeperStore.setState((state) => ({
             logs: [approveLog, ...state.logs].slice(0, 100)

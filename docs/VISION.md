@@ -1,7 +1,7 @@
 # Jules Autopilot - Product Vision (Lean Core)
 
 **Author:** User (Updated for Lean Core Pivot)
-**Version:** 1.0.7
+**Version:** 1.0.8
 
 ---
 
@@ -99,7 +99,7 @@ The official interfaces for AI coding agents are often slow and unresponsive. Th
 
 ## Implementation History
 
-### ✅ Milestone: v1.0.7 — Live Keeper Feed in Session View (Current)
+### ✅ Milestone: v1.0.8 — Keeper Event Detail Streaming (Current)
 - [x] Consolidated API into a single Bun daemon.
 - [x] Removed "Enterprise" feature bloat (Analytics, Swarms, Side Logs).
 - [x] Implemented the frontend proxy layer for seamless local integration.

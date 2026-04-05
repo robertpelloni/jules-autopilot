@@ -2,6 +2,17 @@
 
 All notable changes to this project will be documented in this file.
 
+## [1.0.8] - 2026-04-05
+
+### Added
+- **Keeper Event Detail Streaming**: Extended the session-view Keeper feed so streamed `session_nudged` and `session_approved` events now retain session scoping and render richer operator context.
+
+### Changed
+- **Session Event Context**: Nudge and approval websocket events now carry `sessionId` and structured details into the client log store, allowing the active session view to surface target titles and nudge message content inline.
+
+### Notes
+- **Validation Status**: `pnpm run lint`, `pnpm run typecheck`, `pnpm run test`, and `node scripts/check-version-sync.js` all pass at `1.0.8`.
+
 ## [1.0.7] - 2026-04-05
 
 ### Added

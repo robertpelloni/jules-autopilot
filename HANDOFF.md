@@ -1,10 +1,10 @@
-# Project Handoff: Jules Autopilot (v1.0.7 — Live Keeper Feed in Session View)
+# Project Handoff: Jules Autopilot (v1.0.8 — Keeper Event Detail Streaming)
 
 ## 1. Session Summary
 This session focused on stabilizing the current `main` branch without interrupting any running daemons or background processes.
 
 ### Completed Work
-- Bumped the project version through `1.0.6` and finalized this session at `1.0.7`.
+- Bumped the project version through `1.0.7` and finalized this session at `1.0.8`.
 - Re-established `VERSION` as the canonical source of truth.
 - Added `VERSION.md` as a compatibility mirror because existing repo scripts and docs still referenced it.
 - Updated runtime version surfaces so the same build number now appears in:
@@ -69,6 +69,10 @@ This session focused on stabilizing the current `main` branch without interrupti
   - extended keeper log records with `sessionId`
   - rendered a live session/global Keeper feed directly inside the active session view
   - highlighted newly streamed Keeper events so operator-visible background actions are obvious without refresh
+- Extended that live feed with richer session event context:
+  - `session_nudged` websocket events now keep `sessionId`, `sessionTitle`, `inactiveMinutes`, and the nudge message in the client log store
+  - `session_approved` websocket events now keep `sessionId` and `sessionTitle` in the client log store
+  - the session view Keeper feed now renders inline event badges plus target/session message context for these automation events
 - Kept the expanded lint backlog at 0 warnings while improving the underlying type quality.
 - Updated project docs and operational docs:
   - `CHANGELOG.md`
@@ -107,6 +111,7 @@ The repository had accumulated version/tooling drift in several places:
 - Lint coverage now includes the main app surface (`src`, `components`, `lib`, `server`) with warning-first enforcement to avoid destabilizing active development.
 - The warning backlog has now been reduced from 60 to 0, proving the ratchet can improve code health incrementally without breaking momentum.
 - The latest passes shifted from simple cleanup to type-surface hardening and then back into product-facing real-time UX, reducing future drift while improving operator visibility.
+- Session automation events now carry enough structured context to be meaningfully displayed rather than appearing as opaque generic log lines.
 
 ## 4. Files Intentionally Left Uncommitted/Live
 The live SQLite WAL files are still changing because processes were not interrupted:
@@ -118,12 +123,12 @@ These should stay out of the commit unless there is an explicit reason to snapsh
 ## 5. Recommended Next Steps
 1. Add a proper `eslint.config.js` flat config and any required parser/plugin dependencies so `pnpm run lint` becomes real and enforceable.
 2. Revisit stricter lint enforcement in targeted batches, starting with whether `@typescript-eslint/no-explicit-any` can move back toward stricter behavior without hurting velocity.
-3. Extend the live session feed further by wiring additional daemon events (`session_nudged`, `session_approved`, debate/recovery events) into more explicit operator-visible session timeline artifacts if desired.
+3. Extend the live session feed further by wiring debate/recovery/self-healing events into more explicit operator-visible session timeline artifacts if desired.
 4. If the daemon/UI is actively being used, keep avoiding destructive process management; continue patching in-place.
 
 ## 6. Commit Guidance
 Recommended commit message:
-- `feat: stream keeper log events into session view (v1.0.7)`
+- `feat: extend session view keeper feed with nudges and approvals (v1.0.8)`
 
 ## 7. Session Intent
 No processes were killed. Changes were made in place around the running environment, and live DB WAL artifacts were intentionally left alone.

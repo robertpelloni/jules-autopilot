@@ -61,6 +61,13 @@ interface ActivityFeedProps {
   refreshTrigger?: number;
 }
 
+interface KeeperEventDetails {
+  event?: string;
+  nudgeMessage?: string;
+  sessionTitle?: string;
+  inactiveMinutes?: number;
+}
+
 export function ActivityFeed({ 
   session, 
   onArchive, 
@@ -445,6 +452,11 @@ export function ActivityFeed({
     [keeperLogs, session.id]
   );
 
+  const getKeeperEventDetails = (details?: Record<string, unknown>): KeeperEventDetails | null => {
+    if (!details) return null;
+    return details as KeeperEventDetails;
+  };
+
   const getActivityIcon = (activity: Activity) => {
     if (activity.role === 'user') {
       return <AvatarFallback className="bg-purple-500 text-white text-[9px] font-bold uppercase tracking-wider">U</AvatarFallback>;
@@ -590,27 +602,48 @@ export function ActivityFeed({
             <span>Live Keeper Feed</span>
           </div>
           <div className="space-y-1.5">
-            {sessionScopedKeeperLogs.map((log) => (
-              <div
-                key={log.id}
-                className={`rounded-md border px-2.5 py-2 text-[10px] font-mono transition-colors ${
-                  highlightedKeeperLogId === log.id
-                    ? 'border-purple-500/40 bg-purple-500/10 text-purple-100'
-                    : 'border-white/5 bg-white/[0.03] text-zinc-300'
-                }`}
-              >
-                <div className="flex items-center justify-between gap-3">
-                  <div className="flex items-center gap-2">
-                    <Badge variant="outline" className="h-4 border-white/10 bg-black/20 px-1.5 text-[8px] uppercase tracking-widest text-zinc-400">
-                      {log.sessionId === 'global' ? 'global' : 'session'}
-                    </Badge>
-                    <span className="text-zinc-400">{log.time}</span>
+            {sessionScopedKeeperLogs.map((log) => {
+              const eventDetails = getKeeperEventDetails(log.details);
+
+              return (
+                <div
+                  key={log.id}
+                  className={`rounded-md border px-2.5 py-2 text-[10px] font-mono transition-colors ${
+                    highlightedKeeperLogId === log.id
+                      ? 'border-purple-500/40 bg-purple-500/10 text-purple-100'
+                      : 'border-white/5 bg-white/[0.03] text-zinc-300'
+                  }`}
+                >
+                  <div className="flex items-center justify-between gap-3">
+                    <div className="flex items-center gap-2">
+                      <Badge variant="outline" className="h-4 border-white/10 bg-black/20 px-1.5 text-[8px] uppercase tracking-widest text-zinc-400">
+                        {log.sessionId === 'global' ? 'global' : 'session'}
+                      </Badge>
+                      <span className="text-zinc-400">{log.time}</span>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      {eventDetails?.event && (
+                        <Badge variant="outline" className="h-4 border-purple-500/20 bg-purple-500/10 px-1.5 text-[8px] uppercase tracking-widest text-purple-300">
+                          {eventDetails.event.replace('session_', '')}
+                        </Badge>
+                      )}
+                      <span className="uppercase tracking-widest text-zinc-500">{log.type}</span>
+                    </div>
                   </div>
-                  <span className="uppercase tracking-widest text-zinc-500">{log.type}</span>
+                  <p className="mt-1.5 leading-relaxed">{log.message}</p>
+                  {(eventDetails?.sessionTitle || eventDetails?.nudgeMessage) && (
+                    <div className="mt-2 space-y-1 text-[9px] text-zinc-400">
+                      {eventDetails.sessionTitle && (
+                        <p className="truncate uppercase tracking-wide">Target: {eventDetails.sessionTitle}</p>
+                      )}
+                      {eventDetails.nudgeMessage && (
+                        <p className="line-clamp-2 normal-case tracking-normal text-zinc-300/90">{eventDetails.nudgeMessage}</p>
+                      )}
+                    </div>
+                  )}
                 </div>
-                <p className="mt-1.5 leading-relaxed">{log.message}</p>
-              </div>
-            ))}
+              );
+            })}
           </div>
         </div>
       )}
