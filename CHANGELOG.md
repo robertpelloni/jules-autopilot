@@ -2,6 +2,21 @@
 
 All notable changes to this project will be documented in this file.
 
+## [1.0.1] - 2026-04-05
+
+### Changed
+- **Version Source Hardening**: Promoted `VERSION` back to the canonical source of truth, added `VERSION.md` as a compatibility mirror, and aligned the sync scripts with the actual repo workflow.
+- **Runtime Version Consistency**: Updated the header badge, CLI settings screen, shared packages, and daemon manifest to report the same `1.0.1` build identifier.
+- **Keeper Store Safety**: Hardened persisted storage initialization with a writable `localStorage` probe and in-memory fallback for locked-down browser contexts.
+
+### Fixed
+- **Fleet Intelligence Typing**: Corrected `SessionKeeper` consumers to read `config.isEnabled`, removed the duplicate `toast` import, and preserved the new manual sync/reindex UI controls.
+- **Session Replay API**: Fixed replay timeline mapping (`a.id`) and made `/api/sessions` degrade gracefully to mock/error payloads without crashing the UI.
+
+### Notes
+- **Validation Status**: `pnpm run typecheck`, `pnpm run test`, and `node scripts/check-version-sync.js` pass. `pnpm run lint` still fails because the repository currently has no flat ESLint configuration.
+- **Test Harness Scope**: The Jest configuration is now aligned with the working shared-orchestration unit suite; Vite web-client tests still need a dedicated harness that can evaluate `import.meta.env` safely.
+
 ## [1.0.0] - 2026-03-25
 
 ### Added

@@ -12,11 +12,14 @@ import {
   Activity,
   Layers,
   ChevronRight,
-  Loader2
+  Loader2,
+  RefreshCw
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Progress } from '@/components/ui/progress';
 import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
+import { toast } from 'sonner';
 
 interface QueueStats {
   pending: number;
@@ -24,7 +27,12 @@ interface QueueStats {
 }
 
 export function FleetIntelligence() {
-  const { isEnabled, logs, queue, borgSignals } = useSessionKeeperStore();
+  const {
+    config: { isEnabled },
+    logs,
+    queue,
+    borgSignals,
+  } = useSessionKeeperStore();
   const [stats, setStats] = useState<QueueStats>({ pending: 0, processing: 0 });
   const [isReindexing, setIsReindexing] = useState(false);
 

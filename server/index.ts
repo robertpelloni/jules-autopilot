@@ -13,6 +13,7 @@ import fs from 'fs';
 import path from 'path';
 import type { DaemonEventType } from '@jules/shared';
 import { createDaemonEvent } from '@jules/shared';
+import { APP_VERSION } from '../lib/version';
 
 console.log(`[Server] Initializing Lean Core (Routing Fix Mode)...`);
 
@@ -124,7 +125,7 @@ api.get('/manifest', (c) => {
     return c.json({
         id: 'jules-autopilot-node-1',
         name: 'Jules Autopilot Orchestrator',
-        version: '0.9.7',
+        version: APP_VERSION,
         capabilities: [
             'cloud_session_management',
             'autonomous_plan_approval',
@@ -156,7 +157,7 @@ api.get('/sessions/:id/replay', async (c) => {
 
         // Transform activities into a structured replay timeline
         const timeline = activities.map(a => ({
-            id: activity.id,
+            id: a.id,
             timestamp: a.createdAt,
             role: a.role,
             type: a.type,
@@ -180,10 +181,13 @@ api.get('/sessions/:id/replay', async (c) => {
 api.get('/sessions', async (c) => {
     try {
         const client = await getJulesClient(c);
-        if (!client) return c.json({ sessions: getMockSessions() });
+        if (!client) {
+            console.log("[API] No client available, returning mock sessions.");
+            return c.json({ sessions: getMockSessions() });
+        }
 
         const sessions = await client.listSessions();
-        return c.json({ sessions });
+        return c.json({ sessions: sessions || [] });
     } catch (e: any) {
         const errorMessage = e?.message || String(e);
         console.error(`[API] listSessions failed: ${errorMessage}`);
@@ -203,7 +207,7 @@ api.get('/sessions', async (c) => {
                 },
                 ...getMockSessions()
             ]
-        });
+        }, 200); // Return 200 with error session to prevent crash
     }
 });
 
@@ -307,6 +311,16 @@ api.post('/rag/query', async (c) => {
         return c.json({ results });
     } catch (e) {
         console.error('[API] RAG Query failed:', e);
+        return c.json({ error: String(e) }, 500);
+    }
+});
+
+api.post('/fleet/sync', async (c) => {
+    try {
+        // Unified sync: Trigger RAG re-index and check issues
+        await orchestratorQueue.add('index_codebase', {});
+        return c.json({ success: true, message: 'Collective synchronization initiated' });
+    } catch (e) {
         return c.json({ error: String(e) }, 500);
     }
 });

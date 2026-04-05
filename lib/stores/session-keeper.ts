@@ -254,13 +254,24 @@ export const useSessionKeeperStore = create<SessionKeeperState>()(
     {
       name: 'jules-session-keeper-store',
       storage: createJSONStorage(() => {
-        if (typeof window !== 'undefined') {
-          return localStorage;
+        try {
+          if (typeof window !== 'undefined' && window.localStorage) {
+            // Test if we can actually write to it
+            const testKey = '__storage_test__';
+            window.localStorage.setItem(testKey, testKey);
+            window.localStorage.removeItem(testKey);
+            return window.localStorage;
+          }
+        } catch (e) {
+          console.warn('Session Keeper: localStorage access denied. State will not persist.');
         }
+        
+        // Fallback: In-memory mock storage
+        const mockStore = new Map<string, string>();
         return {
-          getItem: () => null,
-          setItem: () => { },
-          removeItem: () => { },
+          getItem: (key) => mockStore.get(key) || null,
+          setItem: (key, value) => mockStore.set(key, value),
+          removeItem: (key) => mockStore.delete(key),
         };
       }),
       partialize: (state) => ({

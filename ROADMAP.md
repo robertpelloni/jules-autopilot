@@ -16,6 +16,7 @@ For granular tasks and immediate bug fixes, see `TODO.md`.
 * [x] **Continuous RAG Indexing**: Periodic background job chunks and embeds the repository into SQLite for "Long-Term Memory".
 * [x] **Autonomous Multi-Agent Debates**: High-risk implementation plans trigger a background debate between a Security Architect and a Senior Engineer before auto-approval.
 * [x] **Queue Telemetry**: Added real-time counts of pending and processing jobs to `/api/daemon/status`.
+* [x] **Version Uniformity Hardening**: Synced the canonical runtime version across the daemon manifest, header badge, CLI settings screen, shared packages, and compatibility version files.
 
 ## Milestone: v1.5 — "Shadow Pilot"
 * [ ] **Background Anomaly Detection:** Agents silently monitoring `git diffs` background tasks, fixing failing CI pipelines before human review.

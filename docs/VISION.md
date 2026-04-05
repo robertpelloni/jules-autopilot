@@ -1,7 +1,7 @@
 # Jules Autopilot - Product Vision (Lean Core)
 
 **Author:** User (Updated for Lean Core Pivot)
-**Version:** 0.9.1
+**Version:** 1.0.1
 
 ---
 
@@ -99,12 +99,12 @@ The official interfaces for AI coding agents are often slow and unresponsive. Th
 
 ## Implementation History
 
-### ✅ Milestone: v0.9.1 — Lean Core Pivot (Current)
+### ✅ Milestone: v1.0.1 — Deep Autonomous Node Maintenance (Current)
 - [x] Consolidated API into a single Bun daemon.
 - [x] Removed "Enterprise" feature bloat (Analytics, Swarms, Side Logs).
-- [x] Implemented Next.js proxy layer for seamless frontend integration.
+- [x] Implemented the frontend proxy layer for seamless local integration.
 - [x] Pruned Prisma schema to core orchestration models.
-- [x] Standardized on TailwindCSS v4 and Next.js 15.
+- [x] Extended the Deep Autonomous Node with version-uniformity fixes across the Web UI, CLI, shared packages, and daemon manifest.
 
 ### 📋 Future Path
 - [ ] Refined TUI experience for "Mecha Suit" cockpit mode.

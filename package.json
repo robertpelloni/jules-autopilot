@@ -1,7 +1,7 @@
 {
   "name": "jules-ui",
   "description": "The modern, developer-first interface for Google's Jules AI agent. Features live code diffs, interactive terminal outputs, and a streamlined pure React experience.",
-  "version": "0.9.1",
+  "version": "1.0.1",
   "private": true,
   "type": "module",
   "workspaces": [
@@ -23,6 +23,8 @@
     "test": "jest",
     "test:e2e": "playwright test",
     "typecheck": "tsc --noEmit && pnpm --filter @jules/shared typecheck",
+    "update-version": "node scripts/update-version.js",
+    "check-version-sync": "node scripts/check-version-sync.js",
     "postinstall": "pnpm run build:shared && npx prisma generate --schema=prisma/schema.prisma"
   },
   "dependencies": {

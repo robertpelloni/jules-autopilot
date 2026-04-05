@@ -24,6 +24,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
+import { APP_VERSION } from "@/lib/version";
 
 interface AppHeaderProps {
   onSearchClick: () => void;
@@ -78,7 +79,7 @@ export function AppHeader({ onSearchClick, onNewSession }: AppHeaderProps) {
             Jules <span className="text-white/40">Autopilot</span>
           </h1>
           <Badge variant="outline" className="h-4 px-1.5 text-[8px] border-white/10 text-white/40 font-mono">
-            v0.9.1
+            v{APP_VERSION}
           </Badge>
         </div>
       </div>

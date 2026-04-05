@@ -1,6 +1,7 @@
 import React from 'react';
 import { Box, Text, useInput } from 'ink';
 import { useAppStore } from '../hooks/useAppState.js';
+import { APP_VERSION } from '../../../../lib/version';
 
 interface SettingsProps {
   onNavigate: (screen: 'dashboard' | 'sessions' | 'session-detail' | 'logs' | 'settings') => void;
@@ -45,7 +46,7 @@ export default function Settings({ onNavigate }: SettingsProps) {
         <Text bold>Environment</Text>
         <Box marginTop={1} flexDirection="column">
           <Text dimColor>API URL: {process.env.JULES_API_URL || 'http://localhost:8080'}</Text>
-          <Text dimColor>Version: 0.9.1</Text>
+          <Text dimColor>Version: {APP_VERSION}</Text>
         </Box>
       </Box>
 

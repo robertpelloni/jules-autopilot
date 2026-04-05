@@ -33,7 +33,10 @@ export function AppSidebar({
   currentView,
   onViewChange
 }: AppSidebarProps) {
-  const { queue, isEnabled } = useSessionKeeperStore();
+  const {
+    queue,
+    config: { isEnabled },
+  } = useSessionKeeperStore();
   const activeJobs = queue?.processing || 0;
 
   const navItems = [
