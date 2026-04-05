@@ -5,7 +5,7 @@ This document tracks granular bugs, missing features, and technical debt. For ep
 ## Immediate Actions
 - [x] **Submodule Dashboard Live Integration:** `SubmoduleList` now uses `useSWR` against `/api/system/submodules` with 30s refresh and manual revalidation.
 - [x] **Daemon API Discovery:** Formally established `/api/manifest` for node capability discovery.
-- [ ] **SSE/WebSocket Log Streaming:** Inject the `useDaemonEvent` hook into the `SessionView` so that the background `KeeperLog` messages stream in real-time without needing a manual refresh.
+- [x] **SSE/WebSocket Log Streaming:** Injected `useDaemonEvent('log_added')` into the session activity view and surfaced a live Keeper feed for session/global daemon events without manual refresh.
 - [x] **Tooling Stabilization:** Added a working ESLint v9 flat config and aligned the Jest harness with the current Vite/Bun + shared-package runtime assumptions.
 - [x] **Lint Coverage Expansion:** Extended the lint command to cover `src/`, `components/`, `lib/`, and `server/` with a staged warning-first rollout.
 - [x] **Lint Warning Burn-Down:** Completed two warning burn-down passes and brought the expanded lint surface to zero warnings.

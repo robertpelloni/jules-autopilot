@@ -2,6 +2,17 @@
 
 All notable changes to this project will be documented in this file.
 
+## [1.0.7] - 2026-04-05
+
+### Added
+- **Live Keeper Feed**: Surfaced a session-scoped daemon event strip inside `ActivityFeed`, driven by `useDaemonEvent('log_added')`, so Keeper actions stream into the active session view in real time.
+
+### Changed
+- **Keeper Log Plumbing**: Extended the session keeper store log shape with `sessionId` so session/global daemon events can be filtered and rendered contextually in the UI.
+
+### Notes
+- **Validation Status**: `pnpm run lint`, `pnpm run typecheck`, `pnpm run test`, and `node scripts/check-version-sync.js` all pass at `1.0.7`.
+
 ## [1.0.6] - 2026-04-05
 
 ### Changed

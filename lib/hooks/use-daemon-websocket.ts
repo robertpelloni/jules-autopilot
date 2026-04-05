@@ -65,6 +65,7 @@ export function useDaemonWebSocket() {
           if (payload?.log) {
             const newLog: Log = {
               id: String(payload.log.id),
+              sessionId: payload.log.sessionId,
               time: new Date(payload.log.createdAt || Date.now()).toLocaleTimeString(),
               message: payload.log.message,
               type: payload.log.type as Log['type'],

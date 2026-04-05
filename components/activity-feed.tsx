@@ -2,11 +2,12 @@
 
 import { useEffect, useState, useCallback, useRef, useMemo } from 'react';
 import { useJules } from '@/lib/jules/provider';
+import { useSessionKeeperStore } from '@/lib/stores/session-keeper';
 import type { Activity, Session } from '@jules/shared';
 import { exportSessionToJSON, exportSessionToMarkdown } from '@/lib/export';
 import { useNotifications } from '@/hooks/use-notifications';
 import { useDaemonEvent } from '@/lib/hooks/use-daemon-events';
-import type { ActivitiesUpdatedPayload } from '@jules/shared';
+import type { ActivitiesUpdatedPayload, LogAddedPayload } from '@jules/shared';
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { ScrollArea } from '@/components/ui/scroll-area';
@@ -30,7 +31,8 @@ import {
   ArrowUp,
   ArrowDown,
   FileText,
-  Brain
+  Brain,
+  Radio
 } from 'lucide-react';
 import { useVirtualizer } from '@tanstack/react-virtual';
 import { ActivityInput } from './activity-input';
@@ -70,6 +72,7 @@ export function ActivityFeed({
   refreshTrigger = 0 
 }: ActivityFeedProps) {
   const { client } = useJules();
+  const keeperLogs = useSessionKeeperStore((state) => state.logs);
   const [sending, setSending] = useState(false);
   const [approvingPlan, setApprovingPlan] = useState(false);
   const [copiedId, setCopiedId] = useState<string | null>(null);
@@ -77,6 +80,7 @@ export function ActivityFeed({
   const { sendNotification, permission } = useNotifications();
   const [loading, setLoading] = useState(true);
   const [activities, setActivities] = useState<Activity[]>([]);
+  const [highlightedKeeperLogId, setHighlightedKeeperLogId] = useState<string | null>(null);
 
   const formatDate = (dateString: string) => {
     if (!dateString) return 'Unknown date';
@@ -160,6 +164,21 @@ export function ActivityFeed({
       }
     },
     [session.id, isArchived, loadActivities]
+  );
+
+  useDaemonEvent<LogAddedPayload>(
+    'log_added',
+    (data) => {
+      const log = data?.log;
+      if (!log) return;
+      if (log.sessionId !== session.id && log.sessionId !== 'global') return;
+
+      setHighlightedKeeperLogId(String(log.id));
+      window.setTimeout(() => {
+        setHighlightedKeeperLogId((current) => (current === String(log.id) ? null : current));
+      }, 2400);
+    },
+    [session.id]
   );
 
   useEffect(() => {
@@ -421,6 +440,11 @@ export function ActivityFeed({
 
   const hasDiffs = activities.some(activity => activity.diff);
 
+  const sessionScopedKeeperLogs = useMemo(
+    () => keeperLogs.filter((log) => log.sessionId === session.id || log.sessionId === 'global').slice(0, 5),
+    [keeperLogs, session.id]
+  );
+
   const getActivityIcon = (activity: Activity) => {
     if (activity.role === 'user') {
       return <AvatarFallback className="bg-purple-500 text-white text-[9px] font-bold uppercase tracking-wider">U</AvatarFallback>;
@@ -558,6 +582,38 @@ export function ActivityFeed({
           </div>
         </div>
       </div>
+
+      {sessionScopedKeeperLogs.length > 0 && (
+        <div className="border-b border-border bg-zinc-950/50 px-4 py-2.5">
+          <div className="mb-2 flex items-center gap-2 text-[9px] font-mono uppercase tracking-[0.2em] text-zinc-500">
+            <Radio className="h-3 w-3 text-purple-400" />
+            <span>Live Keeper Feed</span>
+          </div>
+          <div className="space-y-1.5">
+            {sessionScopedKeeperLogs.map((log) => (
+              <div
+                key={log.id}
+                className={`rounded-md border px-2.5 py-2 text-[10px] font-mono transition-colors ${
+                  highlightedKeeperLogId === log.id
+                    ? 'border-purple-500/40 bg-purple-500/10 text-purple-100'
+                    : 'border-white/5 bg-white/[0.03] text-zinc-300'
+                }`}
+              >
+                <div className="flex items-center justify-between gap-3">
+                  <div className="flex items-center gap-2">
+                    <Badge variant="outline" className="h-4 border-white/10 bg-black/20 px-1.5 text-[8px] uppercase tracking-widest text-zinc-400">
+                      {log.sessionId === 'global' ? 'global' : 'session'}
+                    </Badge>
+                    <span className="text-zinc-400">{log.time}</span>
+                  </div>
+                  <span className="uppercase tracking-widest text-zinc-500">{log.type}</span>
+                </div>
+                <p className="mt-1.5 leading-relaxed">{log.message}</p>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
 
       <div className="flex-1 overflow-hidden relative group">
         <div className="absolute bottom-6 right-6 flex flex-col gap-2 z-20 opacity-0 group-hover:opacity-100 transition-opacity duration-200">

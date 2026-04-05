@@ -5,6 +5,7 @@ import type { DebateResult as OrchestrationDebateResult } from '@jules/shared';
 
 export interface Log {
   id?: string;
+  sessionId?: string;
   time: string;
   message: string;
   type: 'info' | 'action' | 'error' | 'skip';
@@ -75,7 +76,7 @@ interface SessionKeeperState {
   saveConfig: (config: SessionKeeperConfig) => Promise<void>;
 
   loadLogs: () => Promise<void>;
-  addLog: (message: string, type: Log['type'], details?: Record<string, unknown>) => void;
+  addLog: (message: string, type: Log['type'], details?: Record<string, unknown>, sessionId?: string) => void;
   addDebate: (debate: DebateResult) => void;
   addBorgSignal: (signal: BorgSignal) => void;
 
@@ -139,8 +140,9 @@ export const useSessionKeeperStore = create<SessionKeeperState>()(
               set((state) => ({
                 config: { ...state.config, isEnabled: statusData.isEnabled },
                 queue: statusData.queue,
-                logs: statusData.logs.map((l: { id: string; createdAt: string | number | Date; message: string; type: string; metadata?: string }) => ({
+                logs: statusData.logs.map((l: { id: string; sessionId?: string; createdAt: string | number | Date; message: string; type: string; metadata?: string }) => ({
                   id: l.id,
+                  sessionId: l.sessionId,
                   time: new Date(l.createdAt).toLocaleTimeString(),
                   message: l.message,
                   type: l.type as Log['type'],
@@ -185,8 +187,9 @@ export const useSessionKeeperStore = create<SessionKeeperState>()(
           const res = await fetch('/api/daemon/status');
           if (res.ok) {
             const statusData = await res.json();
-            const mappedLogs: Log[] = statusData.logs.map((l: { id: string; createdAt: string | number | Date; message: string; type: string; metadata?: string }) => ({
+            const mappedLogs: Log[] = statusData.logs.map((l: { id: string; sessionId?: string; createdAt: string | number | Date; message: string; type: string; metadata?: string }) => ({
               id: l.id,
+              sessionId: l.sessionId,
               time: new Date(l.createdAt).toLocaleTimeString(),
               message: l.message,
               type: l.type as Log['type'],
@@ -202,8 +205,9 @@ export const useSessionKeeperStore = create<SessionKeeperState>()(
         }
       },
 
-      addLog: (message, type, details) => {
+      addLog: (message, type, details, sessionId = 'global') => {
         const newLog: Log = {
+          sessionId,
           time: new Date().toLocaleTimeString(),
           message,
           type,
