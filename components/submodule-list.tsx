@@ -3,7 +3,6 @@
 import { useState, useMemo } from 'react';
 import useSWR from 'swr';
 import { 
-  Github, 
   GitBranch, 
   CheckCircle2, 
   AlertCircle, 
@@ -14,7 +13,6 @@ import {
   Clock
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
-import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { ScrollArea } from '@/components/ui/scroll-area';

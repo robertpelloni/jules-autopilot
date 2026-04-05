@@ -86,5 +86,5 @@ export async function searchSimilar(queryEmbeddingArray: number[], topK: number 
     scoredChunks.sort((a, b) => b.score - a.score);
 
     // Strip massive embedding buffer and return top K results
-    return scoredChunks.slice(0, topK).map(({ embedding, ...rest }) => rest);
+    return scoredChunks.slice(0, topK).map(({ embedding: _embedding, ...rest }) => rest);
 }

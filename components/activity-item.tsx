@@ -10,7 +10,6 @@ import { formatDistanceToNow, isValid, parseISO } from 'date-fns';
 import { Check, Copy, ChevronDown, ChevronRight, Terminal, Loader2 } from 'lucide-react';
 import { ActivityContent } from './activity-content';
 import { BashOutput } from '@/components/ui/bash-output';
-import { BorderGlow } from '@/components/ui/border-glow';
 
 interface ActivityItemProps {
   activity: Activity;

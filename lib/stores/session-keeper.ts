@@ -262,7 +262,7 @@ export const useSessionKeeperStore = create<SessionKeeperState>()(
             window.localStorage.removeItem(testKey);
             return window.localStorage;
           }
-        } catch (e) {
+        } catch (_e) {
           console.warn('Session Keeper: localStorage access denied. State will not persist.');
         }
         

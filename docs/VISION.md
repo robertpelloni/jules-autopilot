@@ -1,7 +1,7 @@
 # Jules Autopilot - Product Vision (Lean Core)
 
 **Author:** User (Updated for Lean Core Pivot)
-**Version:** 1.0.3
+**Version:** 1.0.4
 
 ---
 
@@ -99,7 +99,7 @@ The official interfaces for AI coding agents are often slow and unresponsive. Th
 
 ## Implementation History
 
-### ✅ Milestone: v1.0.3 — Validation Surface Expansion (Current)
+### ✅ Milestone: v1.0.4 — Warning Burn-Down Pass #1 (Current)
 - [x] Consolidated API into a single Bun daemon.
 - [x] Removed "Enterprise" feature bloat (Analytics, Swarms, Side Logs).
 - [x] Implemented the frontend proxy layer for seamless local integration.

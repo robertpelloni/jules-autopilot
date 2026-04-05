@@ -1,6 +1,6 @@
 import { prisma } from '../lib/prisma';
 import { JulesClient } from '../lib/jules/client';
-import { getProvider, summarizeSession, evaluatePlanRisk, decideNextAction, runDebate } from '@jules/shared';
+import { getProvider, evaluatePlanRisk, decideNextAction, runDebate } from '@jules/shared';
 import type { Participant } from '@jules/shared';
 import { emitDaemonEvent } from './index';
 import { addLog, getSupervisorState, saveSupervisorState } from './daemon';

@@ -1,6 +1,6 @@
 # Jules Autopilot - Architecture Guide
 
-**Version:** 1.0.3
+**Version:** 1.0.4
 **Decision:** Option C - Hono Backend + Ink TUI + Web UI
 
 ---

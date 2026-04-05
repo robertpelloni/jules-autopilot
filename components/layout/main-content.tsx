@@ -6,7 +6,6 @@ import { CodeDiffSidebar } from "@/components/code-diff-sidebar";
 import { DebateHistoryList } from "@/components/debate-history-list";
 import { SystemLogs } from "@/components/system-logs";
 import { Session, Activity, SessionTemplate } from '@jules/shared';
-import { Button } from "@/components/ui/button";
 
 interface MainContentProps {
   view: 'sessions' | 'templates' | 'kanban' | 'debates' | 'logs';
@@ -43,7 +42,6 @@ export function MainContent({
         {view === "templates" ? (
           <TemplatesPage 
             onStartSession={onStartSessionFromTemplate}
-            onBack={() => onViewChange('sessions')}
           />
         ) : view === "kanban" ? (
           <KanbanBoard 
@@ -74,7 +72,6 @@ export function MainContent({
 
       {showCodeDiffs && selectedSession && (
         <CodeDiffSidebar
-          session={selectedSession}
           activities={currentActivities}
           onClose={() => onToggleCodeDiffs(false)}
         />

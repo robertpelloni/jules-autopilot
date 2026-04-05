@@ -1,9 +1,9 @@
-import { JulesClient, JulesAPIError } from '../lib/jules/client';
+import { JulesClient } from '../lib/jules/client';
 import { prisma } from '../lib/prisma';
 import { Hono, type Context } from 'hono';
 import { cors } from 'hono/cors';
 import { EventEmitter } from 'events';
-import { startDaemon, stopDaemon } from './daemon';
+import { startDaemon } from './daemon';
 import { queryCodebase } from './rag';
 import { handleBorgWebhook } from './webhooks';
 import { createBunWebSocket } from 'hono/bun';
@@ -45,7 +45,6 @@ const port = 8080;
 
 const eventBus = new EventEmitter();
 const wsClients = new Set<ServerWebSocket<any>>();
-let workerInstance: ReturnType<typeof setupWorker> | null = null;
 
 export function broadcastToClients(message: object) {
     const payload = JSON.stringify(message);
@@ -527,7 +526,7 @@ if (typeof Bun !== 'undefined') {
             if (settings?.isEnabled) {
                 console.log("[Server] Auto-starting Session Keeper...");
                 startDaemon();
-                workerInstance = setupWorker();
+                setupWorker();
             }
         } catch (e) { console.error("[Server] Auto-start failed:", e); }
     }, 1000);

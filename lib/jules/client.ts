@@ -3,7 +3,6 @@ import type {
   Source,
   Session,
   Activity,
-  CreateSessionRequest,
   SessionOutput,
   SessionTemplate,
   Artifact
@@ -193,10 +192,8 @@ export class JulesClient {
         headers['X-Goog-Api-Key'] = this.apiKey;
       }
       
-      // LOG THE CLEAN HEADERS (MASKED)
+      // LOG THE CLEAN HEADERS
       if (typeof window === 'undefined') {
-        const maskedToken = this.authToken ? `${this.authToken.slice(0, 4)}...${this.authToken.slice(-4)}` : 'None';
-        const maskedKey = this.apiKey ? `${this.apiKey.slice(0, 4)}...${this.apiKey.slice(-4)}` : 'None';
         console.log(`[JulesClient] Outgoing to Google: auth=${!!this.authToken} key=${!!this.apiKey}`);
       }
     } else {

@@ -6,7 +6,6 @@ import {
   Brain, 
   Cpu, 
   Search, 
-  ShieldCheck, 
   Zap, 
   History,
   Activity,

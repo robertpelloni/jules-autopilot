@@ -20,7 +20,6 @@ import {
   Play, 
   GitBranch, 
   MoreVertical, 
-  Book, 
   Download, 
   Copy, 
   Check, 

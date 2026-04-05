@@ -2,6 +2,16 @@
 
 All notable changes to this project will be documented in this file.
 
+## [1.0.4] - 2026-04-05
+
+### Changed
+- **Warning Burn-Down Pass #1**: Removed a broad set of low-risk unused imports, unused props, unused helper functions, and unused state setters across the UI and server surfaces.
+- **Lint Backlog Reduction**: Reduced the expanded lint backlog from 60 warnings to 30 warnings without weakening the validation command or interrupting running processes.
+
+### Notes
+- **Validation Status**: `pnpm run lint`, `pnpm run typecheck`, `pnpm run test`, and `node scripts/check-version-sync.js` all pass at `1.0.4`.
+- **Remaining Backlog**: The remaining 30 warnings are now concentrated mostly in explicit `any` sites, a few empty blocks, hook dependency warnings, and fast-refresh export-structure warnings.
+
 ## [1.0.3] - 2026-04-05
 
 ### Changed
