@@ -12,10 +12,11 @@ All notable changes to this project will be documented in this file.
 ### Fixed
 - **Fleet Intelligence Typing**: Corrected `SessionKeeper` consumers to read `config.isEnabled`, removed the duplicate `toast` import, and preserved the new manual sync/reindex UI controls.
 - **Session Replay API**: Fixed replay timeline mapping (`a.id`) and made `/api/sessions` degrade gracefully to mock/error payloads without crashing the UI.
+- **Hypercode Cloud Compatibility**: Merged the Hypercode webhook patch so the daemon accepts both `/api/webhooks/borg` and `/api/webhooks/hypercode`.
+- **Jules Client Testability**: Added a safe `process.env.VITE_JULES_API_BASE_URL` fallback path and restored the `lib/jules/client.test.ts` suite under Jest.
 
 ### Notes
 - **Validation Status**: `pnpm run typecheck`, `pnpm run test`, and `node scripts/check-version-sync.js` pass. `pnpm run lint` still fails because the repository currently has no flat ESLint configuration.
-- **Test Harness Scope**: The Jest configuration is now aligned with the working shared-orchestration unit suite; Vite web-client tests still need a dedicated harness that can evaluate `import.meta.env` safely.
 
 ## [1.0.0] - 2026-03-25
 

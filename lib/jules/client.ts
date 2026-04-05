@@ -139,14 +139,26 @@ export class JulesAPIError extends Error {
   }
 }
 
-const DEFAULT_API_BASE_URL = (import.meta as any).env?.VITE_JULES_API_BASE_URL || '/api';
+function getDefaultApiBaseUrl(): string {
+  const viteEnv = (() => {
+    try {
+      return (0, eval)('import.meta.env') as { VITE_JULES_API_BASE_URL?: string } | undefined;
+    } catch {
+      return undefined;
+    }
+  })();
+
+  return viteEnv?.VITE_JULES_API_BASE_URL
+    || process.env.VITE_JULES_API_BASE_URL
+    || '/api';
+}
 
 export class JulesClient {
   private apiKey?: string;
   private authToken?: string;
   private baseUrl: string;
 
-  constructor(apiKey?: string, baseUrl: string = DEFAULT_API_BASE_URL, authToken?: string) {
+  constructor(apiKey?: string, baseUrl: string = getDefaultApiBaseUrl(), authToken?: string) {
     this.apiKey = apiKey;
     this.authToken = authToken;
     this.baseUrl = baseUrl;

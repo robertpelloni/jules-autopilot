@@ -6,7 +6,7 @@ This document tracks granular bugs, missing features, and technical debt. For ep
 - [x] **Submodule Dashboard Live Integration:** `SubmoduleList` now uses `useSWR` against `/api/system/submodules` with 30s refresh and manual revalidation.
 - [x] **Daemon API Discovery:** Formally established `/api/manifest` for node capability discovery.
 - [ ] **SSE/WebSocket Log Streaming:** Inject the `useDaemonEvent` hook into the `SessionView` so that the background `KeeperLog` messages stream in real-time without needing a manual refresh.
-- [ ] **Tooling Stabilization:** Replace the currently broken lint bootstrap with a fully supported flat ESLint setup and add a dedicated Vite-aware harness for web-client tests that currently rely on `import.meta.env`.
+- [ ] **Tooling Stabilization:** Replace the currently broken lint bootstrap with a fully supported flat ESLint setup and keep the restored Jest harness aligned with the evolving Vite/Bun client runtime.
 - [x] **Borg Collective UI:** Implemented the "Collective Signals" feed in the Fleet tab to visualize incoming Borg signals.
 
 ## Technical Debt & Refactoring

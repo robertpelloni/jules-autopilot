@@ -31,8 +31,10 @@ This session focused on stabilizing the current `main` branch without interrupti
   - Session replay timeline uses `a.id` correctly.
   - `/api/sessions` now degrades gracefully to mock/error payloads instead of crashing the UI on auth/backend failure.
   - `POST /api/fleet/sync` remains available for manual synchronization.
-- Repaired and narrowed the Jest harness so the reliable shared orchestration suite runs under the current toolchain.
+  - Hypercode cloud integration is merged in: the daemon now accepts both `/api/webhooks/borg` and `/api/webhooks/hypercode` through the shared webhook handler.
+- Repaired the Jest harness under the current ESM/Vite/Bun reality by adopting the working CJS `ts-jest` configuration from upstream and keeping local test fixes.
 - Fixed `packages/shared/src/orchestration/providers/index.test.ts` by removing a mock for a non-existent `qwen` provider module.
+- Merged upstream `lib/jules/client` compatibility fixes so tests can resolve the API base URL via `process.env.VITE_JULES_API_BASE_URL` outside a Vite runtime.
 - Updated project docs and operational docs:
   - `CHANGELOG.md`
   - `ROADMAP.md`
@@ -62,8 +64,8 @@ The repository had accumulated version/tooling drift in several places:
 ### Current Practical Resolution
 - `VERSION` is now the canonical source.
 - `VERSION.md` exists only as a compatibility mirror for legacy references.
-- Shared orchestration tests are running again.
-- Web-client tests that depend on Vite-style `import.meta.env` still need a dedicated harness and were intentionally not included in the now-working Jest scope.
+- The full currently configured Jest suite is running again, including `lib/jules/client.test.ts`.
+- `lib/jules/client.ts` now safely falls back to `process.env.VITE_JULES_API_BASE_URL` when no Vite runtime env is available.
 
 ## 4. Files Intentionally Left Uncommitted/Live
 The live SQLite WAL files are still changing because processes were not interrupted:
@@ -74,7 +76,7 @@ These should stay out of the commit unless there is an explicit reason to snapsh
 
 ## 5. Recommended Next Steps
 1. Add a proper `eslint.config.js` flat config and any required parser/plugin dependencies so `pnpm run lint` becomes real and enforceable.
-2. Add a Vite-aware unit test path for web-client code that touches `import.meta.env`.
+2. Add a proper flat ESLint configuration and any required parser/plugin dependencies so linting can execute on TS/TSX source.
 3. Consider replacing remaining hardcoded version strings in secondary docs/backends outside the primary web/CLI/shared surfaces.
 4. If the daemon/UI is actively being used, keep avoiding destructive process management; continue patching in-place.
 
