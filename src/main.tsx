@@ -2,7 +2,6 @@
  * Jules Autopilot Main Entry
  * Build: 2026-03-25T17:52:38Z
  */
-import React from 'react';
 import ReactDOM from 'react-dom/client';
 import App from './App';
 import './globals.css';

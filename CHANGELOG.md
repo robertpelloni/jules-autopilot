@@ -2,6 +2,18 @@
 
 All notable changes to this project will be documented in this file.
 
+## [1.0.2] - 2026-04-05
+
+### Added
+- **Flat ESLint Bootstrap**: Added a working `eslint.config.js` using `typescript-eslint`, browser globals, and React hook/refresh rules so the repo finally has an ESLint v9-compatible entrypoint.
+
+### Changed
+- **Tooling Dependencies**: Added the missing lint toolchain packages at the workspace root (`@eslint/js`, `typescript-eslint`, `globals`, `eslint-plugin-react-hooks`, `eslint-plugin-react-refresh`).
+- **Main Entry Cleanup**: Removed the unused `React` import from `src/main.tsx` so the Vite entrypoint is clean under the new lint rules.
+
+### Notes
+- **Validation Status**: `pnpm run lint`, `pnpm run typecheck`, `pnpm run test`, and `node scripts/check-version-sync.js` now all pass.
+
 ## [1.0.1] - 2026-04-05
 
 ### Changed
