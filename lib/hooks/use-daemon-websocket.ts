@@ -6,6 +6,7 @@ import type {
   DaemonEvent,
   DaemonStatusPayload,
   LogAddedPayload,
+  SessionUpdatedPayload,
   SessionNudgedPayload,
   SessionApprovedPayload,
 } from '@jules/shared';
@@ -17,12 +18,19 @@ const WS_URL = DAEMON_WS_URL;
 
 type ConnectionState = 'connecting' | 'connected' | 'disconnected' | 'reconnecting';
 
+interface BorgSignalPayload {
+  type: string;
+  timestamp: string;
+  source?: string;
+  data?: unknown;
+}
+
 export function useDaemonWebSocket() {
   const wsRef = useRef<WebSocket | null>(null);
   const reconnectAttemptsRef = useRef(0);
-  const reconnectTimeoutRef = useRef<any>(null);
-  const pingIntervalRef = useRef<any>(null);
-  const pongTimeoutRef = useRef<any>(null);
+  const reconnectTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const pingIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const pongTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const lastPongRef = useRef<number>(0);
 
   useEffect(() => {
@@ -78,9 +86,7 @@ export function useDaemonWebSocket() {
           break;
 
         case 'session_updated': {
-          // Explicitly type payload to any to resolve build error until shared types are updated
-          // eslint-disable-next-line @typescript-eslint/no-explicit-any
-          const payload = message.data as any;
+          const payload = message.data as SessionUpdatedPayload;
           setStatusSummary({
             lastAction: `Session ${payload?.sessionId?.slice(-6) || 'unknown'} updated`,
           });
@@ -123,7 +129,7 @@ export function useDaemonWebSocket() {
         }
 
         case 'borg_signal_received': {
-          const payload = message.data as any;
+          const payload = message.data as BorgSignalPayload;
           useSessionKeeperStore.getState().addBorgSignal({
             id: String(Date.now()),
             type: payload.type,
@@ -151,6 +157,7 @@ export function useDaemonWebSocket() {
           break;
       }
     } catch {
+      // Ignore malformed daemon payloads and keep the socket alive.
     }
   }, [setStatusSummary, setPausedAll]);
 
@@ -215,10 +222,12 @@ export function useDaemonWebSocket() {
       };
 
       ws.onerror = () => {
+        // Connection retries are coordinated in onclose.
       };
 
       wsRef.current = ws;
     } catch {
+      setConnectionState('disconnected');
     }
   }, [config.isEnabled, handleMessage, setStatusSummary]);
 

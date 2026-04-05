@@ -44,7 +44,7 @@ const api = new Hono();
 const port = 8080;
 
 const eventBus = new EventEmitter();
-const wsClients = new Set<ServerWebSocket<any>>();
+const wsClients = new Set<ServerWebSocket<unknown>>();
 
 export function broadcastToClients(message: object) {
     const payload = JSON.stringify(message);
@@ -75,7 +75,7 @@ app.onError((err, c) => {
     return c.json({ error: err.message, status: 500 }, 500);
 });
 
-async function getJulesClient(c?: any) {
+async function getJulesClient(c?: Context) {
     try {
         const headerKey = c?.req?.header('X-Jules-Api-Key') || c?.req?.header('X-Goog-Api-Key');
         const settings = await prisma.keeperSettings.findUnique({ where: { id: 'default' } }).catch(() => null);    
@@ -187,8 +187,8 @@ api.get('/sessions', async (c) => {
 
         const sessions = await client.listSessions();
         return c.json({ sessions: sessions || [] });
-    } catch (e: any) {
-        const errorMessage = e?.message || String(e);
+    } catch (e) {
+        const errorMessage = e instanceof Error ? e.message : String(e);
         console.error(`[API] listSessions failed: ${errorMessage}`);
 
         return c.json({ 
@@ -484,11 +484,11 @@ app.route('/api', api);
 // WEBSOCKET HANDLER
 app.get('/ws', upgradeWebSocket(() => ({
     onOpen(event, ws) {
-        wsClients.add(ws as unknown as ServerWebSocket<any>);
+        wsClients.add(ws as unknown as ServerWebSocket<unknown>);
         ws.send(JSON.stringify({ type: 'connected' }));
     },
     onClose(event, ws) {
-        wsClients.delete(ws as unknown as ServerWebSocket<any>);
+        wsClients.delete(ws as unknown as ServerWebSocket<unknown>);
     }
 })));
 

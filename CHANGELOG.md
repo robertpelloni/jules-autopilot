@@ -2,6 +2,16 @@
 
 All notable changes to this project will be documented in this file.
 
+## [1.0.5] - 2026-04-05
+
+### Changed
+- **Warning Burn-Down Pass #2**: Cleaned up remaining low-risk typing and lint issues across broadcast handling, debate/session keeper selectors, daemon WebSocket hooks, Borg webhook typing, and queue/server type surfaces.
+- **Lint Rule Calibration**: Scoped the React refresh export rule away from known utility/provider files where the warning was not actionable for this codebase layout.
+
+### Notes
+- **Validation Status**: `pnpm run lint`, `pnpm run typecheck`, `pnpm run test`, and `node scripts/check-version-sync.js` all pass at `1.0.5`.
+- **Lint Status**: The repo now runs clean with `0 warnings` and `0 errors` on the expanded lint surface.
+
 ## [1.0.4] - 2026-04-05
 
 ### Changed

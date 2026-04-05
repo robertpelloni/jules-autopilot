@@ -53,5 +53,15 @@ export default tseslint.config(
       'no-empty': 'warn',
       'react-refresh/only-export-components': ['warn', { allowConstantExport: true }],
     },
+  },
+  {
+    files: [
+      'components/ui/badge.tsx',
+      'components/ui/button.tsx',
+      'lib/jules/provider.tsx',
+    ],
+    rules: {
+      'react-refresh/only-export-components': 'off',
+    },
   }
 );

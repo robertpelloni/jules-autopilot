@@ -1,7 +1,8 @@
 import { prisma } from '../lib/prisma';
+import type { QueueJob } from '@prisma/client';
 import { JulesClient } from '../lib/jules/client';
 import { getProvider, evaluatePlanRisk, decideNextAction, runDebate } from '@jules/shared';
-import type { Participant } from '@jules/shared';
+import type { Participant, Session, SessionKeeperConfig } from '@jules/shared';
 import { emitDaemonEvent } from './index';
 import { addLog, getSupervisorState, saveSupervisorState } from './daemon';
 import { queryCodebase } from './rag';
@@ -26,7 +27,7 @@ export class TaskQueue {
 
     constructor(private concurrency: number = 2) {}
 
-    async add(type: string, payload: any, runAt: Date = new Date()) {
+    async add(type: string, payload: unknown, runAt: Date = new Date()) {
         return await prisma.queueJob.create({
             data: {
                 type,
@@ -74,7 +75,7 @@ export class TaskQueue {
         await Promise.all(jobs.map(job => this.executeJob(job)));
     }
 
-    private async executeJob(job: any) {
+    private async executeJob(job: QueueJob) {
         // Mark as processing
         await prisma.queueJob.update({
             where: { id: job.id },
@@ -215,7 +216,7 @@ export class TaskQueue {
         return { action: 'indexed', count: newChunks };
     }
 
-    private async handleCheckIssues(sourceId: string, settings: any) {
+    private async handleCheckIssues(sourceId: string, settings: SessionKeeperConfig) {
         const julesKey = process.env.JULES_API_KEY || settings.julesApiKey;
         const supervisorKey = settings.supervisorApiKey || process.env.OPENAI_API_KEY || "";
         
@@ -296,7 +297,7 @@ export class TaskQueue {
         return { action: 'none', reason: 'no_suitable_issues' };
     }
 
-    private async handleIndexSessionMemory(sessionId: string, settings: any) {
+    private async handleIndexSessionMemory(sessionId: string, settings: SessionKeeperConfig) {
         const julesKey = process.env.JULES_API_KEY || settings.julesApiKey;
         const supervisorKey = settings.supervisorApiKey || process.env.OPENAI_API_KEY || "";
         
@@ -345,7 +346,7 @@ export class TaskQueue {
         return { action: 'fail', reason: 'embedding_failed' };
     }
 
-    private async handleCheckSession(session: any, settings: any) {
+    private async handleCheckSession(session: Session, settings: SessionKeeperConfig) {
         const julesKey = process.env.JULES_API_KEY;
         const googleKey = process.env.GOOGLE_API_KEY;
         const dbKey = settings.julesApiKey;
@@ -412,7 +413,7 @@ export class TaskQueue {
                                 name: 'Security Architect',
                                 role: 'Security & Architecture Reviewer',
                                 systemPrompt: 'You are a strict security architect. Review the proposed implementation plan for vulnerabilities, data leaks, and architectural flaws. If the plan modifies core logic without adequate testing, reject it. If it is safe, approve it.',
-                                provider: settings.supervisorProvider as any,
+                                provider: settings.supervisorProvider as Participant['provider'],
                                 model: settings.supervisorModel,
                                 apiKey: supervisorKey
                             },
@@ -421,7 +422,7 @@ export class TaskQueue {
                                 name: 'Senior Engineer',
                                 role: 'Code Quality Reviewer',
                                 systemPrompt: 'You are a senior frontend/backend engineer. Review the plan for code quality, edge cases, and best practices. Suggest improvements or point out missing steps. If the plan is sound, approve it.',
-                                provider: settings.supervisorProvider as any,
+                                provider: settings.supervisorProvider as Participant['provider'],
                                 model: settings.supervisorModel,
                                 apiKey: supervisorKey
                             }

@@ -3,8 +3,14 @@ import { orchestratorQueue } from './queue';
 import { emitDaemonEvent } from './index';
 import { addLog } from './daemon';
 
-export async function handleBorgWebhook(payload: any) {
-    const { type, data, source } = payload;
+interface BorgWebhookPayload {
+    type: string;
+    source?: string;
+    data?: Record<string, unknown>;
+}
+
+export async function handleBorgWebhook(payload: BorgWebhookPayload) {
+    const { type, data = {}, source } = payload;
     
     await addLog(`Received Borg signal: ${type} from ${source || 'unknown'}`, 'info', 'global');
 

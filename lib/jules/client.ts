@@ -83,6 +83,20 @@ interface ApiArtifact {
   [key: string]: unknown;
 }
 
+interface ApiErrorResponse {
+  message?: string;
+  error?: {
+    message?: string;
+    details?: Array<{ reason?: string }>;
+  };
+}
+
+interface GitHubIssue {
+  number: number;
+  title: string;
+  body?: string;
+}
+
 interface ApiActivity {
   name?: string;
   id?: string;
@@ -212,8 +226,8 @@ export class JulesClient {
 
       if (!response.ok) {
         const errorText = await response.text().catch(() => 'No error body');
-        let errorData: any = {};
-        try { errorData = JSON.parse(errorText); } catch { /* ignore */ }
+        let errorData: ApiErrorResponse = {};
+        try { errorData = JSON.parse(errorText) as ApiErrorResponse; } catch { /* ignore */ }
 
         console.error(`[Jules Client] Request failed: ${response.status} ${response.statusText}`, errorText);
 
@@ -684,7 +698,7 @@ export class JulesClient {
   }
 
   // GitHub Integration
-  async listIssues(sourceId: string): Promise<any[]> {
+  async listIssues(sourceId: string): Promise<GitHubIssue[]> {
     // sourceId format: "sources/github/owner/repo"
     const match = sourceId.match(/sources\/github\/(.+)/);
     if (!match) throw new Error("Invalid sourceId format for GitHub issues");

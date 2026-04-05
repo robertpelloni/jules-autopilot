@@ -170,7 +170,7 @@ export function SessionKeeperSettingsContent({
                   <Label className="text-xs text-white/60">Provider</Label>
                   <Select
                     value={config.supervisorProvider}
-                    onValueChange={(v: string) => handleConfigChange({ ...config, supervisorProvider: v as any, supervisorModel: '' })}
+                    onValueChange={(v: SessionKeeperConfig['supervisorProvider']) => handleConfigChange({ ...config, supervisorProvider: v, supervisorModel: '' })}
                   >
                     <SelectTrigger className="h-8 text-xs bg-black/50 border-white/10"><SelectValue /></SelectTrigger>
                     <SelectContent className="bg-zinc-900 border-white/10 text-white">

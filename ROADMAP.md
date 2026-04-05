@@ -20,6 +20,7 @@ For granular tasks and immediate bug fixes, see `TODO.md`.
 * [x] **Developer Tooling Recovery**: Restored a working Jest harness and added an ESLint v9 flat configuration so core validation commands are operational again.
 * [x] **Lint Surface Re-Expansion**: Reintroduced `components/`, `lib/`, and `server/` to the primary lint workflow using a warning-first rollout for legacy hotspots.
 * [x] **Warning Backlog Reduction Pass #1**: Cut the expanded lint backlog in half by removing low-risk unused imports, unused props, and unused helpers across major app surfaces.
+* [x] **Warning Backlog Reduction Pass #2**: Eliminated the remaining expanded-lint warnings by tightening types, stabilizing hook dependencies, and calibrating non-actionable refresh warnings.
 
 ## Milestone: v1.5 — "Shadow Pilot"
 * [ ] **Background Anomaly Detection:** Agents silently monitoring `git diffs` background tasks, fixing failing CI pipelines before human review.

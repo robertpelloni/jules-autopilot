@@ -53,7 +53,7 @@ export interface BorgSignal {
   type: string;
   timestamp: string;
   source: string;
-  data?: any;
+  data?: unknown;
 }
 
 interface SessionKeeperState {
