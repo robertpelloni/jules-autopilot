@@ -9,6 +9,7 @@ import (
 
 	"github.com/gofiber/contrib/websocket"
 	"github.com/gofiber/fiber/v2"
+	corsmiddleware "github.com/gofiber/fiber/v2/middleware/cors"
 	"github.com/joho/godotenv"
 	"github.com/jules-autopilot/backend/api"
 	"github.com/jules-autopilot/backend/db"
@@ -65,6 +66,12 @@ func main() {
 	services.StartWorker()
 
 	app := fiber.New()
+
+	app.Use(corsmiddleware.New(corsmiddleware.Config{
+		AllowOrigins: "*",
+		AllowMethods: "GET,POST,PUT,DELETE,OPTIONS,PATCH",
+		AllowHeaders: "Content-Type, Authorization, X-Jules-Api-Key, X-Jules-Auth-Token, X-Goog-Api-Key",
+	}))
 
 	// Setup API Routes
 	api.SetupRoutes(app)

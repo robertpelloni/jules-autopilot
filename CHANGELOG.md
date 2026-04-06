@@ -2,6 +2,19 @@
 
 All notable changes to this project will be documented in this file.
 
+## [1.0.29] - 2026-04-05
+
+### Added
+- **Go Request-Scoped Jules Auth Support**: Added request-scoped Jules client resolution in Go API routes so callers can provide `X-Jules-Api-Key` / `X-Goog-Api-Key` headers, matching Bun-side behavior more closely.
+- **Go CORS Runtime Parity**: Added Bun-like permissive CORS middleware to the Go runtime for API deployment flexibility when the frontend and backend are served from different origins.
+
+### Changed
+- **Go API Runtime Flexibility**: Session/replay/activity/action/export/nudge/fleet-sync routes in the Go API now use request-aware Jules client resolution instead of env/settings-only assumptions.
+- **Primary Runtime Readiness**: This closes another real deployment/runtime gap for using the Go backend directly outside same-origin-only scenarios.
+
+### Notes
+- **Validation Status**: `cd backend-go && gofmt -w main.go api/routes.go && go test ./...`, `pnpm run lint`, `pnpm run typecheck`, `pnpm run test`, and `node scripts/check-version-sync.js` all pass at `1.0.29`.
+
 ## [1.0.28] - 2026-04-05
 
 ### Changed

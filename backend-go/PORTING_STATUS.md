@@ -104,6 +104,8 @@ Move reasonable backend responsibilities from the TypeScript/Bun daemon into the
 - Go runtime now serves built frontend assets and SPA index fallback via `backend-go/main.go`
 - Dedicated dashboard Health view now consumes Go health data and metrics preview helpers
 - Go websocket runtime now emits `connected` and protocol-compatible `pong` responses for frontend daemon websocket health/reconnect behavior
+- Go API routes now support request-scoped Jules auth via `X-Jules-Api-Key` / `X-Goog-Api-Key` headers
+- Go runtime now applies Bun-like permissive CORS middleware for cross-origin API use
 - Go Jules client support for source discovery, GitHub issues, and session creation
 - `POST /api/sessions/:id/nudge` now sends a real activity instead of returning a stub response
 - `POST /api/sessions/:id:approvePlan` is now supported through the generic Go session action handler

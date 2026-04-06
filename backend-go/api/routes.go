@@ -59,6 +59,14 @@ func getVersion() string {
 	return strings.TrimSpace(string(content))
 }
 
+func getJulesClientForRequest(c *fiber.Ctx) *services.JulesClient {
+	headerKey := strings.TrimSpace(c.Get("X-Jules-Api-Key"))
+	if headerKey == "" {
+		headerKey = strings.TrimSpace(c.Get("X-Goog-Api-Key"))
+	}
+	return services.NewJulesClient(headerKey)
+}
+
 func getPing(c *fiber.Ctx) error {
 	return c.JSON(fiber.Map{"status": "ok", "time": time.Now().Format(time.RFC3339)})
 }
@@ -182,7 +190,7 @@ func getSystemSubmodules(c *fiber.Ctx) error {
 
 func getSessionReplay(c *fiber.Ctx) error {
 	id := c.Params("id")
-	client := services.NewJulesClient()
+	client := getJulesClientForRequest(c)
 
 	session, err := client.GetSession(id)
 	if err != nil {
@@ -218,7 +226,7 @@ func getSessionReplay(c *fiber.Ctx) error {
 
 func getSession(c *fiber.Ctx) error {
 	id := c.Params("id")
-	client := services.NewJulesClient()
+	client := getJulesClientForRequest(c)
 	session, err := client.GetSession(id)
 	if err != nil {
 		return c.Status(500).JSON(fiber.Map{"error": err.Error()})
@@ -282,7 +290,7 @@ func deleteDebate(c *fiber.Ctx) error {
 
 func getSessionActivities(c *fiber.Ctx) error {
 	id := c.Params("id")
-	client := services.NewJulesClient()
+	client := getJulesClientForRequest(c)
 	activities, err := client.ListActivities(id)
 	if err != nil {
 		return c.Status(500).JSON(fiber.Map{"error": err.Error()})
@@ -576,7 +584,7 @@ func SetupRoutes(app *fiber.App) {
 }
 
 func triggerFleetSync(c *fiber.Ctx) error {
-	client := services.NewJulesClient()
+	client := getJulesClientForRequest(c)
 	sessions, err := client.ListSessions()
 	if err != nil {
 		return c.Status(500).JSON(fiber.Map{"error": "Failed to fetch sessions: " + err.Error()})
@@ -832,7 +840,7 @@ func handleSessionAction(c *fiber.Ctx) error {
 	id := parts[0]
 	action := parts[1]
 
-	client := services.NewJulesClient()
+	client := getJulesClientForRequest(c)
 
 	if action == "sendMessage" {
 		var body struct {
@@ -898,7 +906,7 @@ func patchSession(c *fiber.Ctx) error {
 		return c.Status(400).JSON(fiber.Map{"error": "No supported updates provided"})
 	}
 
-	client := services.NewJulesClient()
+	client := getJulesClientForRequest(c)
 	updated, err := client.UpdateSession(id, updates, strings.Join(updateMaskParts, ","))
 	if err != nil {
 		return c.Status(500).JSON(fiber.Map{"error": err.Error()})
@@ -913,7 +921,7 @@ func createActivity(c *fiber.Ctx) error {
 		return c.Status(400).JSON(fiber.Map{"error": "Invalid request body"})
 	}
 
-	client := services.NewJulesClient()
+	client := getJulesClientForRequest(c)
 	result, err := client.CreateActivity(id, req)
 	if err != nil {
 		return c.Status(500).JSON(fiber.Map{"error": err.Error()})
@@ -940,7 +948,7 @@ func resolveRepoPath(sourceId string) string {
 
 func exportSessionToRepo(c *fiber.Ctx) error {
 	id := c.Params("id")
-	client := services.NewJulesClient()
+	client := getJulesClientForRequest(c)
 
 	// 1. Get session details for header
 	session, err := client.GetSession(id)
@@ -1009,7 +1017,7 @@ func saveSessionMemory(c *fiber.Ctx) error {
 		return c.Status(400).JSON(fiber.Map{"error": "Invalid request body"})
 	}
 
-	client := services.NewJulesClient()
+	client := getJulesClientForRequest(c)
 	session, err := client.GetSession(id)
 	if err != nil {
 		return c.Status(500).JSON(fiber.Map{"error": "Failed to get session details: " + err.Error()})
@@ -1266,7 +1274,7 @@ func updateKeeperSettings(c *fiber.Ctx) error {
 }
 
 func getSessions(c *fiber.Ctx) error {
-	client := services.NewJulesClient()
+	client := getJulesClientForRequest(c)
 	liveSessions, err := client.ListSessions()
 	if err == nil && len(liveSessions) > 0 {
 		return c.JSON(fiber.Map{"sessions": liveSessions})
@@ -1285,7 +1293,7 @@ func getSessions(c *fiber.Ctx) error {
 
 func nudgeSession(c *fiber.Ctx) error {
 	id := c.Params("id")
-	client := services.NewJulesClient()
+	client := getJulesClientForRequest(c)
 	session, err := client.GetSession(id)
 	if err != nil {
 		return c.Status(500).JSON(fiber.Map{"error": err.Error()})
