@@ -2,6 +2,21 @@
 
 All notable changes to this project will be documented in this file.
 
+## [1.0.27] - 2026-04-05
+
+### Added
+- **Go Static SPA Serving Parity**: Added static asset serving and SPA index fallback in `backend-go/main.go` so the Go runtime can serve the built frontend directly instead of relying on Bun for that behavior.
+- **Dedicated Health Dashboard View**: Added a first-class Health view in the app navigation and command palette, backed by a new `SystemHealthDashboard` component.
+- **Shared Health API Client**: Added `lib/api/health.ts` so Fleet Intelligence and the dedicated health view can reuse the same health-fetch logic.
+
+### Changed
+- **Primary Runtime Readiness**: The Go backend now closes another meaningful “primary runtime” gap by handling built SPA delivery in addition to API/websocket/service responsibilities.
+- **Observability UX Expansion**: Health is no longer only embedded in Fleet Intelligence/settings context; it now has a dedicated dashboard surface with queue, totals, runtime state, and metrics preview visibility.
+- **Navigation Surface**: Added `health` to sidebar navigation, command palette navigation, and main-content view handling.
+
+### Notes
+- **Validation Status**: `cd backend-go && gofmt -w main.go && go test ./...`, `pnpm run lint`, `pnpm run typecheck`, `pnpm run test`, and `node scripts/check-version-sync.js` all pass at `1.0.27`.
+
 ## [1.0.26] - 2026-04-05
 
 ### Added

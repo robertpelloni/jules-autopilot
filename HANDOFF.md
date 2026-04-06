@@ -1,15 +1,13 @@
-# Project Handoff: Jules Autopilot (v1.0.26 — Go Backend Parity Pass #18)
+# Project Handoff: Jules Autopilot (v1.0.27 — Go Backend Parity Pass #19)
 
 ## 1. Session Summary
-This session continued beyond Go observability endpoint delivery and focused on two high-value follow-ups:
-1. tightening shared Go LLM/provider helper logic to reduce duplicated review/debate/issue-evaluation behavior
-2. surfacing the new Go health data directly in the operator UI through the Fleet Intelligence panel
+This session continued the migration by targeting a meaningful remaining “primary runtime” gap: the Bun server still owned static SPA serving and index fallback behavior.
 
-The result is that the Go backend is now both cleaner internally and more visible operationally from the dashboard.
+This pass also expanded the operator-facing observability surface by making health a first-class dashboard view instead of limiting it to embedded Fleet context.
 
 ## 2. Completed Work
 ### 2.1 Versioning & Documentation
-- Bumped the project version from `1.0.25` to `1.0.26`.
+- Bumped the project version from `1.0.26` to `1.0.27`.
 - Re-synced version surfaces via the canonical `VERSION` workflow:
   - `VERSION`
   - `VERSION.md`
@@ -22,93 +20,77 @@ The result is that the Go backend is now both cleaner internally and more visibl
   - `ROADMAP.md`
   - `TODO.md`
   - `IDEAS.md`
+  - `HANDOFF.md`
   - `backend-go/PORTING_STATUS.md`
   - `docs/ARCHITECTURE.md`
   - `docs/VISION.md`
 - Added a new archived handoff in `logs/handoffs/`.
 
-### 2.2 Tightened Shared Go LLM/Provider Helpers
+### 2.2 Added Go Static SPA Serving Parity
 Updated:
-- `backend-go/services/llm.go`
+- `backend-go/main.go`
 
-Added or consolidated shared logic for:
-- provider normalization
-- provider-default model resolution
-- structured JSON extraction
-- reusable risk-score generation
+Added Go runtime support for:
+- serving built static frontend assets from `dist/`
+- SPA index fallback behavior for non-API/non-WS routes
+- preserving API/websocket/metrics/health paths from being swallowed by SPA fallback
 
-This reduces repeated ad-hoc logic across multiple Go services.
+This closes another meaningful gap between the Bun runtime and the Go runtime.
 
-### 2.3 Refactored Go Review Path to Use Shared Helpers
+### 2.3 Added Dedicated Health Dashboard View
+Added:
+- `components/system-health-dashboard.tsx`
+- `lib/api/health.ts`
+
+The new dedicated Health dashboard provides:
+- runtime summary cards
+- queue visibility
+- backend totals
+- health/daemon/database/credential state
+- raw metrics preview (when available from the current frontend origin)
+
+### 2.4 Expanded Health Navigation Surface
 Updated:
-- `backend-go/services/review.go`
-
-Changed:
-- structured review now uses the shared structured-JSON helper
-- provider/model normalization now flows through shared helper logic
-- default model selection is more consistent with the rest of the Go backend
-
-### 2.4 Refactored Go Debate / Queue Intelligence Paths
-Updated:
-- `backend-go/services/debate.go`
-- `backend-go/services/queue.go`
-
-Changed:
-- debate execution now uses normalized provider/model resolution more consistently
-- provider-backed debate risk scoring now uses the shared risk helper
-- issue evaluation now uses the shared structured-JSON helper
-- duplicate local JSON/risk parsing helpers were removed from `queue.go`
-
-This narrows internal divergence between review, debate, and issue-triage code paths.
-
-### 2.5 Added Fleet Health UI Surface
-Updated:
+- `src/App.tsx`
+- `components/app-layout.tsx`
+- `components/layout/app-sidebar.tsx`
+- `components/layout/main-content.tsx`
+- `components/search-command-dialog.tsx`
 - `components/fleet-intelligence.tsx`
 
-Added a runtime health block that calls `GET /api/health` and displays:
-- database health
-- daemon running / keeper enabled state
-- Jules credential presence
-- version/status
-- persisted totals for sessions, code chunks, memory chunks, templates, debates
-- websocket client count
-
-The component also supports periodic refresh and manual refresh.
+Added/changed:
+- new `health` view in the app state model
+- sidebar navigation entry for Health
+- command-palette navigation entry for Health
+- main content rendering for the health dashboard
+- shared health-fetch helper usage in Fleet Intelligence
 
 ## 3. Validation Results
 ### Passing
-- `cd backend-go && gofmt -w services/llm.go services/review.go services/debate.go services/queue.go && go test ./...`
+- `cd backend-go && gofmt -w main.go && go test ./...`
 - `pnpm run lint`
 - `pnpm run typecheck`
 - `pnpm run test`
 - `node scripts/check-version-sync.js`
 
 ## 4. Key Findings
-### 4.1 Remaining Go work is increasingly about coherence, polish, and operational UX
-Many of the obvious route gaps are already closed. The best remaining improvements are increasingly about:
-- deduplicating backend behavior
-- improving operational clarity
-- tightening shared abstractions
-- exposing backend capability in the UI
+### 4.1 Static serving was a real remaining runtime gap
+The Go backend had strong API parity, but Bun still owned a critical runtime responsibility: serving the built frontend with SPA fallback behavior. If Go is going to be a true primary runtime candidate, this kind of product-surface ownership matters.
 
-### 4.2 Shared helper tightening was worthwhile because duplication was real
-Before this pass, review, debate, and queue intelligence still repeated pieces of:
-- provider normalization
-- default model selection
-- JSON extraction
-- risk parsing
+### 4.2 Observability is becoming an actual operator workflow, not just backend infrastructure
+The move from embedded Fleet health to a dedicated Health view is important because it makes backend observability a normal part of dashboard usage rather than a hidden implementation detail.
 
-That duplication was manageable but a good source of drift over time. This pass reduces that risk.
-
-### 4.3 Health endpoints became much more valuable once surfaced in the UI
-Backend observability endpoints are useful, but they become materially more valuable once the operator can see them directly in the dashboard. The Fleet Intelligence health block is a meaningful step toward the planned health/observability milestone.
+### 4.3 Remaining work is increasingly selective and strategic
+At this point the migration is less about broad missing surfaces and more about:
+- any remaining selective Bun-only behavior
+- deeper observability polish
+- deciding when Go is “complete enough” operationally to be considered the default runtime path
 
 ## 5. Remaining Work
 ### Highest-value next steps
-1. Continue auditing for any residual Bun-only backend behavior still worth porting into Go
-2. Consider deeper observability surfaces beyond the current Fleet health block (e.g. richer dependency breakdowns, dedicated health page, metrics drill-downs)
-3. Keep tightening Go provider/runtime abstractions if more duplication remains around recommendation/recovery prompting
-4. Continue evaluating when the Go runtime is strong enough to be considered the default backend path
+1. Continue auditing for any residual Bun-only backend/runtime behavior still worth porting
+2. Consider richer observability features beyond the current Health dashboard (history, dependency breakdowns, metrics drill-downs)
+3. Continue evaluating whether Go is now close enough to primary-runtime readiness to begin explicit default-runtime hardening
 
 ## 6. Process Safety
 - No processes were killed.
@@ -118,8 +100,8 @@ Backend observability endpoints are useful, but they become materially more valu
 
 ## 7. Recommended Next Step
 Recommended next move:
-- continue with **Go Backend Parity Pass #19** by auditing any residual Bun-only backend behavior and/or expanding the new health surface into a richer operator-facing observability view.
+- continue with **Go Backend Parity Pass #20** by auditing residual Bun-only backend/runtime behavior and further strengthening the Go runtime’s “primary deployment” readiness.
 
 ## 8. Commit Guidance
 Recommended commit message for this session:
-- `feat: tighten go llm helpers and fleet health ui (v1.0.26)`
+- `feat: add go static serving parity and health dashboard (v1.0.27)`

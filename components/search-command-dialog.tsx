@@ -16,13 +16,14 @@ import {
   Trello, 
   Users,
   Settings,
-  Plus
+  Plus,
+  HeartPulse
 } from 'lucide-react';
 
 interface SearchCommandDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  onNavigate?: (view: 'sessions' | 'templates' | 'kanban' | 'debates') => void;
+  onNavigate?: (view: 'sessions' | 'templates' | 'kanban' | 'debates' | 'health') => void;
 }
 
 export function SearchCommandDialog({
@@ -67,6 +68,10 @@ export function SearchCommandDialog({
           <CommandItem onSelect={() => runCommand(() => onNavigate?.('debates'))}>
             <Users className="mr-2 h-4 w-4" />
             <span>Go to Debates</span>
+          </CommandItem>
+          <CommandItem onSelect={() => runCommand(() => onNavigate?.('health'))}>
+            <HeartPulse className="mr-2 h-4 w-4" />
+            <span>Go to Health</span>
           </CommandItem>
         </CommandGroup>
         <CommandSeparator className="bg-white/10" />

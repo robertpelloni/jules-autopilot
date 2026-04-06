@@ -14,7 +14,7 @@ function AppContent() {
   useDaemonWebSocket();
 
   const [selectedSession, setSelectedSession] = useState<Session | null>(null);
-  const [view, setView] = useState<'sessions' | 'templates' | 'kanban' | 'debates' | 'logs'>('sessions');
+  const [view, setView] = useState<'sessions' | 'templates' | 'kanban' | 'debates' | 'logs' | 'health'>('sessions');
   const [showCodeDiffs, setShowCodeDiffs] = useState(false);
   const [currentActivities, setCurrentActivities] = useState<Activity[]>([]);
 

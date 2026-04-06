@@ -22,30 +22,11 @@ import { Progress } from '@/components/ui/progress';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { toast } from 'sonner';
+import { fetchHealth, type HealthResponse } from '@/lib/api/health';
 
 interface QueueStats {
   pending: number;
   processing: number;
-}
-
-interface HealthResponse {
-  status: string;
-  timestamp: string;
-  version: string;
-  checks: {
-    database?: { status?: string; error?: string };
-    daemon?: { running?: boolean; enabled?: boolean };
-    credentials?: { julesConfigured?: boolean };
-  };
-  queue?: { pending?: number; processing?: number };
-  totals?: {
-    sessions?: number;
-    codeChunks?: number;
-    memoryChunks?: number;
-    templates?: number;
-    debates?: number;
-  };
-  realtime?: { wsClients?: number };
 }
 
 export function FleetIntelligence() {
@@ -69,11 +50,7 @@ export function FleetIntelligence() {
   const loadHealth = async (showToast = false) => {
     try {
       setIsLoadingHealth(true);
-      const response = await fetch('/api/health');
-      if (!response.ok) {
-        throw new Error('Failed to load health status');
-      }
-      const data = (await response.json()) as HealthResponse;
+      const data = await fetchHealth();
       setHealth(data);
       if (showToast) {
         toast.success('Runtime health refreshed');

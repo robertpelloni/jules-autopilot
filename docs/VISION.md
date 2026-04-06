@@ -99,7 +99,7 @@ The official interfaces for AI coding agents are often slow and unresponsive. Th
 
 ## Implementation History
 
-### ✅ Milestone: v1.0.26 — Go Backend Parity Pass #18 (Current)
+### ✅ Milestone: v1.0.27 — Go Backend Parity Pass #19 (Current)
 - [x] Consolidated API into a single Bun daemon.
 - [x] Removed "Enterprise" feature bloat (Analytics, Swarms, Side Logs).
 - [x] Implemented the frontend proxy layer for seamless local integration.
@@ -123,6 +123,7 @@ The official interfaces for AI coding agents are often slow and unresponsive. Th
 - [x] Expanded Go daemon orchestration parity so the Go runtime now respects keeper cadence, discovers Jules sources, schedules issue checks, opportunistically queues indexing, and can use stored Keeper Jules credentials.
 - [x] Added Go-native observability foundations with Prometheus-style metrics, structured health endpoints, and daemon-running telemetry for operator/runtime inspection.
 - [x] Tightened shared Go LLM/provider helper logic for review/debate/issue workflows and surfaced runtime health directly in the Fleet Intelligence UI.
+- [x] Added Go static SPA serving/index fallback parity and a dedicated dashboard Health view so the Go runtime is closer to serving the full application experience directly.
 
 ### 📋 Future Path
 - [ ] Refined TUI experience for "Mecha Suit" cockpit mode.

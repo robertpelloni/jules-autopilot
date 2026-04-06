@@ -2,6 +2,9 @@ package main
 
 import (
 	"log"
+	"os"
+	"path/filepath"
+	"strings"
 
 	"github.com/gofiber/contrib/websocket"
 	"github.com/gofiber/fiber/v2"
@@ -10,6 +13,44 @@ import (
 	"github.com/jules-autopilot/backend/db"
 	"github.com/jules-autopilot/backend/services"
 )
+
+func getProjectRoot() string {
+	candidates := []string{filepath.Clean("."), filepath.Clean("..")}
+	for _, candidate := range candidates {
+		if info, err := os.Stat(filepath.Join(candidate, "package.json")); err == nil && !info.IsDir() {
+			return candidate
+		}
+	}
+	return filepath.Clean("..")
+}
+
+func serveSPA(c *fiber.Ctx) error {
+	requestPath := c.Path()
+	if strings.HasPrefix(requestPath, "/api") || strings.HasPrefix(requestPath, "/ws") || requestPath == "/metrics" || requestPath == "/healthz" {
+		return c.SendStatus(fiber.StatusNotFound)
+	}
+
+	projectRoot, err := filepath.Abs(getProjectRoot())
+	if err != nil {
+		return c.SendStatus(fiber.StatusInternalServerError)
+	}
+	if requestPath == "/" {
+		requestPath = "/index.html"
+	}
+
+	distPath := filepath.Join(projectRoot, "dist")
+	candidate := filepath.Join(distPath, filepath.FromSlash(strings.TrimPrefix(requestPath, "/")))
+	if info, statErr := os.Stat(candidate); statErr == nil && !info.IsDir() {
+		return c.SendFile(candidate)
+	}
+
+	indexPath := filepath.Join(distPath, "index.html")
+	if info, statErr := os.Stat(indexPath); statErr == nil && !info.IsDir() {
+		return c.SendFile(indexPath)
+	}
+
+	return c.SendStatus(fiber.StatusNotFound)
+}
 
 func main() {
 	// Load environment variables from .env in root
@@ -69,6 +110,9 @@ func main() {
 			}
 		}
 	}))
+
+	// Static SPA serving parity with the Bun runtime.
+	app.Get("/*", serveSPA)
 
 	// Match the TypeScript daemon default port for smoother drop-in parity.
 	log.Fatal(app.Listen(":8080"))
