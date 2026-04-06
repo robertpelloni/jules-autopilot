@@ -32,6 +32,7 @@ type Worker struct {
 	concurrency int
 	isRunning   bool
 	stopChan    chan struct{}
+	mu          sync.Mutex
 }
 
 // NewWorker creates a new queue worker
@@ -41,7 +42,6 @@ func NewWorker(concurrency int) *Worker {
 	}
 	return &Worker{
 		concurrency: concurrency,
-		stopChan:    make(chan struct{}),
 	}
 }
 
@@ -76,11 +76,18 @@ func AddJob(jobType string, payload interface{}, runAt ...time.Time) (*models.Qu
 
 // Start begins polling for jobs
 func (w *Worker) Start() {
+	w.mu.Lock()
 	if w.isRunning {
+		w.mu.Unlock()
 		return
 	}
 	w.isRunning = true
-	log.Printf("[Queue] SQLite Task Queue worker started (concurrency: %d)", w.concurrency)
+	w.stopChan = make(chan struct{})
+	stopChan := w.stopChan
+	concurrency := w.concurrency
+	w.mu.Unlock()
+
+	log.Printf("[Queue] SQLite Task Queue worker started (concurrency: %d)", concurrency)
 
 	go func() {
 		ticker := time.NewTicker(5 * time.Second)
@@ -89,10 +96,10 @@ func (w *Worker) Start() {
 		for {
 			select {
 			case <-ticker.C:
-				if w.isRunning {
+				if w.IsRunning() {
 					w.processJobs()
 				}
-			case <-w.stopChan:
+			case <-stopChan:
 				return
 			}
 		}
@@ -101,12 +108,25 @@ func (w *Worker) Start() {
 
 // Stop halts the polling for jobs
 func (w *Worker) Stop() {
+	w.mu.Lock()
 	if !w.isRunning {
+		w.mu.Unlock()
 		return
 	}
 	w.isRunning = false
-	close(w.stopChan)
+	stopChan := w.stopChan
+	w.stopChan = nil
+	w.mu.Unlock()
+	if stopChan != nil {
+		close(stopChan)
+	}
 	log.Println("[Queue] SQLite Task Queue worker stopped")
+}
+
+func (w *Worker) IsRunning() bool {
+	w.mu.Lock()
+	defer w.mu.Unlock()
+	return w.isRunning
 }
 
 func (w *Worker) processJobs() {
@@ -196,16 +216,37 @@ func (w *Worker) executeJob(job models.QueueJob) {
 // Handlers are currently stubs to be implemented as functionality is ported to Go
 
 var (
-	globalWorker *Worker
-	workerOnce   sync.Once
+	globalWorker   *Worker
+	globalWorkerMu sync.Mutex
 )
 
 // StartWorker initializes and starts the global queue worker
 func StartWorker() {
-	workerOnce.Do(func() {
+	globalWorkerMu.Lock()
+	defer globalWorkerMu.Unlock()
+	if globalWorker == nil {
 		globalWorker = NewWorker(2)
-		globalWorker.Start()
-	})
+	}
+	globalWorker.Start()
+}
+
+func StopWorker() {
+	globalWorkerMu.Lock()
+	worker := globalWorker
+	globalWorkerMu.Unlock()
+	if worker != nil {
+		worker.Stop()
+	}
+}
+
+func IsWorkerRunning() bool {
+	globalWorkerMu.Lock()
+	worker := globalWorker
+	globalWorkerMu.Unlock()
+	if worker == nil {
+		return false
+	}
+	return worker.IsRunning()
 }
 
 func getSettings() (models.KeeperSettings, error) {

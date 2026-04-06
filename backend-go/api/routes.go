@@ -1117,6 +1117,9 @@ func getHealth(c *fiber.Ctx) error {
 				"running": services.GetDaemon().IsRunning(),
 				"enabled": settingsFound && settings.IsEnabled,
 			},
+			"worker": fiber.Map{
+				"running": services.IsWorkerRunning(),
+			},
 			"credentials": fiber.Map{
 				"julesConfigured": julesConfigured,
 			},
@@ -1182,6 +1185,9 @@ func getMetrics(c *fiber.Ctx) error {
 	fmt.Fprintf(&body, "# HELP jules_autopilot_daemon_running Whether the Go daemon loop is running.\n")
 	fmt.Fprintf(&body, "# TYPE jules_autopilot_daemon_running gauge\n")
 	fmt.Fprintf(&body, "jules_autopilot_daemon_running %d\n", boolToMetric(services.GetDaemon().IsRunning()))
+	fmt.Fprintf(&body, "# HELP jules_autopilot_worker_running Whether the Go queue worker is running.\n")
+	fmt.Fprintf(&body, "# TYPE jules_autopilot_worker_running gauge\n")
+	fmt.Fprintf(&body, "jules_autopilot_worker_running %d\n", boolToMetric(services.IsWorkerRunning()))
 	fmt.Fprintf(&body, "# HELP jules_autopilot_keeper_enabled Whether Keeper is enabled.\n")
 	fmt.Fprintf(&body, "# TYPE jules_autopilot_keeper_enabled gauge\n")
 	fmt.Fprintf(&body, "jules_autopilot_keeper_enabled %d\n", boolToMetric(settingsFound && settings.IsEnabled))
@@ -1233,8 +1239,10 @@ func postDaemonStatus(c *fiber.Ctx) error {
 
 	if req.Action == "start" {
 		services.StartDaemon()
+		services.StartWorker()
 	} else if req.Action == "stop" {
 		services.StopDaemon()
+		services.StopWorker()
 	} else {
 		return c.Status(400).JSON(fiber.Map{"error": "Invalid action"})
 	}

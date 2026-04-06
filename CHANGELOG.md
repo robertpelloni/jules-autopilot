@@ -2,6 +2,20 @@
 
 All notable changes to this project will be documented in this file.
 
+## [1.0.31] - 2026-04-05
+
+### Added
+- **Go Worker Lifecycle Controls**: Added Go worker lifecycle management with `StartWorker()`, `StopWorker()`, and `IsWorkerRunning()` so daemon/worker coordination is no longer effectively one-way.
+- **Go Worker Observability**: Added worker-running state to health responses and Prometheus-style metrics output.
+
+### Changed
+- **Go Startup Semantics**: The Go runtime now auto-starts daemon + worker only when Keeper is enabled, matching Bun’s boot semantics more closely instead of starting both unconditionally.
+- **Go Daemon Control Semantics**: `POST /api/daemon/status` now starts and stops both daemon and queue worker together, aligning the Go runtime more closely with Bun’s coordinated keeper startup model.
+- **Go Queue Worker Robustness**: The Go worker lifecycle can now be stopped and restarted cleanly instead of relying on a one-time `sync.Once` startup path.
+
+### Notes
+- **Validation Status**: `cd backend-go && gofmt -w services/queue.go api/routes.go main.go && go test ./...`, `pnpm run lint`, `pnpm run typecheck`, `pnpm run test`, and `node scripts/check-version-sync.js` all pass at `1.0.31`.
+
 ## [1.0.30] - 2026-04-05
 
 ### Added

@@ -107,6 +107,11 @@ Move reasonable backend responsibilities from the TypeScript/Bun daemon into the
 - Go API routes now support request-scoped Jules auth via `X-Jules-Api-Key` / `X-Goog-Api-Key` headers
 - Go runtime now applies Bun-like permissive CORS middleware for cross-origin API use
 - Go runtime now loads `.env` from detected project root and applies centralized Fiber error handling for API-oriented responses
+- Go daemon + worker lifecycle is now more Bun-aligned via:
+  - conditional boot startup when Keeper is enabled
+  - coordinated start/stop through daemon-status control
+  - restartable worker lifecycle management
+  - worker-running observability in health/metrics output
 - Go Jules client support for source discovery, GitHub issues, and session creation
 - `POST /api/sessions/:id/nudge` now sends a real activity instead of returning a stub response
 - `POST /api/sessions/:id:approvePlan` is now supported through the generic Go session action handler

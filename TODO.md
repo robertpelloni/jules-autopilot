@@ -31,7 +31,8 @@ This document tracks granular bugs, missing features, and technical debt. For ep
 - [x] **Go Backend Parity Pass #20:** Aligned Go websocket protocol behavior with the Bun daemon by emitting `connected` events and replying to `ping` frames with `pong` payloads instead of echoing arbitrary client messages.
 - [x] **Go Backend Parity Pass #21:** Added request-scoped Jules auth header support and Bun-like CORS middleware in the Go runtime, improving real deployment/runtime flexibility.
 - [x] **Go Backend Parity Pass #22:** Hardened Go runtime bootstrap and global error handling by loading `.env` from project root and centralizing API-oriented Fiber error responses.
-- [ ] **Go Backend Parity Pass #23:** Continue auditing for any remaining residual Bun-only backend behavior and consider richer observability/dashboard surfaces beyond the current health dashboard and metrics preview.
+- [x] **Go Backend Parity Pass #23:** Aligned Go daemon/worker lifecycle semantics with Bun more closely by coordinating startup/stop behavior, making worker lifecycle restartable, and surfacing worker-running observability.
+- [ ] **Go Backend Parity Pass #24:** Continue auditing for any remaining residual Bun-only backend behavior and consider richer observability/dashboard surfaces beyond the current health dashboard and metrics preview.
 - [x] **Tooling Stabilization:** Added a working ESLint v9 flat config and aligned the Jest harness with the current Vite/Bun + shared-package runtime assumptions.
 - [x] **Lint Coverage Expansion:** Extended the lint command to cover `src/`, `components/`, `lib/`, and `server/` with a staged warning-first rollout.
 - [x] **Lint Warning Burn-Down:** Completed two warning burn-down passes and brought the expanded lint surface to zero warnings.

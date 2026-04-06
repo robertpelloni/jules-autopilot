@@ -66,9 +66,11 @@ func main() {
 	// Initialize Database
 	db.InitDB()
 
-	// Start Background Services
-	services.StartDaemon()
-	services.StartWorker()
+	// Start background services only if Keeper is enabled, mirroring Bun runtime semantics.
+	if settings, err := services.GetSettingsForAPI(); err == nil && settings.IsEnabled {
+		services.StartDaemon()
+		services.StartWorker()
+	}
 
 	app := fiber.New(fiber.Config{
 		ErrorHandler: func(c *fiber.Ctx, err error) error {
