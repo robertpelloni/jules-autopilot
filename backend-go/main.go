@@ -4,12 +4,14 @@ import (
 	"encoding/json"
 	"log"
 	"os"
+	"os/signal"
 	"path/filepath"
 	"strings"
+	"syscall"
 
 	"github.com/gofiber/contrib/websocket"
-	"github.com/gofiber/fiber/v2"
 	corsmiddleware "github.com/gofiber/fiber/v2/middleware/cors"
+	"github.com/gofiber/fiber/v2"
 	"github.com/joho/godotenv"
 	"github.com/jules-autopilot/backend/api"
 	"github.com/jules-autopilot/backend/db"
@@ -66,11 +68,12 @@ func main() {
 	// Initialize Database
 	db.InitDB()
 
-	// Start background services only if Keeper is enabled, mirroring Bun runtime semantics.
+	// Start Background Services
 	if settings, err := services.GetSettingsForAPI(); err == nil && settings.IsEnabled {
 		services.StartDaemon()
 		services.StartWorker()
 	}
+	services.StartScheduler()
 
 	app := fiber.New(fiber.Config{
 		ErrorHandler: func(c *fiber.Ctx, err error) error {
@@ -156,6 +159,21 @@ func main() {
 
 	// Static SPA serving parity with the Bun runtime.
 	app.Get("/*", serveSPA)
+
+	// Graceful shutdown handling
+	sigChan := make(chan os.Signal, 1)
+	signal.Notify(sigChan, os.Interrupt, syscall.SIGTERM)
+
+	go func() {
+		<-sigChan
+		log.Println("[Main] Shutdown signal received. Cleaning up...")
+		services.StopDaemon()
+		services.StopWorker()
+		services.StopScheduler()
+		if err := app.Shutdown(); err != nil {
+			log.Printf("[Main] Server shutdown error: %v", err)
+		}
+	}()
 
 	// Match the TypeScript daemon default port for smoother drop-in parity.
 	log.Fatal(app.Listen(":8080"))

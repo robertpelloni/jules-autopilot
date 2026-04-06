@@ -2,6 +2,19 @@
 
 All notable changes to this project will be documented in this file.
 
+## [1.0.33] - 2026-04-05
+
+### Added
+- **Go Scheduled Task Engine**: Added a new background scheduler service in Go (`services/scheduler.go`) to handle periodic maintenance tasks like codebase indexing (24h), issue checks (1h), and log cleanup (7d).
+- **Go Graceful Shutdown**: Added signal handling (Interrupt/SIGTERM) to the Go runtime so it can cleanly stop the daemon, worker, and scheduler before server exit.
+
+### Changed
+- **Go Observability Expansion**: Added scheduler-running state to health and metrics responses.
+- **Go Log Retention**: The new scheduler automatically cleans up Keeper logs older than 30 days every week.
+
+### Notes
+- **Validation Status**: `cd backend-go && gofmt -w api/routes.go services/scheduler.go main.go && go test ./...`, `pnpm run lint`, `pnpm run typecheck`, `pnpm run test`, and `node scripts/check-version-sync.js` all pass at `1.0.33`.
+
 ## [1.0.32] - 2026-04-05
 
 ### Added

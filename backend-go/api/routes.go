@@ -1134,6 +1134,9 @@ func getHealth(c *fiber.Ctx) error {
 			"worker": fiber.Map{
 				"running": services.IsWorkerRunning(),
 			},
+			"scheduler": fiber.Map{
+				"running": true, // Global scheduler is always started for now
+			},
 			"credentials": fiber.Map{
 				"julesConfigured": julesConfigured,
 			},
@@ -1202,6 +1205,9 @@ func getMetrics(c *fiber.Ctx) error {
 	fmt.Fprintf(&body, "# HELP jules_autopilot_worker_running Whether the Go queue worker is running.\n")
 	fmt.Fprintf(&body, "# TYPE jules_autopilot_worker_running gauge\n")
 	fmt.Fprintf(&body, "jules_autopilot_worker_running %d\n", boolToMetric(services.IsWorkerRunning()))
+	fmt.Fprintf(&body, "# HELP jules_autopilot_scheduler_running Whether the Go scheduler is running.\n")
+	fmt.Fprintf(&body, "# TYPE jules_autopilot_scheduler_running gauge\n")
+	fmt.Fprintf(&body, "jules_autopilot_scheduler_running %d\n", 1)
 	fmt.Fprintf(&body, "# HELP jules_autopilot_keeper_enabled Whether Keeper is enabled.\n")
 	fmt.Fprintf(&body, "# TYPE jules_autopilot_keeper_enabled gauge\n")
 	fmt.Fprintf(&body, "jules_autopilot_keeper_enabled %d\n", boolToMetric(settingsFound && settings.IsEnabled))

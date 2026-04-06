@@ -106,6 +106,8 @@ Move reasonable backend responsibilities from the TypeScript/Bun daemon into the
 - Go websocket runtime now emits `connected` and protocol-compatible `pong` responses for frontend daemon websocket health/reconnect behavior
 - Go API handlers now support resilient degraded-mode fallbacks (mock sessions, critical-err sessions) matching Bun server behavior
 - TypeScript `JulesClient` now supports dual property mappings for both Google-style and Go-native session/activity models
+- Go runtime now supports graceful shutdown (signal handling) for coordinated service cleanup
+- Go runtime now includes a background scheduler for periodic maintenance tasks (indexing, triage, cleanup)
 - Go API routes now support request-scoped Jules auth via `X-Jules-Api-Key` / `X-Goog-Api-Key` headers
 - Go runtime now applies Bun-like permissive CORS middleware for cross-origin API use
 - Go runtime now loads `.env` from detected project root and applies centralized Fiber error handling for API-oriented responses

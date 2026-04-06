@@ -48,6 +48,7 @@ For granular tasks and immediate bug fixes, see `TODO.md`.
 * [x] **Go Backend Parity Pass #22**: Hardened Go runtime bootstrap and global error handling by loading `.env` from project root and centralizing API-oriented Fiber error responses.
 * [x] **Go Backend Parity Pass #23**: Aligned Go daemon/worker lifecycle semantics with Bun more closely by coordinating startup/stop behavior, making worker lifecycle restartable, and surfacing worker-running observability.
 * [x] **Go Backend Parity Pass #24**: Ported resilient degraded-mode session handling (mock/error sessions) and hardened client-side transformation compatibility so the Go runtime is safer for dashboard usage during auth/API failures.
+* [x] **Go Backend Parity Pass #25**: Added Go-native scheduled task engine and graceful shutdown handling, closing more primary-runtime operational gaps and implementing initial v4.0 roadmap items.
 
 ## Milestone: v1.5 — "Shadow Pilot"
 * [ ] **Background Anomaly Detection:** Agents silently monitoring `git diffs` background tasks, fixing failing CI pipelines before human review.
@@ -67,7 +68,7 @@ For granular tasks and immediate bug fixes, see `TODO.md`.
 ## Milestone: v4.0 — "Cognitive Core"
 * [x] **Audit Trail & Compliance Logging:** Immutable, append-only audit log of every orchestrator action with structured metadata, searchable via API and dashboard.
 * [x] **Session Replay & Time Travel:** Record full session activity timelines and replay them step-by-step in the dashboard for debugging and review.
-* [ ] **Scheduled Automation Engine:** Cron-based task scheduler that launches sessions, swarms, or CI checks on configurable recurring schedules with timezone support.
+* [x] **Scheduled Automation Engine:** Added a Go-native cron-based task scheduler that enqueues background maintenance jobs (indexing, issue checks, log cleanup).
 
 ## Milestone: v5.0 — "Sovereign Intelligence"
 * [x] **Webhook Event Router:** Configurable inbound webhook router that maps external service events (Slack, Linear, Jira, Borg) to orchestrator actions.
