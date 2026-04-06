@@ -1,6 +1,6 @@
 {
   "name": "@jules/cli",
-  "version": "1.0.12",
+  "version": "1.0.13",
   "description": "Jules Autopilot TUI - Terminal cockpit for Jules AI agent management",
   "type": "module",
   "bin": {

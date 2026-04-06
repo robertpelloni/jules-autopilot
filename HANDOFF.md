@@ -1,16 +1,13 @@
-# Project Handoff: Jules Autopilot (v1.0.12 — Go Backend Parity Pass #4)
+# Project Handoff: Jules Autopilot (v1.0.13 — Go Backend Parity Pass #5)
 
 ## 1. Session Summary
-This session continued the recommended Go migration path by porting the last major queue job that was still obviously Bun/TypeScript-only: GitHub issue scanning and autonomous session spawning.
+This session continued the next recommended migration slice and addressed what had become the single most important remaining autonomy gap between the Bun/TypeScript daemon and the Go backend: provider-backed risky-plan review.
 
-The result is that the Go backend now owns all three primary queue-job families that previously defined the TypeScript queue's highest-value autonomy surface:
-- `check_session`
-- `index_codebase`
-- `check_issues`
+The result is that the Go backend no longer stops at "high-risk escalation" for plan approval. It can now run a practical provider-backed council review flow, synthesize a summary, rescore risk, persist a debate artifact, and then approve or reject with feedback returned directly into the Jules session.
 
 ## 2. Completed Work
 ### 2.1 Versioning & Documentation
-- Bumped the project version from `1.0.11` to `1.0.12`.
+- Bumped the project version from `1.0.12` to `1.0.13`.
 - Re-synced version surfaces via the canonical `VERSION` workflow:
   - `VERSION`
   - `VERSION.md`
@@ -18,7 +15,7 @@ The result is that the Go backend now owns all three primary queue-job families 
   - `apps/cli/package.json`
   - `packages/shared/package.json`
   - `lib/version.ts`
-- Updated project status / planning docs:
+- Updated project planning/status docs:
   - `CHANGELOG.md`
   - `ROADMAP.md`
   - `TODO.md`
@@ -27,42 +24,57 @@ The result is that the Go backend now owns all three primary queue-job families 
   - `docs/VISION.md`
 - Added a new archived handoff in `logs/handoffs/`.
 
-### 2.2 Go Jules Client Parity for Issue Workflows
-Extended `backend-go/services/jules_client.go` with:
-- `ListIssues(sourceID string) ([]GitHubIssue, error)`
-- `CreateSession(sourceID, prompt, title string) (models.JulesSession, error)`
-- GitHub/Jules source normalization helpers so both `owner/repo` and `sources/github/owner/repo` shapes can be handled safely.
+### 2.2 Added Go Provider Layer
+Added `backend-go/services/llm.go`.
 
-This was necessary because the Go queue could not port issue-spawn behavior without first being able to:
-1. fetch open GitHub issues
-2. create new Jules sessions directly
+This file provides a practical Go LLM bridge for:
+- OpenAI
+- Anthropic
+- Gemini
 
-### 2.3 Go Queue Parity — `handleCheckIssues`
-Ported a real Go implementation of `handleCheckIssues` in `backend-go/services/queue.go`.
+It now handles:
+- supervisor API-key resolution across provider-specific env vars
+- text generation against provider endpoints
+- lightweight token-usage capture where available
 
-The Go worker now:
-- parses `sourceId` from queue payloads
-- fetches current Keeper settings
-- records a Keeper log for issue-scan start
-- fetches open GitHub issues from the repository
-- fetches current Jules sessions to avoid duplicate work
-- filters issues whose titles overlap active session titles
-- evaluates issue fixability using a hybrid strategy:
-  - OpenAI-backed JSON triage when configured for `openai`
-  - conservative heuristic fallback otherwise
-- spawns a new Jules session when an issue is high-confidence and fixable
-- emits `sessions_list_updated`
-- writes Keeper logs for both evaluation and autonomous spawn events
+This is important because the Go backend had reached the point where more parity work would become awkward and repetitive without a small provider abstraction.
 
-### 2.4 Fleet Sync Expansion
-Updated `backend-go/api/routes.go` so `POST /api/fleet/sync` now does more than just enqueue session-memory syncs.
+### 2.3 Ported Provider-Backed Council Review into Go
+Extended `backend-go/services/queue.go` so the Go `check_session` path can now do more than heuristic escalation for risky plans.
 
-It now enqueues:
-- memory sync jobs for active/completed/awaiting-approval sessions
-- `check_issues` jobs for discovered source IDs
-- one `index_codebase` job
+For `AWAITING_PLAN_APPROVAL` sessions, the Go backend now:
+1. calculates a conservative initial heuristic risk score
+2. auto-approves low-risk plans immediately
+3. emits `session_debate_escalated` for higher-risk plans
+4. runs a provider-backed council review when supervisor credentials are available
+5. simulates multi-role review turns for:
+   - Security Architect
+   - Senior Engineer
+6. generates a moderator summary
+7. requests a provider-backed risk rescore
+8. emits `session_debate_resolved` with:
+   - `riskScore`
+   - `approvalStatus`
+   - `summary`
+9. persists a debate record to SQLite
+10. either:
+   - approves the plan and sends the council summary back into the session, or
+   - rejects/flags the plan and requests a revised plan inside the session
 
-This gives the Go backend a more complete one-shot "refresh the fleet" orchestration path.
+### 2.4 Debate Persistence
+The Go backend now persists debate artifacts into the `Debate` model with:
+- topic
+- summary
+- rounds JSON
+- history JSON
+- metadata including session/risk/approval context
+
+This is a meaningful improvement because the Go path now leaves behind inspectable review artifacts instead of only transient websocket/log signals.
+
+### 2.5 Improved Reuse of the New Provider Layer
+I also updated Go issue evaluation to reuse the new provider bridge instead of remaining narrowly OpenAI-specific.
+
+That means `handleCheckIssues` is now less tightly coupled to one provider and the Go backend has a more coherent story for future structured-review parity work.
 
 ## 3. Validation Results
 ### Passing
@@ -73,33 +85,43 @@ This gives the Go backend a more complete one-shot "refresh the fleet" orchestra
 - `node scripts/check-version-sync.js`
 
 ## 4. Key Findings
-### 4.1 The primary Go queue migration is now materially complete
-From the perspective of the original high-value queue responsibilities, Go now covers:
-- session inactivity / approval monitoring
-- codebase indexing for long-term memory
-- issue-driven autonomous work discovery
+### 4.1 The Go migration has crossed from job parity into intelligence parity
+Before this pass, Go owned the major queue jobs, but one of the most important intelligence behaviors still lived mostly in the TypeScript daemon: provider-backed risky-plan adjudication.
 
-That is a major architectural milestone because the remaining Go gaps are now more about intelligence parity depth than missing job ownership.
+After this pass, the Go backend can now:
+- detect risky plans
+- debate them with provider-backed review turns
+- synthesize a conclusion
+- rescore risk
+- decide approval vs rejection
+- message the session with the result
 
-### 4.2 Hybrid evaluation is the right bridge strategy
-A perfect multi-provider parity layer for issue evaluation does not yet exist in Go. Rather than blocking on that abstraction, the current implementation uses:
-- OpenAI JSON triage when available
-- conservative heuristics otherwise
+That is a big shift from surface parity to autonomy parity.
 
-This is the same design principle used in earlier Go ports: real useful behavior first, with conservative fallback when full provider parity is not yet ready.
+### 4.2 A lightweight provider bridge unlocks a lot of future Go work
+Adding `backend-go/services/llm.go` is strategically valuable beyond this one feature. It creates a reusable base for:
+- council debates
+- structured reviews
+- issue triage
+- future semantic/recommendation workflows
+- potential Go-side self-healing reasoning
 
-### 4.3 The biggest remaining Go intelligence gap is debate parity
-The most important remaining intelligence difference between TS and Go is no longer issue scanning or indexing — it is the provider-backed council debate / review path for risky plans.
+### 4.3 Remaining Go gaps are now narrower and more product-facing
+The biggest remaining gaps are no longer core queue ownership. They are now more focused on:
+- semantic query / RAG retrieval parity
+- broader event/detail parity
+- residual session route/action differences
+- refinement of provider-backed structured workflows
 
 ## 5. Remaining Work
 ### Highest-value next Go ports
-1. Replace heuristic Go plan-risk handling with provider-backed council debate parity
-2. Add Go-side semantic query parity on top of indexed `CodeChunk` storage
-3. Broaden Go daemon-event parity for:
+1. Add Go-side semantic query parity on top of indexed `CodeChunk` storage
+2. Broaden Go lifecycle event parity for:
    - recovery/self-healing
-   - indexing detail/progress events
+   - indexing progress/detail events
    - issue-spawn detail events
-4. Fill any remaining session route/action gaps in the Go API
+3. Fill any remaining session route/action gaps in the Go API
+4. Tighten structured provider abstractions for review/debate/recommendation flows in Go
 5. Decide whether Go should become the default runtime or remain the parity track during migration
 
 ## 6. Process Safety
@@ -110,8 +132,8 @@ The most important remaining intelligence difference between TS and Go is no lon
 
 ## 7. Recommended Next Step
 Recommended next move:
-- continue with **Go Backend Parity Pass #5** by porting provider-backed council debate parity for risky plan review, because that is now the most important remaining autonomy/intelligence gap.
+- continue with **Go Backend Parity Pass #6** by porting semantic query / RAG retrieval parity, because the Go backend now owns indexing and should also own practical retrieval on top of that indexed memory.
 
 ## 8. Commit Guidance
 Recommended commit message for this session:
-- `feat: port go issue automation workflow parity (v1.0.12)`
+- `feat: port go provider-backed council debate parity (v1.0.13)`

@@ -6,7 +6,6 @@ import (
 	"encoding/binary"
 	"encoding/json"
 	"fmt"
-	"io"
 	"log"
 	"net/http"
 	"os"
@@ -285,6 +284,170 @@ func saveSupervisorState(state models.SupervisorState) error {
 	return db.DB.Save(&state).Error
 }
 
+type planDebateResult struct {
+	Summary        string
+	RiskScore      int
+	ApprovalStatus string
+	RoundsJSON     string
+	HistoryJSON    string
+}
+
+func approvalStatusFromRisk(score int) string {
+	if score < lowRiskApprovalThreshold {
+		return "approved"
+	}
+	if score > 70 {
+		return "rejected"
+	}
+	return "pending"
+}
+
+func extractRiskScoreFromText(input string) int {
+	digits := strings.Builder{}
+	for _, r := range input {
+		if r >= '0' && r <= '9' {
+			digits.WriteRune(r)
+		}
+	}
+	if digits.Len() == 0 {
+		return defaultPlanRiskScore
+	}
+	var score int
+	fmt.Sscanf(digits.String(), "%d", &score)
+	if score < 0 {
+		return 0
+	}
+	if score > 100 {
+		return 100
+	}
+	return score
+}
+
+func persistDebateRecord(session models.JulesSession, result planDebateResult) {
+	summary := result.Summary
+	metadataValue, _ := json.Marshal(map[string]interface{}{
+		"sessionId":       session.ID,
+		"sessionTitle":    session.Title,
+		"riskScore":       result.RiskScore,
+		"approvalStatus":  result.ApprovalStatus,
+		"sourceId":        session.SourceID,
+		"supervisorOrigin": "go",
+	})
+	metadata := string(metadataValue)
+	workspaceID := "default"
+	debate := models.Debate{
+		ID:          uuid.New().String(),
+		Topic:       fmt.Sprintf("Review Plan for Session %s", session.ID),
+		Summary:     &summary,
+		Rounds:      result.RoundsJSON,
+		History:     result.HistoryJSON,
+		Metadata:    &metadata,
+		WorkspaceID: &workspaceID,
+		CreatedAt:   time.Now(),
+		UpdatedAt:   time.Now(),
+	}
+	_ = db.DB.Create(&debate).Error
+}
+
+func reviewPlanWithCouncil(session models.JulesSession, planText string, settings models.KeeperSettings) (planDebateResult, error) {
+	provider := strings.TrimSpace(settings.SupervisorProvider)
+	if provider == "" {
+		provider = "openai"
+	}
+	apiKey := getSupervisorAPIKey(provider, settings.SupervisorApiKey)
+	if apiKey == "" {
+		riskScore := isRiskyPlan(planText)
+		return planDebateResult{
+			Summary:        "Council debate unavailable because no supervisor API key is configured. Falling back to conservative heuristic risk handling.",
+			RiskScore:      riskScore,
+			ApprovalStatus: approvalStatusFromRisk(riskScore),
+			RoundsJSON:     "[]",
+			HistoryJSON:    "[]",
+		}, nil
+	}
+
+	model := strings.TrimSpace(settings.SupervisorModel)
+	participants := []struct {
+		ID, Name, Role, SystemPrompt string
+	}{
+		{
+			ID:   "security-architect",
+			Name: "Security Architect",
+			Role: "Security & Architecture Reviewer",
+			SystemPrompt: "You are a strict security architect. Review the proposed implementation plan for vulnerabilities, data leaks, unsafe migrations, architectural flaws, and missing verification. If the plan modifies core logic without adequate testing, say so clearly.",
+		},
+		{
+			ID:   "senior-engineer",
+			Name: "Senior Engineer",
+			Role: "Code Quality Reviewer",
+			SystemPrompt: "You are a senior frontend/backend engineer. Review the plan for code quality, edge cases, scope control, testability, and practical execution detail. Call out missing steps and suggest improvements.",
+		},
+	}
+
+	conversation := []LLMMessage{{
+		Role:    "user",
+		Content: fmt.Sprintf("Please review the following implementation plan for session %s.\n\n%s", session.ID, planText),
+	}}
+	turns := make([]map[string]string, 0, len(participants))
+
+	for _, participant := range participants {
+		systemPrompt := fmt.Sprintf("You are %s, acting as a %s. Review the conversation history and provide concise, concrete review feedback.\n\n%s", participant.Name, participant.Role, participant.SystemPrompt)
+		result, err := generateLLMText(provider, apiKey, model, systemPrompt, conversation)
+		if err != nil {
+			turns = append(turns, map[string]string{
+				"participantId":   participant.ID,
+				"participantName": participant.Name,
+				"role":            participant.Role,
+				"content":         fmt.Sprintf("[Error: %s]", err.Error()),
+			})
+			continue
+		}
+
+		turns = append(turns, map[string]string{
+			"participantId":   participant.ID,
+			"participantName": participant.Name,
+			"role":            participant.Role,
+			"content":         result.Content,
+		})
+		conversation = append(conversation, LLMMessage{
+			Role:    "assistant",
+			Content: fmt.Sprintf("[%s (%s)]: %s", participant.Name, participant.Role, result.Content),
+		})
+	}
+
+	summaryPrompt := "You are the moderator and judge of this technical review debate. Summarize the strongest arguments, identify consensus/disagreement, and provide a final recommendation in Markdown."
+	summaryResult, summaryErr := generateLLMText(provider, apiKey, model, summaryPrompt, conversation)
+	summary := "Debate completed, but auto-summary generation failed."
+	if summaryErr == nil && strings.TrimSpace(summaryResult.Content) != "" {
+		summary = summaryResult.Content
+	}
+
+	riskPrompt := fmt.Sprintf("Analyze the following debate summary and provide a risk score between 0 and 100. 100 = extremely high risk, 0 = extremely low risk. Respond with ONLY the number.\n\nTopic: Review Plan for Session %s\nSummary:\n%s", session.ID, summary)
+	riskResult, riskErr := generateLLMText(provider, apiKey, model, "You are a strict technical risk scorer. Respond with a number only.", []LLMMessage{{Role: "user", Content: riskPrompt}})
+	riskScore := defaultPlanRiskScore
+	if riskErr == nil {
+		riskScore = extractRiskScoreFromText(riskResult.Content)
+	} else {
+		riskScore = isRiskyPlan(planText)
+	}
+
+	roundsJSONBytes, _ := json.Marshal([]map[string]interface{}{{
+		"roundNumber": 1,
+		"turns":       turns,
+	}})
+	historyJSONBytes, _ := json.Marshal(conversation)
+
+	result := planDebateResult{
+		Summary:        summary,
+		RiskScore:      riskScore,
+		ApprovalStatus: approvalStatusFromRisk(riskScore),
+		RoundsJSON:     string(roundsJSONBytes),
+		HistoryJSON:    string(historyJSONBytes),
+	}
+	persistDebateRecord(session, result)
+	return result, nil
+}
+
 func (w *Worker) handleCheckSession(payload string) (string, error) {
 	var data struct {
 		Session models.JulesSession `json:"session"`
@@ -360,7 +523,57 @@ func (w *Worker) handleCheckSession(payload string) (string, error) {
 					"sessionTitle": session.Title,
 					"riskScore":    riskScore,
 				})
-				return "plan_escalated", nil
+
+				debateResult, debateErr := reviewPlanWithCouncil(session, activity.Content, settings)
+				if debateErr != nil {
+					return "fail", debateErr
+				}
+
+				addKeeperLog(fmt.Sprintf("Council debate concluded. Final Risk Score: %d", debateResult.RiskScore), "info", session.ID, map[string]interface{}{
+					"event":          "session_debate_resolved",
+					"riskScore":      debateResult.RiskScore,
+					"approvalStatus": debateResult.ApprovalStatus,
+					"summary":        debateResult.Summary,
+				})
+				emitDaemonEvent("session_debate_resolved", map[string]interface{}{
+					"sessionId":       session.ID,
+					"sessionTitle":    session.Title,
+					"riskScore":       debateResult.RiskScore,
+					"approvalStatus":  debateResult.ApprovalStatus,
+					"summary":         debateResult.Summary,
+				})
+
+				if debateResult.RiskScore < lowRiskApprovalThreshold || debateResult.ApprovalStatus == "approved" {
+					if err := client.ApprovePlan(session.ID); err != nil {
+						return "fail", err
+					}
+					_, _ = client.CreateActivity(session.ID, CreateActivityRequest{
+						Content: fmt.Sprintf("Council Supervisor Debate Summary:\n\n%s\n\nThe plan has been approved. Proceed with implementation.", debateResult.Summary),
+						Type:    "message",
+						Role:    "user",
+					})
+					addKeeperLog("Council approved plan after debate. Auto-approving from Go backend.", "action", session.ID, map[string]interface{}{
+						"event":          "session_approved",
+						"sessionId":      session.ID,
+						"riskScore":      debateResult.RiskScore,
+						"approvalStatus": debateResult.ApprovalStatus,
+					})
+					emitDaemonEvent("activities_updated", map[string]interface{}{"sessionId": session.ID})
+					emitDaemonEvent("session_approved", map[string]interface{}{"sessionId": session.ID, "sessionTitle": session.Title})
+					return "plan_approved_by_council", nil
+				}
+
+				_, _ = client.CreateActivity(session.ID, CreateActivityRequest{
+					Content: fmt.Sprintf("The Council Supervisor flagged the implementation plan as high-risk.\n\nDebate Summary:\n%s\n\nPlease revise the plan addressing these concerns and submit it for approval again.", debateResult.Summary),
+					Type:    "message",
+					Role:    "user",
+				})
+				addKeeperLog("Council rejected or flagged plan after debate. Manual revision required.", "error", session.ID, map[string]interface{}{
+					"event":          "session_plan_flagged",
+					"riskScore":      debateResult.RiskScore,
+					"approvalStatus": debateResult.ApprovalStatus,
+				})
+				return "plan_flagged_by_council", nil
 			}
 		}
 	}
@@ -769,10 +982,14 @@ func heuristicIssueEvaluation(issue GitHubIssue) issueEvaluation {
 	}
 }
 
-func evaluateIssueWithOpenAI(issue GitHubIssue, sourceID string, settings models.KeeperSettings, apiKey string) (issueEvaluation, error) {
+func evaluateIssueWithProvider(issue GitHubIssue, sourceID string, settings models.KeeperSettings, apiKey string) (issueEvaluation, error) {
 	model := settings.SupervisorModel
+	provider := settings.SupervisorProvider
 	if strings.TrimSpace(model) == "" {
 		model = "gpt-4o-mini"
+	}
+	if strings.TrimSpace(provider) == "" {
+		provider = "openai"
 	}
 
 	prompt := fmt.Sprintf(`Evaluate if the following GitHub issue is "Self-Healable" by an AI coding agent.
@@ -797,49 +1014,15 @@ Respond with JSON only:
 		issue.Body,
 	)
 
-	requestBody, _ := json.Marshal(map[string]interface{}{
-		"model": model,
-		"messages": []map[string]string{
-			{"role": "system", "content": "You are a technical lead evaluating project issues for autonomous coding agents. Respond with JSON only."},
-			{"role": "user", "content": prompt},
-		},
-		"temperature": 0.1,
-	})
-
-	req, err := http.NewRequest(http.MethodPost, "https://api.openai.com/v1/chat/completions", bytes.NewReader(requestBody))
+	result, err := generateLLMText(provider, apiKey, model, "You are a technical lead evaluating project issues for autonomous coding agents. Respond with JSON only.", []LLMMessage{{
+		Role:    "user",
+		Content: prompt,
+	}})
 	if err != nil {
 		return issueEvaluation{}, err
 	}
-	req.Header.Set("Authorization", "Bearer "+apiKey)
-	req.Header.Set("Content-Type", "application/json")
 
-	resp, err := http.DefaultClient.Do(req)
-	if err != nil {
-		return issueEvaluation{}, err
-	}
-	defer resp.Body.Close()
-
-	if resp.StatusCode >= 400 {
-		body, _ := io.ReadAll(resp.Body)
-		return issueEvaluation{}, fmt.Errorf("issue evaluation request failed (%d): %s", resp.StatusCode, string(body))
-	}
-
-	var response struct {
-		Choices []struct {
-			Message struct {
-				Content string `json:"content"`
-			} `json:"message"`
-		} `json:"choices"`
-	}
-	if err := json.NewDecoder(resp.Body).Decode(&response); err != nil {
-		return issueEvaluation{}, err
-	}
-	if len(response.Choices) == 0 {
-		return issueEvaluation{}, fmt.Errorf("issue evaluation response contained no choices")
-	}
-
-	content := response.Choices[0].Message.Content
-	jsonBlock := extractJSONBlock(content)
+	jsonBlock := extractJSONBlock(result.Content)
 	if jsonBlock == "" {
 		return issueEvaluation{}, fmt.Errorf("issue evaluation response did not contain JSON")
 	}
@@ -855,13 +1038,9 @@ Respond with JSON only:
 }
 
 func evaluateIssue(issue GitHubIssue, sourceID string, settings models.KeeperSettings) issueEvaluation {
-	apiKey := strings.TrimSpace(os.Getenv("OPENAI_API_KEY"))
-	if apiKey == "" && settings.SupervisorApiKey != nil {
-		apiKey = strings.TrimSpace(*settings.SupervisorApiKey)
-	}
-
-	if apiKey != "" && apiKey != "placeholder" && (settings.SupervisorProvider == "" || strings.EqualFold(settings.SupervisorProvider, "openai")) {
-		if evaluation, err := evaluateIssueWithOpenAI(issue, sourceID, settings, apiKey); err == nil {
+	apiKey := getSupervisorAPIKey(settings.SupervisorProvider, settings.SupervisorApiKey)
+	if apiKey != "" && apiKey != "placeholder" {
+		if evaluation, err := evaluateIssueWithProvider(issue, sourceID, settings, apiKey); err == nil {
 			return evaluation
 		}
 	}

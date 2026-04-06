@@ -10,7 +10,8 @@ This document tracks granular bugs, missing features, and technical debt. For ep
 - [x] **Go Backend Parity Pass #2:** Ported the highest-value queue intelligence path (`handleCheckSession`) plus Go-side event/log bridging and real session actions so the Go backend can nudge sessions, enqueue memory sync, and conservatively auto-approve low-risk plans.
 - [x] **Go Backend Parity Pass #3:** Ported `handleIndexCodebase` so Go can now walk the repo, chunk source files, request embeddings, and upsert `CodeChunk` rows without Bun.
 - [x] **Go Backend Parity Pass #4:** Ported `handleCheckIssues` plus Go-side issue fetching/session spawning support so the Go backend can now discover GitHub work and open Jules sessions autonomously.
-- [ ] **Go Backend Parity Pass #5:** Replace the current heuristic-only Go approval escalation path with full council-debate/provider parity and broaden Go-side semantic query/RAG retrieval support.
+- [x] **Go Backend Parity Pass #5:** Ported provider-backed council debate/review into Go, including supervisor-provider LLM calls, debate summaries, risk rescoring, and approval/rejection feedback back into the Jules session.
+- [ ] **Go Backend Parity Pass #6:** Broaden Go-side semantic query/RAG retrieval support and fill any remaining session action / lifecycle-event gaps that still depend on the TypeScript daemon.
 - [x] **Tooling Stabilization:** Added a working ESLint v9 flat config and aligned the Jest harness with the current Vite/Bun + shared-package runtime assumptions.
 - [x] **Lint Coverage Expansion:** Extended the lint command to cover `src/`, `components/`, `lib/`, and `server/` with a staged warning-first rollout.
 - [x] **Lint Warning Burn-Down:** Completed two warning burn-down passes and brought the expanded lint surface to zero warnings.

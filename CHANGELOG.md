@@ -2,6 +2,19 @@
 
 All notable changes to this project will be documented in this file.
 
+## [1.0.13] - 2026-04-05
+
+### Added
+- **Go Council Debate Parity**: Added `backend-go/services/llm.go` and ported provider-backed risky-plan review into the Go `check_session` path, including multi-role debate turns, moderator synthesis, risk rescoring, and debate-record persistence.
+- **Go Debate Lifecycle Resolution**: The Go backend now emits richer `session_debate_resolved` payloads with risk score, approval status, and summary, and messages the Jules session with council feedback after approval or rejection.
+
+### Changed
+- **Go Plan Review Strategy**: High-risk plans no longer stop at heuristic escalation in Go. They now escalate into a provider-backed council review when supervisor credentials are available, with conservative fallback only when provider execution is unavailable.
+- **Go Issue Evaluation Reuse**: Issue triage now uses the shared Go provider layer as well, reducing OpenAI-only coupling and improving future provider parity.
+
+### Notes
+- **Validation Status**: `cd backend-go && go test ./...`, `pnpm run lint`, `pnpm run typecheck`, `pnpm run test`, and `node scripts/check-version-sync.js` all pass at `1.0.13`.
+
 ## [1.0.12] - 2026-04-05
 
 ### Added
