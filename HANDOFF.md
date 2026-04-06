@@ -1,13 +1,13 @@
-# Project Handoff: Jules Autopilot (v1.0.13 — Go Backend Parity Pass #5)
+# Project Handoff: Jules Autopilot (v1.0.14 — Go Backend Parity Pass #6)
 
 ## 1. Session Summary
-This session continued the next recommended migration slice and addressed what had become the single most important remaining autonomy gap between the Bun/TypeScript daemon and the Go backend: provider-backed risky-plan review.
+This session continued the recommended next step after provider-backed debate parity and ported the missing retrieval half of the Go memory subsystem.
 
-The result is that the Go backend no longer stops at "high-risk escalation" for plan approval. It can now run a practical provider-backed council review flow, synthesize a summary, rescore risk, persist a debate artifact, and then approve or reject with feedback returned directly into the Jules session.
+Before this pass, the Go backend could index repository chunks and memory outcomes, but it still depended on the TypeScript daemon for practical semantic retrieval. After this pass, the Go backend can now query its own indexed memory, expose that through an API route, and use retrieval results to enrich inactivity nudges.
 
 ## 2. Completed Work
 ### 2.1 Versioning & Documentation
-- Bumped the project version from `1.0.12` to `1.0.13`.
+- Bumped the project version from `1.0.13` to `1.0.14`.
 - Re-synced version surfaces via the canonical `VERSION` workflow:
   - `VERSION`
   - `VERSION.md`
@@ -24,57 +24,45 @@ The result is that the Go backend no longer stops at "high-risk escalation" for 
   - `docs/VISION.md`
 - Added a new archived handoff in `logs/handoffs/`.
 
-### 2.2 Added Go Provider Layer
-Added `backend-go/services/llm.go`.
+### 2.2 Added Go RAG Retrieval Layer
+Added `backend-go/services/rag.go`.
 
-This file provides a practical Go LLM bridge for:
-- OpenAI
-- Anthropic
-- Gemini
+This file now provides:
+- query embedding generation via OpenAI embeddings
+- byte-to-float embedding decoding from SQLite blobs
+- cosine similarity scoring
+- combined retrieval across:
+  - `CodeChunk`
+  - `MemoryChunk`
+- ranked result output with origin metadata (`codebase` vs `history`)
 
-It now handles:
-- supervisor API-key resolution across provider-specific env vars
-- text generation against provider endpoints
-- lightweight token-usage capture where available
+This effectively ports the practical behavior of `server/rag.ts` into Go.
 
-This is important because the Go backend had reached the point where more parity work would become awkward and repetitive without a small provider abstraction.
+### 2.3 Added Go RAG Query API Route
+Updated `backend-go/api/routes.go` to expose:
+- `POST /api/rag/query`
 
-### 2.3 Ported Provider-Backed Council Review into Go
-Extended `backend-go/services/queue.go` so the Go `check_session` path can now do more than heuristic escalation for risky plans.
+The new Go route now:
+- validates request body
+- resolves the effective embeddings API key using current settings/env
+- calls Go-native retrieval
+- returns ranked semantic results in the same general shape as the TypeScript daemon path
 
-For `AWAITING_PLAN_APPROVAL` sessions, the Go backend now:
-1. calculates a conservative initial heuristic risk score
-2. auto-approves low-risk plans immediately
-3. emits `session_debate_escalated` for higher-risk plans
-4. runs a provider-backed council review when supervisor credentials are available
-5. simulates multi-role review turns for:
-   - Security Architect
-   - Senior Engineer
-6. generates a moderator summary
-7. requests a provider-backed risk rescore
-8. emits `session_debate_resolved` with:
-   - `riskScore`
-   - `approvalStatus`
-   - `summary`
-9. persists a debate record to SQLite
-10. either:
-   - approves the plan and sends the council summary back into the session, or
-   - rejects/flags the plan and requests a revised plan inside the session
+### 2.4 Added Go RAG-Assisted Nudges
+Extended `backend-go/services/queue.go` so the Go `check_session` path can use retrieval results during inactivity nudges.
 
-### 2.4 Debate Persistence
-The Go backend now persists debate artifacts into the `Debate` model with:
-- topic
-- summary
-- rounds JSON
-- history JSON
-- metadata including session/risk/approval context
+When smart pilot is enabled, the Go backend now:
+- queries semantic memory using the session title (or fallback activity wording)
+- pulls back relevant code/history context
+- formats that into a `[LOCAL_CONTEXT]` block
+- appends it to the generated nudge sent into the Jules session
 
-This is a meaningful improvement because the Go path now leaves behind inspectable review artifacts instead of only transient websocket/log signals.
+This brings the Go nudge path much closer to the Bun daemon's dual role of:
+- monitoring inactivity
+- injecting useful repo memory
 
-### 2.5 Improved Reuse of the New Provider Layer
-I also updated Go issue evaluation to reuse the new provider bridge instead of remaining narrowly OpenAI-specific.
-
-That means `handleCheckIssues` is now less tightly coupled to one provider and the Go backend has a more coherent story for future structured-review parity work.
+### 2.5 Small API/Service Boundary Improvement
+Exported a lightweight settings accessor from the Go services layer so API routes can reuse the same Keeper settings resolution logic without duplicating DB access conventions.
 
 ## 3. Validation Results
 ### Passing
@@ -85,43 +73,34 @@ That means `handleCheckIssues` is now less tightly coupled to one provider and t
 - `node scripts/check-version-sync.js`
 
 ## 4. Key Findings
-### 4.1 The Go migration has crossed from job parity into intelligence parity
-Before this pass, Go owned the major queue jobs, but one of the most important intelligence behaviors still lived mostly in the TypeScript daemon: provider-backed risky-plan adjudication.
+### 4.1 Go now owns both sides of the practical memory loop
+Before this pass, Go only owned ingestion/indexing. That was incomplete because a memory system is only truly useful when the runtime that builds it can also retrieve from it.
 
-After this pass, the Go backend can now:
-- detect risky plans
-- debate them with provider-backed review turns
-- synthesize a conclusion
-- rescore risk
-- decide approval vs rejection
-- message the session with the result
+Now Go owns:
+- indexing
+- retrieval
+- retrieval-assisted nudges
 
-That is a big shift from surface parity to autonomy parity.
+That makes the Go memory subsystem materially real rather than only partially migrated.
 
-### 4.2 A lightweight provider bridge unlocks a lot of future Go work
-Adding `backend-go/services/llm.go` is strategically valuable beyond this one feature. It creates a reusable base for:
-- council debates
-- structured reviews
-- issue triage
-- future semantic/recommendation workflows
-- potential Go-side self-healing reasoning
+### 4.2 Retrieval parity is more valuable when it is actually consumed
+Adding `/api/rag/query` was necessary, but using retrieval inside Go nudges makes the port much more meaningful. It proves the feature is not only available in the API — it is actively shaping Go-side autonomous behavior.
 
-### 4.3 Remaining Go gaps are now narrower and more product-facing
-The biggest remaining gaps are no longer core queue ownership. They are now more focused on:
-- semantic query / RAG retrieval parity
-- broader event/detail parity
-- residual session route/action differences
-- refinement of provider-backed structured workflows
+### 4.3 Remaining gaps are now even more concentrated in event/detail parity and residual route differences
+After this pass, the remaining important gaps are less about missing core intelligence loops and more about:
+- lifecycle event/detail richness
+- some remaining action/route differences
+- broader UI-facing parity if the frontend should lean more heavily on Go-native memory workflows
 
 ## 5. Remaining Work
 ### Highest-value next Go ports
-1. Add Go-side semantic query parity on top of indexed `CodeChunk` storage
-2. Broaden Go lifecycle event parity for:
+1. Broaden Go daemon event payload parity for:
    - recovery/self-healing
    - indexing progress/detail events
    - issue-spawn detail events
-3. Fill any remaining session route/action gaps in the Go API
-4. Tighten structured provider abstractions for review/debate/recommendation flows in Go
+2. Fill any remaining session activity/action route gaps in the Go API
+3. Tighten Go provider abstractions for structured review/debate/recommendation flows
+4. Add richer Go-native retrieval/result presentation hooks where the UI would benefit from explicit memory reasoning metadata
 5. Decide whether Go should become the default runtime or remain the parity track during migration
 
 ## 6. Process Safety
@@ -132,8 +111,8 @@ The biggest remaining gaps are no longer core queue ownership. They are now more
 
 ## 7. Recommended Next Step
 Recommended next move:
-- continue with **Go Backend Parity Pass #6** by porting semantic query / RAG retrieval parity, because the Go backend now owns indexing and should also own practical retrieval on top of that indexed memory.
+- continue with **Go Backend Parity Pass #7** by broadening Go-side daemon lifecycle event/detail parity, because the remaining gaps are now mostly around operator visibility and the last UI/runtime coupling points rather than missing core backend intelligence features.
 
 ## 8. Commit Guidance
 Recommended commit message for this session:
-- `feat: port go provider-backed council debate parity (v1.0.13)`
+- `feat: port go semantic rag retrieval parity (v1.0.14)`

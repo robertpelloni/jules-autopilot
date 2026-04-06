@@ -203,6 +203,34 @@ func getSessionReplay(c *fiber.Ctx) error {
 	})
 }
 
+func postRAGQuery(c *fiber.Ctx) error {
+	var body struct {
+		Query string `json:"query"`
+		TopK  int    `json:"topK"`
+	}
+	if err := c.BodyParser(&body); err != nil {
+		return c.Status(400).JSON(fiber.Map{"error": "Invalid request body"})
+	}
+	if strings.TrimSpace(body.Query) == "" {
+		return c.Status(400).JSON(fiber.Map{"error": "Query is required"})
+	}
+
+	settings, _ := services.GetSettingsForAPI()
+	apiKey := strings.TrimSpace(os.Getenv("OPENAI_API_KEY"))
+	if apiKey == "" && settings.SupervisorApiKey != nil {
+		apiKey = strings.TrimSpace(*settings.SupervisorApiKey)
+	}
+	if apiKey == "" || apiKey == "placeholder" {
+		return c.Status(401).JSON(fiber.Map{"error": "OpenAI API key is required for RAG"})
+	}
+
+	results, err := services.QueryCodebase(body.Query, apiKey, body.TopK)
+	if err != nil {
+		return c.Status(500).JSON(fiber.Map{"error": err.Error()})
+	}
+	return c.JSON(fiber.Map{"results": results})
+}
+
 func postBorgWebhook(c *fiber.Ctx) error {
 	var payload struct {
 		Type   string                 `json:"type"`
@@ -257,6 +285,7 @@ func SetupRoutes(app *fiber.App) {
 	api.Get("/fleet/summary", getFleetSummary)
 	api.Get("/system/submodules", getSystemSubmodules)
 	api.Get("/sessions/:id/replay", getSessionReplay)
+	api.Post("/rag/query", postRAGQuery)
 	api.Post("/webhooks/borg", postBorgWebhook)
 	api.Post("/webhooks/hypercode", postBorgWebhook)
 

@@ -2,6 +2,19 @@
 
 All notable changes to this project will be documented in this file.
 
+## [1.0.14] - 2026-04-05
+
+### Added
+- **Go Semantic RAG Retrieval Parity**: Added `backend-go/services/rag.go` with OpenAI embedding-based query generation, cosine similarity search across `CodeChunk` and `MemoryChunk`, and combined scored retrieval results matching the TypeScript daemon's dual-layer code/history search model.
+- **Go RAG Query API**: Added `POST /api/rag/query` in the Go backend so semantic search can be called directly through the Go API.
+
+### Changed
+- **Go Nudge Enrichment**: The Go `check_session` path now injects RAG-backed local context into inactivity nudges when smart pilot mode is enabled and semantic retrieval is available.
+- **Go Memory Ownership**: The Go backend now owns both halves of the practical RAG loop — indexing and retrieval — rather than only chunk ingestion.
+
+### Notes
+- **Validation Status**: `cd backend-go && go test ./...`, `pnpm run lint`, `pnpm run typecheck`, `pnpm run test`, and `node scripts/check-version-sync.js` all pass at `1.0.14`.
+
 ## [1.0.13] - 2026-04-05
 
 ### Added

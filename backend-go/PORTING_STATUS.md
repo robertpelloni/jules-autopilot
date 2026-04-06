@@ -43,6 +43,12 @@ Move reasonable backend responsibilities from the TypeScript/Bun daemon into the
   - persisted debate records in SQLite
   - `session_debate_resolved` payloads carrying risk/summary/decision data
 - Shared Go LLM provider layer in `backend-go/services/llm.go` for OpenAI, Anthropic, and Gemini-backed text generation
+- Go semantic retrieval layer in `backend-go/services/rag.go` with:
+  - OpenAI query embedding generation
+  - cosine similarity search across both `CodeChunk` and `MemoryChunk`
+  - combined codebase/history ranked results
+- `POST /api/rag/query` now exists in the Go API
+- Go `check_session` nudges can now include retrieved local context snippets
 - Go Jules client support for GitHub issues + session creation
 - `POST /api/sessions/:id/nudge` now sends a real activity instead of returning a stub response
 - `POST /api/sessions/:id:approvePlan` is now supported through the generic Go session action handler
@@ -59,14 +65,14 @@ Move reasonable backend responsibilities from the TypeScript/Bun daemon into the
 - WebSocket broadcasting
 
 ## Still Pending / Partial
-- RAG query parity on top of the now-ported Go indexing path
 - Full session activity/action parity with the TypeScript daemon
-- Broader WebSocket event parity beyond the currently implemented log, queue, issue, debate, and webhook broadcasts
+- Broader WebSocket event parity beyond the currently implemented log, queue, issue, debate, RAG, and webhook broadcasts
 - Additional provider/runtime polish around Go-side structured review/debate abstractions beyond the current practical provider bridge
+- More explicit Go-side retrieval/result presentation surfaces if the UI should call Go-native memory workflows directly more often
 
 ## Recommended Next Go Porting Steps
-1. Add Go-side semantic query parity on top of the indexed `CodeChunk` store.
-2. Broaden Go-side daemon event payload parity for recovery, indexing, and issue-spawn lifecycle events.
-3. Fill any remaining session activity/action route gaps in the Go API.
-4. Tighten Go-side provider abstractions for structured review/debate/recommendation workflows.
+1. Broaden Go-side daemon event payload parity for recovery, indexing, and issue-spawn lifecycle events.
+2. Fill any remaining session activity/action route gaps in the Go API.
+3. Tighten Go-side provider abstractions for structured review/debate/recommendation workflows.
+4. Add richer Go-native retrieval/result presentation hooks where the UI would benefit from more explicit memory reasoning metadata.
 5. Decide whether the Go backend becomes the primary runtime or remains a parity track during migration.

@@ -214,6 +214,10 @@ func getSettings() (models.KeeperSettings, error) {
 	return settings, err
 }
 
+func GetSettingsForAPI() (models.KeeperSettings, error) {
+	return getSettings()
+}
+
 func parseMessages(raw string) []string {
 	if strings.TrimSpace(raw) == "" {
 		return nil
@@ -268,6 +272,29 @@ func chooseNudgeMessage(settings models.KeeperSettings) string {
 		}
 	}
 	return "Please continue working on this task."
+}
+
+func buildRAGContext(query string, settings models.KeeperSettings, topK int) string {
+	apiKey := getSupervisorAPIKey("openai", settings.SupervisorApiKey)
+	if strings.TrimSpace(apiKey) == "" || apiKey == "placeholder" {
+		return ""
+	}
+
+	results, err := QueryCodebase(query, apiKey, topK)
+	if err != nil || len(results) == 0 {
+		return ""
+	}
+
+	var context strings.Builder
+	context.WriteString("\n\n[LOCAL_CONTEXT] - I found these relevant patterns in your fleet's memory that might help:\n\n")
+	for _, res := range results {
+		originLabel := "CURRENT CODEBASE"
+		if res.Origin == "history" {
+			originLabel = "HISTORICAL SUCCESS"
+		}
+		context.WriteString(fmt.Sprintf("[%s] File/Source: %s\n```\n%s\n```\n\n", originLabel, res.Filepath, res.Content))
+	}
+	return context.String()
 }
 
 func getSupervisorState(sessionID string) (models.SupervisorState, error) {
@@ -597,8 +624,17 @@ func (w *Worker) handleCheckSession(payload string) (string, error) {
 
 	if time.Since(lastActivityTime) > time.Duration(thresholdMinutes)*time.Minute && session.RawState != "AWAITING_PLAN_APPROVAL" {
 		message := chooseNudgeMessage(settings)
+		ragContext := ""
+		if settings.SmartPilotEnabled {
+			query := session.Title
+			if strings.TrimSpace(query) == "" {
+				query = "recent development activity"
+			}
+			ragContext = buildRAGContext(query, settings, 3)
+		}
+		finalMessage := message + ragContext
 		if _, err := client.CreateActivity(session.ID, CreateActivityRequest{
-			Content: message,
+			Content: finalMessage,
 			Type:    "message",
 			Role:    "user",
 		}); err != nil {
@@ -614,6 +650,7 @@ func (w *Worker) handleCheckSession(payload string) (string, error) {
 				"sessionTitle":   session.Title,
 				"inactiveMinutes": int(time.Since(lastActivityTime).Minutes()),
 				"nudgeMessage":   message,
+				"usedRAG":        ragContext != "",
 			},
 		)
 		emitDaemonEvent("activities_updated", map[string]interface{}{"sessionId": session.ID})
