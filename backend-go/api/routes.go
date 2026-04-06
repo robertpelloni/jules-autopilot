@@ -592,6 +592,11 @@ func SetupRoutes(app *fiber.App) {
 	api.Get("/repos/paths", getRepoPaths)
 	api.Post("/repos/paths", updateRepoPath)
 
+	// API Key routes
+	api.Get("/keys", getApiKeys)
+	api.Post("/keys", createApiKey)
+	api.Delete("/keys/:id", deleteApiKey)
+
 	// File system routes
 	api.Get("/fs/list", getFSList)
 	api.Get("/fs/read", getFSRead)
@@ -1315,6 +1320,55 @@ func getMockSessions() []models.JulesSession {
 			Branch:    "main",
 		},
 	}
+}
+
+func getApiKeys(c *fiber.Ctx) error {
+	var keys []models.ApiKey
+	if err := db.DB.Order("created_at desc").Find(&keys).Error; err != nil {
+		return c.Status(500).JSON(fiber.Map{"error": err.Error()})
+	}
+	return c.JSON(keys)
+}
+
+func createApiKey(c *fiber.Ctx) error {
+	var body struct {
+		Name string `json:"name"`
+	}
+	if err := c.BodyParser(&body); err != nil {
+		return c.Status(400).JSON(fiber.Map{"error": "Invalid request body"})
+	}
+	if strings.TrimSpace(body.Name) == "" {
+		return c.Status(400).JSON(fiber.Map{"error": "Name is required"})
+	}
+
+	workspaceID := "default"
+	prefix := "jp_"
+	key := uuid.New().String()
+	apiKey := models.ApiKey{
+		ID:          uuid.New().String(),
+		KeyHash:     key, // Placeholder for actual hash
+		KeyPrefix:   prefix,
+		Name:        body.Name,
+		Scopes:      "*",
+		IsActive:    true,
+		WorkspaceID: &workspaceID,
+		CreatedAt:   time.Now(),
+		UpdatedAt:   time.Now(),
+	}
+
+	if err := db.DB.Create(&apiKey).Error; err != nil {
+		return c.Status(500).JSON(fiber.Map{"error": err.Error()})
+	}
+
+	return c.Status(201).JSON(apiKey)
+}
+
+func deleteApiKey(c *fiber.Ctx) error {
+	id := c.Params("id")
+	if err := db.DB.Delete(&models.ApiKey{}, "id = ?", id).Error; err != nil {
+		return c.Status(500).JSON(fiber.Map{"error": err.Error()})
+	}
+	return c.JSON(fiber.Map{"success": true})
 }
 
 func getSessions(c *fiber.Ctx) error {

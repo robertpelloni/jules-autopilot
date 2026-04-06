@@ -10,8 +10,8 @@ import (
 	"syscall"
 
 	"github.com/gofiber/contrib/websocket"
-	corsmiddleware "github.com/gofiber/fiber/v2/middleware/cors"
 	"github.com/gofiber/fiber/v2"
+	corsmiddleware "github.com/gofiber/fiber/v2/middleware/cors"
 	"github.com/joho/godotenv"
 	"github.com/jules-autopilot/backend/api"
 	"github.com/jules-autopilot/backend/db"

@@ -42,4 +42,30 @@ func InitDB() {
 	}
 
 	log.Println("Database initialized and migrated successfully")
+
+	seedDefaultSettings()
+}
+
+func seedDefaultSettings() {
+	var settings models.KeeperSettings
+	if err := DB.First(&settings, "id = ?", "default").Error; err != nil {
+		log.Println("Seeding default keeper settings...")
+		settings = models.KeeperSettings{
+			ID:                         "default",
+			IsEnabled:                  false,
+			AutoSwitch:                 true,
+			CheckIntervalSeconds:       30,
+			InactivityThresholdMinutes: 1,
+			ActiveWorkThresholdMinutes: 30,
+			Messages:                   "Great! Please keep going as you advise!\nYes! Please continue to proceed as you recommend!\nThis looks correct. Please proceed.\nExcellent plan. Go ahead.\nLooks good to me. Continue.",
+			CustomMessages:             "[]",
+			SmartPilotEnabled:          false,
+			SupervisorProvider:         "openai",
+			SupervisorModel:            "gpt-4o",
+			ContextMessageCount:        20,
+		}
+		if err := DB.Create(&settings).Error; err != nil {
+			log.Printf("failed to seed default settings: %v", err)
+		}
+	}
 }

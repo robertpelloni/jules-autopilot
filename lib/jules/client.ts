@@ -161,8 +161,16 @@ function getDefaultApiBaseUrl(): string {
     }
   })();
 
+  const processEnv = (() => {
+    try {
+      return process.env as { VITE_JULES_API_BASE_URL?: string } | undefined;
+    } catch {
+      return undefined;
+    }
+  })();
+
   return viteEnv?.VITE_JULES_API_BASE_URL
-    || process.env.VITE_JULES_API_BASE_URL
+    || processEnv?.VITE_JULES_API_BASE_URL
     || '/api';
 }
 
