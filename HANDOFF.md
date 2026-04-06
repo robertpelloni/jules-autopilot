@@ -1,15 +1,13 @@
-# Project Handoff: Jules Autopilot (v1.0.16 — Go Backend Parity Pass #8)
+# Project Handoff: Jules Autopilot (v1.0.17 — Go Backend Parity Pass #9)
 
 ## 1. Session Summary
-This session continued the next recommended migration slice after lifecycle event parity and focused on two concrete remaining gaps:
-1. failed-session recovery/self-healing in Go
-2. a practical session mutation gap in the Go API
+This session continued the recommended next step after failed-session recovery/session-patch parity and focused on closing several remaining practical session/API route gaps that still existed between the Bun daemon and the Go backend.
 
-The result is that the Go backend can now detect failed sessions, generate recovery guidance, send that guidance back into the Jules session, emit explicit recovery lifecycle events, and accept session title/status updates through a Go-native `PATCH /api/sessions/:id` route.
+The result is that the Go API now exposes direct session read, direct session-activity read, and explicit Go-native RAG reindex triggering endpoints, making the practical session-control surface significantly more complete.
 
 ## 2. Completed Work
 ### 2.1 Versioning & Documentation
-- Bumped the project version from `1.0.15` to `1.0.16`.
+- Bumped the project version from `1.0.16` to `1.0.17`.
 - Re-synced version surfaces via the canonical `VERSION` workflow:
   - `VERSION`
   - `VERSION.md`
@@ -26,45 +24,23 @@ The result is that the Go backend can now detect failed sessions, generate recov
   - `docs/VISION.md`
 - Added a new archived handoff in `logs/handoffs/`.
 
-### 2.2 Go Session Patch / Update Support
-Extended the Go Jules client and API with practical session update support.
+### 2.2 Added Direct Session Read Route
+Updated `backend-go/api/routes.go` to add:
+- `GET /api/sessions/:id`
 
-#### `backend-go/services/jules_client.go`
-Added:
-- `UpdateSession(sessionID string, updates map[string]interface{}, updateMask string)`
+This route now fetches a single live Jules session through the Go backend and returns the transformed session payload directly.
 
-#### `backend-go/api/routes.go`
-Added:
-- `PATCH /api/sessions/:id`
+### 2.3 Added Direct Session Activity Read Route
+Updated `backend-go/api/routes.go` to add:
+- `GET /api/sessions/:id/activities`
 
-The new route supports practical updates for:
-- `status`
-- `title`
+This closes another practical read-surface gap and means the Go runtime can now expose direct session history retrieval without relying only on replay/export endpoints.
 
-This closes a useful session-control gap in the Go API and makes the Go backend more capable as a direct session management runtime.
+### 2.4 Added Go-Native RAG Reindex Trigger Route
+Updated `backend-go/api/routes.go` to add:
+- `POST /api/rag/reindex`
 
-### 2.3 Go Failed-Session Recovery / Self-Healing
-Extended `backend-go/services/queue.go` so the Go `check_session` path now has a real `FAILED`-state recovery branch.
-
-When a session is in the `FAILED` state and smart pilot mode is enabled, the Go backend now:
-- detects whether the failure has already been handled for the current activity state
-- emits `session_recovery_started`
-- logs recovery start in Keeper logs
-- gathers recent session activities
-- generates recovery guidance using the Go provider bridge when supervisor credentials are available
-- falls back to a conservative static recovery instruction if provider execution is unavailable
-- optionally appends Go-native RAG context
-- sends the recovery instruction back into the Jules session
-- emits `session_recovery_completed`
-- logs recovery completion with summary content
-- persists the latest processed activity timestamp to reduce repeated guidance
-
-### 2.4 Recovery Telemetry Parity
-The shared event schema and frontend websocket path now explicitly understand recovery events:
-- `session_recovery_started`
-- `session_recovery_completed`
-
-This means recovery/self-healing is now operator-visible through the same event/log/status layers as other Go-originated automation.
+This route enqueues the Go `index_codebase` job directly and returns a success payload, bringing Go closer to the Bun daemon's direct RAG-control surface.
 
 ## 3. Validation Results
 ### Passing
@@ -75,21 +51,30 @@ This means recovery/self-healing is now operator-visible through the same event/
 - `node scripts/check-version-sync.js`
 
 ## 4. Key Findings
-### 4.1 Go now owns another previously Bun-advantaged autonomy path
-Before this pass, the Go backend already covered most of the major queue/intelligence loops, but failed-session self-healing still represented an obvious practical advantage for the Bun path. After this pass, Go now has a real recovery flow instead of only monitoring and nudging.
+### 4.1 The remaining differences are getting narrower and more product-surface oriented
+At this point, the Go backend covers the core session/memory/control loop much more completely:
+- session read
+- session update
+- session message send
+- session activity read
+- plan approval
+- nudges
+- failed-session recovery
+- replay/export/save-memory
+- issue-driven autonomy
+- indexing/retrieval/reindex control
 
-### 4.2 Session mutation parity matters for runtime credibility
-Adding `PATCH /api/sessions/:id` is not flashy, but it matters. A backend that is intended to become a more primary runtime needs to support straightforward session mutation operations directly, not only through indirect action endpoints.
+That means the remaining gaps are increasingly outside the core loop and more in secondary product surfaces or edge-case refinements.
 
-### 4.3 Recovery state tracking is now present but still worth refining
-The current implementation uses `LastProcessedActivityTimestamp` to avoid repeating recovery guidance for the same failed state. That is practical and safe, but there is room to refine recovery-specific state tracking in future passes for even cleaner edge-case behavior.
+### 4.2 Practical route completeness matters for treating Go as a primary runtime candidate
+Even when a capability exists internally, missing top-level routes still create parity friction. This pass helps reduce that friction by giving the Go backend more of the direct control/read endpoints an operator-facing runtime is expected to have.
 
 ## 5. Remaining Work
 ### Highest-value next Go ports
-1. Fill any remaining session activity/action route gaps in the Go API
-2. Refine Go-side recovery state tracking and edge-case handling
-3. Tighten Go provider abstractions for structured review/debate/recommendation workflows
-4. Add richer Go-native retrieval/result presentation hooks where the UI would benefit from explicit memory reasoning metadata
+1. Refine Go-side recovery state tracking and edge-case handling
+2. Tighten Go provider abstractions for structured review/debate/recommendation workflows
+3. Add richer Go-native retrieval/result presentation hooks where the UI would benefit from explicit memory reasoning metadata
+4. Audit non-core product surfaces (templates, filesystem, local review, import/export) for whether they should also migrate into Go
 5. Decide whether Go should become the default runtime or remain the parity track during migration
 
 ## 6. Process Safety
@@ -100,8 +85,8 @@ The current implementation uses `LastProcessedActivityTimestamp` to avoid repeat
 
 ## 7. Recommended Next Step
 Recommended next move:
-- continue with **Go Backend Parity Pass #9** by auditing and filling any remaining session route/action gaps, while refining recovery state handling so the Go backend's remaining differences from Bun become increasingly narrow and edge-case focused.
+- continue with **Go Backend Parity Pass #10** by refining Go recovery state tracking and then auditing non-core product surfaces, because the core session/memory/control loop is now far closer to complete parity and the remaining differences are increasingly edge-case or product-surface specific.
 
 ## 8. Commit Guidance
 Recommended commit message for this session:
-- `feat: add go failed-session recovery and session patch parity (v1.0.16)`
+- `feat: close remaining go session read and rag reindex route gaps (v1.0.17)`

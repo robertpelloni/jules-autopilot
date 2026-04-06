@@ -203,6 +203,26 @@ func getSessionReplay(c *fiber.Ctx) error {
 	})
 }
 
+func getSession(c *fiber.Ctx) error {
+	id := c.Params("id")
+	client := services.NewJulesClient()
+	session, err := client.GetSession(id)
+	if err != nil {
+		return c.Status(500).JSON(fiber.Map{"error": err.Error()})
+	}
+	return c.JSON(session)
+}
+
+func getSessionActivities(c *fiber.Ctx) error {
+	id := c.Params("id")
+	client := services.NewJulesClient()
+	activities, err := client.ListActivities(id)
+	if err != nil {
+		return c.Status(500).JSON(fiber.Map{"error": err.Error()})
+	}
+	return c.JSON(activities)
+}
+
 func postRAGQuery(c *fiber.Ctx) error {
 	var body struct {
 		Query string `json:"query"`
@@ -274,6 +294,13 @@ func postBorgWebhook(c *fiber.Ctx) error {
 	return c.JSON(fiber.Map{"success": true, "processed": true})
 }
 
+func postRAGReindex(c *fiber.Ctx) error {
+	if _, err := services.AddJob("index_codebase", map[string]string{}); err != nil {
+		return c.Status(500).JSON(fiber.Map{"error": err.Error()})
+	}
+	return c.JSON(fiber.Map{"success": true, "message": "Codebase indexing job enqueued"})
+}
+
 // SetupRoutes registers all API routes
 func SetupRoutes(app *fiber.App) {
 	services.SetBroadcaster(Broadcast)
@@ -285,7 +312,10 @@ func SetupRoutes(app *fiber.App) {
 	api.Get("/fleet/summary", getFleetSummary)
 	api.Get("/system/submodules", getSystemSubmodules)
 	api.Get("/sessions/:id/replay", getSessionReplay)
+	api.Get("/sessions/:id", getSession)
+	api.Get("/sessions/:id/activities", getSessionActivities)
 	api.Post("/rag/query", postRAGQuery)
+	api.Post("/rag/reindex", postRAGReindex)
 	api.Post("/webhooks/borg", postBorgWebhook)
 	api.Post("/webhooks/hypercode", postBorgWebhook)
 

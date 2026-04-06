@@ -14,7 +14,8 @@ This document tracks granular bugs, missing features, and technical debt. For ep
 - [x] **Go Backend Parity Pass #6:** Ported Go-side semantic query / RAG retrieval, added `/api/rag/query`, and wired retrieval-backed local context into Go inactivity nudges.
 - [x] **Go Backend Parity Pass #7:** Added explicit Go indexing/issue lifecycle events, taught the frontend websocket layer about them, and expanded Keeper feed metadata rendering for Go-originated automation details.
 - [x] **Go Backend Parity Pass #8:** Added Go-side failed-session recovery lifecycle parity plus `PATCH /api/sessions/:id` support so the Go backend can recover failed sessions and cover a broader session-control surface.
-- [ ] **Go Backend Parity Pass #9:** Fill any remaining session action/route gaps, refine Go-side recovery state tracking to avoid redundant guidance, and continue tightening operator-visible parity where Bun still has richer metadata.
+- [x] **Go Backend Parity Pass #9:** Added Go-native direct session fetch, session activity fetch, and RAG reindex routes, reducing the remaining practical route/control gap versus the Bun daemon.
+- [ ] **Go Backend Parity Pass #10:** Refine Go-side recovery state tracking to avoid redundant guidance and continue tightening the remaining edge-case/operator-visible parity where Bun still has richer metadata.
 - [x] **Tooling Stabilization:** Added a working ESLint v9 flat config and aligned the Jest harness with the current Vite/Bun + shared-package runtime assumptions.
 - [x] **Lint Coverage Expansion:** Extended the lint command to cover `src/`, `components/`, `lib/`, and `server/` with a staged warning-first rollout.
 - [x] **Lint Warning Burn-Down:** Completed two warning burn-down passes and brought the expanded lint surface to zero warnings.

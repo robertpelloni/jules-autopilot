@@ -2,6 +2,18 @@
 
 All notable changes to this project will be documented in this file.
 
+## [1.0.17] - 2026-04-05
+
+### Added
+- **Go Session Read/Control Route Parity**: Added Go API support for `GET /api/sessions/:id`, `GET /api/sessions/:id/activities`, and `POST /api/rag/reindex`, closing several remaining practical route gaps versus the Bun daemon.
+
+### Changed
+- **Go Session Surface Coverage**: The Go backend now covers a fuller read/control loop for sessions by exposing direct session fetch, direct activity fetch, patch/update support, action endpoints, and replay/export/save-memory support from the same runtime.
+- **Go Migration Focus Shift**: Remaining Go parity work is now increasingly edge-case and product-surface oriented rather than broad missing route coverage.
+
+### Notes
+- **Validation Status**: `cd backend-go && go test ./...`, `pnpm run lint`, `pnpm run typecheck`, `pnpm run test`, and `node scripts/check-version-sync.js` all pass at `1.0.17`.
+
 ## [1.0.16] - 2026-04-05
 
 ### Added
