@@ -2,6 +2,18 @@
 
 All notable changes to this project will be documented in this file.
 
+## [1.0.30] - 2026-04-05
+
+### Added
+- **Go Runtime Error/Bootstrap Hardening**: Added root-project `.env` loading and a global Fiber error handler so the Go runtime behaves more like the Bun server during startup and API error handling.
+
+### Changed
+- **Go Error Response Parity**: API/metrics/health errors in the Go runtime now return structured responses through a central Fiber error handler instead of depending only on per-route behavior.
+- **Go Runtime Bootstrap Parity**: The Go runtime now loads `.env` from the detected project root, reducing path-assumption drift relative to the Bun runtime.
+
+### Notes
+- **Validation Status**: `cd backend-go && gofmt -w main.go && go test ./...`, `pnpm run lint`, `pnpm run typecheck`, `pnpm run test`, and `node scripts/check-version-sync.js` all pass at `1.0.30`.
+
 ## [1.0.29] - 2026-04-05
 
 ### Added

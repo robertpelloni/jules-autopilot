@@ -1,15 +1,15 @@
-# Project Handoff: Jules Autopilot (v1.0.29 — Go Backend Parity Pass #21)
+# Project Handoff: Jules Autopilot (v1.0.30 — Go Backend Parity Pass #22)
 
 ## 1. Session Summary
-This session continued the residual runtime-gap audit after websocket protocol alignment and targeted two practical deployment/runtime differences that still favored the Bun daemon:
-- request-scoped Jules auth header handling
-- permissive cross-origin API behavior
+This session continued the residual runtime/deployment audit after request-auth and CORS parity and targeted another remaining area where the Bun runtime was still more polished operationally:
+- root `.env` bootstrap behavior
+- centralized runtime error handling
 
-The result is that the Go runtime now behaves more like the Bun runtime for cross-origin and externally-authenticated use cases.
+The result is that the Go runtime now behaves more like the Bun server during startup and when surfacing API-facing runtime errors.
 
 ## 2. Completed Work
 ### 2.1 Versioning & Documentation
-- Bumped the project version from `1.0.28` to `1.0.29`.
+- Bumped the project version from `1.0.29` to `1.0.30`.
 - Re-synced version surfaces via the canonical `VERSION` workflow:
   - `VERSION`
   - `VERSION.md`
@@ -28,74 +28,56 @@ The result is that the Go runtime now behaves more like the Bun runtime for cros
   - `docs/VISION.md`
 - Added a new archived handoff in `logs/handoffs/`.
 
-### 2.2 Added Request-Scoped Jules Auth Support in Go API Routes
-Updated:
-- `backend-go/api/routes.go`
-
-Added:
-- `getJulesClientForRequest(c *fiber.Ctx)`
-
-This request-aware Go client resolution now checks:
-- `X-Jules-Api-Key`
-- `X-Goog-Api-Key`
-
-and then falls back to the broader Go Jules key resolution already supported in services.
-
-Applied this to practical session-facing Go routes including:
-- session replay
-- session fetch
-- activity fetch
-- fleet sync
-- session action handling
-- patch session
-- create activity
-- export session to repo
-- save session memory
-- session list
-- nudge session
-
-### 2.3 Added Bun-Like CORS Behavior in Go Runtime
+### 2.2 Hardened Go Runtime `.env` Bootstrap Behavior
 Updated:
 - `backend-go/main.go`
 
-Added Go CORS middleware with Bun-like permissive configuration for:
-- origins
-- methods
-- auth/API-key headers
+Added:
+- `loadRootEnv()`
 
-This improves deployment flexibility when:
-- the frontend and backend are served from different origins
-- external tooling or clients call the Go runtime directly
+The Go runtime now explicitly loads `.env` from the detected project root, reducing path-assumption drift and making startup behavior more like the Bun runtime’s root-aware environment bootstrap.
+
+### 2.3 Added Centralized Fiber Error Handling
+Updated:
+- `backend-go/main.go`
+
+The Go runtime now uses a centralized Fiber error handler that:
+- returns structured JSON for API/metrics/health-oriented paths
+- returns plain text for non-API paths
+- normalizes error-code propagation from Fiber errors
+
+This improves consistency for runtime-originated or middleware-originated errors rather than relying only on per-route explicit JSON returns.
 
 ## 3. Validation Results
 ### Passing
-- `cd backend-go && gofmt -w main.go api/routes.go && go test ./...`
+- `cd backend-go && gofmt -w main.go && go test ./...`
 - `pnpm run lint`
 - `pnpm run typecheck`
 - `pnpm run test`
 - `node scripts/check-version-sync.js`
 
 ## 4. Key Findings
-### 4.1 Remaining runtime gaps are often deployment-oriented now
-Many of the large application surfaces are already ported. The strongest remaining differences are increasingly about runtime operation in realistic environments, especially:
-- cross-origin use
-- request-scoped auth overrides
-- frontend/runtime deployment assumptions
+### 4.1 Remaining parity work is increasingly about polish and operational consistency
+At this stage, the broad route/product/runtime surface is quite mature. What remains increasingly looks like:
+- startup/bootstrapping assumptions
+- error semantics
+- deployment-time ergonomics
+- subtle runtime consistency details
 
-### 4.2 Request-aware auth handling matters for real backend flexibility
-Even if the internal UI often runs with env/config-backed credentials, supporting request-scoped auth headers is important for:
-- external clients
-- proxy/gateway scenarios
-- testing different Jules credentials without rewriting environment state
+### 4.2 Centralized error handling is worthwhile even with explicit per-route JSON
+Per-route JSON handling covers many expected failures, but a central error handler still matters for:
+- middleware-generated errors
+- unexpected Fiber errors
+- keeping API-facing failures structurally consistent
 
-### 4.3 CORS parity is a meaningful primary-runtime requirement
-A runtime can be feature-complete on paper but still frustrating in actual deployment if cross-origin behavior differs. This pass helps the Go runtime behave more like the Bun server in real integration scenarios.
+### 4.3 Root-aware environment loading is part of real runtime parity
+Environment bootstrapping can be an invisible source of runtime drift. Making Go root-aware here reduces one more operational mismatch with the Bun runtime.
 
 ## 5. Remaining Work
 ### Highest-value next steps
-1. Continue auditing for any remaining Bun-only runtime or deployment behavior still worth porting
-2. Deepen observability if needed with richer health history, dependency checks, or metrics drill-downs
-3. Evaluate whether the Go runtime is now close enough to explicit primary-runtime hardening / default-runtime readiness
+1. Continue auditing for any remaining Bun-only runtime/deployment assumptions still worth porting
+2. Deepen observability if useful with richer metrics history or dependency checks
+3. Continue evaluating whether the Go runtime is now nearing explicit default-runtime readiness
 
 ## 6. Process Safety
 - No processes were killed.
@@ -105,8 +87,8 @@ A runtime can be feature-complete on paper but still frustrating in actual deplo
 
 ## 7. Recommended Next Step
 Recommended next move:
-- continue with **Go Backend Parity Pass #22** by auditing any remaining Bun-specific deployment/runtime assumptions and deciding what still meaningfully blocks Go from primary-runtime status.
+- continue with **Go Backend Parity Pass #23** by auditing what remaining Bun-specific runtime/deployment behaviors still meaningfully block Go from primary-runtime status.
 
 ## 8. Commit Guidance
 Recommended commit message for this session:
-- `feat: add go request auth and cors parity (v1.0.29)`
+- `feat: harden go bootstrap and error parity (v1.0.30)`

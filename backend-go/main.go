@@ -54,9 +54,14 @@ func serveSPA(c *fiber.Ctx) error {
 	return c.SendStatus(fiber.StatusNotFound)
 }
 
+func loadRootEnv() {
+	projectRoot := getProjectRoot()
+	_ = godotenv.Overload(filepath.Join(projectRoot, ".env"))
+}
+
 func main() {
-	// Load environment variables from .env in root
-	_ = godotenv.Load("../.env")
+	// Load environment variables from .env in project root for runtime parity with the Bun server.
+	loadRootEnv()
 
 	// Initialize Database
 	db.InitDB()
@@ -65,7 +70,18 @@ func main() {
 	services.StartDaemon()
 	services.StartWorker()
 
-	app := fiber.New()
+	app := fiber.New(fiber.Config{
+		ErrorHandler: func(c *fiber.Ctx, err error) error {
+			code := fiber.StatusInternalServerError
+			if fiberErr, ok := err.(*fiber.Error); ok {
+				code = fiberErr.Code
+			}
+			if strings.HasPrefix(c.Path(), "/api") || c.Path() == "/metrics" || c.Path() == "/healthz" {
+				return c.Status(code).JSON(fiber.Map{"error": err.Error(), "status": code})
+			}
+			return c.Status(code).SendString(err.Error())
+		},
+	})
 
 	app.Use(corsmiddleware.New(corsmiddleware.Config{
 		AllowOrigins: "*",
