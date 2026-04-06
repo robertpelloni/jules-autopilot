@@ -267,9 +267,10 @@ func (c *JulesClient) ListActivities(sessionId string) ([]models.JulesActivity, 
 
 // CreateActivityRequest defines the payload for creating a session activity
 type CreateActivityRequest struct {
-	Content string `json:"content"`
-	Type    string `json:"type,omitempty"`
-	Role    string `json:"role,omitempty"`
+	SessionID string `json:"sessionId,omitempty"`
+	Content   string `json:"content"`
+	Type      string `json:"type,omitempty"`
+	Role      string `json:"role,omitempty"`
 }
 
 // CreateActivity sends a message or result to a specific session
@@ -313,6 +314,34 @@ func (c *JulesClient) CreateActivity(sessionId string, params CreateActivityRequ
 	var result interface{}
 	json.Unmarshal(body, &result)
 	return result, nil
+}
+
+func (c *JulesClient) ApprovePlan(sessionId string) error {
+	if c.apiKey == "" {
+		return fmt.Errorf("JULES_API_KEY not found in environment")
+	}
+
+	url := fmt.Sprintf("%s/sessions/%s:approvePlan", JulesApiBaseUrl, sessionId)
+	req, err := http.NewRequest("POST", url, nil)
+	if err != nil {
+		return err
+	}
+
+	req.Header.Set("X-Goog-Api-Key", c.apiKey)
+	req.Header.Set("Content-Type", "application/json")
+
+	resp, err := http.DefaultClient.Do(req)
+	if err != nil {
+		return err
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode >= 400 {
+		body, _ := io.ReadAll(resp.Body)
+		return fmt.Errorf("Jules API approvePlan error (%d): %s", resp.StatusCode, string(body))
+	}
+
+	return nil
 }
 
 func transformSession(s ApiSession) models.JulesSession {

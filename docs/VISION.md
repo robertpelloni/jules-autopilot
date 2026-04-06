@@ -99,12 +99,14 @@ The official interfaces for AI coding agents are often slow and unresponsive. Th
 
 ## Implementation History
 
-### ✅ Milestone: v1.0.9 — Go Backend Parity Pass #1 (Current)
+### ✅ Milestone: v1.0.10 — Go Backend Parity Pass #2 (Current)
 - [x] Consolidated API into a single Bun daemon.
 - [x] Removed "Enterprise" feature bloat (Analytics, Swarms, Side Logs).
 - [x] Implemented the frontend proxy layer for seamless local integration.
 - [x] Pruned Prisma schema to core orchestration models.
 - [x] Extended the Deep Autonomous Node with version-uniformity fixes across the Web UI, CLI, shared packages, and daemon manifest.
+- [x] Ported practical Go backend control-loop behavior for live session checks, nudges, completed-session memory sync enqueueing, and conservative low-risk plan auto-approval.
+- [x] Added a Go-side Keeper log / realtime event bridge so autonomous behavior can surface into the operator UI without depending exclusively on the Bun daemon.
 
 ### 📋 Future Path
 - [ ] Refined TUI experience for "Mecha Suit" cockpit mode.

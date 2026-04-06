@@ -9,17 +9,6 @@ import (
 	"github.com/jules-autopilot/backend/models"
 )
 
-// JulesClientStub is a stub for the Jules API client
-type JulesClientStub struct {
-	APIKey string
-}
-
-func (c *JulesClientStub) GetLastActivity(sessionID string) (time.Time, error) {
-	// Stub implementation: return current time (no inactivity)
-	// In a real implementation, this would call the Jules API
-	return time.Now(), nil
-}
-
 // Daemon represents the background monitoring loop
 type Daemon struct {
 	isRunning bool
@@ -70,9 +59,7 @@ func (d *Daemon) Run() {
 
 func (d *Daemon) tick() {
 	var settings models.KeeperSettings
-	// Fetch KeeperSettings from DB
 	if err := db.DB.First(&settings, "id = ?", "default").Error; err != nil {
-		// Log and skip if settings not found
 		return
 	}
 
@@ -80,45 +67,19 @@ func (d *Daemon) tick() {
 		return
 	}
 
-	// Query Sessions where status is 'ACTIVE' or 'AWAITING_USER_FEEDBACK'
-	var activeSessions []models.JulesSession
-	err := db.DB.Where("status = ? OR status = ?", "ACTIVE", "AWAITING_USER_FEEDBACK").Find(&activeSessions).Error
+	client := NewJulesClient()
+	sessions, err := client.ListSessions()
 	if err != nil {
-		log.Printf("[Daemon] Failed to query active sessions: %v", err)
+		log.Printf("[Daemon] Failed to fetch live sessions: %v", err)
 		return
 	}
 
-	if len(activeSessions) == 0 {
-		return
-	}
-
-	// Jules API Key from settings or env
-	apiKey := ""
-	if settings.JulesApiKey != nil {
-		apiKey = *settings.JulesApiKey
-	}
-	client := &JulesClientStub{APIKey: apiKey}
-
-	for _, session := range activeSessions {
-		lastActivity, err := client.GetLastActivity(session.ID)
-		if err != nil {
-			log.Printf("[Daemon] Failed to get last activity for session %s: %v", session.ID, err)
-			continue
+	for _, session := range sessions {
+		payload := map[string]interface{}{
+			"session": session,
 		}
-
-		// Check if inactive longer than inactivityThresholdMinutes
-		threshold := time.Duration(settings.InactivityThresholdMinutes) * time.Minute
-		if time.Since(lastActivity) > threshold {
-			// Enqueue a check_session job
-			payload := map[string]string{
-				"sessionId": session.ID,
-			}
-			_, err := AddJob("check_session", payload)
-			if err != nil {
-				log.Printf("[Daemon] Failed to enqueue check_session job for session %s: %v", session.ID, err)
-			} else {
-				log.Printf("[Daemon] Enqueued check_session job for inactive session %s", session.ID)
-			}
+		if _, err := AddJob("check_session", payload); err != nil {
+			log.Printf("[Daemon] Failed to enqueue check_session for %s: %v", session.ID, err)
 		}
 	}
 }

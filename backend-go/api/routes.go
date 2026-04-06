@@ -248,6 +248,8 @@ func postBorgWebhook(c *fiber.Ctx) error {
 
 // SetupRoutes registers all API routes
 func SetupRoutes(app *fiber.App) {
+	services.SetBroadcaster(Broadcast)
+
 	api := app.Group("/api")
 
 	api.Get("/ping", getPing)
@@ -351,6 +353,8 @@ func handleSessionAction(c *fiber.Ctx) error {
 	id := parts[0]
 	action := parts[1]
 
+	client := services.NewJulesClient()
+
 	if action == "sendMessage" {
 		var body struct {
 			Prompt string `json:"prompt"`
@@ -359,7 +363,6 @@ func handleSessionAction(c *fiber.Ctx) error {
 			return c.Status(400).JSON(fiber.Map{"error": "Invalid request body"})
 		}
 
-		client := services.NewJulesClient()
 		result, err := client.CreateActivity(id, services.CreateActivityRequest{
 			Content: body.Prompt,
 			Type:    "message",
@@ -368,6 +371,16 @@ func handleSessionAction(c *fiber.Ctx) error {
 			return c.Status(500).JSON(fiber.Map{"error": err.Error()})
 		}
 		return c.JSON(result)
+	}
+
+	if action == "approvePlan" {
+		if err := client.ApprovePlan(id); err != nil {
+			return c.Status(500).JSON(fiber.Map{"error": err.Error()})
+		}
+		_, _ = services.AddJob("check_session", map[string]interface{}{
+			"session": models.JulesSession{ID: id},
+		})
+		return c.JSON(fiber.Map{"success": true})
 	}
 
 	return c.Status(400).JSON(fiber.Map{"error": "Unsupported action: " + action})
@@ -598,7 +611,25 @@ func getSessions(c *fiber.Ctx) error {
 
 func nudgeSession(c *fiber.Ctx) error {
 	id := c.Params("id")
-	// Stub implementation: just return success
+	client := services.NewJulesClient()
+	session, err := client.GetSession(id)
+	if err != nil {
+		return c.Status(500).JSON(fiber.Map{"error": err.Error()})
+	}
+
+	message := "Please continue working on this task."
+	if _, err := client.CreateActivity(id, services.CreateActivityRequest{
+		Content: message,
+		Type:    "message",
+		Role:    "user",
+	}); err != nil {
+		return c.Status(500).JSON(fiber.Map{"error": err.Error()})
+	}
+
+	_, _ = services.AddJob("check_session", map[string]interface{}{
+		"session": session,
+	})
+	Broadcast(fiber.Map{"type": "activities_updated", "data": fiber.Map{"sessionId": id}})
 	return c.JSON(fiber.Map{
 		"success": true,
 		"message": "Session " + id + " nudged",

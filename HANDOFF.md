@@ -1,69 +1,70 @@
-# Project Handoff: Jules Autopilot (v1.0.9 — Go Backend Parity Pass #1)
+# Project Handoff: Jules Autopilot (v1.0.10 — Go Backend Parity Pass #2)
 
 ## 1. Session Summary
-This session continued the transition from maintenance work into backend parity work, with a specific focus on making the Go backend materially more useful and closer to the TypeScript/Bun daemon without interrupting any running processes.
+This session continued the Go migration on the highest-value backend control-loop surface instead of attempting a risky all-at-once rewrite. The main outcome is that the Go backend now owns a meaningful slice of autonomous queue behavior rather than just route parity and scaffolding.
 
 ## 2. Completed Work
 ### 2.1 Versioning & Documentation
-- Bumped the project version from `1.0.8` to `1.0.9`.
-- Synced version surfaces through the canonical `VERSION` workflow:
+- Bumped the project version from `1.0.9` to `1.0.10`.
+- Re-synced version surfaces through the canonical `VERSION` workflow:
   - `VERSION`
   - `VERSION.md`
   - `package.json`
   - `apps/cli/package.json`
   - `packages/shared/package.json`
   - `lib/version.ts`
-- Updated project documentation and handoff records:
+- Updated delivery/planning docs:
   - `CHANGELOG.md`
   - `ROADMAP.md`
   - `TODO.md`
-  - `docs/VISION.md`
-  - `docs/ARCHITECTURE.md`
   - `backend-go/PORTING_STATUS.md`
+- Added a new archived handoff for this pass in `logs/handoffs/`.
 
-### 2.2 TypeScript Runtime UX Improvements Preserved
-- Extended the session-view Keeper feed so council/debate lifecycle events can now be streamed and contextualized more richly.
-- Added new shared daemon event payloads in `packages/shared/src/websocket.ts` for:
-  - `session_debate_escalated`
-  - `session_debate_resolved`
-- Updated `server/queue.ts` so auto-approval/debate flows emit stronger event coverage:
-  - `session_approved` now fires consistently for low-risk and council-approved plans
-  - debate escalation/resolution now emit dedicated lifecycle events
-- Updated `lib/hooks/use-daemon-websocket.ts` to translate those new daemon events into client-side Keeper log entries.
-- Updated `components/activity-feed.tsx` to render richer inline session automation context such as:
-  - risk scores
-  - approval decisions
-  - debate summaries
-  - nudge details
+### 2.2 Go Backend Parity Pass #2
+#### Realtime/event plumbing
+Added `backend-go/services/realtime.go` to let Go automation paths:
+- persist Keeper logs into SQLite
+- emit websocket events with the same general daemon-event shape the UI already understands
+- avoid an `api -> services -> api` import cycle by registering the broadcaster from the route layer
 
-### 2.3 Go Backend Parity Pass #1
-The largest new body of work in this session was porting a practical, high-value slice of the backend from TypeScript/Bun assumptions into the Go backend.
+#### Queue intelligence: `handleCheckSession`
+Ported a practical Go version of the TypeScript `check_session` flow in `backend-go/services/queue.go`.
 
-#### Ported / Added in `backend-go/api/routes.go`
-- `GET /api/ping`
-- `GET /api/manifest`
-- `GET /api/fleet/summary`
-- `GET /api/system/submodules`
-- `GET /api/sessions/:id/replay`
-- `POST /api/webhooks/borg`
-- `POST /api/webhooks/hypercode`
+The Go worker now:
+- parses live session payloads from queued jobs
+- refreshes live session state from Jules before acting
+- tracks `SupervisorState.lastProcessedActivityTimestamp`
+- emits `activities_updated` when fresh activity is detected
+- queues `sync_session_memory` for completed sessions that do not yet have indexed memory
+- performs conservative low-risk auto-approval for plans awaiting approval
+- emits escalation events for higher-risk plans instead of approving unsafely
+- sends inactivity nudges through the Jules API
+- writes Keeper logs for approvals, escalations, memory-sync queueing, and nudges
 
-#### Go Backend Runtime Alignment
-- Updated `backend-go/main.go` to listen on `:8080` instead of `:8085` so the Go backend can move toward drop-in parity with the TypeScript daemon defaults.
-- Removed the hardcoded manifest stub from `main.go` and centralized manifest serving through the route layer.
-- Added root-version reading in the Go API so the Go backend manifest reports the canonical project version from `../VERSION`.
+#### Risk handling strategy
+The Go path does **not** yet run the full provider-backed council debate stack.
+Instead, it now uses a conservative heuristic scorer:
+- low-risk plans can auto-approve
+- higher-risk plans emit `session_debate_escalated` and stop for safer follow-up
 
-#### Go Queue / Model Fixes
-- Fixed Go build blockers in `backend-go/services/queue.go` by restoring missing imports used by the existing partial implementation.
-- Fixed the malformed struct tag in `backend-go/models/models.go` for `QueueJob.UpdatedAt`.
-- Verified that `cd backend-go && go test ./...` now passes.
+This is intentionally more conservative than the TypeScript path until full provider/debate parity is ported.
 
-### 2.4 Go Porting Documentation
-- Added `backend-go/PORTING_STATUS.md` documenting:
-  - what is now ported
-  - what Go already covered before this pass
-  - what remains unported
-  - the next recommended Go migration steps
+#### Daemon tick improvements
+Updated `backend-go/services/daemon.go` so the Go daemon now:
+- fetches live sessions from Jules instead of using the old stub-only DB path
+- enqueues `check_session` jobs with live session payloads
+
+This materially improves parity because the Go daemon is no longer pretending to monitor sessions while using a fake `GetLastActivity` stub.
+
+#### Jules client parity
+Extended `backend-go/services/jules_client.go` with:
+- `ApprovePlan(sessionId string) error`
+
+#### Route parity improvements
+Improved `backend-go/api/routes.go` by:
+- registering the Go realtime broadcaster with the services layer
+- adding `approvePlan` support to the generic `POST /api/sessions/:id:action` handler path
+- replacing the stub `POST /api/sessions/:id/nudge` implementation with a real Jules message send + queue refresh path
 
 ## 3. Validation Results
 ### Passing
@@ -73,62 +74,47 @@ The largest new body of work in this session was porting a practical, high-value
 - `node scripts/check-version-sync.js`
 - `cd backend-go && go test ./...`
 
-### Important Note on Test Output
-The Jest suite still prints expected console warnings/errors from mocked failure-path tests (review parsing failures, provider failures, unauthorized client requests), but the suite passes completely. These are test-intent outputs, not validation failures.
-
 ## 4. Key Findings
-### 4.1 The Go Backend Was Closer Than It Looked
-The repository already had a substantial `backend-go/` scaffold with:
-- Fiber routing
-- SQLite/GORM persistence
-- Jules API client basics
-- queue worker structure
-- daemon/websocket basics
+### 4.1 The biggest Go gap was no longer routes — it was automation ownership
+After the previous pass, the Go backend could answer more API requests, but the actual autonomy loop still depended mostly on the TypeScript daemon. The most important missing piece was `handleCheckSession`, because that is where nudging, approval, memory-sync enqueueing, and session-state reaction all converge.
 
-However, it was not yet a true parity backend because:
-- key routes from `server/index.ts` were missing
-- some queue code did not compile
-- manifest/version handling was stale
-- the runtime port did not match the primary backend port
+### 4.2 Conservative parity is better than fake parity
+It would be easy to claim “Go parity” while leaving stubs or blindly approving plans. That would be unsafe. The current Go implementation intentionally takes a safer midpoint:
+- it performs useful real automation now
+- it emits meaningful realtime/log data now
+- it does **not** overclaim full council-debate intelligence until provider-backed parity is ported
 
-This session addressed those foundational gaps first.
-
-### 4.2 Reasonable Porting Strategy
-A full “everything possible” port is too large for one pass, so the most reasonable migration strategy is:
-1. **Port high-signal route parity first**
-2. **Make the Go backend compile and pass tests**
-3. **Port queue intelligence and automation logic next**
-4. **Only then consider Go as the primary runtime**
-
-That is the strategy now underway.
+### 4.3 The Go daemon is now materially more real
+Switching the daemon tick from stub last-activity logic to live Jules session polling is one of the most important structural improvements in this pass. It means queued automation decisions are now based on live session data instead of placeholder timing behavior.
 
 ## 5. Remaining Work
-### Highest-Value Go Port Targets Next
-1. Port `handleCheckSession` from `server/queue.ts` into `backend-go/services/queue.go`
-2. Port `handleIndexCodebase`
-3. Port `handleCheckIssues`
-4. Port daemon event parity for approval/nudge/debate/recovery lifecycle updates directly from Go-side automation paths
-5. Decide whether the Go backend becomes:
-   - the primary runtime, or
-   - a parity/migration track while Bun remains primary
+### Highest-value next Go ports
+1. Port `handleIndexCodebase`
+2. Port `handleCheckIssues`
+3. Replace heuristic risk scoring with provider-backed council debate parity
+4. Extend Go-side lifecycle event coverage for:
+   - recovery/self-healing
+   - indexing lifecycle
+   - issue-spawn lifecycle
+5. Decide whether Go becomes the primary runtime or remains a parity track during migration
 
-### Product-Facing Follow-Up
-- The active session Keeper feed is now richer, but could still evolve into explicit operator timeline cards for:
-  - debate escalation
-  - recovery/self-healing
-  - autonomous issue conversion
-  - indexing lifecycle events
+### Product-facing follow-up
+- The active session feed can already display richer debate metadata from the TS path; it would be valuable to add explicit cards for:
+  - escalations
+  - indexing state
+  - recoveries
+  - issue-driven autonomous session spawns
 
 ## 6. Process Safety
 - No processes were killed.
-- Live database sidecar files were intentionally left unstaged:
+- Live DB sidecars remain intentionally unstaged:
   - `prisma/dev.db-shm`
   - `prisma/dev.db-wal`
 
 ## 7. Recommended Next Step
 Recommended next move:
-- continue **Go Backend Parity Pass #2** by porting `handleCheckSession` from TypeScript to Go, because that unlocks the most meaningful autonomous behavior migration.
+- continue with **Go Backend Parity Pass #3** by porting `handleIndexCodebase`, because it is the next major backend responsibility that can be moved to Go cleanly and reasonably.
 
 ## 8. Commit Guidance
 Recommended commit message for this session:
-- `feat: port high-value backend routes and parity scaffolding to Go (v1.0.9)`
+- `feat: port go session automation control loop parity (v1.0.10)`

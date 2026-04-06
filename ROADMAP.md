@@ -25,6 +25,7 @@ For granular tasks and immediate bug fixes, see `TODO.md`.
 * [x] **Live Keeper Feed in Session View**: Streamed daemon `log_added` events directly into the session activity view so background Keeper actions appear without manual refresh.
 * [x] **Keeper Event Detail Streaming**: Preserved session scoping and event metadata for nudges/approvals so the active session view can show richer operator context inline.
 * [x] **Council Debate Lifecycle Streaming**: Added dedicated escalation/resolution daemon events so the active session feed can surface debate state changes, risk scores, and outcomes without refresh.
+* [x] **Go Backend Parity Pass #2**: Ported the Go `check_session` automation path, live daemon queueing, realtime Keeper log/event bridging, and practical session actions (`approvePlan`, real nudge route) so more autonomous control-loop behavior can run outside the Bun daemon.
 
 ## Milestone: v1.5 — "Shadow Pilot"
 * [ ] **Background Anomaly Detection:** Agents silently monitoring `git diffs` background tasks, fixing failing CI pipelines before human review.

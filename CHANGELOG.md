@@ -2,6 +2,20 @@
 
 All notable changes to this project will be documented in this file.
 
+## [1.0.10] - 2026-04-05
+
+### Added
+- **Go Queue Automation Parity Pass #2**: Ported a working `check_session` flow into `backend-go/services/queue.go`, including live session refresh, inactivity-based nudging, completed-session memory sync enqueueing, conservative low-risk plan auto-approval, and Go-side Keeper log/event emission.
+- **Go Realtime Event Bridge**: Added `backend-go/services/realtime.go` so Go automation paths can persist Keeper logs and publish daemon-style websocket events without creating an API/services import cycle.
+
+### Changed
+- **Go Daemon Tick Source**: The Go daemon now polls live Jules sessions instead of relying on the stale DB-only stub path, and enqueues `check_session` jobs using live session payloads.
+- **Go Session Actions**: Added `approvePlan` support to the generic session action handler and replaced the stub `POST /api/sessions/:id/nudge` route with a real Jules activity send + queue refresh path.
+- **Risk Handling Strategy**: The Go backend now uses a conservative heuristic risk scorer for plan approval. Low-risk plans can auto-approve; higher-risk plans emit escalation signals and stop short of unsafe auto-approval until full council-debate parity is ported.
+
+### Notes
+- **Validation Status**: `pnpm run lint`, `pnpm run typecheck`, `pnpm run test`, `node scripts/check-version-sync.js`, and `cd backend-go && go test ./...` all pass at `1.0.10`.
+
 ## [1.0.9] - 2026-04-05
 
 ### Added
