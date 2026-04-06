@@ -235,6 +235,19 @@ func getSessionActivities(c *fiber.Ctx) error {
 	return c.JSON(activities)
 }
 
+func postReview(c *fiber.Ctx) error {
+	var body services.ReviewRequest
+	if err := c.BodyParser(&body); err != nil {
+		return c.Status(400).JSON(fiber.Map{"error": "Invalid request body"})
+	}
+
+	content, err := services.RunCodeReview(body)
+	if err != nil {
+		return c.Status(500).JSON(fiber.Map{"error": err.Error()})
+	}
+	return c.JSON(fiber.Map{"content": content})
+}
+
 func postRAGQuery(c *fiber.Ctx) error {
 	var body struct {
 		Query string `json:"query"`
@@ -394,6 +407,8 @@ func SetupRoutes(app *fiber.App) {
 	api.Get("/sessions/:id/replay", getSessionReplay)
 	api.Get("/sessions/:id", getSession)
 	api.Get("/sessions/:id/activities", getSessionActivities)
+	api.Post("/review", postReview)
+	api.Post("/local/review", postReview)
 	api.Post("/rag/query", postRAGQuery)
 	api.Post("/rag/reindex", postRAGReindex)
 	api.Post("/webhooks/borg", postBorgWebhook)

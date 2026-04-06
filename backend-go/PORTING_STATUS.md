@@ -74,6 +74,13 @@ Move reasonable backend responsibilities from the TypeScript/Bun daemon into the
   - `POST /api/templates`
   - `PUT /api/templates/:id`
   - `DELETE /api/templates/:id`
+- Go review routes via:
+  - `POST /api/review`
+  - `POST /api/local/review`
+- Go review service with:
+  - simple review mode
+  - comprehensive persona-based review mode
+  - structured JSON review mode
 - Go Jules client support for GitHub issues + session creation
 - `POST /api/sessions/:id/nudge` now sends a real activity instead of returning a stub response
 - `POST /api/sessions/:id:approvePlan` is now supported through the generic Go session action handler
@@ -93,11 +100,11 @@ Move reasonable backend responsibilities from the TypeScript/Bun daemon into the
 - Additional provider/runtime polish around Go-side structured review/debate abstractions beyond the current practical provider bridge
 - More explicit Go-side retrieval/result presentation surfaces if the UI should call Go-native memory workflows directly more often
 - More refined Go-side recovery state tracking to avoid redundant guidance across edge cases
-- Residual product-surface parity gaps outside the core session/memory/control loop (local review, import/export, etc.) if those are also meant to migrate fully into Go
+- Residual product-surface parity gaps outside the core session/memory/control loop (import/export, etc.) if those are also meant to migrate fully into Go
 
 ## Recommended Next Go Porting Steps
 1. Refine Go-side recovery state tracking and edge-case handling.
 2. Tighten Go-side provider abstractions for structured review/debate/recommendation workflows.
 3. Add richer Go-native retrieval/result presentation hooks where the UI would benefit from more explicit memory reasoning metadata.
-4. Audit remaining non-core product surfaces (local review, import/export) for whether they should also migrate into Go.
+4. Audit remaining non-core product surfaces (import/export) for whether they should also migrate into Go.
 5. Decide whether the Go backend becomes the primary runtime or remains a parity track during migration.

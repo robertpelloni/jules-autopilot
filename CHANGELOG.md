@@ -2,6 +2,18 @@
 
 All notable changes to this project will be documented in this file.
 
+## [1.0.20] - 2026-04-05
+
+### Added
+- **Go Review Endpoint Parity**: Added Go-native `/api/review` and `/api/local/review` support backed by a new `backend-go/services/review.go` service that can run simple, comprehensive, and structured JSON review flows.
+
+### Changed
+- **Go Non-Core Product Surface Coverage**: The Go backend now covers another actively used UI workflow: direct code review requests triggered from the activity feed.
+- **Go Review Strategy**: Review execution now reuses the Go provider bridge and supports persona-based comprehensive review output plus structured JSON fallbacks compatible with the shared review contract.
+
+### Notes
+- **Validation Status**: `cd backend-go && go test ./...`, `pnpm run lint`, `pnpm run typecheck`, `pnpm run test`, and `node scripts/check-version-sync.js` all pass at `1.0.20`.
+
 ## [1.0.19] - 2026-04-05
 
 ### Added
