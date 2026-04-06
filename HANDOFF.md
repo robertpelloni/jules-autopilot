@@ -1,18 +1,17 @@
-# Project Handoff: Jules Autopilot (v1.0.24 — Go Backend Parity Pass #16)
+# Project Handoff: Jules Autopilot (v1.0.25 — Go Backend Parity Pass #17)
 
 ## 1. Session Summary
-This session continued the Go migration after debate-management parity and targeted a real remaining backend-behavior gap: the Go daemon loop still lagged behind the Bun daemon in orchestration behavior.
+This session continued beyond daemon-loop parity and moved into planned backend feature implementation by adding Go-native observability endpoints.
 
-The result is that the Go runtime now has stronger daemon-loop parity:
-- keeper-cadence-aware scheduling
-- Go-side Jules source discovery
-- smart-pilot issue-check scheduling
-- opportunistic index scheduling
-- broader Jules credential resolution using env or stored Keeper settings
+The result is that the Go backend now exposes:
+- Prometheus-style metrics via `GET /metrics`
+- structured health JSON via `GET /healthz`
+- structured health JSON via `GET /api/health`
+- daemon-running state introspection so health/metrics can report whether the Go loop is active
 
 ## 2. Completed Work
 ### 2.1 Versioning & Documentation
-- Bumped the project version from `1.0.23` to `1.0.24`.
+- Bumped the project version from `1.0.24` to `1.0.25`.
 - Re-synced version surfaces via the canonical `VERSION` workflow:
   - `VERSION`
   - `VERSION.md`
@@ -24,68 +23,80 @@ The result is that the Go runtime now has stronger daemon-loop parity:
   - `CHANGELOG.md`
   - `ROADMAP.md`
   - `TODO.md`
+  - `IDEAS.md`
   - `backend-go/PORTING_STATUS.md`
   - `docs/ARCHITECTURE.md`
   - `docs/VISION.md`
 - Added a new archived handoff in `logs/handoffs/`.
 
-### 2.2 Strengthened Go Jules Client Credential Resolution
-Updated `backend-go/services/jules_client.go`.
-
-Added broader Jules key resolution so the Go backend can now resolve a usable Jules key from:
-- explicit input
-- `JULES_API_KEY`
-- `GOOGLE_API_KEY`
-- stored Keeper settings (`julesApiKey`)
-
-This closes an important parity gap with the Bun runtime, which already considered stored settings and alternative env sources.
-
-### 2.3 Added Go Jules Source Discovery
-Updated `backend-go/services/jules_client.go` to add Go-side source discovery support.
+### 2.2 Added Go Health / Metrics Endpoints
+Updated `backend-go/api/routes.go`.
 
 Added:
-- `ListSources(filter string) ([]JulesSource, error)`
-- source normalization into a practical Go shape
+- `GET /metrics`
+- `GET /healthz`
+- `GET /api/health`
 
-This was a prerequisite for porting Bun-style autonomous issue-check scheduling into the Go daemon loop.
+### 2.3 Health Response Coverage
+The new Go health response includes:
+- overall status
+- timestamp
+- version
+- database connectivity check
+- daemon running/enabled state
+- Jules credential presence check
+- queue pending/processing counts
+- websocket client count
+- stored totals for sessions, code chunks, memory chunks, templates, and debates
 
-### 2.4 Expanded Go Daemon Loop Parity
+### 2.4 Prometheus-Style Metrics Coverage
+The new Go metrics endpoint now exports operational counters/gauges for:
+- build/version info
+- database up/down
+- daemon running state
+- keeper enabled state
+- Jules credential configured state
+- queue jobs by status
+- sessions total
+- code chunks total
+- memory chunks total
+- templates total
+- debates total
+- websocket clients
+
+### 2.5 Added Go Daemon Introspection
 Updated `backend-go/services/daemon.go`.
 
-The Go daemon now:
-- respects Keeper `checkIntervalSeconds` instead of using a fixed hardcoded tick
-- schedules `check_session` jobs from live Jules sessions
-- schedules `check_issues` jobs from discovered Jules sources when smart pilot is enabled
-- opportunistically enqueues `index_codebase` when no indexing job is already pending/processing
-- emits Keeper-log telemetry for missing Jules key, source-poll failure, session-poll failure, and successful scheduling ticks
+Added:
+- `IsRunning()` on the Go daemon singleton
 
-This moves the Go daemon much closer to the Bun daemon’s orchestration role instead of leaving Go with a reduced control loop.
+This supports structured health reporting without relying on guesswork or duplicated state.
 
 ## 3. Validation Results
 ### Passing
-- `cd backend-go && gofmt -w services/jules_client.go services/daemon.go && go test ./...`
+- `cd backend-go && gofmt -w api/routes.go services/daemon.go services/jules_client.go && go test ./...`
 - `pnpm run lint`
 - `pnpm run typecheck`
 - `pnpm run test`
 - `node scripts/check-version-sync.js`
 
 ## 4. Key Findings
-### 4.1 Remaining Go migration gaps are increasingly behavioral, not just route-shaped
-The largest obvious route gaps have narrowed a lot. A major remaining area was daemon behavior parity rather than endpoint count. This pass materially closes that.
+### 4.1 Go migration is now productizing planned backend capabilities, not just chasing parity
+The Go backend has moved past route-gap cleanup and is now taking on planned platform features like observability.
 
-### 4.2 Go autonomy strength depended on Go-side source discovery
-Without `ListSources()`, the Go daemon could not mirror Bun’s smart-pilot issue-check scheduling. That made source discovery a meaningful backend capability, not just a convenience helper.
+### 4.2 The observability milestone is now partially in motion
+The roadmap item is not complete yet because there is still no dedicated health dashboard surface and no Redis-specific checks, but the backend foundation now exists.
 
-### 4.3 Env-only Jules key assumptions were artificially weakening Go
-The Go backend was unnecessarily weaker than Bun because it assumed env-only Jules credentials in key places. Expanding credential resolution makes Go more realistic in actual operator usage.
+### 4.3 Go runtime maturity is improving in operational terms too
+Metrics and health endpoints make the Go backend more viable as a primary runtime candidate because operators and orchestrators can inspect its state directly.
 
 ## 5. Remaining Work
-### Highest-value next Go ports / refinements
+### Highest-value next steps
 1. Tighten Go-side provider abstractions for structured review/debate/recommendation workflows
-2. Audit any remaining residual product or observability surfaces still worth porting into Go
-3. Add richer Go-native retrieval/result presentation hooks if the UI should surface memory reasoning metadata more explicitly
-4. Continue observing/refining recovery edge cases if duplication or race conditions still surface
-5. Decide whether Go should become the default runtime or remain the parity track during migration
+2. Add a dedicated dashboard health surface that consumes the new Go health/metrics endpoints
+3. Continue auditing any residual Bun-only backend behavior or product surfaces still worth porting
+4. Continue refining recovery/runtime edge cases if new observations surface
+5. Decide when the Go runtime is strong enough to become the default runtime path
 
 ## 6. Process Safety
 - No processes were killed.
@@ -95,8 +106,8 @@ The Go backend was unnecessarily weaker than Bun because it assumed env-only Jul
 
 ## 7. Recommended Next Step
 Recommended next move:
-- continue with **Go Backend Parity Pass #17** by tightening provider abstractions and auditing whether any residual observability or product surfaces still meaningfully depend on Bun behavior.
+- continue with **Go Backend Parity Pass #18** by tightening shared provider abstractions and/or surfacing the new health data in the UI with a dedicated operator health view.
 
 ## 8. Commit Guidance
 Recommended commit message for this session:
-- `feat: expand go daemon orchestration parity (v1.0.24)`
+- `feat: add go observability endpoints (v1.0.25)`

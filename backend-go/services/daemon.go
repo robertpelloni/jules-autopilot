@@ -159,6 +159,12 @@ func (d *Daemon) tick() time.Duration {
 	return interval
 }
 
+func (d *Daemon) IsRunning() bool {
+	d.mu.Lock()
+	defer d.mu.Unlock()
+	return d.isRunning
+}
+
 // StartDaemon starts the global daemon in a goroutine
 func StartDaemon() {
 	d := GetDaemon()

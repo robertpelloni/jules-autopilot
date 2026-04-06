@@ -7,6 +7,7 @@ This document tracks granular bugs, missing features, and technical debt. For ep
 - [x] **Daemon API Discovery:** Formally established `/api/manifest` for node capability discovery.
 - [x] **SSE/WebSocket Log Streaming:** Injected `useDaemonEvent('log_added')` into the session activity view and surfaced a live Keeper feed for session/global daemon events without manual refresh.
 - [ ] **Session Event Timeline Enrichment:** Optionally render richer structured cards for debate/escalation/recovery events beyond the current Keeper feed strip.
+- [ ] **Dashboard Health Surface:** Add a dedicated operator-facing health page/widget that consumes the new Go health/metrics observability endpoints.
 - [x] **Go Backend Parity Pass #2:** Ported the highest-value queue intelligence path (`handleCheckSession`) plus Go-side event/log bridging and real session actions so the Go backend can nudge sessions, enqueue memory sync, and conservatively auto-approve low-risk plans.
 - [x] **Go Backend Parity Pass #3:** Ported `handleIndexCodebase` so Go can now walk the repo, chunk source files, request embeddings, and upsert `CodeChunk` rows without Bun.
 - [x] **Go Backend Parity Pass #4:** Ported `handleCheckIssues` plus Go-side issue fetching/session spawning support so the Go backend can now discover GitHub work and open Jules sessions autonomously.
@@ -22,7 +23,8 @@ This document tracks granular bugs, missing features, and technical debt. For ep
 - [x] **Go Backend Parity Pass #14:** Tightened Go recovery-state edge-case handling by adding a second duplicate-suppression signal based on recent recovery completion logs, plus explicit skip telemetry.
 - [x] **Go Backend Parity Pass #15:** Ported Go-native debate execution/history/detail/delete support so another actively used product surface now has Go API coverage.
 - [x] **Go Backend Parity Pass #16:** Expanded Go daemon orchestration parity so the Go runtime now honors Keeper cadence, discovers Jules sources, schedules issue checks, opportunistically enqueues indexing, and resolves Jules API credentials more like the Bun daemon.
-- [ ] **Go Backend Parity Pass #17:** Tighten Go-side provider abstractions for structured review/debate/recommendation workflows and audit whether any remaining residual product or observability surfaces still need Go-native implementation.
+- [x] **Go Backend Parity Pass #17:** Added Go-native observability foundations with `GET /metrics`, `GET /healthz`, and `GET /api/health`, plus daemon-running telemetry for health reporting.
+- [ ] **Go Backend Parity Pass #18:** Tighten Go-side provider abstractions for structured review/debate/recommendation workflows and audit whether any remaining residual product or observability surfaces still need Go-native implementation.
 - [x] **Tooling Stabilization:** Added a working ESLint v9 flat config and aligned the Jest harness with the current Vite/Bun + shared-package runtime assumptions.
 - [x] **Lint Coverage Expansion:** Extended the lint command to cover `src/`, `components/`, `lib/`, and `server/` with a staged warning-first rollout.
 - [x] **Lint Warning Burn-Down:** Completed two warning burn-down passes and brought the expanded lint surface to zero warnings.

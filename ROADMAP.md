@@ -40,6 +40,7 @@ For granular tasks and immediate bug fixes, see `TODO.md`.
 * [x] **Go Backend Parity Pass #14**: Hardened Go failed-session recovery against duplicate guidance by combining session-activity and Keeper-log dedupe checks, plus explicit skip telemetry.
 * [x] **Go Backend Parity Pass #15**: Ported Go-native debate execution/history/detail/delete support so the debate-management UI no longer depends on Bun-only API handling.
 * [x] **Go Backend Parity Pass #16**: Expanded Go daemon orchestration parity so the Go runtime now honors Keeper cadence, discovers Jules sources, schedules issue checks, opportunistically enqueues indexing, and resolves Jules API credentials more like the Bun daemon.
+* [x] **Go Backend Parity Pass #17**: Added Go-native observability foundations with `GET /metrics`, `GET /healthz`, and `GET /api/health`, plus daemon-running telemetry for health reporting.
 
 ## Milestone: v1.5 — "Shadow Pilot"
 * [ ] **Background Anomaly Detection:** Agents silently monitoring `git diffs` background tasks, fixing failing CI pipelines before human review.
@@ -52,6 +53,7 @@ For granular tasks and immediate bug fixes, see `TODO.md`.
 
 ## Milestone: v3.0 — "Neural Autonomy"
 * [ ] **Observability & Health Checks:** Prometheus-compatible `/metrics` endpoint, structured health checks for daemon/Redis/DB, and a live `/dashboard/health` status page.
+  * Progress: Go backend now serves `GET /metrics`, `GET /healthz`, and `GET /api/health` with database/daemon/queue/runtime visibility. Remaining work includes broader dependency coverage (if/when Redis exists) and a dedicated dashboard health page.
 * [ ] **Self-Healing Circuit Breakers:** Provider-level circuit breakers that automatically reroute to fallback models when error rates spike, with configurable thresholds and recovery windows.
 * [ ] **Multi-Tenant API Keys:** Scoped API key generation for team members with rate limiting, usage quotas, and per-key cost attribution in the cost optimizer.
 

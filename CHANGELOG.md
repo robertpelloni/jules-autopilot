@@ -2,6 +2,19 @@
 
 All notable changes to this project will be documented in this file.
 
+## [1.0.25] - 2026-04-05
+
+### Added
+- **Go Observability Endpoints**: Added a Prometheus-style `GET /metrics` endpoint plus structured health endpoints at `GET /healthz` and `GET /api/health` in the Go backend.
+- **Go Health Telemetry**: Health responses now report database connectivity, daemon running state, Keeper enabled state, Jules credential presence, queue depth, websocket client count, and key persisted totals.
+
+### Changed
+- **Go Daemon Introspection**: Added Go daemon running-state introspection so health/metrics endpoints can expose backend-loop status.
+- **Roadmap Progress**: This establishes an initial slice of the planned observability and health-check milestone directly in the Go runtime.
+
+### Notes
+- **Validation Status**: `cd backend-go && gofmt -w api/routes.go services/daemon.go services/jules_client.go && go test ./...`, `pnpm run lint`, `pnpm run typecheck`, `pnpm run test`, and `node scripts/check-version-sync.js` all pass at `1.0.25`.
+
 ## [1.0.24] - 2026-04-05
 
 ### Added

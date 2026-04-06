@@ -1,6 +1,7 @@
 package api
 
 import (
+	"bytes"
 	"encoding/json"
 	"fmt"
 	"log"
@@ -119,8 +120,8 @@ func getFleetSummary(c *fiber.Ctx) error {
 			"byStatus": statusCounts,
 		},
 		"orchestrator": fiber.Map{
-			"queueDepth":               pendingCount + processingCount,
-			"isActive":                 processingCount > 0,
+			"queueDepth":              pendingCount + processingCount,
+			"isActive":                processingCount > 0,
 			"recentAutonomousActions": actions,
 		},
 		"knowledgeBase": fiber.Map{
@@ -301,8 +302,8 @@ func getExport(c *fiber.Ctx) error {
 	_ = db.DB.Find(&repoPaths).Error
 
 	return c.JSON(fiber.Map{
-		"version":    getVersion(),
-		"exportedAt": time.Now().Format(time.RFC3339),
+		"version":        getVersion(),
+		"exportedAt":     time.Now().Format(time.RFC3339),
 		"keeperSettings": keeperSettings,
 		"templates":      templates,
 		"debates":        debates,
@@ -510,9 +511,13 @@ func postRAGReindex(c *fiber.Ctx) error {
 func SetupRoutes(app *fiber.App) {
 	services.SetBroadcaster(Broadcast)
 
+	app.Get("/metrics", getMetrics)
+	app.Get("/healthz", getHealth)
+
 	api := app.Group("/api")
 
 	api.Get("/ping", getPing)
+	api.Get("/health", getHealth)
 	api.Get("/manifest", getManifest)
 	api.Get("/export", getExport)
 	api.Post("/import", postImport)
@@ -616,9 +621,9 @@ func triggerFleetSync(c *fiber.Ctx) error {
 	_, _ = services.AddJob("index_codebase", map[string]string{})
 
 	return c.JSON(fiber.Map{
-		"success":           true,
-		"message":           fmt.Sprintf("Enqueued %d memory sync jobs, %d issue-check jobs, and a codebase indexing job", syncCount, issueCount),
-		"syncJobCount":      syncCount,
+		"success":            true,
+		"message":            fmt.Sprintf("Enqueued %d memory sync jobs, %d issue-check jobs, and a codebase indexing job", syncCount, issueCount),
+		"syncJobCount":       syncCount,
 		"issueCheckJobCount": issueCount,
 	})
 }
@@ -1053,6 +1058,160 @@ func getDaemonStatus(c *fiber.Ctx) error {
 			"processing": processingCount,
 		},
 	})
+}
+
+func getHealth(c *fiber.Ctx) error {
+	status := "ok"
+	databaseStatus := "ok"
+	var databaseError string
+
+	sqlDB, err := db.DB.DB()
+	if err != nil {
+		status = "degraded"
+		databaseStatus = "error"
+		databaseError = err.Error()
+	} else if pingErr := sqlDB.Ping(); pingErr != nil {
+		status = "degraded"
+		databaseStatus = "error"
+		databaseError = pingErr.Error()
+	}
+
+	var settings models.KeeperSettings
+	settingsFound := db.DB.First(&settings, "id = ?", "default").Error == nil
+	var pendingCount, processingCount, codeChunkCount, memoryChunkCount, templateCount, debateCount, sessionCount int64
+	db.DB.Model(&models.QueueJob{}).Where("status = ?", "pending").Count(&pendingCount)
+	db.DB.Model(&models.QueueJob{}).Where("status = ?", "processing").Count(&processingCount)
+	db.DB.Model(&models.CodeChunk{}).Count(&codeChunkCount)
+	db.DB.Model(&models.MemoryChunk{}).Count(&memoryChunkCount)
+	db.DB.Model(&models.SessionTemplate{}).Count(&templateCount)
+	db.DB.Model(&models.Debate{}).Count(&debateCount)
+	db.DB.Model(&models.JulesSession{}).Count(&sessionCount)
+
+	ClientsMutex.Lock()
+	wsCount := len(ActiveClients)
+	ClientsMutex.Unlock()
+
+	julesConfigured := strings.TrimSpace(os.Getenv("JULES_API_KEY")) != "" || strings.TrimSpace(os.Getenv("GOOGLE_API_KEY")) != ""
+	if !julesConfigured && settingsFound && settings.JulesApiKey != nil {
+		julesConfigured = strings.TrimSpace(*settings.JulesApiKey) != "" && strings.TrimSpace(*settings.JulesApiKey) != "placeholder"
+	}
+
+	return c.JSON(fiber.Map{
+		"status":    status,
+		"timestamp": time.Now().Format(time.RFC3339),
+		"version":   getVersion(),
+		"checks": fiber.Map{
+			"database": fiber.Map{
+				"status": databaseStatus,
+				"error":  databaseError,
+			},
+			"daemon": fiber.Map{
+				"running": services.GetDaemon().IsRunning(),
+				"enabled": settingsFound && settings.IsEnabled,
+			},
+			"credentials": fiber.Map{
+				"julesConfigured": julesConfigured,
+			},
+		},
+		"queue": fiber.Map{
+			"pending":    pendingCount,
+			"processing": processingCount,
+		},
+		"totals": fiber.Map{
+			"sessions":     sessionCount,
+			"codeChunks":   codeChunkCount,
+			"memoryChunks": memoryChunkCount,
+			"templates":    templateCount,
+			"debates":      debateCount,
+		},
+		"realtime": fiber.Map{
+			"wsClients": wsCount,
+		},
+	})
+}
+
+func getMetrics(c *fiber.Ctx) error {
+	var settings models.KeeperSettings
+	settingsFound := db.DB.First(&settings, "id = ?", "default").Error == nil
+
+	var pendingCount, processingCount, codeChunkCount, memoryChunkCount, templateCount, debateCount, sessionCount int64
+	db.DB.Model(&models.QueueJob{}).Where("status = ?", "pending").Count(&pendingCount)
+	db.DB.Model(&models.QueueJob{}).Where("status = ?", "processing").Count(&processingCount)
+	db.DB.Model(&models.CodeChunk{}).Count(&codeChunkCount)
+	db.DB.Model(&models.MemoryChunk{}).Count(&memoryChunkCount)
+	db.DB.Model(&models.SessionTemplate{}).Count(&templateCount)
+	db.DB.Model(&models.Debate{}).Count(&debateCount)
+	db.DB.Model(&models.JulesSession{}).Count(&sessionCount)
+
+	ClientsMutex.Lock()
+	wsCount := len(ActiveClients)
+	ClientsMutex.Unlock()
+
+	databaseUp := 0
+	if sqlDB, err := db.DB.DB(); err == nil {
+		if pingErr := sqlDB.Ping(); pingErr == nil {
+			databaseUp = 1
+		}
+	}
+
+	julesConfigured := 0
+	if strings.TrimSpace(os.Getenv("JULES_API_KEY")) != "" || strings.TrimSpace(os.Getenv("GOOGLE_API_KEY")) != "" {
+		julesConfigured = 1
+	} else if settingsFound && settings.JulesApiKey != nil {
+		value := strings.TrimSpace(*settings.JulesApiKey)
+		if value != "" && value != "placeholder" {
+			julesConfigured = 1
+		}
+	}
+
+	var body bytes.Buffer
+	fmt.Fprintf(&body, "# HELP jules_autopilot_build_info Build and version information.\n")
+	fmt.Fprintf(&body, "# TYPE jules_autopilot_build_info gauge\n")
+	fmt.Fprintf(&body, "jules_autopilot_build_info{version=%q} 1\n", getVersion())
+	fmt.Fprintf(&body, "# HELP jules_autopilot_database_up Database connectivity status.\n")
+	fmt.Fprintf(&body, "# TYPE jules_autopilot_database_up gauge\n")
+	fmt.Fprintf(&body, "jules_autopilot_database_up %d\n", databaseUp)
+	fmt.Fprintf(&body, "# HELP jules_autopilot_daemon_running Whether the Go daemon loop is running.\n")
+	fmt.Fprintf(&body, "# TYPE jules_autopilot_daemon_running gauge\n")
+	fmt.Fprintf(&body, "jules_autopilot_daemon_running %d\n", boolToMetric(services.GetDaemon().IsRunning()))
+	fmt.Fprintf(&body, "# HELP jules_autopilot_keeper_enabled Whether Keeper is enabled.\n")
+	fmt.Fprintf(&body, "# TYPE jules_autopilot_keeper_enabled gauge\n")
+	fmt.Fprintf(&body, "jules_autopilot_keeper_enabled %d\n", boolToMetric(settingsFound && settings.IsEnabled))
+	fmt.Fprintf(&body, "# HELP jules_autopilot_jules_configured Whether a Jules API key is configured.\n")
+	fmt.Fprintf(&body, "# TYPE jules_autopilot_jules_configured gauge\n")
+	fmt.Fprintf(&body, "jules_autopilot_jules_configured %d\n", julesConfigured)
+	fmt.Fprintf(&body, "# HELP jules_autopilot_queue_jobs Queue jobs by status.\n")
+	fmt.Fprintf(&body, "# TYPE jules_autopilot_queue_jobs gauge\n")
+	fmt.Fprintf(&body, "jules_autopilot_queue_jobs{status=%q} %d\n", "pending", pendingCount)
+	fmt.Fprintf(&body, "jules_autopilot_queue_jobs{status=%q} %d\n", "processing", processingCount)
+	fmt.Fprintf(&body, "# HELP jules_autopilot_sessions_total Persisted session records.\n")
+	fmt.Fprintf(&body, "# TYPE jules_autopilot_sessions_total gauge\n")
+	fmt.Fprintf(&body, "jules_autopilot_sessions_total %d\n", sessionCount)
+	fmt.Fprintf(&body, "# HELP jules_autopilot_code_chunks_total Indexed code chunks.\n")
+	fmt.Fprintf(&body, "# TYPE jules_autopilot_code_chunks_total gauge\n")
+	fmt.Fprintf(&body, "jules_autopilot_code_chunks_total %d\n", codeChunkCount)
+	fmt.Fprintf(&body, "# HELP jules_autopilot_memory_chunks_total Stored memory chunks.\n")
+	fmt.Fprintf(&body, "# TYPE jules_autopilot_memory_chunks_total gauge\n")
+	fmt.Fprintf(&body, "jules_autopilot_memory_chunks_total %d\n", memoryChunkCount)
+	fmt.Fprintf(&body, "# HELP jules_autopilot_templates_total Stored templates.\n")
+	fmt.Fprintf(&body, "# TYPE jules_autopilot_templates_total gauge\n")
+	fmt.Fprintf(&body, "jules_autopilot_templates_total %d\n", templateCount)
+	fmt.Fprintf(&body, "# HELP jules_autopilot_debates_total Stored debates.\n")
+	fmt.Fprintf(&body, "# TYPE jules_autopilot_debates_total gauge\n")
+	fmt.Fprintf(&body, "jules_autopilot_debates_total %d\n", debateCount)
+	fmt.Fprintf(&body, "# HELP jules_autopilot_ws_clients WebSocket clients connected to the Go backend.\n")
+	fmt.Fprintf(&body, "# TYPE jules_autopilot_ws_clients gauge\n")
+	fmt.Fprintf(&body, "jules_autopilot_ws_clients %d\n", wsCount)
+
+	c.Set("Content-Type", "text/plain; version=0.0.4; charset=utf-8")
+	return c.SendString(body.String())
+}
+
+func boolToMetric(value bool) int {
+	if value {
+		return 1
+	}
+	return 0
 }
 
 func postDaemonStatus(c *fiber.Ctx) error {
