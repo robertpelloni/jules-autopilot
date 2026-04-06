@@ -43,6 +43,7 @@ For granular tasks and immediate bug fixes, see `TODO.md`.
 * [x] **Go Backend Parity Pass #17**: Added Go-native observability foundations with `GET /metrics`, `GET /healthz`, and `GET /api/health`, plus daemon-running telemetry for health reporting.
 * [x] **Go Backend Parity Pass #18**: Tightened shared Go LLM/provider helpers for review/debate/issue workflows and surfaced the new health data directly in the Fleet Intelligence UI.
 * [x] **Go Backend Parity Pass #19**: Added Go static SPA serving/index fallback parity and a dedicated dashboard Health view so the Go runtime is closer to serving the full product surface directly.
+* [x] **Go Backend Parity Pass #20**: Aligned Go websocket protocol behavior with the Bun daemon by emitting `connected` events and replying to `ping` frames with `pong` payloads instead of echoing arbitrary client messages.
 
 ## Milestone: v1.5 — "Shadow Pilot"
 * [ ] **Background Anomaly Detection:** Agents silently monitoring `git diffs` background tasks, fixing failing CI pipelines before human review.

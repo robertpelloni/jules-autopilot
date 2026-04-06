@@ -28,7 +28,8 @@ This document tracks granular bugs, missing features, and technical debt. For ep
 - [x] **Go Backend Parity Pass #17:** Added Go-native observability foundations with `GET /metrics`, `GET /healthz`, and `GET /api/health`, plus daemon-running telemetry for health reporting.
 - [x] **Go Backend Parity Pass #18:** Tightened shared Go LLM/provider helpers for review/debate/issue workflows and surfaced the new health data directly in the Fleet Intelligence UI.
 - [x] **Go Backend Parity Pass #19:** Added Go static SPA serving/index fallback parity and a dedicated Health dashboard view so the Go runtime is closer to serving the full product surface directly.
-- [ ] **Go Backend Parity Pass #20:** Continue auditing for any remaining residual Bun-only backend behavior and consider richer observability/dashboard surfaces beyond the current health dashboard and metrics preview.
+- [x] **Go Backend Parity Pass #20:** Aligned Go websocket protocol behavior with the Bun daemon by emitting `connected` events and replying to `ping` frames with `pong` payloads instead of echoing arbitrary client messages.
+- [ ] **Go Backend Parity Pass #21:** Continue auditing for any remaining residual Bun-only backend behavior and consider richer observability/dashboard surfaces beyond the current health dashboard and metrics preview.
 - [x] **Tooling Stabilization:** Added a working ESLint v9 flat config and aligned the Jest harness with the current Vite/Bun + shared-package runtime assumptions.
 - [x] **Lint Coverage Expansion:** Extended the lint command to cover `src/`, `components/`, `lib/`, and `server/` with a staged warning-first rollout.
 - [x] **Lint Warning Burn-Down:** Completed two warning burn-down passes and brought the expanded lint surface to zero warnings.

@@ -1,6 +1,7 @@
 package main
 
 import (
+	"encoding/json"
 	"log"
 	"os"
 	"path/filepath"
@@ -85,6 +86,7 @@ func main() {
 		api.ClientsMutex.Unlock()
 
 		log.Printf("WebSocket client connected: %s", c.RemoteAddr())
+		_ = c.WriteJSON(map[string]interface{}{"type": "connected"})
 
 		defer func() {
 			// Unregister client
@@ -96,17 +98,33 @@ func main() {
 		}()
 
 		for {
-			mt, msg, err := c.ReadMessage()
+			_, msg, err := c.ReadMessage()
 			if err != nil {
 				log.Println("WebSocket read error:", err)
 				break
 			}
-			log.Printf("WebSocket message received: %s", msg)
 
-			// Echo message back or handle accordingly
-			if err = c.WriteMessage(mt, msg); err != nil {
-				log.Println("WebSocket write error:", err)
-				break
+			var payload struct {
+				Type      string `json:"type"`
+				Timestamp int64  `json:"timestamp"`
+			}
+			if err := json.Unmarshal(msg, &payload); err != nil {
+				continue
+			}
+
+			switch payload.Type {
+			case "ping":
+				if err := c.WriteJSON(map[string]interface{}{
+					"type": "pong",
+					"data": map[string]interface{}{
+						"timestamp": payload.Timestamp,
+					},
+				}); err != nil {
+					log.Println("WebSocket write error:", err)
+					break
+				}
+			default:
+				// Ignore unsupported client-originated websocket payloads.
 			}
 		}
 	}))

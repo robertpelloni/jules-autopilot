@@ -1,13 +1,16 @@
-# Project Handoff: Jules Autopilot (v1.0.27 — Go Backend Parity Pass #19)
+# Project Handoff: Jules Autopilot (v1.0.28 — Go Backend Parity Pass #20)
 
 ## 1. Session Summary
-This session continued the migration by targeting a meaningful remaining “primary runtime” gap: the Bun server still owned static SPA serving and index fallback behavior.
+This session continued the runtime-readiness audit after static serving parity and targeted another subtle but meaningful residual mismatch between the Bun daemon and the Go runtime: websocket protocol semantics.
 
-This pass also expanded the operator-facing observability surface by making health a first-class dashboard view instead of limiting it to embedded Fleet context.
+The result is that the Go websocket runtime now behaves more like the Bun daemon by:
+- emitting an initial `connected` event on websocket open
+- replying to client `ping` frames with protocol-compatible `pong` payloads
+- ignoring unsupported client-originated frames instead of echoing arbitrary payloads back
 
 ## 2. Completed Work
 ### 2.1 Versioning & Documentation
-- Bumped the project version from `1.0.26` to `1.0.27`.
+- Bumped the project version from `1.0.27` to `1.0.28`.
 - Re-synced version surfaces via the canonical `VERSION` workflow:
   - `VERSION`
   - `VERSION.md`
@@ -26,44 +29,15 @@ This pass also expanded the operator-facing observability surface by making heal
   - `docs/VISION.md`
 - Added a new archived handoff in `logs/handoffs/`.
 
-### 2.2 Added Go Static SPA Serving Parity
+### 2.2 Aligned Go Websocket Protocol Behavior
 Updated:
 - `backend-go/main.go`
 
-Added Go runtime support for:
-- serving built static frontend assets from `dist/`
-- SPA index fallback behavior for non-API/non-WS routes
-- preserving API/websocket/metrics/health paths from being swallowed by SPA fallback
-
-This closes another meaningful gap between the Bun runtime and the Go runtime.
-
-### 2.3 Added Dedicated Health Dashboard View
-Added:
-- `components/system-health-dashboard.tsx`
-- `lib/api/health.ts`
-
-The new dedicated Health dashboard provides:
-- runtime summary cards
-- queue visibility
-- backend totals
-- health/daemon/database/credential state
-- raw metrics preview (when available from the current frontend origin)
-
-### 2.4 Expanded Health Navigation Surface
-Updated:
-- `src/App.tsx`
-- `components/app-layout.tsx`
-- `components/layout/app-sidebar.tsx`
-- `components/layout/main-content.tsx`
-- `components/search-command-dialog.tsx`
-- `components/fleet-intelligence.tsx`
-
-Added/changed:
-- new `health` view in the app state model
-- sidebar navigation entry for Health
-- command-palette navigation entry for Health
-- main content rendering for the health dashboard
-- shared health-fetch helper usage in Fleet Intelligence
+Changed Go websocket handling to:
+- send `{ type: "connected" }` when a websocket client connects
+- parse client-originated JSON payloads
+- respond to `{ type: "ping", timestamp }` with `{ type: "pong", data: { timestamp } }`
+- stop echoing arbitrary client websocket messages back to the sender
 
 ## 3. Validation Results
 ### Passing
@@ -74,23 +48,20 @@ Added/changed:
 - `node scripts/check-version-sync.js`
 
 ## 4. Key Findings
-### 4.1 Static serving was a real remaining runtime gap
-The Go backend had strong API parity, but Bun still owned a critical runtime responsibility: serving the built frontend with SPA fallback behavior. If Go is going to be a true primary runtime candidate, this kind of product-surface ownership matters.
+### 4.1 Some of the most important remaining gaps are subtle runtime semantics
+At this stage, many large route/product surfaces are already ported. Remaining differences increasingly show up as protocol and runtime behavior mismatches rather than obvious missing endpoints.
 
-### 4.2 Observability is becoming an actual operator workflow, not just backend infrastructure
-The move from embedded Fleet health to a dedicated Health view is important because it makes backend observability a normal part of dashboard usage rather than a hidden implementation detail.
+### 4.2 Websocket behavior matters for primary-runtime readiness
+Realtime connection semantics are a meaningful part of the product. Even small differences like `connected`/`pong` behavior can affect connection health, reconnect logic, and frontend assumptions. This pass makes the Go runtime closer to a drop-in daemon replacement.
 
-### 4.3 Remaining work is increasingly selective and strategic
-At this point the migration is less about broad missing surfaces and more about:
-- any remaining selective Bun-only behavior
-- deeper observability polish
-- deciding when Go is “complete enough” operationally to be considered the default runtime path
+### 4.3 The remaining migration work is becoming increasingly high-signal and selective
+The project has reached a point where each remaining pass should continue targeting the highest-leverage residual differences rather than porting indiscriminately.
 
 ## 5. Remaining Work
 ### Highest-value next steps
-1. Continue auditing for any residual Bun-only backend/runtime behavior still worth porting
-2. Consider richer observability features beyond the current Health dashboard (history, dependency breakdowns, metrics drill-downs)
-3. Continue evaluating whether Go is now close enough to primary-runtime readiness to begin explicit default-runtime hardening
+1. Continue auditing for any remaining Bun-only runtime behavior still worth porting
+2. Deepen observability with richer history, dependency checks, or metrics drill-downs where useful
+3. Keep evaluating whether the Go runtime is now approaching default-runtime readiness
 
 ## 6. Process Safety
 - No processes were killed.
@@ -100,8 +71,8 @@ At this point the migration is less about broad missing surfaces and more about:
 
 ## 7. Recommended Next Step
 Recommended next move:
-- continue with **Go Backend Parity Pass #20** by auditing residual Bun-only backend/runtime behavior and further strengthening the Go runtime’s “primary deployment” readiness.
+- continue with **Go Backend Parity Pass #21** by auditing the remaining Bun-specific runtime behavior and deciding what is still truly worth porting for primary-runtime completeness.
 
 ## 8. Commit Guidance
 Recommended commit message for this session:
-- `feat: add go static serving parity and health dashboard (v1.0.27)`
+- `feat: align go websocket protocol parity (v1.0.28)`

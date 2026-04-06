@@ -2,6 +2,15 @@
 
 All notable changes to this project will be documented in this file.
 
+## [1.0.28] - 2026-04-05
+
+### Changed
+- **Go WebSocket Protocol Parity**: Updated the Go websocket handler to emit an initial `connected` event and respond to client `ping` frames with protocol-compatible `pong` payloads instead of echoing arbitrary websocket messages.
+- **Go Realtime Runtime Alignment**: The Go runtime now behaves more like the Bun daemon for live websocket connection semantics, reducing another subtle frontend/runtime mismatch.
+
+### Notes
+- **Validation Status**: `cd backend-go && gofmt -w main.go && go test ./...`, `pnpm run lint`, `pnpm run typecheck`, `pnpm run test`, and `node scripts/check-version-sync.js` all pass at `1.0.28`.
+
 ## [1.0.27] - 2026-04-05
 
 ### Added
