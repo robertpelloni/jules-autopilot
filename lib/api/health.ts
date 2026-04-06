@@ -5,6 +5,7 @@ export interface HealthResponse {
   checks: {
     database?: { status?: string; error?: string };
     daemon?: { running?: boolean; enabled?: boolean };
+    worker?: { running?: boolean };
     credentials?: { julesConfigured?: boolean };
   };
   queue?: { pending?: number; processing?: number };

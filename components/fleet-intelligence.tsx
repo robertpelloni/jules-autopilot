@@ -190,7 +190,7 @@ export function FleetIntelligence() {
                 {health?.checks?.daemon?.running ? 'RUNNING' : 'STOPPED'}
               </div>
               <p className="text-[10px] text-zinc-500">
-                Keeper {health?.checks?.daemon?.enabled ? 'enabled' : 'disabled'} · Jules key {health?.checks?.credentials?.julesConfigured ? 'configured' : 'missing'}
+                Keeper {health?.checks?.daemon?.enabled ? 'enabled' : 'disabled'} · Worker {health?.checks?.worker?.running ? 'running' : 'stopped'} · Jules key {health?.checks?.credentials?.julesConfigured ? 'configured' : 'missing'}
               </p>
             </div>
           </div>

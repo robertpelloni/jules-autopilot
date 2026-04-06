@@ -48,6 +48,7 @@ export function SystemHealthDashboard() {
 
   const databaseHealthy = health?.checks?.database?.status === 'ok';
   const daemonRunning = !!health?.checks?.daemon?.running;
+  const workerRunning = !!health?.checks?.worker?.running;
   const keeperEnabled = !!health?.checks?.daemon?.enabled;
   const julesConfigured = !!health?.checks?.credentials?.julesConfigured;
 
@@ -75,7 +76,7 @@ export function SystemHealthDashboard() {
           </Button>
         </div>
 
-        <div className="grid grid-cols-1 gap-4 md:grid-cols-4">
+        <div className="grid grid-cols-1 gap-4 md:grid-cols-5">
           <div className="rounded-xl border border-white/5 bg-zinc-900 p-4">
             <div className="flex items-center gap-2 text-zinc-500 text-[10px] font-mono uppercase tracking-widest">
               <Database className="h-3.5 w-3.5" /> Database
@@ -90,6 +91,14 @@ export function SystemHealthDashboard() {
             </div>
             <div className="mt-3 text-2xl font-bold tracking-tight">{daemonRunning ? 'Running' : 'Stopped'}</div>
             <p className="mt-2 text-[11px] text-zinc-500">Keeper {keeperEnabled ? 'enabled' : 'disabled'}.</p>
+          </div>
+
+          <div className="rounded-xl border border-white/5 bg-zinc-900 p-4">
+            <div className="flex items-center gap-2 text-zinc-500 text-[10px] font-mono uppercase tracking-widest">
+              <Activity className="h-3.5 w-3.5" /> Worker
+            </div>
+            <div className="mt-3 text-2xl font-bold tracking-tight">{workerRunning ? 'Running' : 'Stopped'}</div>
+            <p className="mt-2 text-[11px] text-zinc-500">Queue job execution loop state.</p>
           </div>
 
           <div className="rounded-xl border border-white/5 bg-zinc-900 p-4">
