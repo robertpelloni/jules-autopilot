@@ -605,6 +605,56 @@ func (w *Worker) handleCheckSession(payload string) (string, error) {
 		}
 	}
 
+	if session.RawState == "FAILED" && settings.SmartPilotEnabled {
+		alreadyProcessedFailure := false
+		if supervisorState.LastProcessedActivityTimestamp != nil {
+			if t, err := time.Parse(time.RFC3339, *supervisorState.LastProcessedActivityTimestamp); err == nil && !lastActivityTime.After(t) {
+				alreadyProcessedFailure = true
+			}
+		}
+
+		if !alreadyProcessedFailure {
+			activities, _ := client.ListActivities(session.ID)
+			emitDaemonEvent("session_recovery_started", map[string]interface{}{
+				"sessionId":    session.ID,
+				"sessionTitle": session.Title,
+			})
+			addKeeperLog("Detected failed session. Generating recovery guidance from Go backend.", "info", session.ID, map[string]interface{}{
+				"event":        "session_recovery_started",
+				"sessionTitle": session.Title,
+			})
+
+			recoveryMessage := buildRecoveryMessage(session, activities, settings)
+			if ragContext := buildRAGContext(session.Title, settings, 2); ragContext != "" {
+				recoveryMessage += ragContext
+			}
+
+			if _, err := client.CreateActivity(session.ID, CreateActivityRequest{
+				Content: recoveryMessage,
+				Type:    "message",
+				Role:    "user",
+			}); err != nil {
+				return "fail", err
+			}
+
+			addKeeperLog("Sent recovery guidance to failed session from Go backend.", "action", session.ID, map[string]interface{}{
+				"event":        "session_recovery_completed",
+				"sessionTitle": session.Title,
+				"summary":      recoveryMessage,
+			})
+			emitDaemonEvent("session_recovery_completed", map[string]interface{}{
+				"sessionId":    session.ID,
+				"sessionTitle": session.Title,
+				"summary":      recoveryMessage,
+			})
+
+			timestamp := lastActivityTime.Format(time.RFC3339)
+			supervisorState.LastProcessedActivityTimestamp = &timestamp
+			_ = saveSupervisorState(supervisorState)
+			return "recovery_sent", nil
+		}
+	}
+
 	if session.RawState == "COMPLETED" && settings.SmartPilotEnabled {
 		var existing models.MemoryChunk
 		if err := db.DB.First(&existing, "session_id = ?", session.ID).Error; err != nil {
@@ -671,6 +721,42 @@ func (w *Worker) handleCheckSession(payload string) (string, error) {
 	supervisorState.LastProcessedActivityTimestamp = &timestamp
 	_ = saveSupervisorState(supervisorState)
 	return "none", nil
+}
+
+func buildRecoveryMessage(session models.JulesSession, activities []models.JulesActivity, settings models.KeeperSettings) string {
+	provider := strings.TrimSpace(settings.SupervisorProvider)
+	if provider == "" {
+		provider = "openai"
+	}
+	apiKey := getSupervisorAPIKey(provider, settings.SupervisorApiKey)
+
+	recentActivities := activities
+	if len(recentActivities) > 6 {
+		recentActivities = recentActivities[len(recentActivities)-6:]
+	}
+
+	var activityContext strings.Builder
+	for _, activity := range recentActivities {
+		role := strings.ToUpper(activity.Role)
+		if role == "" {
+			role = "SYSTEM"
+		}
+		activityContext.WriteString(fmt.Sprintf("%s [%s]: %s\n\n", role, activity.Type, activity.Content))
+	}
+
+	basePrompt := fmt.Sprintf("A Jules session has entered the FAILED state.\nSession: %s\nTitle: %s\n\nRecent activity:\n%s\nProvide a concise recovery plan and direct next-step instruction for the coding agent. Keep it practical and actionable.", session.ID, session.Title, activityContext.String())
+
+	if strings.TrimSpace(apiKey) != "" && apiKey != "placeholder" {
+		result, err := generateLLMText(provider, apiKey, settings.SupervisorModel, "You are a recovery supervisor helping an AI coding agent recover from a failed execution. Be concise, practical, and specific.", []LLMMessage{{
+			Role:    "user",
+			Content: basePrompt,
+		}})
+		if err == nil && strings.TrimSpace(result.Content) != "" {
+			return result.Content
+		}
+	}
+
+	return "The session appears to have failed. Review the most recent error, identify the last successful step, fix the immediate cause, and continue with a revised plan. If a prior assumption was wrong, state it explicitly before proceeding."
 }
 
 func getProjectRoot() string {

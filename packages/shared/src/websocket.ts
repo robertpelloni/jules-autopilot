@@ -9,6 +9,8 @@ export type DaemonEventType =
   | 'session_approved'
   | 'session_debate_escalated'
   | 'session_debate_resolved'
+  | 'session_recovery_started'
+  | 'session_recovery_completed'
   | 'codebase_index_started'
   | 'codebase_index_completed'
   | 'issue_check_started'
@@ -72,6 +74,17 @@ export interface SessionDebateResolvedPayload {
   sessionTitle?: string;
   riskScore: number;
   approvalStatus?: 'approved' | 'rejected' | 'pending';
+  summary?: string;
+}
+
+export interface SessionRecoveryStartedPayload {
+  sessionId: string;
+  sessionTitle?: string;
+}
+
+export interface SessionRecoveryCompletedPayload {
+  sessionId: string;
+  sessionTitle?: string;
   summary?: string;
 }
 

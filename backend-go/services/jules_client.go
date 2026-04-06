@@ -397,6 +397,38 @@ func (c *JulesClient) ListIssues(sourceID string) ([]GitHubIssue, error) {
 	return filtered, nil
 }
 
+func (c *JulesClient) UpdateSession(sessionID string, updates map[string]interface{}, updateMask string) (models.JulesSession, error) {
+	if c.apiKey == "" {
+		return models.JulesSession{}, fmt.Errorf("JULES_API_KEY not found in environment")
+	}
+
+	jsonPayload, _ := json.Marshal(updates)
+	url := fmt.Sprintf("%s/sessions/%s?updateMask=%s", JulesApiBaseUrl, sessionID, updateMask)
+	req, err := http.NewRequest(http.MethodPatch, url, strings.NewReader(string(jsonPayload)))
+	if err != nil {
+		return models.JulesSession{}, err
+	}
+	req.Header.Set("X-Goog-Api-Key", c.apiKey)
+	req.Header.Set("Content-Type", "application/json")
+
+	resp, err := http.DefaultClient.Do(req)
+	if err != nil {
+		return models.JulesSession{}, err
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode >= 400 {
+		body, _ := io.ReadAll(resp.Body)
+		return models.JulesSession{}, fmt.Errorf("Jules API updateSession error (%d): %s", resp.StatusCode, string(body))
+	}
+
+	var session ApiSession
+	if err := json.NewDecoder(resp.Body).Decode(&session); err != nil {
+		return models.JulesSession{}, err
+	}
+	return transformSession(session), nil
+}
+
 func (c *JulesClient) CreateSession(sourceID, prompt, title string) (models.JulesSession, error) {
 	if c.apiKey == "" {
 		return models.JulesSession{}, fmt.Errorf("JULES_API_KEY not found in environment")

@@ -299,6 +299,7 @@ func SetupRoutes(app *fiber.App) {
 
 	// Session routes
 	api.Get("/sessions", getSessions)
+	api.Patch("/sessions/:id", patchSession)
 	api.Post("/sessions/:id/activities", createActivity)
 	api.Post("/sessions/:idAndAction", handleSessionAction)
 	api.Post("/sessions/:id/export-to-repo", exportSessionToRepo)
@@ -438,6 +439,47 @@ func handleSessionAction(c *fiber.Ctx) error {
 	}
 
 	return c.Status(400).JSON(fiber.Map{"error": "Unsupported action: " + action})
+}
+
+func patchSession(c *fiber.Ctx) error {
+	id := c.Params("id")
+	var body struct {
+		Status string `json:"status"`
+		Title  string `json:"title"`
+	}
+	if err := c.BodyParser(&body); err != nil {
+		return c.Status(400).JSON(fiber.Map{"error": "Invalid request body"})
+	}
+
+	updates := map[string]interface{}{}
+	updateMaskParts := make([]string, 0, 2)
+	if body.Status != "" {
+		stateMap := map[string]string{
+			"active":            "ACTIVE",
+			"paused":            "PAUSED",
+			"completed":         "COMPLETED",
+			"failed":            "FAILED",
+			"awaiting_approval": "AWAITING_PLAN_APPROVAL",
+		}
+		if mapped, ok := stateMap[body.Status]; ok {
+			updates["state"] = mapped
+			updateMaskParts = append(updateMaskParts, "state")
+		}
+	}
+	if body.Title != "" {
+		updates["title"] = body.Title
+		updateMaskParts = append(updateMaskParts, "title")
+	}
+	if len(updateMaskParts) == 0 {
+		return c.Status(400).JSON(fiber.Map{"error": "No supported updates provided"})
+	}
+
+	client := services.NewJulesClient()
+	updated, err := client.UpdateSession(id, updates, strings.Join(updateMaskParts, ","))
+	if err != nil {
+		return c.Status(500).JSON(fiber.Map{"error": err.Error()})
+	}
+	return c.JSON(updated)
 }
 
 func createActivity(c *fiber.Ctx) error {

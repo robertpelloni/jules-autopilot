@@ -1,13 +1,13 @@
 # Jules Autopilot - Architecture Guide
 
-**Version:** 1.0.15
+**Version:** 1.0.16
 **Decision:** Option C - Hono Backend + Ink TUI + Web UI
 
 ---
 
 ## System Overview
 
-> **Migration Note:** The Bun/Hono daemon remains the most complete runtime, but the Go backend now owns a meaningful parity track: manifest/summary/webhook/session replay routes, live daemon polling, `check_session` queue automation, provider-backed council debate for risky plans, `index_codebase` background indexing, semantic RAG retrieval, `check_issues` autonomous work discovery, Keeper log persistence, and increasingly explicit daemon-style lifecycle event emission for Go-originated automation flows.
+> **Migration Note:** The Bun/Hono daemon remains the most complete runtime, but the Go backend now owns a meaningful parity track: manifest/summary/webhook/session replay routes, live daemon polling, `check_session` queue automation, provider-backed council debate for risky plans, failed-session recovery guidance, `index_codebase` background indexing, semantic RAG retrieval, `check_issues` autonomous work discovery, Keeper log persistence, and increasingly explicit daemon-style lifecycle event emission for Go-originated automation flows.
 
 ```
 ┌─────────────────────────────────────────────────────────────────────────┐

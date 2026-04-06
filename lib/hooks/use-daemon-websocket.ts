@@ -11,6 +11,8 @@ import type {
   SessionApprovedPayload,
   SessionDebateEscalatedPayload,
   SessionDebateResolvedPayload,
+  SessionRecoveryStartedPayload,
+  SessionRecoveryCompletedPayload,
   CodebaseIndexStartedPayload,
   CodebaseIndexCompletedPayload,
   IssueCheckStartedPayload,
@@ -191,6 +193,51 @@ export function useDaemonWebSocket() {
           }));
           setStatusSummary({
             lastAction: `Debate resolved for ${payload?.sessionTitle || payload?.sessionId?.slice(0, 8)}`,
+          });
+          break;
+        }
+
+        case 'session_recovery_started': {
+          const payload = message.data as SessionRecoveryStartedPayload;
+          const recoveryLog: Log = {
+            id: String(Date.now()),
+            sessionId: payload?.sessionId,
+            time: new Date().toLocaleTimeString(),
+            message: `Started recovery analysis for ${payload?.sessionId?.slice(0, 8)}`,
+            type: 'info',
+            details: {
+              event: 'session_recovery_started',
+              sessionTitle: payload?.sessionTitle,
+            }
+          };
+          useSessionKeeperStore.setState((state) => ({
+            logs: [recoveryLog, ...state.logs].slice(0, 100)
+          }));
+          setStatusSummary({
+            lastAction: `Recovering ${payload?.sessionTitle || payload?.sessionId?.slice(0, 8)}`,
+          });
+          break;
+        }
+
+        case 'session_recovery_completed': {
+          const payload = message.data as SessionRecoveryCompletedPayload;
+          const recoveryLog: Log = {
+            id: String(Date.now()),
+            sessionId: payload?.sessionId,
+            time: new Date().toLocaleTimeString(),
+            message: `Recovery guidance generated for ${payload?.sessionId?.slice(0, 8)}`,
+            type: 'action',
+            details: {
+              event: 'session_recovery_completed',
+              sessionTitle: payload?.sessionTitle,
+              summary: payload?.summary,
+            }
+          };
+          useSessionKeeperStore.setState((state) => ({
+            logs: [recoveryLog, ...state.logs].slice(0, 100)
+          }));
+          setStatusSummary({
+            lastAction: `Recovery sent to ${payload?.sessionTitle || payload?.sessionId?.slice(0, 8)}`,
           });
           break;
         }

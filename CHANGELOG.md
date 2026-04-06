@@ -2,6 +2,19 @@
 
 All notable changes to this project will be documented in this file.
 
+## [1.0.16] - 2026-04-05
+
+### Added
+- **Go Failed-Session Recovery Parity**: The Go `check_session` path now detects `FAILED` sessions, generates provider-backed recovery guidance, sends the recovery message back into the Jules session, and emits explicit recovery lifecycle events.
+- **Go Session Patch Support**: Added `PATCH /api/sessions/:id` plus Go-side Jules session update support so title/status session mutations can be handled through the Go API.
+
+### Changed
+- **Recovery Telemetry**: Added shared/frontend support for `session_recovery_started` and `session_recovery_completed` so Go self-healing flows become operator-visible in the websocket/status/feed layers.
+- **Go Recovery Guidance Quality**: Recovery guidance now uses recent activity context and can append Go-native RAG context before messaging a failed session.
+
+### Notes
+- **Validation Status**: `cd backend-go && go test ./...`, `pnpm run lint`, `pnpm run typecheck`, `pnpm run test`, and `node scripts/check-version-sync.js` all pass at `1.0.16`.
+
 ## [1.0.15] - 2026-04-05
 
 ### Added

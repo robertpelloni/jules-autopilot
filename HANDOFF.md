@@ -1,13 +1,15 @@
-# Project Handoff: Jules Autopilot (v1.0.15 — Go Backend Parity Pass #7)
+# Project Handoff: Jules Autopilot (v1.0.16 — Go Backend Parity Pass #8)
 
 ## 1. Session Summary
-This session continued the Go migration after semantic retrieval parity and focused on a narrower but important remaining gap: lifecycle/detail visibility.
+This session continued the next recommended migration slice after lifecycle event parity and focused on two concrete remaining gaps:
+1. failed-session recovery/self-healing in Go
+2. a practical session mutation gap in the Go API
 
-At this stage, the Go backend already owned most of the major autonomous loops, but some of those flows were still primarily visible through generic Keeper logs rather than explicit daemon event types that the frontend could understand directly. This pass broadens that parity for indexing and issue-driven automation.
+The result is that the Go backend can now detect failed sessions, generate recovery guidance, send that guidance back into the Jules session, emit explicit recovery lifecycle events, and accept session title/status updates through a Go-native `PATCH /api/sessions/:id` route.
 
 ## 2. Completed Work
 ### 2.1 Versioning & Documentation
-- Bumped the project version from `1.0.14` to `1.0.15`.
+- Bumped the project version from `1.0.15` to `1.0.16`.
 - Re-synced version surfaces via the canonical `VERSION` workflow:
   - `VERSION`
   - `VERSION.md`
@@ -24,46 +26,45 @@ At this stage, the Go backend already owned most of the major autonomous loops, 
   - `docs/VISION.md`
 - Added a new archived handoff in `logs/handoffs/`.
 
-### 2.2 Extended Shared Daemon Event Schema
-Updated `packages/shared/src/websocket.ts` to add explicit event types and payloads for Go lifecycle flows:
-- `codebase_index_started`
-- `codebase_index_completed`
-- `issue_check_started`
-- `issue_evaluated`
-- `issue_session_spawned`
+### 2.2 Go Session Patch / Update Support
+Extended the Go Jules client and API with practical session update support.
 
-This gives the cross-runtime frontend/shared layer a typed vocabulary for Go-originated indexing and issue-automation events.
+#### `backend-go/services/jules_client.go`
+Added:
+- `UpdateSession(sessionID string, updates map[string]interface{}, updateMask string)`
 
-### 2.3 Frontend WebSocket Understanding of New Go Events
-Updated `lib/hooks/use-daemon-websocket.ts` so the frontend now understands the new Go lifecycle events and uses them to update status summaries such as:
-- indexing started/completed
-- issue checking in progress
-- issue evaluation confidence
-- autonomous issue-session spawning
+#### `backend-go/api/routes.go`
+Added:
+- `PATCH /api/sessions/:id`
 
-This means the operator UI can react to Go lifecycle events directly rather than relying only on generic log lines.
+The new route supports practical updates for:
+- `status`
+- `title`
 
-### 2.4 Richer Keeper Feed Metadata Rendering
-Updated `components/activity-feed.tsx` so the session Keeper feed can now display richer metadata fields when present, including:
-- `sourceId`
-- `issueNumber`
-- `confidence`
-- `isFixable`
-- `newChunks`
-- `totalFilesScanned`
-- `usedRAG`
+This closes a useful session-control gap in the Go API and makes the Go backend more capable as a direct session management runtime.
 
-I also improved event badge labeling so non-session events are easier to read in the feed.
+### 2.3 Go Failed-Session Recovery / Self-Healing
+Extended `backend-go/services/queue.go` so the Go `check_session` path now has a real `FAILED`-state recovery branch.
 
-### 2.5 Go Queue Event Emission Coverage Expanded
-Updated `backend-go/services/queue.go` so the Go queue now emits explicit daemon events for:
-- codebase indexing start
-- codebase indexing completion
-- issue check start
-- issue evaluation
-- issue-driven session spawn
+When a session is in the `FAILED` state and smart pilot mode is enabled, the Go backend now:
+- detects whether the failure has already been handled for the current activity state
+- emits `session_recovery_started`
+- logs recovery start in Keeper logs
+- gathers recent session activities
+- generates recovery guidance using the Go provider bridge when supervisor credentials are available
+- falls back to a conservative static recovery instruction if provider execution is unavailable
+- optionally appends Go-native RAG context
+- sends the recovery instruction back into the Jules session
+- emits `session_recovery_completed`
+- logs recovery completion with summary content
+- persists the latest processed activity timestamp to reduce repeated guidance
 
-These events are emitted alongside existing Keeper logs, which improves operator-visible parity without removing the durable log trail.
+### 2.4 Recovery Telemetry Parity
+The shared event schema and frontend websocket path now explicitly understand recovery events:
+- `session_recovery_started`
+- `session_recovery_completed`
+
+This means recovery/self-healing is now operator-visible through the same event/log/status layers as other Go-originated automation.
 
 ## 3. Validation Results
 ### Passing
@@ -74,30 +75,21 @@ These events are emitted alongside existing Keeper logs, which improves operator
 - `node scripts/check-version-sync.js`
 
 ## 4. Key Findings
-### 4.1 The remaining Go gaps are increasingly about visibility and coupling, not core intelligence
-By this point, Go already owns most of the important backend behaviors:
-- session checking
-- indexing
-- retrieval
-- issue-driven session spawning
-- provider-backed debate review
+### 4.1 Go now owns another previously Bun-advantaged autonomy path
+Before this pass, the Go backend already covered most of the major queue/intelligence loops, but failed-session self-healing still represented an obvious practical advantage for the Bun path. After this pass, Go now has a real recovery flow instead of only monitoring and nudging.
 
-What remained was making those flows visible in the operator experience with the same clarity as the Bun daemon. This pass pushes in that direction.
+### 4.2 Session mutation parity matters for runtime credibility
+Adding `PATCH /api/sessions/:id` is not flashy, but it matters. A backend that is intended to become a more primary runtime needs to support straightforward session mutation operations directly, not only through indirect action endpoints.
 
-### 4.2 Typed shared events are an important bridge layer
-Adding explicit event types to the shared websocket schema matters because it reduces ambiguity at the frontend boundary. The UI no longer has to infer everything from generic logs for these workflows.
-
-### 4.3 Logs are still useful, but events help the UI reason better
-This pass keeps Keeper logs for persistence and history, but also adds explicit events for realtime interpretation. That combination is stronger than either mechanism alone:
-- logs give auditability
-- explicit events give better live UX semantics
+### 4.3 Recovery state tracking is now present but still worth refining
+The current implementation uses `LastProcessedActivityTimestamp` to avoid repeating recovery guidance for the same failed state. That is practical and safe, but there is room to refine recovery-specific state tracking in future passes for even cleaner edge-case behavior.
 
 ## 5. Remaining Work
 ### Highest-value next Go ports
 1. Fill any remaining session activity/action route gaps in the Go API
-2. Broaden Go-side recovery/self-healing lifecycle parity and related events
-3. Tighten Go provider abstractions for structured review/debate/recommendation flows
-4. Add richer Go-native retrieval/result presentation hooks where the UI would benefit from more explicit memory reasoning metadata
+2. Refine Go-side recovery state tracking and edge-case handling
+3. Tighten Go provider abstractions for structured review/debate/recommendation workflows
+4. Add richer Go-native retrieval/result presentation hooks where the UI would benefit from explicit memory reasoning metadata
 5. Decide whether Go should become the default runtime or remain the parity track during migration
 
 ## 6. Process Safety
@@ -108,8 +100,8 @@ This pass keeps Keeper logs for persistence and history, but also adds explicit 
 
 ## 7. Recommended Next Step
 Recommended next move:
-- continue with **Go Backend Parity Pass #8** by filling remaining session action gaps and broadening Go recovery/self-healing lifecycle parity, because those are now some of the clearest remaining areas where Bun-originated automation metadata still has an advantage.
+- continue with **Go Backend Parity Pass #9** by auditing and filling any remaining session route/action gaps, while refining recovery state handling so the Go backend's remaining differences from Bun become increasingly narrow and edge-case focused.
 
 ## 8. Commit Guidance
 Recommended commit message for this session:
-- `feat: expand go lifecycle event parity and operator telemetry (v1.0.15)`
+- `feat: add go failed-session recovery and session patch parity (v1.0.16)`
