@@ -235,6 +235,64 @@ func getSessionActivities(c *fiber.Ctx) error {
 	return c.JSON(activities)
 }
 
+func getExport(c *fiber.Ctx) error {
+	var keeperSettings []models.KeeperSettings
+	var templates []models.SessionTemplate
+	var debates []models.Debate
+	var repoPaths []models.RepoPath
+
+	_ = db.DB.Find(&keeperSettings).Error
+	_ = db.DB.Find(&templates).Error
+	_ = db.DB.Find(&debates).Error
+	_ = db.DB.Find(&repoPaths).Error
+
+	return c.JSON(fiber.Map{
+		"version":    getVersion(),
+		"exportedAt": time.Now().Format(time.RFC3339),
+		"keeperSettings": keeperSettings,
+		"templates":      templates,
+		"debates":        debates,
+		"repoPaths":      repoPaths,
+	})
+}
+
+func postImport(c *fiber.Ctx) error {
+	var body struct {
+		KeeperSettings []models.KeeperSettings  `json:"keeperSettings"`
+		Templates      []models.SessionTemplate `json:"templates"`
+		Debates        []models.Debate          `json:"debates"`
+		RepoPaths      []models.RepoPath        `json:"repoPaths"`
+	}
+	if err := c.BodyParser(&body); err != nil {
+		return c.Status(400).JSON(fiber.Map{"error": "Invalid request body"})
+	}
+
+	for _, item := range body.KeeperSettings {
+		item.UpdatedAt = time.Now()
+		_ = db.DB.Save(&item).Error
+	}
+	for _, item := range body.Templates {
+		item.UpdatedAt = time.Now()
+		if item.ID == "" {
+			item.ID = uuid.New().String()
+		}
+		_ = db.DB.Save(&item).Error
+	}
+	for _, item := range body.Debates {
+		item.UpdatedAt = time.Now()
+		if item.ID == "" {
+			item.ID = uuid.New().String()
+		}
+		_ = db.DB.Save(&item).Error
+	}
+	for _, item := range body.RepoPaths {
+		item.UpdatedAt = time.Now()
+		_ = db.DB.Save(&item).Error
+	}
+
+	return c.JSON(fiber.Map{"success": true})
+}
+
 func postReview(c *fiber.Ctx) error {
 	var body services.ReviewRequest
 	if err := c.BodyParser(&body); err != nil {
@@ -402,6 +460,8 @@ func SetupRoutes(app *fiber.App) {
 
 	api.Get("/ping", getPing)
 	api.Get("/manifest", getManifest)
+	api.Get("/export", getExport)
+	api.Post("/import", postImport)
 	api.Get("/fleet/summary", getFleetSummary)
 	api.Get("/system/submodules", getSystemSubmodules)
 	api.Get("/sessions/:id/replay", getSessionReplay)

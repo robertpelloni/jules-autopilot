@@ -615,6 +615,12 @@ func (w *Worker) handleCheckSession(payload string) (string, error) {
 
 		if !alreadyProcessedFailure {
 			activities, _ := client.ListActivities(session.ID)
+			if hasRecentRecoveryGuidance(activities) {
+				timestamp := lastActivityTime.Format(time.RFC3339)
+				supervisorState.LastProcessedActivityTimestamp = &timestamp
+				_ = saveSupervisorState(supervisorState)
+				return "recovery_already_present", nil
+			}
 			emitDaemonEvent("session_recovery_started", map[string]interface{}{
 				"sessionId":    session.ID,
 				"sessionTitle": session.Title,
@@ -723,6 +729,20 @@ func (w *Worker) handleCheckSession(payload string) (string, error) {
 	return "none", nil
 }
 
+func hasRecentRecoveryGuidance(activities []models.JulesActivity) bool {
+	limit := 6
+	if len(activities) < limit {
+		limit = len(activities)
+	}
+	for i := len(activities) - 1; i >= 0 && i >= len(activities)-limit; i-- {
+		activity := activities[i]
+		if activity.Role == "user" && strings.Contains(activity.Content, "Recovery Guidance:") {
+			return true
+		}
+	}
+	return false
+}
+
 func buildRecoveryMessage(session models.JulesSession, activities []models.JulesActivity, settings models.KeeperSettings) string {
 	provider := strings.TrimSpace(settings.SupervisorProvider)
 	if provider == "" {
@@ -752,11 +772,11 @@ func buildRecoveryMessage(session models.JulesSession, activities []models.Jules
 			Content: basePrompt,
 		}})
 		if err == nil && strings.TrimSpace(result.Content) != "" {
-			return result.Content
+			return "Recovery Guidance:\n\n" + result.Content
 		}
 	}
 
-	return "The session appears to have failed. Review the most recent error, identify the last successful step, fix the immediate cause, and continue with a revised plan. If a prior assumption was wrong, state it explicitly before proceeding."
+	return "Recovery Guidance:\n\nThe session appears to have failed. Review the most recent error, identify the last successful step, fix the immediate cause, and continue with a revised plan. If a prior assumption was wrong, state it explicitly before proceeding."
 }
 
 func getProjectRoot() string {

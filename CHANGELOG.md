@@ -2,6 +2,18 @@
 
 All notable changes to this project will be documented in this file.
 
+## [1.0.21] - 2026-04-05
+
+### Added
+- **Go Import/Export Parity**: Added Go-native `/api/export` and `/api/import` support for the settings portability workflow, covering Keeper settings, templates, debates, and repo-path mappings.
+
+### Changed
+- **Go Recovery Dedupe Refinement**: Failed-session recovery now avoids resending guidance when a recent recovery message is already present in the session activity stream.
+- **Go Settings Portability Coverage**: The Go backend now covers another settings-dialog workflow that previously depended on Bun-only routing.
+
+### Notes
+- **Validation Status**: `cd backend-go && go test ./...`, `pnpm run lint`, `pnpm run typecheck`, `pnpm run test`, and `node scripts/check-version-sync.js` all pass at `1.0.21`.
+
 ## [1.0.20] - 2026-04-05
 
 ### Added
