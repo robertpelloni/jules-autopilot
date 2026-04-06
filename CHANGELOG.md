@@ -2,6 +2,19 @@
 
 All notable changes to this project will be documented in this file.
 
+## [1.0.32] - 2026-04-05
+
+### Added
+- **Go Resilient Degraded Mode**: Added mock session and critical-error session fallbacks in the Go API handlers (`getSessions`, `getSession`, `getSessionActivities`), matching Bun’s defensive behavior during live Jules API failures.
+- **Hardened Client Transformation**: Updated the TypeScript `JulesClient` to support both Google Jules API (createTime/updateTime) and Go-native model (createdAt/updatedAt) property names during session and activity transformation.
+
+### Changed
+- **Go Session Auth Resilience**: The Go API routes now check `X-Jules-Auth-Token` in addition to API key headers when resolving request-scoped Jules clients.
+- **UI Resilience**: The dashboard is now less likely to crash or show empty states when the Go backend is running but live Jules access is degraded or unauthorized.
+
+### Notes
+- **Validation Status**: `cd backend-go && gofmt -w api/routes.go && go test ./...`, `pnpm run lint`, `pnpm run typecheck`, `pnpm run test`, and `node scripts/check-version-sync.js` all pass at `1.0.32`.
+
 ## [1.0.31] - 2026-04-05
 
 ### Added

@@ -362,14 +362,14 @@ export class JulesClient {
 
       const transformed = {
         id: session.id,
-        sourceId: session.sourceContext?.source?.replace('sources/github/', '') || '',
+        sourceId: session.sourceContext?.source?.replace('sources/github/', '') || (session.sourceId as string) || '',
         title: session.title || '',
-        status: this.mapState(session.state || ''),
-        rawState: session.state,
-        createdAt: session.createTime,
-        updatedAt: session.updateTime,
+        status: this.mapState(session.state || (session.status as string) || ''),
+        rawState: session.state || (session.rawState as string),
+        createdAt: session.createTime || (session.createdAt as string),
+        updatedAt: session.updateTime || (session.updatedAt as string),
         lastActivityAt: session.lastActivityAt,
-        branch: session.sourceContext?.githubRepoContext?.startingBranch || 'main',
+        branch: session.sourceContext?.githubRepoContext?.startingBranch || (session.branch as string) || 'main',
         outputs: outputs.length > 0 ? outputs : undefined
       };
       return transformed;
@@ -540,7 +540,7 @@ export class JulesClient {
       diff,
       bashOutput,
       media,
-      createdAt: activity.createTime,
+      createdAt: activity.createTime || (activity.createdAt as string),
       metadata: activity as Record<string, unknown>
     };
   }

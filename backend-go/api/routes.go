@@ -64,6 +64,9 @@ func getJulesClientForRequest(c *fiber.Ctx) *services.JulesClient {
 	if headerKey == "" {
 		headerKey = strings.TrimSpace(c.Get("X-Goog-Api-Key"))
 	}
+	if headerKey == "" {
+		headerKey = strings.TrimSpace(c.Get("X-Jules-Auth-Token"))
+	}
 	return services.NewJulesClient(headerKey)
 }
 
@@ -226,6 +229,13 @@ func getSessionReplay(c *fiber.Ctx) error {
 
 func getSession(c *fiber.Ctx) error {
 	id := c.Params("id")
+	if id == "critical-err" {
+		return c.JSON(fiber.Map{"id": id, "title": "API Error Log", "status": "failed", "rawState": "FAILED"})
+	}
+	if strings.HasPrefix(id, "mock-") {
+		return c.JSON(fiber.Map{"id": id, "title": "Mock Session", "status": "active", "rawState": "ACTIVE"})
+	}
+
 	client := getJulesClientForRequest(c)
 	session, err := client.GetSession(id)
 	if err != nil {
@@ -290,6 +300,10 @@ func deleteDebate(c *fiber.Ctx) error {
 
 func getSessionActivities(c *fiber.Ctx) error {
 	id := c.Params("id")
+	if id == "critical-err" || strings.HasPrefix(id, "mock-") {
+		return c.JSON(fiber.Map{"activities": []interface{}{}})
+	}
+
 	client := getJulesClientForRequest(c)
 	activities, err := client.ListActivities(id)
 	if err != nil {
@@ -1281,6 +1295,22 @@ func updateKeeperSettings(c *fiber.Ctx) error {
 	return c.JSON(settings)
 }
 
+func getMockSessions() []models.JulesSession {
+	now := time.Now()
+	return []models.JulesSession{
+		{
+			ID:        "mock-1",
+			Title:     "Fix broken auth",
+			Status:    "active",
+			RawState:  "ACTIVE",
+			CreatedAt: now,
+			UpdatedAt: now,
+			SourceID:  "google/jules",
+			Branch:    "main",
+		},
+	}
+}
+
 func getSessions(c *fiber.Ctx) error {
 	client := getJulesClientForRequest(c)
 	liveSessions, err := client.ListSessions()
@@ -1290,12 +1320,33 @@ func getSessions(c *fiber.Ctx) error {
 
 	if err != nil {
 		log.Printf("Failed to fetch live sessions: %v", err)
+		// Return 200 with error session + mocks to prevent UI crash, mirroring Bun.
+		return c.JSON(fiber.Map{
+			"sessions": append([]models.JulesSession{
+				{
+					ID:        "critical-err",
+					Title:     "API Error: " + err.Error(),
+					Status:    "failed",
+					RawState:  "FAILED",
+					CreatedAt: time.Now(),
+					UpdatedAt: time.Now(),
+					SourceID:  "system",
+					Branch:    "none",
+				},
+			}, getMockSessions()...),
+		})
 	}
 
+	// No live sessions and no error (e.g. empty) - check DB
 	var sessions []models.JulesSession
 	if err := db.DB.Find(&sessions).Error; err != nil {
 		return c.Status(500).JSON(fiber.Map{"error": err.Error()})
 	}
+
+	if len(sessions) == 0 {
+		return c.JSON(fiber.Map{"sessions": getMockSessions()})
+	}
+
 	return c.JSON(fiber.Map{"sessions": sessions})
 }
 
