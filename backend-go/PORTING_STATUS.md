@@ -49,6 +49,12 @@ Move reasonable backend responsibilities from the TypeScript/Bun daemon into the
   - combined codebase/history ranked results
 - `POST /api/rag/query` now exists in the Go API
 - Go `check_session` nudges can now include retrieved local context snippets
+- Explicit Go lifecycle event emission for:
+  - codebase indexing start/completion
+  - issue-check start
+  - issue evaluation
+  - autonomous issue-session spawning
+- Frontend/shared websocket layer updated to understand those Go-originated lifecycle events
 - Go Jules client support for GitHub issues + session creation
 - `POST /api/sessions/:id/nudge` now sends a real activity instead of returning a stub response
 - `POST /api/sessions/:id:approvePlan` is now supported through the generic Go session action handler
@@ -66,13 +72,13 @@ Move reasonable backend responsibilities from the TypeScript/Bun daemon into the
 
 ## Still Pending / Partial
 - Full session activity/action parity with the TypeScript daemon
-- Broader WebSocket event parity beyond the currently implemented log, queue, issue, debate, RAG, and webhook broadcasts
+- Recovery/self-healing lifecycle parity and related event detail parity in Go
 - Additional provider/runtime polish around Go-side structured review/debate abstractions beyond the current practical provider bridge
 - More explicit Go-side retrieval/result presentation surfaces if the UI should call Go-native memory workflows directly more often
 
 ## Recommended Next Go Porting Steps
-1. Broaden Go-side daemon event payload parity for recovery, indexing, and issue-spawn lifecycle events.
-2. Fill any remaining session activity/action route gaps in the Go API.
+1. Fill any remaining session activity/action route gaps in the Go API.
+2. Broaden Go-side recovery/self-healing lifecycle parity and related events.
 3. Tighten Go-side provider abstractions for structured review/debate/recommendation workflows.
 4. Add richer Go-native retrieval/result presentation hooks where the UI would benefit from more explicit memory reasoning metadata.
 5. Decide whether the Go backend becomes the primary runtime or remains a parity track during migration.

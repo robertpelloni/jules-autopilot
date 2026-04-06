@@ -9,6 +9,11 @@ export type DaemonEventType =
   | 'session_approved'
   | 'session_debate_escalated'
   | 'session_debate_resolved'
+  | 'codebase_index_started'
+  | 'codebase_index_completed'
+  | 'issue_check_started'
+  | 'issue_evaluated'
+  | 'issue_session_spawned'
   | 'activities_updated'
   | 'sessions_list_updated'
   | 'borg_signal_received'
@@ -68,6 +73,35 @@ export interface SessionDebateResolvedPayload {
   riskScore: number;
   approvalStatus?: 'approved' | 'rejected' | 'pending';
   summary?: string;
+}
+
+export interface CodebaseIndexStartedPayload {
+  scope?: string;
+}
+
+export interface CodebaseIndexCompletedPayload {
+  newChunks: number;
+  totalFilesScanned?: number;
+}
+
+export interface IssueCheckStartedPayload {
+  sourceId: string;
+}
+
+export interface IssueEvaluatedPayload {
+  sourceId: string;
+  issueNumber: number;
+  issueTitle?: string;
+  confidence: number;
+  isFixable: boolean;
+}
+
+export interface IssueSessionSpawnedPayload {
+  sourceId: string;
+  issueNumber: number;
+  issueTitle?: string;
+  sessionId: string;
+  sessionTitle?: string;
 }
 
 export interface ActivitiesUpdatedPayload {

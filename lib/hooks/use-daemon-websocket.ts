@@ -11,6 +11,11 @@ import type {
   SessionApprovedPayload,
   SessionDebateEscalatedPayload,
   SessionDebateResolvedPayload,
+  CodebaseIndexStartedPayload,
+  CodebaseIndexCompletedPayload,
+  IssueCheckStartedPayload,
+  IssueEvaluatedPayload,
+  IssueSessionSpawnedPayload,
 } from '@jules/shared';
 import { WS_DEFAULTS } from '@jules/shared';
 import { emitDaemonEvent } from './use-daemon-events';
@@ -186,6 +191,46 @@ export function useDaemonWebSocket() {
           }));
           setStatusSummary({
             lastAction: `Debate resolved for ${payload?.sessionTitle || payload?.sessionId?.slice(0, 8)}`,
+          });
+          break;
+        }
+
+        case 'codebase_index_started': {
+          const payload = message.data as CodebaseIndexStartedPayload;
+          setStatusSummary({
+            lastAction: `Indexing ${payload?.scope || 'workspace'} started`,
+          });
+          break;
+        }
+
+        case 'codebase_index_completed': {
+          const payload = message.data as CodebaseIndexCompletedPayload;
+          setStatusSummary({
+            lastAction: `Indexed ${payload?.newChunks ?? 0} chunks`,
+          });
+          break;
+        }
+
+        case 'issue_check_started': {
+          const payload = message.data as IssueCheckStartedPayload;
+          setStatusSummary({
+            lastAction: `Checking issues for ${payload?.sourceId || 'repo'}`,
+          });
+          break;
+        }
+
+        case 'issue_evaluated': {
+          const payload = message.data as IssueEvaluatedPayload;
+          setStatusSummary({
+            lastAction: `Evaluated issue #${payload?.issueNumber ?? '?'} (${payload?.confidence ?? 0}%)`,
+          });
+          break;
+        }
+
+        case 'issue_session_spawned': {
+          const payload = message.data as IssueSessionSpawnedPayload;
+          setStatusSummary({
+            lastAction: `Spawned ${payload?.sessionTitle || payload?.sessionId?.slice(0, 8)}`,
           });
           break;
         }

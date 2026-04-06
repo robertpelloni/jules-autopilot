@@ -798,7 +798,10 @@ func (w *Worker) handleIndexCodebase(payload string) (string, error) {
 		return "skip", nil
 	}
 
-	addKeeperLog("Starting Go codebase indexing run.", "info", "global", map[string]interface{}{"event": "index_codebase_started"})
+	addKeeperLog("Starting Go codebase indexing run.", "info", "global", map[string]interface{}{"event": "codebase_index_started"})
+	emitDaemonEvent("codebase_index_started", map[string]interface{}{
+		"scope": "default",
+	})
 
 	directories := []string{"src", "lib", "server", "components", "packages"}
 	var allFiles []string
@@ -862,8 +865,13 @@ func (w *Worker) handleIndexCodebase(payload string) (string, error) {
 	}
 
 	addKeeperLog("Completed Go codebase indexing run.", "info", "global", map[string]interface{}{
-		"event":    "index_codebase_completed",
-		"newChunks": newChunks,
+		"event":             "codebase_index_completed",
+		"newChunks":         newChunks,
+		"totalFilesScanned": len(allFiles),
+	})
+	emitDaemonEvent("codebase_index_completed", map[string]interface{}{
+		"newChunks":         newChunks,
+		"totalFilesScanned": len(allFiles),
 	})
 	return fmt.Sprintf("indexed:%d", newChunks), nil
 }
@@ -1103,7 +1111,10 @@ func (w *Worker) handleCheckIssues(payload string) (string, error) {
 
 	client := NewJulesClient()
 	addKeeperLog(fmt.Sprintf("Checking GitHub issues for %s...", data.SourceID), "info", "global", map[string]interface{}{
-		"event":    "issues_check_started",
+		"event":    "issue_check_started",
+		"sourceId": data.SourceID,
+	})
+	emitDaemonEvent("issue_check_started", map[string]interface{}{
 		"sourceId": data.SourceID,
 	})
 
@@ -1142,6 +1153,14 @@ func (w *Worker) handleCheckIssues(payload string) (string, error) {
 			"event":       "issue_evaluated",
 			"sourceId":    data.SourceID,
 			"issueNumber": issue.Number,
+			"issueTitle":  issue.Title,
+			"confidence":  evaluation.Confidence,
+			"isFixable":   evaluation.IsFixable,
+		})
+		emitDaemonEvent("issue_evaluated", map[string]interface{}{
+			"sourceId":    data.SourceID,
+			"issueNumber": issue.Number,
+			"issueTitle":  issue.Title,
 			"confidence":  evaluation.Confidence,
 			"isFixable":   evaluation.IsFixable,
 		})
@@ -1157,10 +1176,18 @@ func (w *Worker) handleCheckIssues(payload string) (string, error) {
 		}
 
 		addKeeperLog(fmt.Sprintf("Autonomous session spawn for issue: %s", issue.Title), "action", "global", map[string]interface{}{
-			"event":       "issue_session_spawned",
-			"sourceId":    data.SourceID,
-			"issueNumber": issue.Number,
-			"sessionId":   newSession.ID,
+			"event":        "issue_session_spawned",
+			"sourceId":     data.SourceID,
+			"issueNumber":  issue.Number,
+			"issueTitle":   issue.Title,
+			"sessionId":    newSession.ID,
+			"sessionTitle": newSession.Title,
+		})
+		emitDaemonEvent("issue_session_spawned", map[string]interface{}{
+			"sourceId":     data.SourceID,
+			"issueNumber":  issue.Number,
+			"issueTitle":   issue.Title,
+			"sessionId":    newSession.ID,
 			"sessionTitle": newSession.Title,
 		})
 		emitDaemonEvent("sessions_list_updated", map[string]interface{}{})

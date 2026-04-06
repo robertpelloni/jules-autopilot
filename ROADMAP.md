@@ -30,6 +30,7 @@ For granular tasks and immediate bug fixes, see `TODO.md`.
 * [x] **Go Backend Parity Pass #4**: Ported Go-side GitHub issue evaluation and autonomous session spawning so issue-driven work discovery no longer depends exclusively on the TypeScript queue path.
 * [x] **Go Backend Parity Pass #5**: Ported provider-backed council debate/review into the Go session-approval path so risky plans can be debated, summarized, rescored, and approved/rejected without falling back immediately to the Bun daemon.
 * [x] **Go Backend Parity Pass #6**: Ported semantic query / RAG retrieval into the Go backend, including combined code/history similarity search, a Go `/api/rag/query` route, and RAG-assisted session nudges.
+* [x] **Go Backend Parity Pass #7**: Broadened Go lifecycle/detail parity with explicit indexing/issue daemon events, frontend websocket support, and richer Keeper feed metadata for Go-originated automation flows.
 
 ## Milestone: v1.5 — "Shadow Pilot"
 * [ ] **Background Anomaly Detection:** Agents silently monitoring `git diffs` background tasks, fixing failing CI pipelines before human review.

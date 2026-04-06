@@ -2,6 +2,18 @@
 
 All notable changes to this project will be documented in this file.
 
+## [1.0.15] - 2026-04-05
+
+### Added
+- **Go Lifecycle Event Parity**: Added explicit shared daemon event types for Go-originated indexing and issue workflows, including `codebase_index_started`, `codebase_index_completed`, `issue_check_started`, `issue_evaluated`, and `issue_session_spawned`.
+
+### Changed
+- **Go Event Emission Coverage**: The Go queue now emits dedicated realtime events for indexing start/completion and issue evaluation/spawn workflows in addition to Keeper logs.
+- **Operator Visibility Improvements**: The frontend websocket hook now understands the new lifecycle events for status updates, and the session Keeper feed can render richer metadata like source IDs, issue numbers, confidence, chunk counts, and RAG usage details.
+
+### Notes
+- **Validation Status**: `cd backend-go && go test ./...`, `pnpm run lint`, `pnpm run typecheck`, `pnpm run test`, and `node scripts/check-version-sync.js` all pass at `1.0.15`.
+
 ## [1.0.14] - 2026-04-05
 
 ### Added

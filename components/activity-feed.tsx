@@ -69,6 +69,13 @@ interface KeeperEventDetails {
   riskScore?: number;
   approvalStatus?: 'approved' | 'rejected' | 'pending';
   summary?: string;
+  sourceId?: string;
+  issueNumber?: number;
+  confidence?: number;
+  isFixable?: boolean;
+  newChunks?: number;
+  totalFilesScanned?: number;
+  usedRAG?: boolean;
 }
 
 export function ActivityFeed({ 
@@ -460,6 +467,15 @@ export function ActivityFeed({
     return details as KeeperEventDetails;
   };
 
+  const getEventBadgeLabel = (eventName?: string) => {
+    if (!eventName) return null;
+    return eventName
+      .replace(/^session_/, '')
+      .replace(/^issue_/, 'issue:')
+      .replace(/^codebase_/, 'index:')
+      .replaceAll('_', ' ');
+  };
+
   const getActivityIcon = (activity: Activity) => {
     if (activity.role === 'user') {
       return <AvatarFallback className="bg-purple-500 text-white text-[9px] font-bold uppercase tracking-wider">U</AvatarFallback>;
@@ -627,23 +643,44 @@ export function ActivityFeed({
                     <div className="flex items-center gap-2">
                       {eventDetails?.event && (
                         <Badge variant="outline" className="h-4 border-purple-500/20 bg-purple-500/10 px-1.5 text-[8px] uppercase tracking-widest text-purple-300">
-                          {eventDetails.event.replace('session_', '')}
+                          {getEventBadgeLabel(eventDetails.event)}
                         </Badge>
                       )}
                       <span className="uppercase tracking-widest text-zinc-500">{log.type}</span>
                     </div>
                   </div>
                   <p className="mt-1.5 leading-relaxed">{log.message}</p>
-                  {(eventDetails?.sessionTitle || eventDetails?.nudgeMessage || eventDetails?.summary || typeof eventDetails?.riskScore === 'number' || eventDetails?.approvalStatus) && (
+                  {(eventDetails?.sessionTitle || eventDetails?.nudgeMessage || eventDetails?.summary || typeof eventDetails?.riskScore === 'number' || eventDetails?.approvalStatus || eventDetails?.sourceId || typeof eventDetails?.issueNumber === 'number' || typeof eventDetails?.confidence === 'number' || typeof eventDetails?.newChunks === 'number' || typeof eventDetails?.totalFilesScanned === 'number' || typeof eventDetails?.usedRAG === 'boolean') && (
                     <div className="mt-2 space-y-1 text-[9px] text-zinc-400">
                       {eventDetails.sessionTitle && (
                         <p className="truncate uppercase tracking-wide">Target: {eventDetails.sessionTitle}</p>
+                      )}
+                      {eventDetails.sourceId && (
+                        <p className="truncate uppercase tracking-wide">Source: {eventDetails.sourceId}</p>
+                      )}
+                      {typeof eventDetails.issueNumber === 'number' && (
+                        <p className="uppercase tracking-wide">Issue: #{eventDetails.issueNumber}</p>
+                      )}
+                      {typeof eventDetails.confidence === 'number' && (
+                        <p className="uppercase tracking-wide">Confidence: {eventDetails.confidence}%</p>
+                      )}
+                      {typeof eventDetails.isFixable === 'boolean' && (
+                        <p className="uppercase tracking-wide">Fixable: {eventDetails.isFixable ? 'yes' : 'no'}</p>
                       )}
                       {typeof eventDetails.riskScore === 'number' && (
                         <p className="uppercase tracking-wide">Risk Score: {eventDetails.riskScore}/100</p>
                       )}
                       {eventDetails.approvalStatus && (
                         <p className="uppercase tracking-wide">Decision: {eventDetails.approvalStatus}</p>
+                      )}
+                      {typeof eventDetails.newChunks === 'number' && (
+                        <p className="uppercase tracking-wide">New Chunks: {eventDetails.newChunks}</p>
+                      )}
+                      {typeof eventDetails.totalFilesScanned === 'number' && (
+                        <p className="uppercase tracking-wide">Files Scanned: {eventDetails.totalFilesScanned}</p>
+                      )}
+                      {typeof eventDetails.usedRAG === 'boolean' && (
+                        <p className="uppercase tracking-wide">RAG Context: {eventDetails.usedRAG ? 'included' : 'not used'}</p>
                       )}
                       {eventDetails.nudgeMessage && (
                         <p className="line-clamp-2 normal-case tracking-normal text-zinc-300/90">{eventDetails.nudgeMessage}</p>

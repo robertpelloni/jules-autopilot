@@ -1,13 +1,13 @@
-# Project Handoff: Jules Autopilot (v1.0.14 — Go Backend Parity Pass #6)
+# Project Handoff: Jules Autopilot (v1.0.15 — Go Backend Parity Pass #7)
 
 ## 1. Session Summary
-This session continued the recommended next step after provider-backed debate parity and ported the missing retrieval half of the Go memory subsystem.
+This session continued the Go migration after semantic retrieval parity and focused on a narrower but important remaining gap: lifecycle/detail visibility.
 
-Before this pass, the Go backend could index repository chunks and memory outcomes, but it still depended on the TypeScript daemon for practical semantic retrieval. After this pass, the Go backend can now query its own indexed memory, expose that through an API route, and use retrieval results to enrich inactivity nudges.
+At this stage, the Go backend already owned most of the major autonomous loops, but some of those flows were still primarily visible through generic Keeper logs rather than explicit daemon event types that the frontend could understand directly. This pass broadens that parity for indexing and issue-driven automation.
 
 ## 2. Completed Work
 ### 2.1 Versioning & Documentation
-- Bumped the project version from `1.0.13` to `1.0.14`.
+- Bumped the project version from `1.0.14` to `1.0.15`.
 - Re-synced version surfaces via the canonical `VERSION` workflow:
   - `VERSION`
   - `VERSION.md`
@@ -24,45 +24,46 @@ Before this pass, the Go backend could index repository chunks and memory outcom
   - `docs/VISION.md`
 - Added a new archived handoff in `logs/handoffs/`.
 
-### 2.2 Added Go RAG Retrieval Layer
-Added `backend-go/services/rag.go`.
+### 2.2 Extended Shared Daemon Event Schema
+Updated `packages/shared/src/websocket.ts` to add explicit event types and payloads for Go lifecycle flows:
+- `codebase_index_started`
+- `codebase_index_completed`
+- `issue_check_started`
+- `issue_evaluated`
+- `issue_session_spawned`
 
-This file now provides:
-- query embedding generation via OpenAI embeddings
-- byte-to-float embedding decoding from SQLite blobs
-- cosine similarity scoring
-- combined retrieval across:
-  - `CodeChunk`
-  - `MemoryChunk`
-- ranked result output with origin metadata (`codebase` vs `history`)
+This gives the cross-runtime frontend/shared layer a typed vocabulary for Go-originated indexing and issue-automation events.
 
-This effectively ports the practical behavior of `server/rag.ts` into Go.
+### 2.3 Frontend WebSocket Understanding of New Go Events
+Updated `lib/hooks/use-daemon-websocket.ts` so the frontend now understands the new Go lifecycle events and uses them to update status summaries such as:
+- indexing started/completed
+- issue checking in progress
+- issue evaluation confidence
+- autonomous issue-session spawning
 
-### 2.3 Added Go RAG Query API Route
-Updated `backend-go/api/routes.go` to expose:
-- `POST /api/rag/query`
+This means the operator UI can react to Go lifecycle events directly rather than relying only on generic log lines.
 
-The new Go route now:
-- validates request body
-- resolves the effective embeddings API key using current settings/env
-- calls Go-native retrieval
-- returns ranked semantic results in the same general shape as the TypeScript daemon path
+### 2.4 Richer Keeper Feed Metadata Rendering
+Updated `components/activity-feed.tsx` so the session Keeper feed can now display richer metadata fields when present, including:
+- `sourceId`
+- `issueNumber`
+- `confidence`
+- `isFixable`
+- `newChunks`
+- `totalFilesScanned`
+- `usedRAG`
 
-### 2.4 Added Go RAG-Assisted Nudges
-Extended `backend-go/services/queue.go` so the Go `check_session` path can use retrieval results during inactivity nudges.
+I also improved event badge labeling so non-session events are easier to read in the feed.
 
-When smart pilot is enabled, the Go backend now:
-- queries semantic memory using the session title (or fallback activity wording)
-- pulls back relevant code/history context
-- formats that into a `[LOCAL_CONTEXT]` block
-- appends it to the generated nudge sent into the Jules session
+### 2.5 Go Queue Event Emission Coverage Expanded
+Updated `backend-go/services/queue.go` so the Go queue now emits explicit daemon events for:
+- codebase indexing start
+- codebase indexing completion
+- issue check start
+- issue evaluation
+- issue-driven session spawn
 
-This brings the Go nudge path much closer to the Bun daemon's dual role of:
-- monitoring inactivity
-- injecting useful repo memory
-
-### 2.5 Small API/Service Boundary Improvement
-Exported a lightweight settings accessor from the Go services layer so API routes can reuse the same Keeper settings resolution logic without duplicating DB access conventions.
+These events are emitted alongside existing Keeper logs, which improves operator-visible parity without removing the durable log trail.
 
 ## 3. Validation Results
 ### Passing
@@ -73,34 +74,30 @@ Exported a lightweight settings accessor from the Go services layer so API route
 - `node scripts/check-version-sync.js`
 
 ## 4. Key Findings
-### 4.1 Go now owns both sides of the practical memory loop
-Before this pass, Go only owned ingestion/indexing. That was incomplete because a memory system is only truly useful when the runtime that builds it can also retrieve from it.
-
-Now Go owns:
+### 4.1 The remaining Go gaps are increasingly about visibility and coupling, not core intelligence
+By this point, Go already owns most of the important backend behaviors:
+- session checking
 - indexing
 - retrieval
-- retrieval-assisted nudges
+- issue-driven session spawning
+- provider-backed debate review
 
-That makes the Go memory subsystem materially real rather than only partially migrated.
+What remained was making those flows visible in the operator experience with the same clarity as the Bun daemon. This pass pushes in that direction.
 
-### 4.2 Retrieval parity is more valuable when it is actually consumed
-Adding `/api/rag/query` was necessary, but using retrieval inside Go nudges makes the port much more meaningful. It proves the feature is not only available in the API — it is actively shaping Go-side autonomous behavior.
+### 4.2 Typed shared events are an important bridge layer
+Adding explicit event types to the shared websocket schema matters because it reduces ambiguity at the frontend boundary. The UI no longer has to infer everything from generic logs for these workflows.
 
-### 4.3 Remaining gaps are now even more concentrated in event/detail parity and residual route differences
-After this pass, the remaining important gaps are less about missing core intelligence loops and more about:
-- lifecycle event/detail richness
-- some remaining action/route differences
-- broader UI-facing parity if the frontend should lean more heavily on Go-native memory workflows
+### 4.3 Logs are still useful, but events help the UI reason better
+This pass keeps Keeper logs for persistence and history, but also adds explicit events for realtime interpretation. That combination is stronger than either mechanism alone:
+- logs give auditability
+- explicit events give better live UX semantics
 
 ## 5. Remaining Work
 ### Highest-value next Go ports
-1. Broaden Go daemon event payload parity for:
-   - recovery/self-healing
-   - indexing progress/detail events
-   - issue-spawn detail events
-2. Fill any remaining session activity/action route gaps in the Go API
+1. Fill any remaining session activity/action route gaps in the Go API
+2. Broaden Go-side recovery/self-healing lifecycle parity and related events
 3. Tighten Go provider abstractions for structured review/debate/recommendation flows
-4. Add richer Go-native retrieval/result presentation hooks where the UI would benefit from explicit memory reasoning metadata
+4. Add richer Go-native retrieval/result presentation hooks where the UI would benefit from more explicit memory reasoning metadata
 5. Decide whether Go should become the default runtime or remain the parity track during migration
 
 ## 6. Process Safety
@@ -111,8 +108,8 @@ After this pass, the remaining important gaps are less about missing core intell
 
 ## 7. Recommended Next Step
 Recommended next move:
-- continue with **Go Backend Parity Pass #7** by broadening Go-side daemon lifecycle event/detail parity, because the remaining gaps are now mostly around operator visibility and the last UI/runtime coupling points rather than missing core backend intelligence features.
+- continue with **Go Backend Parity Pass #8** by filling remaining session action gaps and broadening Go recovery/self-healing lifecycle parity, because those are now some of the clearest remaining areas where Bun-originated automation metadata still has an advantage.
 
 ## 8. Commit Guidance
 Recommended commit message for this session:
-- `feat: port go semantic rag retrieval parity (v1.0.14)`
+- `feat: expand go lifecycle event parity and operator telemetry (v1.0.15)`
