@@ -1,10 +1,15 @@
 package services
 
 import (
+	"bytes"
+	"crypto/sha256"
+	"encoding/binary"
 	"encoding/json"
 	"fmt"
 	"log"
+	"net/http"
 	"os"
+	"path/filepath"
 	"strings"
 	"sync"
 	"time"
@@ -18,7 +23,8 @@ const (
 	defaultPlanRiskScore      = 50
 	lowRiskApprovalThreshold  = 40
 	recentActivityWindow      = 30 * time.Second
-	globalSessionID           = "global"
+	chunkLineLimit            = 150
+	maxIndexedFileSizeBytes   = 500000
 )
 
 // Worker represents the SQLite Task Queue worker
@@ -416,10 +422,199 @@ func (w *Worker) handleCheckSession(payload string) (string, error) {
 	return "none", nil
 }
 
+func getProjectRoot() string {
+	candidates := []string{filepath.Clean("."), filepath.Clean("..")}
+	for _, candidate := range candidates {
+		if info, err := os.Stat(filepath.Join(candidate, "src")); err == nil && info.IsDir() {
+			return candidate
+		}
+	}
+	return filepath.Clean("..")
+}
+
+func getIndexRoot(dir string) string {
+	root := getProjectRoot()
+	candidate := filepath.Clean(filepath.Join(root, dir))
+	if info, err := os.Stat(candidate); err == nil && info.IsDir() {
+		return candidate
+	}
+	return candidate
+}
+
+func shouldIndexFile(path string) bool {
+	ext := strings.ToLower(filepath.Ext(path))
+	switch ext {
+	case ".ts", ".tsx", ".js", ".jsx", ".md":
+		return true
+	default:
+		return false
+	}
+}
+
+func collectIndexFiles(dir string) ([]string, error) {
+	root := getIndexRoot(dir)
+	var files []string
+
+	err := filepath.Walk(root, func(path string, info os.FileInfo, err error) error {
+		if err != nil {
+			return nil
+		}
+
+		if info.IsDir() {
+			name := info.Name()
+			if name == "node_modules" || name == "dist" || strings.HasPrefix(name, ".") {
+				return filepath.SkipDir
+			}
+			return nil
+		}
+
+		if !shouldIndexFile(path) {
+			return nil
+		}
+
+		rel, relErr := filepath.Rel(getProjectRoot(), path)
+		if relErr != nil {
+			rel = path
+		}
+		files = append(files, filepath.ToSlash(rel))
+		return nil
+	})
+
+	return files, err
+}
+
+func computeChecksum(content string) string {
+	sum := sha256.Sum256([]byte(content))
+	return fmt.Sprintf("%x", sum)
+}
+
+func fetchEmbedding(input, apiKey string) ([]byte, error) {
+	payload, _ := json.Marshal(map[string]string{
+		"input": input,
+		"model": "text-embedding-3-small",
+	})
+
+	req, err := http.NewRequest(http.MethodPost, "https://api.openai.com/v1/embeddings", bytes.NewReader(payload))
+	if err != nil {
+		return nil, err
+	}
+	req.Header.Set("Authorization", "Bearer "+apiKey)
+	req.Header.Set("Content-Type", "application/json")
+
+	resp, err := http.DefaultClient.Do(req)
+	if err != nil {
+		return nil, err
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode >= 400 {
+		return nil, fmt.Errorf("embedding request failed with status %d", resp.StatusCode)
+	}
+
+	var body struct {
+		Data []struct {
+			Embedding []float64 `json:"embedding"`
+		} `json:"data"`
+	}
+	if err := json.NewDecoder(resp.Body).Decode(&body); err != nil {
+		return nil, err
+	}
+	if len(body.Data) == 0 {
+		return nil, fmt.Errorf("embedding response contained no vectors")
+	}
+
+	buf := new(bytes.Buffer)
+	for _, value := range body.Data[0].Embedding {
+		if err := binary.Write(buf, binary.LittleEndian, float32(value)); err != nil {
+			return nil, err
+		}
+	}
+
+	return buf.Bytes(), nil
+}
+
 func (w *Worker) handleIndexCodebase(payload string) (string, error) {
-	// TODO: Port handleIndexCodebase logic from TypeScript
-	// This would involve file system traversal and OpenAI embeddings
-	return "done", nil
+	settings, err := getSettings()
+	if err != nil {
+		return "skip", err
+	}
+
+	apiKey := strings.TrimSpace(os.Getenv("OPENAI_API_KEY"))
+	if apiKey == "" && settings.SupervisorApiKey != nil {
+		apiKey = strings.TrimSpace(*settings.SupervisorApiKey)
+	}
+	if apiKey == "" || apiKey == "placeholder" {
+		return "skip", nil
+	}
+
+	addKeeperLog("Starting Go codebase indexing run.", "info", "global", map[string]interface{}{"event": "index_codebase_started"})
+
+	directories := []string{"src", "lib", "server", "components", "packages"}
+	var allFiles []string
+	for _, dir := range directories {
+		files, err := collectIndexFiles(dir)
+		if err != nil {
+			continue
+		}
+		allFiles = append(allFiles, files...)
+	}
+
+	newChunks := 0
+	for _, relativePath := range allFiles {
+		fullPath := filepath.Join(getProjectRoot(), filepath.FromSlash(relativePath))
+
+		contentBytes, err := os.ReadFile(fullPath)
+		if err != nil || len(contentBytes) > maxIndexedFileSizeBytes {
+			continue
+		}
+
+		content := string(contentBytes)
+		lines := strings.Split(content, "\n")
+		for i := 0; i < len(lines); i += chunkLineLimit {
+			endIndex := i + chunkLineLimit
+			if endIndex > len(lines) {
+				endIndex = len(lines)
+			}
+
+			chunkText := strings.Join(lines[i:endIndex], "\n")
+			startLine := i + 1
+			endLine := endIndex
+			checksum := computeChecksum(chunkText)
+			chunkID := fmt.Sprintf("chunk-%s-%d", relativePath, startLine)
+
+			var existing models.CodeChunk
+			if err := db.DB.First(&existing, "id = ?", chunkID).Error; err == nil && existing.Checksum == checksum {
+				continue
+			}
+
+			embedding, err := fetchEmbedding(chunkText, apiKey)
+			if err != nil {
+				continue
+			}
+
+			chunk := models.CodeChunk{
+				ID:          chunkID,
+				WorkspaceID: "default",
+				Filepath:    relativePath,
+				StartLine:   startLine,
+				EndLine:     endLine,
+				Content:     chunkText,
+				Embedding:   embedding,
+				Checksum:    checksum,
+			}
+
+			if err := db.DB.Where("id = ?", chunkID).Assign(chunk).FirstOrCreate(&chunk).Error; err == nil {
+				newChunks++
+			}
+			time.Sleep(100 * time.Millisecond)
+		}
+	}
+
+	addKeeperLog("Completed Go codebase indexing run.", "info", "global", map[string]interface{}{
+		"event":    "index_codebase_completed",
+		"newChunks": newChunks,
+	})
+	return fmt.Sprintf("indexed:%d", newChunks), nil
 }
 
 func (w *Worker) handleSyncSessionMemory(payload string) (string, error) {

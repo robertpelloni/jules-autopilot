@@ -2,6 +2,18 @@
 
 All notable changes to this project will be documented in this file.
 
+## [1.0.11] - 2026-04-05
+
+### Added
+- **Go Codebase Indexing Parity**: Ported `handleIndexCodebase` into `backend-go/services/queue.go`, including repository traversal, chunking, SHA-256 checksum detection, OpenAI embedding generation, SQLite `CodeChunk` upserts, and Keeper log entries for indexing lifecycle visibility.
+
+### Changed
+- **Go Project-Root Resolution**: Added root-aware indexing path resolution so the Go backend can discover repository files whether it is launched from `backend-go/` or the repo root.
+- **Go Queue Capability Coverage**: The Go backend now owns both the `check_session` control loop and the `index_codebase` background indexing workflow, leaving issue-evaluation/session-spawn parity as the primary remaining queue gap.
+
+### Notes
+- **Validation Status**: `cd backend-go && go test ./...`, `pnpm run lint`, `pnpm run typecheck`, `pnpm run test`, and `node scripts/check-version-sync.js` all pass at `1.0.11`.
+
 ## [1.0.10] - 2026-04-05
 
 ### Added

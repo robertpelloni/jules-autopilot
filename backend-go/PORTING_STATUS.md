@@ -22,6 +22,13 @@ Move reasonable backend responsibilities from the TypeScript/Bun daemon into the
   - completed-session memory sync enqueueing
   - conservative low-risk plan auto-approval
   - high-risk escalation event emission
+- Go `handleIndexCodebase` with:
+  - project-root aware file discovery
+  - repository traversal across `src`, `lib`, `server`, `components`, and `packages`
+  - `.ts`/`.tsx`/`.js`/`.jsx`/`.md` chunking
+  - checksum-based chunk deduplication
+  - OpenAI embeddings ingestion
+  - SQLite `CodeChunk` upserts
 - `POST /api/sessions/:id/nudge` now sends a real activity instead of returning a stub response
 - `POST /api/sessions/:id:approvePlan` is now supported through the generic Go session action handler
 
@@ -36,17 +43,16 @@ Move reasonable backend responsibilities from the TypeScript/Bun daemon into the
 - WebSocket broadcasting
 
 ## Still Pending / Partial
-- Remaining queue intelligence ports:
-  - `handleIndexCodebase`
+- Remaining queue intelligence port:
   - `handleCheckIssues`
 - Full council supervisor / debate approval orchestration in Go (current Go path uses a conservative heuristic risk scorer and escalation events instead of full provider-backed debate execution)
-- RAG indexing and semantic query parity
+- RAG query parity on top of the now-ported Go indexing path
 - Full session activity/action parity with the TypeScript daemon
 - Broader WebSocket event parity beyond the currently implemented log, queue, and webhook broadcasts
 
 ## Recommended Next Go Porting Steps
-1. Port `handleIndexCodebase` from TypeScript to Go.
-2. Port issue evaluation and autonomous session spawning (`handleCheckIssues`).
-3. Replace the heuristic Go plan-risk path with provider-backed council debate parity.
+1. Port issue evaluation and autonomous session spawning (`handleCheckIssues`).
+2. Replace the heuristic Go plan-risk path with provider-backed council debate parity.
+3. Add Go-side semantic query parity on top of the indexed `CodeChunk` store.
 4. Broaden Go-side daemon event payload parity for recovery, indexing, and issue-spawn lifecycle events.
 5. Decide whether the Go backend becomes the primary runtime or remains a parity track during migration.
