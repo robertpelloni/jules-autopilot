@@ -1,17 +1,13 @@
-# Project Handoff: Jules Autopilot (v1.0.22 — Go Backend Parity Pass #14)
+# Project Handoff: Jules Autopilot (v1.0.23 — Go Backend Parity Pass #15)
 
 ## 1. Session Summary
-This session continued the recovery-refinement track after import/export parity and focused on making Go-side failed-session recovery more robust under polling and propagation races.
+This session continued the product-surface migration after recovery hardening and targeted another actively used frontend workflow: debate execution and debate history/detail management.
 
-The result is that failed-session recovery in the Go backend now uses two duplicate-suppression signals:
-1. recent recovery guidance already present in session activities
-2. recent recovery completion logs already persisted in Keeper logs
-
-This reduces the chance of resending recovery guidance when session activity propagation and queue polling timing are slightly out of sync.
+The result is that the Go backend now exposes Go-native debate execution, history listing, detail retrieval, and deletion routes, backed by a dedicated Go debate service and the existing `Debate` persistence model.
 
 ## 2. Completed Work
 ### 2.1 Versioning & Documentation
-- Bumped the project version from `1.0.21` to `1.0.22`.
+- Bumped the project version from `1.0.22` to `1.0.23`.
 - Re-synced version surfaces via the canonical `VERSION` workflow:
   - `VERSION`
   - `VERSION.md`
@@ -28,18 +24,43 @@ This reduces the chance of resending recovery guidance when session activity pro
   - `docs/VISION.md`
 - Added a new archived handoff in `logs/handoffs/`.
 
-### 2.2 Hardened Recovery Duplicate Suppression
-Updated `backend-go/services/queue.go` so the Go recovery path now checks:
-- recent session activities for an existing `Recovery Guidance:` message
-- recent Keeper logs for a matching recovery-completion action
+### 2.2 Added Go Debate Service
+Added `backend-go/services/debate.go`.
 
-If either signal is present, the Go backend:
-- skips sending another recovery instruction
-- updates the processed timestamp
-- writes a `skip` Keeper log with `session_recovery_skipped` metadata
+This new Go service provides:
+- debate request parsing/types
+- multi-round participant turn execution
+- summary generation
+- risk scoring
+- approval status derivation
+- persistence into the `Debate` model
+- stored-debate parsing back into frontend-compatible shapes
 
-### 2.3 Improved Operator Visibility for Recovery Skips
-The new skip behavior is explicitly logged instead of silently returning. That gives operators a clearer signal that recovery was intentionally suppressed as a dedupe decision rather than simply not running.
+### 2.3 Added Go Debate Routes
+Updated `backend-go/api/routes.go` to add:
+- `POST /api/debate`
+- `GET /api/debate/history`
+- `GET /api/debate/:id`
+- `DELETE /api/debate/:id`
+
+These routes now support the existing frontend debate-management flow used by:
+- `DebateDialog`
+- `DebateHistoryList`
+- `DebateDetailsDialog`
+
+### 2.4 Debate UI Compatibility
+The Go debate result shape was designed to match what the current UI expects:
+- `topic`
+- `rounds`
+- `summary`
+- `history`
+- `metadata`
+- `riskScore`
+- `approvalStatus`
+- `durationMs`
+- persisted `id` for history/detail/delete workflows
+
+This means the Go port is not just endpoint-count parity — it is practical UI-shape parity.
 
 ## 3. Validation Results
 ### Passing
@@ -50,19 +71,25 @@ The new skip behavior is explicitly logged instead of silently returning. That g
 - `node scripts/check-version-sync.js`
 
 ## 4. Key Findings
-### 4.1 Recovery refinement is now about race resistance, not missing functionality
-The Go backend already had a functioning failed-session recovery path. This pass makes it more resilient under realistic timing conditions where:
-- session activity visibility may lag slightly
-- queue polling may repeat before the remote session fully reflects the latest injected guidance
+### 4.1 Debate management was a real remaining product-surface gap
+The frontend already had a full debate-management UX, but the Go backend did not yet cover the routes that power it. Porting that surface removes another meaningful Bun-only dependency from the active application.
 
-### 4.2 Durable logs are useful as a second dedupe signal
-Using Keeper logs as a second duplicate-suppression signal is a good complement to activity-stream inspection because it gives the Go backend another source of truth when remote activity propagation timing is uncertain.
+### 4.2 The Go backend now covers an even broader application layer
+At this point, Go covers not only the daemon/autonomy/memory/control loop, but also a significant portion of user-facing utility/product workflows:
+- filesystem context
+- template management
+- direct review
+- import/export portability
+- debate execution/history/detail/delete
 
-### 4.3 Remaining differences are now mostly polish-oriented
-At this point, the remaining gaps are increasingly centered around:
+That materially strengthens the case for Go as a serious primary-runtime candidate.
+
+### 4.3 Remaining work is increasingly about polish and selective residual gaps
+The remaining areas now look more like:
 - provider/runtime abstraction polish
-- retrieval/result presentation richness
-- any last non-core utility surfaces that might still deserve migration
+- richer retrieval/result presentation
+- any residual utility/product surfaces still not covered
+- further recovery edge-case refinement only if needed in practice
 
 ## 5. Remaining Work
 ### Highest-value next Go ports
@@ -80,8 +107,8 @@ At this point, the remaining gaps are increasingly centered around:
 
 ## 7. Recommended Next Step
 Recommended next move:
-- continue with **Go Backend Parity Pass #15** by tightening provider abstractions and reviewing whether any remaining product-surface or UX-oriented gaps still justify Go migration work.
+- continue with **Go Backend Parity Pass #16** by tightening provider abstractions and reviewing whether any small but still-meaningful utility or presentation gaps remain, because the broad feature migration is now very far along.
 
 ## 8. Commit Guidance
 Recommended commit message for this session:
-- `feat: harden go recovery dedupe with keeper-log suppression (v1.0.22)`
+- `feat: port go debate management parity (v1.0.23)`

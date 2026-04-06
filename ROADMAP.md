@@ -38,6 +38,7 @@ For granular tasks and immediate bug fixes, see `TODO.md`.
 * [x] **Go Backend Parity Pass #12**: Ported Go-native review endpoints so direct code-review workflows can run through the Go backend instead of depending on Bun-only review routing.
 * [x] **Go Backend Parity Pass #13**: Added Go-native import/export support and refined failed-session recovery dedupe so the settings portability flow and recovery edge cases rely less on Bun-only behavior.
 * [x] **Go Backend Parity Pass #14**: Hardened Go failed-session recovery against duplicate guidance by combining session-activity and Keeper-log dedupe checks, plus explicit skip telemetry.
+* [x] **Go Backend Parity Pass #15**: Ported Go-native debate execution/history/detail/delete support so the debate-management UI no longer depends on Bun-only API handling.
 
 ## Milestone: v1.5 — "Shadow Pilot"
 * [ ] **Background Anomaly Detection:** Agents silently monitoring `git diffs` background tasks, fixing failing CI pipelines before human review.

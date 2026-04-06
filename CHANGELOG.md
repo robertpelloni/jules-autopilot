@@ -2,6 +2,18 @@
 
 All notable changes to this project will be documented in this file.
 
+## [1.0.23] - 2026-04-05
+
+### Added
+- **Go Debate Management Parity**: Added a Go-native debate service plus `POST /api/debate`, `GET /api/debate/history`, `GET /api/debate/:id`, and `DELETE /api/debate/:id` so debate execution and history/detail workflows can run through the Go backend.
+
+### Changed
+- **Go Product-Surface Coverage**: The Go backend now covers another actively used frontend workflow beyond the core autonomy loop by serving debate execution, list/detail viewing, and deletion through the same runtime.
+- **Go Debate Persistence**: Debate API execution now persists results through the existing Go `Debate` model and returns shapes compatible with the current debate UI.
+
+### Notes
+- **Validation Status**: `cd backend-go && go test ./...`, `pnpm run lint`, `pnpm run typecheck`, `pnpm run test`, and `node scripts/check-version-sync.js` all pass at `1.0.23`.
+
 ## [1.0.22] - 2026-04-05
 
 ### Changed

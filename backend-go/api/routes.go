@@ -225,6 +225,60 @@ func getSession(c *fiber.Ctx) error {
 	return c.JSON(session)
 }
 
+func postDebate(c *fiber.Ctx) error {
+	var body services.DebateRequest
+	if err := c.BodyParser(&body); err != nil {
+		return c.Status(400).JSON(fiber.Map{"error": "Invalid request body"})
+	}
+	result, err := services.RunDebate(body)
+	if err != nil {
+		return c.Status(500).JSON(fiber.Map{"error": err.Error()})
+	}
+	return c.JSON(result)
+}
+
+func getDebateHistory(c *fiber.Ctx) error {
+	var debates []models.Debate
+	if err := db.DB.Order("created_at desc").Find(&debates).Error; err != nil {
+		return c.Status(500).JSON(fiber.Map{"error": err.Error()})
+	}
+	items := make([]fiber.Map, 0, len(debates))
+	for _, debate := range debates {
+		summary := any(nil)
+		if debate.Summary != nil {
+			summary = *debate.Summary
+		}
+		items = append(items, fiber.Map{
+			"id":        debate.ID,
+			"topic":     debate.Topic,
+			"summary":   summary,
+			"createdAt": debate.CreatedAt,
+		})
+	}
+	return c.JSON(items)
+}
+
+func getDebateByID(c *fiber.Ctx) error {
+	id := c.Params("id")
+	var debate models.Debate
+	if err := db.DB.First(&debate, "id = ?", id).Error; err != nil {
+		return c.Status(404).JSON(fiber.Map{"error": "Debate not found"})
+	}
+	result, err := services.ParseStoredDebate(debate)
+	if err != nil {
+		return c.Status(500).JSON(fiber.Map{"error": err.Error()})
+	}
+	return c.JSON(result)
+}
+
+func deleteDebate(c *fiber.Ctx) error {
+	id := c.Params("id")
+	if err := db.DB.Delete(&models.Debate{}, "id = ?", id).Error; err != nil {
+		return c.Status(500).JSON(fiber.Map{"error": err.Error()})
+	}
+	return c.JSON(fiber.Map{"success": true})
+}
+
 func getSessionActivities(c *fiber.Ctx) error {
 	id := c.Params("id")
 	client := services.NewJulesClient()
@@ -467,6 +521,10 @@ func SetupRoutes(app *fiber.App) {
 	api.Get("/sessions/:id/replay", getSessionReplay)
 	api.Get("/sessions/:id", getSession)
 	api.Get("/sessions/:id/activities", getSessionActivities)
+	api.Post("/debate", postDebate)
+	api.Get("/debate/history", getDebateHistory)
+	api.Get("/debate/:id", getDebateByID)
+	api.Delete("/debate/:id", deleteDebate)
 	api.Post("/review", postReview)
 	api.Post("/local/review", postReview)
 	api.Post("/rag/query", postRAGQuery)

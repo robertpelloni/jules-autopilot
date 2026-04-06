@@ -84,6 +84,12 @@ Move reasonable backend responsibilities from the TypeScript/Bun daemon into the
 - Go portability routes via:
   - `GET /api/export`
   - `POST /api/import`
+- Go debate routes via:
+  - `POST /api/debate`
+  - `GET /api/debate/history`
+  - `GET /api/debate/:id`
+  - `DELETE /api/debate/:id`
+- Go debate execution/persistence service in `backend-go/services/debate.go`
 - Go Jules client support for GitHub issues + session creation
 - `POST /api/sessions/:id/nudge` now sends a real activity instead of returning a stub response
 - `POST /api/sessions/:id:approvePlan` is now supported through the generic Go session action handler
