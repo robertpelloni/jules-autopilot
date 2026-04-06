@@ -29,8 +29,16 @@ Move reasonable backend responsibilities from the TypeScript/Bun daemon into the
   - checksum-based chunk deduplication
   - OpenAI embeddings ingestion
   - SQLite `CodeChunk` upserts
+- Go `handleCheckIssues` with:
+  - GitHub issue fetching
+  - duplicate-title filtering against active sessions
+  - hybrid issue evaluation (OpenAI JSON triage when available, conservative heuristic fallback otherwise)
+  - autonomous Jules session creation for high-confidence issues
+  - Keeper log coverage for evaluation and spawn lifecycle events
+- Go Jules client support for GitHub issues + session creation
 - `POST /api/sessions/:id/nudge` now sends a real activity instead of returning a stub response
 - `POST /api/sessions/:id:approvePlan` is now supported through the generic Go session action handler
+- `POST /api/fleet/sync` now also enqueues issue-check jobs and a codebase indexing job
 
 ## Existing Go Coverage
 - Keeper settings routes
@@ -43,16 +51,14 @@ Move reasonable backend responsibilities from the TypeScript/Bun daemon into the
 - WebSocket broadcasting
 
 ## Still Pending / Partial
-- Remaining queue intelligence port:
-  - `handleCheckIssues`
 - Full council supervisor / debate approval orchestration in Go (current Go path uses a conservative heuristic risk scorer and escalation events instead of full provider-backed debate execution)
 - RAG query parity on top of the now-ported Go indexing path
 - Full session activity/action parity with the TypeScript daemon
-- Broader WebSocket event parity beyond the currently implemented log, queue, and webhook broadcasts
+- Broader WebSocket event parity beyond the currently implemented log, queue, issue, and webhook broadcasts
 
 ## Recommended Next Go Porting Steps
-1. Port issue evaluation and autonomous session spawning (`handleCheckIssues`).
-2. Replace the heuristic Go plan-risk path with provider-backed council debate parity.
-3. Add Go-side semantic query parity on top of the indexed `CodeChunk` store.
-4. Broaden Go-side daemon event payload parity for recovery, indexing, and issue-spawn lifecycle events.
+1. Replace the heuristic Go plan-risk path with provider-backed council debate parity.
+2. Add Go-side semantic query parity on top of the indexed `CodeChunk` store.
+3. Broaden Go-side daemon event payload parity for recovery, indexing, and issue-spawn lifecycle events.
+4. Fill any remaining session activity/action route gaps in the Go API.
 5. Decide whether the Go backend becomes the primary runtime or remains a parity track during migration.

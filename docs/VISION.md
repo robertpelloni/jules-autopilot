@@ -99,7 +99,7 @@ The official interfaces for AI coding agents are often slow and unresponsive. Th
 
 ## Implementation History
 
-### ✅ Milestone: v1.0.11 — Go Backend Parity Pass #3 (Current)
+### ✅ Milestone: v1.0.12 — Go Backend Parity Pass #4 (Current)
 - [x] Consolidated API into a single Bun daemon.
 - [x] Removed "Enterprise" feature bloat (Analytics, Swarms, Side Logs).
 - [x] Implemented the frontend proxy layer for seamless local integration.
@@ -108,6 +108,7 @@ The official interfaces for AI coding agents are often slow and unresponsive. Th
 - [x] Ported practical Go backend control-loop behavior for live session checks, nudges, completed-session memory sync enqueueing, and conservative low-risk plan auto-approval.
 - [x] Added a Go-side Keeper log / realtime event bridge so autonomous behavior can surface into the operator UI without depending exclusively on the Bun daemon.
 - [x] Ported Go-side repository indexing so code chunk traversal, embedding ingestion, and `CodeChunk` persistence can run without Bun.
+- [x] Ported Go-side GitHub issue scanning and autonomous session spawning so issue-driven work discovery can run without Bun.
 
 ### 📋 Future Path
 - [ ] Refined TUI experience for "Mecha Suit" cockpit mode.

@@ -294,8 +294,13 @@ func triggerFleetSync(c *fiber.Ctx) error {
 		return c.Status(500).JSON(fiber.Map{"error": "Failed to fetch sessions: " + err.Error()})
 	}
 
-	count := 0
+	syncCount := 0
+	sourceIDs := map[string]struct{}{}
 	for _, s := range sessions {
+		if strings.TrimSpace(s.SourceID) != "" {
+			sourceIDs[s.SourceID] = struct{}{}
+		}
+
 		// Only sync active or recently completed sessions
 		if s.Status == "active" || s.Status == "completed" || s.Status == "awaiting_approval" {
 			payload := map[string]string{
@@ -303,15 +308,35 @@ func triggerFleetSync(c *fiber.Ctx) error {
 			}
 			_, err := services.AddJob("sync_session_memory", payload)
 			if err == nil {
-				count++
+				syncCount++
 			}
 		}
 	}
 
+	var repoPaths []models.RepoPath
+	if err := db.DB.Find(&repoPaths).Error; err == nil {
+		for _, path := range repoPaths {
+			if strings.TrimSpace(path.SourceID) != "" {
+				sourceIDs[path.SourceID] = struct{}{}
+			}
+		}
+	}
+
+	issueCount := 0
+	for sourceID := range sourceIDs {
+		_, err := services.AddJob("check_issues", map[string]string{"sourceId": sourceID})
+		if err == nil {
+			issueCount++
+		}
+	}
+
+	_, _ = services.AddJob("index_codebase", map[string]string{})
+
 	return c.JSON(fiber.Map{
-		"success": true,
-		"message": fmt.Sprintf("Enqueued sync jobs for %d sessions", count),
-		"count":   count,
+		"success":           true,
+		"message":           fmt.Sprintf("Enqueued %d memory sync jobs, %d issue-check jobs, and a codebase indexing job", syncCount, issueCount),
+		"syncJobCount":      syncCount,
+		"issueCheckJobCount": issueCount,
 	})
 }
 

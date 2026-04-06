@@ -2,6 +2,19 @@
 
 All notable changes to this project will be documented in this file.
 
+## [1.0.12] - 2026-04-05
+
+### Added
+- **Go Issue-Autonomy Parity**: Ported `handleCheckIssues` into `backend-go/services/queue.go`, including GitHub issue fetching, duplicate-title filtering against active sessions, conservative fixability evaluation, autonomous Jules session spawning, and Keeper log coverage for evaluation/spawn lifecycle events.
+- **Go Jules Client Issue/Session Support**: Added GitHub issue listing and Jules session creation helpers in `backend-go/services/jules_client.go` so Go queue jobs can open autonomous work without relying on the TypeScript client layer.
+
+### Changed
+- **Fleet Sync Expansion**: `POST /api/fleet/sync` in the Go backend now enqueues memory-sync jobs, issue-check jobs for discovered source IDs, and a codebase indexing job in one pass.
+- **Issue Evaluation Strategy**: The Go backend now uses a hybrid evaluation path for GitHub issues: OpenAI-backed JSON triage when configured for `openai`, with conservative heuristic fallback when provider/API parity is unavailable.
+
+### Notes
+- **Validation Status**: `cd backend-go && go test ./...`, `pnpm run lint`, `pnpm run typecheck`, `pnpm run test`, and `node scripts/check-version-sync.js` all pass at `1.0.12`.
+
 ## [1.0.11] - 2026-04-05
 
 ### Added

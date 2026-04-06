@@ -57,6 +57,14 @@ type ApiSessionOutput struct {
 	} `json:"pullRequest"`
 }
 
+type GitHubIssue struct {
+	Number      int         `json:"number"`
+	Title       string      `json:"title"`
+	Body        string      `json:"body"`
+	HTMLURL     string      `json:"html_url"`
+	PullRequest interface{} `json:"pull_request,omitempty"`
+}
+
 // ListSessions fetches all sessions from the Jules API
 func (c *JulesClient) ListSessions() ([]models.JulesSession, error) {
 	if c.apiKey == "" {
@@ -265,6 +273,24 @@ func (c *JulesClient) ListActivities(sessionId string) ([]models.JulesActivity, 
 	return allActivities, nil
 }
 
+func normalizeGitHubRepo(sourceID string) (string, error) {
+	trimmed := strings.TrimSpace(sourceID)
+	trimmed = strings.TrimPrefix(trimmed, "sources/github/")
+	trimmed = strings.TrimPrefix(trimmed, "github/")
+	if strings.Count(trimmed, "/") < 1 {
+		return "", fmt.Errorf("invalid GitHub source id: %s", sourceID)
+	}
+	return trimmed, nil
+}
+
+func normalizeSourceForCreate(sourceID string) string {
+	trimmed := strings.TrimSpace(sourceID)
+	if strings.HasPrefix(trimmed, "sources/") {
+		return trimmed
+	}
+	return "sources/github/" + strings.TrimPrefix(trimmed, "/")
+}
+
 // CreateActivityRequest defines the payload for creating a session activity
 type CreateActivityRequest struct {
 	SessionID string `json:"sessionId,omitempty"`
@@ -314,6 +340,104 @@ func (c *JulesClient) CreateActivity(sessionId string, params CreateActivityRequ
 	var result interface{}
 	json.Unmarshal(body, &result)
 	return result, nil
+}
+
+func (c *JulesClient) ListIssues(sourceID string) ([]GitHubIssue, error) {
+	githubToken := os.Getenv("GITHUB_PAT")
+	if githubToken == "" {
+		githubToken = os.Getenv("GITHUB_TOKEN")
+	}
+	if githubToken == "" {
+		_ = godotenv.Load("../.env")
+		if githubToken = os.Getenv("GITHUB_PAT"); githubToken == "" {
+			githubToken = os.Getenv("GITHUB_TOKEN")
+		}
+	}
+	if githubToken == "" {
+		return []GitHubIssue{}, nil
+	}
+
+	repo, err := normalizeGitHubRepo(sourceID)
+	if err != nil {
+		return nil, err
+	}
+
+	url := fmt.Sprintf("https://api.github.com/repos/%s/issues?state=open&sort=updated", repo)
+	req, err := http.NewRequest(http.MethodGet, url, nil)
+	if err != nil {
+		return nil, err
+	}
+	req.Header.Set("Authorization", "token "+githubToken)
+	req.Header.Set("Accept", "application/vnd.github.v3+json")
+	req.Header.Set("User-Agent", "Jules-Autopilot-Go")
+
+	resp, err := http.DefaultClient.Do(req)
+	if err != nil {
+		return nil, err
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode >= 400 {
+		body, _ := io.ReadAll(resp.Body)
+		return nil, fmt.Errorf("GitHub issues request failed (%d): %s", resp.StatusCode, string(body))
+	}
+
+	var issues []GitHubIssue
+	if err := json.NewDecoder(resp.Body).Decode(&issues); err != nil {
+		return nil, err
+	}
+
+	filtered := make([]GitHubIssue, 0, len(issues))
+	for _, issue := range issues {
+		if issue.PullRequest != nil {
+			continue
+		}
+		filtered = append(filtered, issue)
+	}
+	return filtered, nil
+}
+
+func (c *JulesClient) CreateSession(sourceID, prompt, title string) (models.JulesSession, error) {
+	if c.apiKey == "" {
+		return models.JulesSession{}, fmt.Errorf("JULES_API_KEY not found in environment")
+	}
+
+	requestBody := map[string]interface{}{
+		"prompt": prompt,
+		"sourceContext": map[string]interface{}{
+			"source": normalizeSourceForCreate(sourceID),
+			"githubRepoContext": map[string]string{
+				"startingBranch": "main",
+			},
+		},
+		"title":               title,
+		"requirePlanApproval": true,
+	}
+
+	jsonPayload, _ := json.Marshal(requestBody)
+	req, err := http.NewRequest(http.MethodPost, fmt.Sprintf("%s/sessions", JulesApiBaseUrl), strings.NewReader(string(jsonPayload)))
+	if err != nil {
+		return models.JulesSession{}, err
+	}
+	req.Header.Set("X-Goog-Api-Key", c.apiKey)
+	req.Header.Set("Content-Type", "application/json")
+
+	resp, err := http.DefaultClient.Do(req)
+	if err != nil {
+		return models.JulesSession{}, err
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode >= 400 {
+		body, _ := io.ReadAll(resp.Body)
+		return models.JulesSession{}, fmt.Errorf("Jules API createSession error (%d): %s", resp.StatusCode, string(body))
+	}
+
+	var session ApiSession
+	if err := json.NewDecoder(resp.Body).Decode(&session); err != nil {
+		return models.JulesSession{}, err
+	}
+	return transformSession(session), nil
 }
 
 func (c *JulesClient) ApprovePlan(sessionId string) error {

@@ -6,6 +6,7 @@ import (
 	"encoding/binary"
 	"encoding/json"
 	"fmt"
+	"io"
 	"log"
 	"net/http"
 	"os"
@@ -709,8 +710,246 @@ func resolveRepoPath(sourceId string) string {
 	return "C:/Users/hyper/workspace/" + repoName
 }
 
+type issueEvaluation struct {
+	IsFixable      bool   `json:"isFixable"`
+	Confidence     int    `json:"confidence"`
+	SuggestedTitle string `json:"suggestedTitle"`
+	Reasoning      string `json:"reasoning"`
+}
+
+func extractJSONBlock(input string) string {
+	start := strings.Index(input, "{")
+	end := strings.LastIndex(input, "}")
+	if start == -1 || end == -1 || end <= start {
+		return ""
+	}
+	return input[start : end+1]
+}
+
+func heuristicIssueEvaluation(issue GitHubIssue) issueEvaluation {
+	content := strings.ToLower(issue.Title + "\n" + issue.Body)
+	score := 45
+
+	positiveSignals := []string{"bug", "fix", "error", "broken", "failing", "feature", "add", "implement", "support", "regression"}
+	for _, signal := range positiveSignals {
+		if strings.Contains(content, signal) {
+			score += 8
+		}
+	}
+
+	negativeSignals := []string{"question", "discussion", "investigate", "maybe", "unclear", "wip", "research", "spike"}
+	for _, signal := range negativeSignals {
+		if strings.Contains(content, signal) {
+			score -= 12
+		}
+	}
+
+	if len(strings.TrimSpace(issue.Body)) > 80 {
+		score += 10
+	}
+	if len(strings.TrimSpace(issue.Title)) > 12 {
+		score += 5
+	}
+	if strings.Contains(content, "steps to reproduce") || strings.Contains(content, "expected") || strings.Contains(content, "actual") {
+		score += 10
+	}
+
+	if score < 0 {
+		score = 0
+	}
+	if score > 100 {
+		score = 100
+	}
+
+	return issueEvaluation{
+		IsFixable:      score >= 70,
+		Confidence:     score,
+		SuggestedTitle: fmt.Sprintf("Issue #%d: %s", issue.Number, issue.Title),
+		Reasoning:      "Heuristic issue triage based on clarity, specificity, and likely code-only scope.",
+	}
+}
+
+func evaluateIssueWithOpenAI(issue GitHubIssue, sourceID string, settings models.KeeperSettings, apiKey string) (issueEvaluation, error) {
+	model := settings.SupervisorModel
+	if strings.TrimSpace(model) == "" {
+		model = "gpt-4o-mini"
+	}
+
+	prompt := fmt.Sprintf(`Evaluate if the following GitHub issue is "Self-Healable" by an AI coding agent.
+Target Repository: %s
+Issue Title: %s
+Issue Body: %s
+
+Criteria for "Self-Healable":
+1. Clear bug description or feature request.
+2. Non-ambiguous requirements.
+3. Does not require complex multi-step human interaction.
+
+Respond with JSON only:
+{
+  "isFixable": true,
+  "confidence": 0,
+  "suggestedTitle": "Short descriptive title for the session",
+  "reasoning": "Short explanation"
+}`,
+		sourceID,
+		issue.Title,
+		issue.Body,
+	)
+
+	requestBody, _ := json.Marshal(map[string]interface{}{
+		"model": model,
+		"messages": []map[string]string{
+			{"role": "system", "content": "You are a technical lead evaluating project issues for autonomous coding agents. Respond with JSON only."},
+			{"role": "user", "content": prompt},
+		},
+		"temperature": 0.1,
+	})
+
+	req, err := http.NewRequest(http.MethodPost, "https://api.openai.com/v1/chat/completions", bytes.NewReader(requestBody))
+	if err != nil {
+		return issueEvaluation{}, err
+	}
+	req.Header.Set("Authorization", "Bearer "+apiKey)
+	req.Header.Set("Content-Type", "application/json")
+
+	resp, err := http.DefaultClient.Do(req)
+	if err != nil {
+		return issueEvaluation{}, err
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode >= 400 {
+		body, _ := io.ReadAll(resp.Body)
+		return issueEvaluation{}, fmt.Errorf("issue evaluation request failed (%d): %s", resp.StatusCode, string(body))
+	}
+
+	var response struct {
+		Choices []struct {
+			Message struct {
+				Content string `json:"content"`
+			} `json:"message"`
+		} `json:"choices"`
+	}
+	if err := json.NewDecoder(resp.Body).Decode(&response); err != nil {
+		return issueEvaluation{}, err
+	}
+	if len(response.Choices) == 0 {
+		return issueEvaluation{}, fmt.Errorf("issue evaluation response contained no choices")
+	}
+
+	content := response.Choices[0].Message.Content
+	jsonBlock := extractJSONBlock(content)
+	if jsonBlock == "" {
+		return issueEvaluation{}, fmt.Errorf("issue evaluation response did not contain JSON")
+	}
+
+	var evaluation issueEvaluation
+	if err := json.Unmarshal([]byte(jsonBlock), &evaluation); err != nil {
+		return issueEvaluation{}, err
+	}
+	if evaluation.SuggestedTitle == "" {
+		evaluation.SuggestedTitle = fmt.Sprintf("Issue #%d: %s", issue.Number, issue.Title)
+	}
+	return evaluation, nil
+}
+
+func evaluateIssue(issue GitHubIssue, sourceID string, settings models.KeeperSettings) issueEvaluation {
+	apiKey := strings.TrimSpace(os.Getenv("OPENAI_API_KEY"))
+	if apiKey == "" && settings.SupervisorApiKey != nil {
+		apiKey = strings.TrimSpace(*settings.SupervisorApiKey)
+	}
+
+	if apiKey != "" && apiKey != "placeholder" && (settings.SupervisorProvider == "" || strings.EqualFold(settings.SupervisorProvider, "openai")) {
+		if evaluation, err := evaluateIssueWithOpenAI(issue, sourceID, settings, apiKey); err == nil {
+			return evaluation
+		}
+	}
+
+	return heuristicIssueEvaluation(issue)
+}
+
 func (w *Worker) handleCheckIssues(payload string) (string, error) {
-	// TODO: Port handleCheckIssues logic from TypeScript
-	// This would involve GitHub issue scanning and evaluation
-	return "done", nil
+	var data struct {
+		SourceID string `json:"sourceId"`
+	}
+	if err := json.Unmarshal([]byte(payload), &data); err != nil {
+		return "fail", fmt.Errorf("failed to parse check_issues payload: %w", err)
+	}
+	if strings.TrimSpace(data.SourceID) == "" {
+		return "none", fmt.Errorf("missing sourceId in check_issues payload")
+	}
+
+	settings, err := getSettings()
+	if err != nil {
+		return "none", err
+	}
+
+	client := NewJulesClient()
+	addKeeperLog(fmt.Sprintf("Checking GitHub issues for %s...", data.SourceID), "info", "global", map[string]interface{}{
+		"event":    "issues_check_started",
+		"sourceId": data.SourceID,
+	})
+
+	issues, err := client.ListIssues(data.SourceID)
+	if err != nil {
+		return "fail", err
+	}
+	if len(issues) == 0 {
+		return "none", nil
+	}
+
+	sessions, err := client.ListSessions()
+	if err != nil {
+		return "fail", err
+	}
+	activeTitles := make([]string, 0, len(sessions))
+	for _, session := range sessions {
+		activeTitles = append(activeTitles, strings.ToLower(session.Title))
+	}
+
+	for _, issue := range issues {
+		issueTitleLower := strings.ToLower(issue.Title)
+		duplicate := false
+		for _, title := range activeTitles {
+			if strings.Contains(title, issueTitleLower) || strings.Contains(issueTitleLower, title) {
+				duplicate = true
+				break
+			}
+		}
+		if duplicate {
+			continue
+		}
+
+		evaluation := evaluateIssue(issue, data.SourceID, settings)
+		addKeeperLog(fmt.Sprintf("Evaluated issue #%d for %s (confidence=%d)", issue.Number, data.SourceID, evaluation.Confidence), "info", "global", map[string]interface{}{
+			"event":       "issue_evaluated",
+			"sourceId":    data.SourceID,
+			"issueNumber": issue.Number,
+			"confidence":  evaluation.Confidence,
+			"isFixable":   evaluation.IsFixable,
+		})
+
+		if !evaluation.IsFixable || evaluation.Confidence <= 70 {
+			continue
+		}
+
+		prompt := fmt.Sprintf("Fix issue #%d: %s\n\nContext:\n%s", issue.Number, issue.Title, issue.Body)
+		newSession, err := client.CreateSession(data.SourceID, prompt, evaluation.SuggestedTitle)
+		if err != nil {
+			return "fail", err
+		}
+
+		addKeeperLog(fmt.Sprintf("Autonomous session spawn for issue: %s", issue.Title), "action", "global", map[string]interface{}{
+			"event":       "issue_session_spawned",
+			"sourceId":    data.SourceID,
+			"issueNumber": issue.Number,
+			"sessionId":   newSession.ID,
+			"sessionTitle": newSession.Title,
+		})
+		emitDaemonEvent("sessions_list_updated", map[string]interface{}{})
+		return fmt.Sprintf("session_spawned:%s", newSession.ID), nil
+	}
+
+	return "none", nil
 }
