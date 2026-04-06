@@ -2,6 +2,18 @@
 
 All notable changes to this project will be documented in this file.
 
+## [1.0.19] - 2026-04-05
+
+### Added
+- **Go Template CRUD Parity**: Added Go API support for `GET /api/templates`, `POST /api/templates`, `PUT /api/templates/:id`, and `DELETE /api/templates/:id`, including tag normalization between the DB string field and the shared frontend array shape.
+
+### Changed
+- **Go Non-Core Product Surface Coverage**: The Go backend now covers another actively used frontend surface beyond the core session/memory/control loop by serving template management workflows directly.
+- **Template Data Adaptation**: Added Go-side template response mapping so `SessionTemplate.tags` is returned as a string array compatible with the shared UI contract.
+
+### Notes
+- **Validation Status**: `cd backend-go && go test ./...`, `pnpm run lint`, `pnpm run typecheck`, `pnpm run test`, and `node scripts/check-version-sync.js` all pass at `1.0.19`.
+
 ## [1.0.18] - 2026-04-05
 
 ### Added

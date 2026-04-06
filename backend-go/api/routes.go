@@ -1,6 +1,7 @@
 package api
 
 import (
+	"encoding/json"
 	"fmt"
 	"log"
 	"os"
@@ -12,6 +13,7 @@ import (
 
 	"github.com/gofiber/contrib/websocket"
 	"github.com/gofiber/fiber/v2"
+	"github.com/google/uuid"
 	"github.com/jules-autopilot/backend/db"
 	"github.com/jules-autopilot/backend/models"
 	"github.com/jules-autopilot/backend/services"
@@ -420,6 +422,12 @@ func SetupRoutes(app *fiber.App) {
 	// Fleet sync route
 	api.Post("/fleet/sync", triggerFleetSync)
 
+	// Template routes
+	api.Get("/templates", listTemplates)
+	api.Post("/templates", createTemplate)
+	api.Put("/templates/:id", updateTemplate)
+	api.Delete("/templates/:id", deleteTemplate)
+
 	// Repo mapping routes
 	api.Get("/repos/paths", getRepoPaths)
 	api.Post("/repos/paths", updateRepoPath)
@@ -480,6 +488,172 @@ func triggerFleetSync(c *fiber.Ctx) error {
 		"syncJobCount":      syncCount,
 		"issueCheckJobCount": issueCount,
 	})
+}
+
+type sessionTemplateResponse struct {
+	ID          string    `json:"id"`
+	Name        string    `json:"name"`
+	Description string    `json:"description"`
+	Prompt      string    `json:"prompt"`
+	Title       *string   `json:"title,omitempty"`
+	IsFavorite  bool      `json:"isFavorite,omitempty"`
+	IsPrebuilt  bool      `json:"isPrebuilt,omitempty"`
+	Tags        []string  `json:"tags,omitempty"`
+	CreatedAt   time.Time `json:"createdAt"`
+	UpdatedAt   time.Time `json:"updatedAt"`
+}
+
+func parseTemplateTags(raw string) []string {
+	if strings.TrimSpace(raw) == "" {
+		return []string{}
+	}
+	var tags []string
+	if err := json.Unmarshal([]byte(raw), &tags); err == nil {
+		return tags
+	}
+	for _, part := range strings.Split(raw, ",") {
+		trimmed := strings.TrimSpace(part)
+		if trimmed != "" {
+			tags = append(tags, trimmed)
+		}
+	}
+	return tags
+}
+
+func formatTemplateTags(tags []string) string {
+	if len(tags) == 0 {
+		return "[]"
+	}
+	payload, err := json.Marshal(tags)
+	if err != nil {
+		return "[]"
+	}
+	return string(payload)
+}
+
+func mapTemplateResponse(template models.SessionTemplate) sessionTemplateResponse {
+	return sessionTemplateResponse{
+		ID:          template.ID,
+		Name:        template.Name,
+		Description: template.Description,
+		Prompt:      template.Prompt,
+		Title:       template.Title,
+		IsFavorite:  template.IsFavorite,
+		IsPrebuilt:  template.IsPrebuilt,
+		Tags:        parseTemplateTags(template.Tags),
+		CreatedAt:   template.CreatedAt,
+		UpdatedAt:   template.UpdatedAt,
+	}
+}
+
+func listTemplates(c *fiber.Ctx) error {
+	var templates []models.SessionTemplate
+	if err := db.DB.Order("updated_at desc").Find(&templates).Error; err != nil {
+		return c.Status(500).JSON(fiber.Map{"error": err.Error()})
+	}
+
+	response := make([]sessionTemplateResponse, 0, len(templates))
+	for _, template := range templates {
+		response = append(response, mapTemplateResponse(template))
+	}
+	return c.JSON(response)
+}
+
+func createTemplate(c *fiber.Ctx) error {
+	var body struct {
+		Name        string   `json:"name"`
+		Description string   `json:"description"`
+		Prompt      string   `json:"prompt"`
+		Title       string   `json:"title"`
+		Tags        []string `json:"tags"`
+	}
+	if err := c.BodyParser(&body); err != nil {
+		return c.Status(400).JSON(fiber.Map{"error": "Invalid request body"})
+	}
+	if strings.TrimSpace(body.Name) == "" || strings.TrimSpace(body.Prompt) == "" {
+		return c.Status(400).JSON(fiber.Map{"error": "name and prompt are required"})
+	}
+
+	now := time.Now()
+	workspaceID := "default"
+	var titlePtr *string
+	if strings.TrimSpace(body.Title) != "" {
+		title := strings.TrimSpace(body.Title)
+		titlePtr = &title
+	}
+	template := models.SessionTemplate{
+		ID:          uuid.New().String(),
+		Name:        body.Name,
+		Description: body.Description,
+		Prompt:      body.Prompt,
+		Title:       titlePtr,
+		Tags:        formatTemplateTags(body.Tags),
+		WorkspaceID: &workspaceID,
+		CreatedAt:   now,
+		UpdatedAt:   now,
+	}
+	if err := db.DB.Create(&template).Error; err != nil {
+		return c.Status(500).JSON(fiber.Map{"error": err.Error()})
+	}
+	return c.JSON(mapTemplateResponse(template))
+}
+
+func updateTemplate(c *fiber.Ctx) error {
+	id := c.Params("id")
+	var template models.SessionTemplate
+	if err := db.DB.First(&template, "id = ?", id).Error; err != nil {
+		return c.Status(404).JSON(fiber.Map{"error": "Template not found"})
+	}
+
+	var body struct {
+		Name        *string  `json:"name"`
+		Description *string  `json:"description"`
+		Prompt      *string  `json:"prompt"`
+		Title       *string  `json:"title"`
+		Tags        []string `json:"tags"`
+		IsFavorite  *bool    `json:"isFavorite"`
+	}
+	if err := c.BodyParser(&body); err != nil {
+		return c.Status(400).JSON(fiber.Map{"error": "Invalid request body"})
+	}
+
+	if body.Name != nil {
+		template.Name = *body.Name
+	}
+	if body.Description != nil {
+		template.Description = *body.Description
+	}
+	if body.Prompt != nil {
+		template.Prompt = *body.Prompt
+	}
+	if body.Title != nil {
+		trimmed := strings.TrimSpace(*body.Title)
+		if trimmed == "" {
+			template.Title = nil
+		} else {
+			template.Title = &trimmed
+		}
+	}
+	if body.Tags != nil {
+		template.Tags = formatTemplateTags(body.Tags)
+	}
+	if body.IsFavorite != nil {
+		template.IsFavorite = *body.IsFavorite
+	}
+	template.UpdatedAt = time.Now()
+
+	if err := db.DB.Save(&template).Error; err != nil {
+		return c.Status(500).JSON(fiber.Map{"error": err.Error()})
+	}
+	return c.JSON(mapTemplateResponse(template))
+}
+
+func deleteTemplate(c *fiber.Ctx) error {
+	id := c.Params("id")
+	if err := db.DB.Delete(&models.SessionTemplate{}, "id = ?", id).Error; err != nil {
+		return c.Status(500).JSON(fiber.Map{"error": err.Error()})
+	}
+	return c.JSON(fiber.Map{"success": true})
 }
 
 func getRepoPaths(c *fiber.Ctx) error {

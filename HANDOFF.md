@@ -1,13 +1,13 @@
-# Project Handoff: Jules Autopilot (v1.0.18 — Go Backend Parity Pass #10)
+# Project Handoff: Jules Autopilot (v1.0.19 — Go Backend Parity Pass #11)
 
 ## 1. Session Summary
-This session continued the non-core product-surface migration after the session/API route parity pass and targeted a small but actively used Bun-only surface: the filesystem utility endpoints used by the client to gather repository context.
+This session continued the non-core product-surface migration after filesystem utility parity and targeted another actively used frontend surface that already had a Go-side data model available: session templates.
 
-The result is that the Go backend now exposes Go-native `/api/fs/list` and `/api/fs/read` routes with path-confinement safeguards, further reducing Bun-only dependencies in the practical client workflow.
+The result is that the Go backend now exposes template CRUD routes compatible with the frontend client's existing `/api/templates` usage, including tag normalization between the database's string storage and the shared frontend's string-array contract.
 
 ## 2. Completed Work
 ### 2.1 Versioning & Documentation
-- Bumped the project version from `1.0.17` to `1.0.18`.
+- Bumped the project version from `1.0.18` to `1.0.19`.
 - Re-synced version surfaces via the canonical `VERSION` workflow:
   - `VERSION`
   - `VERSION.md`
@@ -24,27 +24,33 @@ The result is that the Go backend now exposes Go-native `/api/fs/list` and `/api
   - `docs/VISION.md`
 - Added a new archived handoff in `logs/handoffs/`.
 
-### 2.2 Added Go Filesystem Utility Routes
+### 2.2 Added Go Template CRUD Routes
 Updated `backend-go/api/routes.go` to add:
-- `GET /api/fs/list`
-- `GET /api/fs/read`
+- `GET /api/templates`
+- `POST /api/templates`
+- `PUT /api/templates/:id`
+- `DELETE /api/templates/:id`
 
-#### `GET /api/fs/list`
-- accepts a `path` query param (default `.`)
-- resolves the path relative to the project root
-- denies access outside the repo root
-- filters hidden entries and `node_modules`
-- returns file/directory metadata in the same general shape expected by the frontend client
+### 2.3 Added Template Shape Adaptation
+The Go `SessionTemplate` model stores tags as a string, while the shared frontend contract expects `tags?: string[]`.
 
-#### `GET /api/fs/read`
-- accepts a `path` query param
-- resolves the path relative to the project root
-- denies access outside the repo root
-- verifies the target exists and is a file
-- returns file content as text
+To bridge that cleanly, I added Go-side helpers for:
+- parsing stored tag strings into `[]string`
+- formatting incoming tag arrays back into stored JSON strings
+- mapping DB records into a response shape compatible with the frontend/shared `SessionTemplate` interface
 
-### 2.3 Added Project-Root Resolution in the Go API Layer
-To support the filesystem endpoints safely, I added a project-root detection helper in the Go API layer. This keeps the file utility routes anchored to the repo root rather than whichever working directory the Go backend happened to be launched from.
+This means the Go API can now serve the template-management surface without forcing frontend changes or leaking storage-format details.
+
+### 2.4 Create / Update Behavior
+The Go template routes support the fields the frontend already uses:
+- `name`
+- `description`
+- `prompt`
+- `title`
+- `tags`
+- `isFavorite` (update path)
+
+Templates are created with UUID IDs and ordered by `updated_at desc` for list responses.
 
 ## 3. Validation Results
 ### Passing
@@ -55,24 +61,28 @@ To support the filesystem endpoints safely, I added a project-root detection hel
 - `node scripts/check-version-sync.js`
 
 ## 4. Key Findings
-### 4.1 Non-core surfaces still matter when they are in active use
-The filesystem utility endpoints are not as glamorous as debates or RAG, but they are directly used by the client for repository context gathering. That makes them a reasonable and valuable migration target rather than speculative parity work.
+### 4.1 Templates were a high-value next migration target
+This was a good next port because:
+- the frontend already depends on `/api/templates`
+- the data model already existed in Go
+- the behavior is practical and bounded
+- it reduces another real Bun-only dependency without requiring speculative architecture work
 
-### 4.2 The Go migration is now extending beyond the core autonomy loop into utility surfaces
-By this point, the Go backend already covered most of the major session/memory/autonomy behavior. This pass shows the migration is also becoming credible on practical utility surfaces that real client flows rely on.
-
-### 4.3 Remaining gaps are increasingly selective rather than broad
-After this pass, the most obvious remaining Go migration questions are no longer about the core control loop or memory loop. They are more about:
+### 4.2 More of the remaining work is now concentrated in selective utility surfaces and refinement
+At this point, the Go backend covers a broad amount of the core runtime plus several utility surfaces. The remaining gaps are increasingly things like:
 - recovery-state refinement
 - provider/runtime abstraction polish
-- a few remaining non-core product surfaces such as templates, local review, and import/export if those are intended to move into Go as well
+- local review / import-export surfaces if those are meant to migrate too
+
+### 4.3 Data-shape adaptation matters in mixed-runtime migrations
+The template port is a good reminder that parity is not just about endpoints existing. It is also about returning shapes the frontend already understands. The tag normalization layer was necessary to make this a real, low-friction migration rather than a nominal one.
 
 ## 5. Remaining Work
 ### Highest-value next Go ports
 1. Refine Go-side recovery state tracking and edge-case handling
 2. Tighten Go-side provider abstractions for structured review/debate/recommendation workflows
 3. Add richer Go-native retrieval/result presentation hooks where the UI would benefit from explicit memory reasoning metadata
-4. Audit remaining non-core product surfaces (templates, local review, import/export) for whether they should also migrate into Go
+4. Audit remaining non-core product surfaces (local review, import/export) for whether they should also migrate into Go
 5. Decide whether Go should become the default runtime or remain the parity track during migration
 
 ## 6. Process Safety
@@ -83,8 +93,8 @@ After this pass, the most obvious remaining Go migration questions are no longer
 
 ## 7. Recommended Next Step
 Recommended next move:
-- continue with **Go Backend Parity Pass #11** by refining recovery state handling and then auditing the remaining non-core product surfaces, because the biggest remaining differences are now narrower, edge-case-driven, and product-surface specific.
+- continue with **Go Backend Parity Pass #12** by refining recovery-state handling and then auditing the remaining non-core product surfaces, because the biggest remaining differences are now mostly edge-case and utility-surface specific rather than core-session-loop deficiencies.
 
 ## 8. Commit Guidance
 Recommended commit message for this session:
-- `feat: port go filesystem utility route parity (v1.0.18)`
+- `feat: port go template crud parity (v1.0.19)`
