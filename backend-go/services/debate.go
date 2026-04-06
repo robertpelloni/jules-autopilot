@@ -80,7 +80,7 @@ func normalizeDebateAPIKey(participant DebateParticipant) string {
 	if apiKey != "" && apiKey != "env" && apiKey != "placeholder" {
 		return apiKey
 	}
-	return getSupervisorAPIKey(participant.Provider, nil)
+	return getSupervisorAPIKey(normalizeProvider(participant.Provider), nil)
 }
 
 func RunDebate(request DebateRequest) (DebateResult, error) {
@@ -115,7 +115,7 @@ func RunDebate(request DebateRequest) (DebateResult, error) {
 			}
 
 			systemPrompt := fmt.Sprintf("You are %s, acting as a %s.\n%s\n\nReview the conversation history and provide constructive, specific, concise input.", participant.Name, participant.Role, participant.SystemPrompt)
-			result, err := generateLLMText(participant.Provider, apiKey, participant.Model, systemPrompt, messages)
+			result, err := generateLLMText(normalizeProvider(participant.Provider), apiKey, resolveModel(participant.Provider, participant.Model), systemPrompt, messages)
 			content := ""
 			var usage *LLMUsage
 			if err != nil {
@@ -162,7 +162,7 @@ func RunDebate(request DebateRequest) (DebateResult, error) {
 		}
 		moderatorPrompt := fmt.Sprintf("You are the Moderator and Judge of this technical debate. Topic: %s\nSummarize key arguments, consensus/disagreement, and give a final recommendation in Markdown.", request.Topic)
 		apiKey := normalizeDebateAPIKey(*summaryParticipant)
-		if result, err := generateLLMText(summaryParticipant.Provider, apiKey, summaryParticipant.Model, moderatorPrompt, messages); err == nil && strings.TrimSpace(result.Content) != "" {
+		if result, err := generateLLMText(normalizeProvider(summaryParticipant.Provider), apiKey, resolveModel(summaryParticipant.Provider, summaryParticipant.Model), moderatorPrompt, messages); err == nil && strings.TrimSpace(result.Content) != "" {
 			summary = result.Content
 			if result.Usage != nil {
 				totalUsage.PromptTokens += result.Usage.PromptTokens
@@ -176,10 +176,7 @@ func RunDebate(request DebateRequest) (DebateResult, error) {
 	approvalStatus := "pending"
 	if summaryParticipant != nil {
 		apiKey := normalizeDebateAPIKey(*summaryParticipant)
-		riskPrompt := fmt.Sprintf("Analyze the following debate result and provide a risk score between 0 and 100. Respond with ONLY the number.\n\nDebate Topic: %s\nSummary: %s", request.Topic, summary)
-		if result, err := generateLLMText(summaryParticipant.Provider, apiKey, summaryParticipant.Model, "You are a strict technical risk scorer. Respond with a number only.", []LLMMessage{{Role: "user", Content: riskPrompt}}); err == nil {
-			riskScore = extractRiskScoreFromText(result.Content)
-		}
+		riskScore = generateRiskScore(normalizeProvider(summaryParticipant.Provider), apiKey, resolveModel(summaryParticipant.Provider, summaryParticipant.Model), request.Topic, summary, defaultPlanRiskScore)
 		approvalStatus = debateApprovalStatus(riskScore)
 	}
 
@@ -240,11 +237,11 @@ func ParseStoredDebate(debate models.Debate) (DebateResult, error) {
 		summary = *debate.Summary
 	}
 	return DebateResult{
-		ID:      debate.ID,
-		Topic:   debate.Topic,
-		Rounds:  rounds,
-		Summary: summary,
-		History: history,
+		ID:       debate.ID,
+		Topic:    debate.Topic,
+		Rounds:   rounds,
+		Summary:  summary,
+		History:  history,
 		Metadata: metadata,
 		TotalUsage: &LLMUsage{
 			PromptTokens:     debate.PromptTokens,

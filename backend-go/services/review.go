@@ -38,51 +38,20 @@ type ReviewResult struct {
 	RawOutput string        `json:"rawOutput,omitempty"`
 }
 
-func normalizeReviewProvider(request ReviewRequest) (string, string) {
-	provider := strings.TrimSpace(request.Provider)
-	if provider == "" {
-		provider = "openai"
-	}
+func normalizeReviewProvider(request ReviewRequest) (string, string, string) {
+	provider := normalizeProvider(request.Provider)
 	apiKey := strings.TrimSpace(request.APIKey)
 	if apiKey == "" || apiKey == "placeholder" {
 		apiKey = getSupervisorAPIKey(provider, nil)
 	}
-	return provider, apiKey
-}
-
-func parseReviewResult(content string) ReviewResult {
-	var parsed struct {
-		Summary string        `json:"summary"`
-		Score   int           `json:"score"`
-		Issues  []ReviewIssue `json:"issues"`
-	}
-	jsonBlock := extractJSONBlock(content)
-	if jsonBlock != "" {
-		if err := json.Unmarshal([]byte(jsonBlock), &parsed); err == nil {
-			return ReviewResult{
-				Summary:   parsed.Summary,
-				Score:     parsed.Score,
-				Issues:    parsed.Issues,
-				RawOutput: content,
-			}
-		}
-	}
-	return ReviewResult{
-		Summary:   "Failed to generate structured review.",
-		Score:     0,
-		Issues:    []ReviewIssue{},
-		RawOutput: content,
-	}
+	model := resolveModel(provider, request.Model)
+	return provider, apiKey, model
 }
 
 func runStructuredReview(request ReviewRequest) (ReviewResult, error) {
-	provider, apiKey := normalizeReviewProvider(request)
+	provider, apiKey, model := normalizeReviewProvider(request)
 	if apiKey == "" {
 		return ReviewResult{}, fmt.Errorf("missing API key for review")
-	}
-	model := strings.TrimSpace(request.Model)
-	if model == "" {
-		model = "gpt-4o-mini"
 	}
 
 	systemPrompt := `You are an expert code reviewer. Analyze the code and provide a structured JSON response.
@@ -104,14 +73,13 @@ Response Format (JSON):
 		systemPrompt = request.SystemPrompt
 	}
 
-	result, err := generateLLMText(provider, apiKey, model, systemPrompt, []LLMMessage{{
+	var parsed ReviewResult
+	if err := generateStructuredJSON(provider, apiKey, model, systemPrompt, []LLMMessage{{
 		Role:    "user",
 		Content: request.CodeContext,
-	}})
-	if err != nil {
+	}}, &parsed); err != nil {
 		return ReviewResult{}, err
 	}
-	parsed := parseReviewResult(result.Content)
 	if parsed.Summary == "" {
 		parsed.Summary = "No summary provided."
 	}
@@ -119,13 +87,9 @@ Response Format (JSON):
 }
 
 func runComprehensiveReview(request ReviewRequest) (string, error) {
-	provider, apiKey := normalizeReviewProvider(request)
+	provider, apiKey, model := normalizeReviewProvider(request)
 	if apiKey == "" {
 		return "", fmt.Errorf("missing API key for review")
-	}
-	model := strings.TrimSpace(request.Model)
-	if model == "" {
-		model = "gpt-4o-mini"
 	}
 
 	personas := request.CustomPersonas
@@ -173,13 +137,9 @@ func RunCodeReview(request ReviewRequest) (string, error) {
 		return runComprehensiveReview(request)
 	}
 
-	provider, apiKey := normalizeReviewProvider(request)
+	provider, apiKey, model := normalizeReviewProvider(request)
 	if apiKey == "" {
 		return "", fmt.Errorf("missing API key for review")
-	}
-	model := strings.TrimSpace(request.Model)
-	if model == "" {
-		model = "gpt-4o-mini"
 	}
 	systemPrompt := request.SystemPrompt
 	if strings.TrimSpace(systemPrompt) == "" {

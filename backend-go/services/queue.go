@@ -20,11 +20,11 @@ import (
 )
 
 const (
-	defaultPlanRiskScore      = 50
-	lowRiskApprovalThreshold  = 40
-	recentActivityWindow      = 30 * time.Second
-	chunkLineLimit            = 150
-	maxIndexedFileSizeBytes   = 500000
+	defaultPlanRiskScore     = 50
+	lowRiskApprovalThreshold = 40
+	recentActivityWindow     = 30 * time.Second
+	chunkLineLimit           = 150
+	maxIndexedFileSizeBytes  = 500000
 )
 
 // Worker represents the SQLite Task Queue worker
@@ -129,7 +129,7 @@ func (w *Worker) processJobs() {
 	}
 
 	for _, job := range jobs {
-		// Run in goroutine to respect concurrency if needed, 
+		// Run in goroutine to respect concurrency if needed,
 		// but simple loop with goroutines works for now
 		go w.executeJob(job)
 	}
@@ -329,35 +329,14 @@ func approvalStatusFromRisk(score int) string {
 	return "pending"
 }
 
-func extractRiskScoreFromText(input string) int {
-	digits := strings.Builder{}
-	for _, r := range input {
-		if r >= '0' && r <= '9' {
-			digits.WriteRune(r)
-		}
-	}
-	if digits.Len() == 0 {
-		return defaultPlanRiskScore
-	}
-	var score int
-	fmt.Sscanf(digits.String(), "%d", &score)
-	if score < 0 {
-		return 0
-	}
-	if score > 100 {
-		return 100
-	}
-	return score
-}
-
 func persistDebateRecord(session models.JulesSession, result planDebateResult) {
 	summary := result.Summary
 	metadataValue, _ := json.Marshal(map[string]interface{}{
-		"sessionId":       session.ID,
-		"sessionTitle":    session.Title,
-		"riskScore":       result.RiskScore,
-		"approvalStatus":  result.ApprovalStatus,
-		"sourceId":        session.SourceID,
+		"sessionId":        session.ID,
+		"sessionTitle":     session.Title,
+		"riskScore":        result.RiskScore,
+		"approvalStatus":   result.ApprovalStatus,
+		"sourceId":         session.SourceID,
 		"supervisorOrigin": "go",
 	})
 	metadata := string(metadataValue)
@@ -377,10 +356,7 @@ func persistDebateRecord(session models.JulesSession, result planDebateResult) {
 }
 
 func reviewPlanWithCouncil(session models.JulesSession, planText string, settings models.KeeperSettings) (planDebateResult, error) {
-	provider := strings.TrimSpace(settings.SupervisorProvider)
-	if provider == "" {
-		provider = "openai"
-	}
+	provider := normalizeProvider(settings.SupervisorProvider)
 	apiKey := getSupervisorAPIKey(provider, settings.SupervisorApiKey)
 	if apiKey == "" {
 		riskScore := isRiskyPlan(planText)
@@ -393,20 +369,20 @@ func reviewPlanWithCouncil(session models.JulesSession, planText string, setting
 		}, nil
 	}
 
-	model := strings.TrimSpace(settings.SupervisorModel)
+	model := resolveModel(provider, settings.SupervisorModel)
 	participants := []struct {
 		ID, Name, Role, SystemPrompt string
 	}{
 		{
-			ID:   "security-architect",
-			Name: "Security Architect",
-			Role: "Security & Architecture Reviewer",
+			ID:           "security-architect",
+			Name:         "Security Architect",
+			Role:         "Security & Architecture Reviewer",
 			SystemPrompt: "You are a strict security architect. Review the proposed implementation plan for vulnerabilities, data leaks, unsafe migrations, architectural flaws, and missing verification. If the plan modifies core logic without adequate testing, say so clearly.",
 		},
 		{
-			ID:   "senior-engineer",
-			Name: "Senior Engineer",
-			Role: "Code Quality Reviewer",
+			ID:           "senior-engineer",
+			Name:         "Senior Engineer",
+			Role:         "Code Quality Reviewer",
 			SystemPrompt: "You are a senior frontend/backend engineer. Review the plan for code quality, edge cases, scope control, testability, and practical execution detail. Call out missing steps and suggest improvements.",
 		},
 	}
@@ -449,14 +425,7 @@ func reviewPlanWithCouncil(session models.JulesSession, planText string, setting
 		summary = summaryResult.Content
 	}
 
-	riskPrompt := fmt.Sprintf("Analyze the following debate summary and provide a risk score between 0 and 100. 100 = extremely high risk, 0 = extremely low risk. Respond with ONLY the number.\n\nTopic: Review Plan for Session %s\nSummary:\n%s", session.ID, summary)
-	riskResult, riskErr := generateLLMText(provider, apiKey, model, "You are a strict technical risk scorer. Respond with a number only.", []LLMMessage{{Role: "user", Content: riskPrompt}})
-	riskScore := defaultPlanRiskScore
-	if riskErr == nil {
-		riskScore = extractRiskScoreFromText(riskResult.Content)
-	} else {
-		riskScore = isRiskyPlan(planText)
-	}
+	riskScore := generateRiskScore(provider, apiKey, model, fmt.Sprintf("Review Plan for Session %s", session.ID), summary, isRiskyPlan(planText))
 
 	roundsJSONBytes, _ := json.Marshal([]map[string]interface{}{{
 		"roundNumber": 1,
@@ -563,11 +532,11 @@ func (w *Worker) handleCheckSession(payload string) (string, error) {
 					"summary":        debateResult.Summary,
 				})
 				emitDaemonEvent("session_debate_resolved", map[string]interface{}{
-					"sessionId":       session.ID,
-					"sessionTitle":    session.Title,
-					"riskScore":       debateResult.RiskScore,
-					"approvalStatus":  debateResult.ApprovalStatus,
-					"summary":         debateResult.Summary,
+					"sessionId":      session.ID,
+					"sessionTitle":   session.Title,
+					"riskScore":      debateResult.RiskScore,
+					"approvalStatus": debateResult.ApprovalStatus,
+					"summary":        debateResult.Summary,
 				})
 
 				if debateResult.RiskScore < lowRiskApprovalThreshold || debateResult.ApprovalStatus == "approved" {
@@ -706,11 +675,11 @@ func (w *Worker) handleCheckSession(payload string) (string, error) {
 			"action",
 			session.ID,
 			map[string]interface{}{
-				"event":          "session_nudged",
-				"sessionTitle":   session.Title,
+				"event":           "session_nudged",
+				"sessionTitle":    session.Title,
 				"inactiveMinutes": int(time.Since(lastActivityTime).Minutes()),
-				"nudgeMessage":   message,
-				"usedRAG":        ragContext != "",
+				"nudgeMessage":    message,
+				"usedRAG":         ragContext != "",
 			},
 		)
 		emitDaemonEvent("activities_updated", map[string]interface{}{"sessionId": session.ID})
@@ -1093,15 +1062,6 @@ type issueEvaluation struct {
 	Reasoning      string `json:"reasoning"`
 }
 
-func extractJSONBlock(input string) string {
-	start := strings.Index(input, "{")
-	end := strings.LastIndex(input, "}")
-	if start == -1 || end == -1 || end <= start {
-		return ""
-	}
-	return input[start : end+1]
-}
-
 func heuristicIssueEvaluation(issue GitHubIssue) issueEvaluation {
 	content := strings.ToLower(issue.Title + "\n" + issue.Body)
 	score := 45
@@ -1146,14 +1106,8 @@ func heuristicIssueEvaluation(issue GitHubIssue) issueEvaluation {
 }
 
 func evaluateIssueWithProvider(issue GitHubIssue, sourceID string, settings models.KeeperSettings, apiKey string) (issueEvaluation, error) {
-	model := settings.SupervisorModel
-	provider := settings.SupervisorProvider
-	if strings.TrimSpace(model) == "" {
-		model = "gpt-4o-mini"
-	}
-	if strings.TrimSpace(provider) == "" {
-		provider = "openai"
-	}
+	provider := normalizeProvider(settings.SupervisorProvider)
+	model := resolveModel(provider, settings.SupervisorModel)
 
 	prompt := fmt.Sprintf(`Evaluate if the following GitHub issue is "Self-Healable" by an AI coding agent.
 Target Repository: %s
@@ -1177,21 +1131,11 @@ Respond with JSON only:
 		issue.Body,
 	)
 
-	result, err := generateLLMText(provider, apiKey, model, "You are a technical lead evaluating project issues for autonomous coding agents. Respond with JSON only.", []LLMMessage{{
+	var evaluation issueEvaluation
+	if err := generateStructuredJSON(provider, apiKey, model, "You are a technical lead evaluating project issues for autonomous coding agents. Respond with JSON only.", []LLMMessage{{
 		Role:    "user",
 		Content: prompt,
-	}})
-	if err != nil {
-		return issueEvaluation{}, err
-	}
-
-	jsonBlock := extractJSONBlock(result.Content)
-	if jsonBlock == "" {
-		return issueEvaluation{}, fmt.Errorf("issue evaluation response did not contain JSON")
-	}
-
-	var evaluation issueEvaluation
-	if err := json.Unmarshal([]byte(jsonBlock), &evaluation); err != nil {
+	}}, &evaluation); err != nil {
 		return issueEvaluation{}, err
 	}
 	if evaluation.SuggestedTitle == "" {

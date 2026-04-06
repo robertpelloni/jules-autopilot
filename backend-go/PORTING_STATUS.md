@@ -95,6 +95,12 @@ Move reasonable backend responsibilities from the TypeScript/Bun daemon into the
   - `GET /healthz`
   - `GET /api/health`
 - Go daemon-running introspection for observability reporting
+- Shared Go LLM/provider helper tightening for:
+  - provider normalization
+  - provider-default model resolution
+  - structured JSON response extraction
+  - reusable risk-score generation
+- Fleet Intelligence UI now consumes Go `GET /api/health` output for operator-visible runtime health
 - Go Jules client support for source discovery, GitHub issues, and session creation
 - `POST /api/sessions/:id/nudge` now sends a real activity instead of returning a stub response
 - `POST /api/sessions/:id:approvePlan` is now supported through the generic Go session action handler

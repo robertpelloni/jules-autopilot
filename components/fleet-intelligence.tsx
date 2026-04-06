@@ -12,7 +12,10 @@ import {
   Layers,
   ChevronRight,
   Loader2,
-  RefreshCw
+  RefreshCw,
+  HeartPulse,
+  Database,
+  Wifi
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Progress } from '@/components/ui/progress';
@@ -25,6 +28,26 @@ interface QueueStats {
   processing: number;
 }
 
+interface HealthResponse {
+  status: string;
+  timestamp: string;
+  version: string;
+  checks: {
+    database?: { status?: string; error?: string };
+    daemon?: { running?: boolean; enabled?: boolean };
+    credentials?: { julesConfigured?: boolean };
+  };
+  queue?: { pending?: number; processing?: number };
+  totals?: {
+    sessions?: number;
+    codeChunks?: number;
+    memoryChunks?: number;
+    templates?: number;
+    debates?: number;
+  };
+  realtime?: { wsClients?: number };
+}
+
 export function FleetIntelligence() {
   const {
     config: { isEnabled },
@@ -34,12 +57,36 @@ export function FleetIntelligence() {
   } = useSessionKeeperStore();
   const [stats, setStats] = useState<QueueStats>({ pending: 0, processing: 0 });
   const [isReindexing, setIsReindexing] = useState(false);
+  const [health, setHealth] = useState<HealthResponse | null>(null);
+  const [isLoadingHealth, setIsLoadingHealth] = useState(false);
 
   useEffect(() => {
     if (queue) {
       setStats(queue);
     }
   }, [queue]);
+
+  const loadHealth = async (showToast = false) => {
+    try {
+      setIsLoadingHealth(true);
+      const response = await fetch('/api/health');
+      if (!response.ok) {
+        throw new Error('Failed to load health status');
+      }
+      const data = (await response.json()) as HealthResponse;
+      setHealth(data);
+      if (showToast) {
+        toast.success('Runtime health refreshed');
+      }
+    } catch (err) {
+      console.error(err);
+      if (showToast) {
+        toast.error('Failed to refresh runtime health');
+      }
+    } finally {
+      setIsLoadingHealth(false);
+    }
+  };
 
   const handleReindex = async () => {
     try {
@@ -54,6 +101,15 @@ export function FleetIntelligence() {
       setTimeout(() => setIsReindexing(false), 2000);
     }
   };
+
+  useEffect(() => {
+    void loadHealth();
+    const intervalId = window.setInterval(() => {
+      void loadHealth();
+    }, 30000);
+
+    return () => window.clearInterval(intervalId);
+  }, []);
 
   // Filter logs for Council or RAG related events
   const intelligenceLogs = logs.filter(log => 
@@ -110,7 +166,88 @@ export function FleetIntelligence() {
         </div>
       </div>
 
-      {/* 2. Borg Collective Signals */}
+      {/* 2. Runtime Health */}
+      <div className="bg-zinc-900 border border-emerald-500/20 rounded-xl overflow-hidden shadow-xl">
+        <div className="px-4 py-3 border-b border-white/5 bg-emerald-500/5 flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            <HeartPulse className="h-3.5 w-3.5 text-emerald-400" />
+            <span className="text-[10px] font-bold text-white uppercase tracking-widest">Runtime Health</span>
+          </div>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => void loadHealth(true)}
+            disabled={isLoadingHealth}
+            className="h-7 border-white/10 hover:bg-white/5 text-[9px] font-mono uppercase tracking-widest"
+          >
+            {isLoadingHealth ? (
+              <Loader2 className="h-3 w-3 animate-spin" />
+            ) : (
+              <RefreshCw className="h-3 w-3" />
+            )}
+          </Button>
+        </div>
+
+        <div className="p-4 space-y-4">
+          <div className="grid grid-cols-2 gap-3">
+            <div className="rounded-lg border border-white/5 bg-black/20 p-3 space-y-1">
+              <div className="flex items-center gap-2 text-zinc-500 text-[10px] font-mono uppercase tracking-widest">
+                <Database className="h-3 w-3" />
+                <span>Database</span>
+              </div>
+              <div className="text-sm font-bold text-white uppercase tracking-tight">
+                {health?.checks?.database?.status === 'ok' ? 'HEALTHY' : health?.checks?.database?.status === 'error' ? 'DEGRADED' : 'UNKNOWN'}
+              </div>
+              {health?.checks?.database?.error ? (
+                <p className="text-[10px] text-red-300 break-all">{health.checks.database.error}</p>
+              ) : (
+                <p className="text-[10px] text-zinc-500">SQLite connectivity available.</p>
+              )}
+            </div>
+            <div className="rounded-lg border border-white/5 bg-black/20 p-3 space-y-1">
+              <div className="flex items-center gap-2 text-zinc-500 text-[10px] font-mono uppercase tracking-widest">
+                <Cpu className="h-3 w-3" />
+                <span>Daemon Loop</span>
+              </div>
+              <div className="text-sm font-bold text-white uppercase tracking-tight">
+                {health?.checks?.daemon?.running ? 'RUNNING' : 'STOPPED'}
+              </div>
+              <p className="text-[10px] text-zinc-500">
+                Keeper {health?.checks?.daemon?.enabled ? 'enabled' : 'disabled'} · Jules key {health?.checks?.credentials?.julesConfigured ? 'configured' : 'missing'}
+              </p>
+            </div>
+          </div>
+
+          <div className="grid grid-cols-4 gap-3 text-center">
+            <div className="rounded-lg border border-white/5 bg-black/20 p-3">
+              <div className="text-[9px] text-zinc-500 font-mono uppercase tracking-widest">Sessions</div>
+              <div className="text-lg font-bold text-white">{health?.totals?.sessions ?? 0}</div>
+            </div>
+            <div className="rounded-lg border border-white/5 bg-black/20 p-3">
+              <div className="text-[9px] text-zinc-500 font-mono uppercase tracking-widest">Code</div>
+              <div className="text-lg font-bold text-white">{health?.totals?.codeChunks ?? 0}</div>
+            </div>
+            <div className="rounded-lg border border-white/5 bg-black/20 p-3">
+              <div className="text-[9px] text-zinc-500 font-mono uppercase tracking-widest">Memory</div>
+              <div className="text-lg font-bold text-white">{health?.totals?.memoryChunks ?? 0}</div>
+            </div>
+            <div className="rounded-lg border border-white/5 bg-black/20 p-3">
+              <div className="text-[9px] text-zinc-500 font-mono uppercase tracking-widest">WS</div>
+              <div className="text-lg font-bold text-white">{health?.realtime?.wsClients ?? 0}</div>
+            </div>
+          </div>
+
+          <div className="flex items-center justify-between rounded-lg border border-white/5 bg-black/20 px-3 py-2 text-[10px] font-mono uppercase tracking-widest text-zinc-500">
+            <div className="flex items-center gap-2">
+              <Wifi className="h-3 w-3 text-emerald-400" />
+              <span>Status: {health?.status ?? 'unknown'}</span>
+            </div>
+            <span>v{health?.version ?? 'unknown'}</span>
+          </div>
+        </div>
+      </div>
+
+      {/* 3. Borg Collective Signals */}
       <div className="bg-zinc-900 border border-purple-500/20 rounded-xl overflow-hidden shadow-2xl">
         <div className="px-4 py-3 border-b border-white/5 bg-purple-500/5 flex items-center justify-between">
           <div className="flex items-center gap-2">
@@ -144,7 +281,7 @@ export function FleetIntelligence() {
         </div>
       </div>
 
-      {/* 3. RAG Indexing Progress */}
+      {/* 4. RAG Indexing Progress */}
       <div className="bg-zinc-900 border border-white/5 rounded-xl p-5 space-y-4 shadow-xl">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-3">
@@ -190,7 +327,7 @@ export function FleetIntelligence() {
         </div>
       </div>
 
-      {/* 4. Live Intelligence Feed */}
+      {/* 5. Live Intelligence Feed */}
       <div className="bg-zinc-900 border border-white/5 rounded-xl overflow-hidden shadow-xl">
         <div className="px-4 py-3 border-b border-white/5 bg-white/[0.02] flex items-center justify-between">
           <div className="flex items-center gap-2">
@@ -227,7 +364,7 @@ export function FleetIntelligence() {
         </div>
       </div>
 
-      {/* 5. Borg Integration Hint */}
+      {/* 6. Borg Integration Hint */}
       <div className="flex items-center gap-3 p-4 bg-purple-500/5 border border-purple-500/10 rounded-xl">
         <Zap className="h-4 w-4 text-purple-500 shrink-0" />
         <p className="text-[10px] text-purple-300/80 leading-relaxed font-mono">

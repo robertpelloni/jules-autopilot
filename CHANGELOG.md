@@ -2,6 +2,20 @@
 
 All notable changes to this project will be documented in this file.
 
+## [1.0.26] - 2026-04-05
+
+### Added
+- **Fleet Health UI Surface**: Added an operator-facing runtime health block inside the Fleet Intelligence panel so the new Go health endpoint data is visible in the dashboard without external tooling.
+- **Go Shared LLM Helpers**: Added shared Go helper logic for provider normalization, default model resolution, structured JSON extraction, and reusable risk scoring to reduce duplicated provider-flow logic.
+
+### Changed
+- **Go Provider Abstraction Tightening**: Refactored Go review, debate, and issue-evaluation paths to reuse shared LLM helpers instead of repeating JSON parsing, model defaults, and risk-score extraction logic in multiple services.
+- **Go Debate / Review Consistency**: Debate execution, structured review, council plan review, and issue triage now normalize provider/model selection more consistently across the Go backend.
+- **Fleet Observability UX**: The Fleet tab now polls `/api/health`, surfaces daemon/database/credential state, and shows key persisted totals for sessions, chunks, templates, debates, and websocket clients.
+
+### Notes
+- **Validation Status**: `cd backend-go && gofmt -w services/llm.go services/review.go services/debate.go services/queue.go && go test ./...`, `pnpm run lint`, `pnpm run typecheck`, `pnpm run test`, and `node scripts/check-version-sync.js` all pass at `1.0.26`.
+
 ## [1.0.25] - 2026-04-05
 
 ### Added

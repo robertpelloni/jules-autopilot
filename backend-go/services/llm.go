@@ -26,6 +26,33 @@ type LLMResult struct {
 	Usage   *LLMUsage
 }
 
+func normalizeProvider(provider string) string {
+	value := strings.ToLower(strings.TrimSpace(provider))
+	if value == "" {
+		return "openai"
+	}
+	return value
+}
+
+func defaultModelForProvider(provider string) string {
+	switch normalizeProvider(provider) {
+	case "anthropic":
+		return "claude-3-5-sonnet-latest"
+	case "gemini":
+		return "gemini-1.5-flash"
+	default:
+		return "gpt-4o-mini"
+	}
+}
+
+func resolveModel(provider, model string) string {
+	value := strings.TrimSpace(model)
+	if value != "" {
+		return value
+	}
+	return defaultModelForProvider(provider)
+}
+
 func getSupervisorAPIKey(provider string, explicit *string) string {
 	if explicit != nil {
 		value := strings.TrimSpace(*explicit)
@@ -62,7 +89,10 @@ func getSupervisorAPIKey(provider string, explicit *string) string {
 }
 
 func generateLLMText(provider, apiKey, model, systemPrompt string, messages []LLMMessage) (LLMResult, error) {
-	switch strings.ToLower(strings.TrimSpace(provider)) {
+	provider = normalizeProvider(provider)
+	model = resolveModel(provider, model)
+
+	switch provider {
 	case "anthropic":
 		return generateAnthropicText(apiKey, model, systemPrompt, messages)
 	case "gemini":
@@ -72,10 +102,61 @@ func generateLLMText(provider, apiKey, model, systemPrompt string, messages []LL
 	}
 }
 
-func generateOpenAIText(apiKey, model, systemPrompt string, messages []LLMMessage) (LLMResult, error) {
-	if strings.TrimSpace(model) == "" {
-		model = "gpt-4o-mini"
+func extractJSONBlock(input string) string {
+	start := strings.Index(input, "{")
+	end := strings.LastIndex(input, "}")
+	if start == -1 || end == -1 || end <= start {
+		return ""
 	}
+	return input[start : end+1]
+}
+
+func extractRiskScoreFromText(input string) int {
+	digits := strings.Builder{}
+	for _, r := range input {
+		if r >= '0' && r <= '9' {
+			digits.WriteRune(r)
+		}
+	}
+	if digits.Len() == 0 {
+		return defaultPlanRiskScore
+	}
+	var score int
+	fmt.Sscanf(digits.String(), "%d", &score)
+	if score < 0 {
+		return 0
+	}
+	if score > 100 {
+		return 100
+	}
+	return score
+}
+
+func generateStructuredJSON(provider, apiKey, model, systemPrompt string, messages []LLMMessage, target interface{}) error {
+	result, err := generateLLMText(provider, apiKey, model, systemPrompt, messages)
+	if err != nil {
+		return err
+	}
+	jsonBlock := extractJSONBlock(result.Content)
+	if jsonBlock == "" {
+		return fmt.Errorf("response did not contain JSON")
+	}
+	if err := json.Unmarshal([]byte(jsonBlock), target); err != nil {
+		return err
+	}
+	return nil
+}
+
+func generateRiskScore(provider, apiKey, model, topic, summary string, fallback int) int {
+	prompt := fmt.Sprintf("Analyze the following debate summary and provide a risk score between 0 and 100. 100 = extremely high risk, 0 = extremely low risk. Respond with ONLY the number.\n\nTopic: %s\nSummary:\n%s", topic, summary)
+	result, err := generateLLMText(provider, apiKey, model, "You are a strict technical risk scorer. Respond with a number only.", []LLMMessage{{Role: "user", Content: prompt}})
+	if err != nil {
+		return fallback
+	}
+	return extractRiskScoreFromText(result.Content)
+}
+
+func generateOpenAIText(apiKey, model, systemPrompt string, messages []LLMMessage) (LLMResult, error) {
 
 	requestMessages := make([]map[string]string, 0, len(messages)+1)
 	if strings.TrimSpace(systemPrompt) != "" {
@@ -139,9 +220,6 @@ func generateOpenAIText(apiKey, model, systemPrompt string, messages []LLMMessag
 }
 
 func generateAnthropicText(apiKey, model, systemPrompt string, messages []LLMMessage) (LLMResult, error) {
-	if strings.TrimSpace(model) == "" {
-		model = "claude-3-5-sonnet-latest"
-	}
 
 	anthropicMessages := make([]map[string]string, 0, len(messages))
 	for _, message := range messages {
@@ -216,9 +294,6 @@ func generateAnthropicText(apiKey, model, systemPrompt string, messages []LLMMes
 }
 
 func generateGeminiText(apiKey, model, systemPrompt string, messages []LLMMessage) (LLMResult, error) {
-	if strings.TrimSpace(model) == "" {
-		model = "gemini-1.5-flash"
-	}
 
 	type part struct {
 		Text string `json:"text"`
