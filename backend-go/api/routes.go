@@ -37,8 +37,18 @@ func Broadcast(message interface{}) {
 	}
 }
 
+func getProjectRoot() string {
+	candidates := []string{filepath.Clean("."), filepath.Clean("..")}
+	for _, candidate := range candidates {
+		if info, err := os.Stat(filepath.Join(candidate, "package.json")); err == nil && !info.IsDir() {
+			return candidate
+		}
+	}
+	return filepath.Clean("..")
+}
+
 func getVersion() string {
-	versionPath := filepath.Clean(filepath.Join("..", "VERSION"))
+	versionPath := filepath.Clean(filepath.Join(getProjectRoot(), "VERSION"))
 	content, err := os.ReadFile(versionPath)
 	if err != nil {
 		return "unknown"
@@ -251,6 +261,74 @@ func postRAGQuery(c *fiber.Ctx) error {
 	return c.JSON(fiber.Map{"results": results})
 }
 
+func getFSList(c *fiber.Ctx) error {
+	queryPath := c.Query("path", ".")
+	projectRoot, err := filepath.Abs(getProjectRoot())
+	if err != nil {
+		return c.Status(500).JSON(fiber.Map{"error": err.Error()})
+	}
+	targetPath, err := filepath.Abs(filepath.Join(projectRoot, queryPath))
+	if err != nil {
+		return c.Status(500).JSON(fiber.Map{"error": err.Error()})
+	}
+	if !strings.HasPrefix(targetPath, projectRoot) {
+		return c.Status(403).JSON(fiber.Map{"error": "Access denied"})
+	}
+
+	entries, err := os.ReadDir(targetPath)
+	if err != nil {
+		return c.Status(500).JSON(fiber.Map{"error": err.Error()})
+	}
+
+	files := make([]fiber.Map, 0, len(entries))
+	for _, entry := range entries {
+		name := entry.Name()
+		if strings.HasPrefix(name, ".") || name == "node_modules" {
+			continue
+		}
+		entryPath := filepath.Join(targetPath, name)
+		rel, relErr := filepath.Rel(projectRoot, entryPath)
+		if relErr != nil {
+			rel = name
+		}
+		files = append(files, fiber.Map{
+			"name":        name,
+			"isDirectory": entry.IsDir(),
+			"path":        filepath.ToSlash(rel),
+		})
+	}
+
+	return c.JSON(fiber.Map{"files": files})
+}
+
+func getFSRead(c *fiber.Ctx) error {
+	queryPath := c.Query("path")
+	if strings.TrimSpace(queryPath) == "" {
+		return c.Status(400).JSON(fiber.Map{"error": "Path required"})
+	}
+	projectRoot, err := filepath.Abs(getProjectRoot())
+	if err != nil {
+		return c.Status(500).JSON(fiber.Map{"error": err.Error()})
+	}
+	targetPath, err := filepath.Abs(filepath.Join(projectRoot, queryPath))
+	if err != nil {
+		return c.Status(500).JSON(fiber.Map{"error": err.Error()})
+	}
+	if !strings.HasPrefix(targetPath, projectRoot) {
+		return c.Status(403).JSON(fiber.Map{"error": "Access denied"})
+	}
+	info, err := os.Stat(targetPath)
+	if err != nil || info.IsDir() {
+		return c.Status(404).JSON(fiber.Map{"error": "File not found"})
+	}
+
+	content, err := os.ReadFile(targetPath)
+	if err != nil {
+		return c.Status(500).JSON(fiber.Map{"error": err.Error()})
+	}
+	return c.JSON(fiber.Map{"content": string(content)})
+}
+
 func postBorgWebhook(c *fiber.Ctx) error {
 	var payload struct {
 		Type   string                 `json:"type"`
@@ -345,6 +423,10 @@ func SetupRoutes(app *fiber.App) {
 	// Repo mapping routes
 	api.Get("/repos/paths", getRepoPaths)
 	api.Post("/repos/paths", updateRepoPath)
+
+	// File system routes
+	api.Get("/fs/list", getFSList)
+	api.Get("/fs/read", getFSRead)
 }
 
 func triggerFleetSync(c *fiber.Ctx) error {

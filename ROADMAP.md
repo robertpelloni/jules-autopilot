@@ -33,6 +33,7 @@ For granular tasks and immediate bug fixes, see `TODO.md`.
 * [x] **Go Backend Parity Pass #7**: Broadened Go lifecycle/detail parity with explicit indexing/issue daemon events, frontend websocket support, and richer Keeper feed metadata for Go-originated automation flows.
 * [x] **Go Backend Parity Pass #8**: Added Go-side failed-session recovery/self-healing plus session patch/update support, with explicit recovery lifecycle events surfaced to the operator UI.
 * [x] **Go Backend Parity Pass #9**: Closed several remaining practical Go session/API route gaps by adding direct session fetch, activity fetch, and Go-native RAG reindex endpoints.
+* [x] **Go Backend Parity Pass #10**: Ported Go filesystem utility endpoints used for repository-context gathering so the client no longer depends on Bun-only `/api/fs/*` routes for that workflow.
 
 ## Milestone: v1.5 — "Shadow Pilot"
 * [ ] **Background Anomaly Detection:** Agents silently monitoring `git diffs` background tasks, fixing failing CI pipelines before human review.

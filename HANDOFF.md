@@ -1,13 +1,13 @@
-# Project Handoff: Jules Autopilot (v1.0.17 — Go Backend Parity Pass #9)
+# Project Handoff: Jules Autopilot (v1.0.18 — Go Backend Parity Pass #10)
 
 ## 1. Session Summary
-This session continued the recommended next step after failed-session recovery/session-patch parity and focused on closing several remaining practical session/API route gaps that still existed between the Bun daemon and the Go backend.
+This session continued the non-core product-surface migration after the session/API route parity pass and targeted a small but actively used Bun-only surface: the filesystem utility endpoints used by the client to gather repository context.
 
-The result is that the Go API now exposes direct session read, direct session-activity read, and explicit Go-native RAG reindex triggering endpoints, making the practical session-control surface significantly more complete.
+The result is that the Go backend now exposes Go-native `/api/fs/list` and `/api/fs/read` routes with path-confinement safeguards, further reducing Bun-only dependencies in the practical client workflow.
 
 ## 2. Completed Work
 ### 2.1 Versioning & Documentation
-- Bumped the project version from `1.0.16` to `1.0.17`.
+- Bumped the project version from `1.0.17` to `1.0.18`.
 - Re-synced version surfaces via the canonical `VERSION` workflow:
   - `VERSION`
   - `VERSION.md`
@@ -24,23 +24,27 @@ The result is that the Go API now exposes direct session read, direct session-ac
   - `docs/VISION.md`
 - Added a new archived handoff in `logs/handoffs/`.
 
-### 2.2 Added Direct Session Read Route
+### 2.2 Added Go Filesystem Utility Routes
 Updated `backend-go/api/routes.go` to add:
-- `GET /api/sessions/:id`
+- `GET /api/fs/list`
+- `GET /api/fs/read`
 
-This route now fetches a single live Jules session through the Go backend and returns the transformed session payload directly.
+#### `GET /api/fs/list`
+- accepts a `path` query param (default `.`)
+- resolves the path relative to the project root
+- denies access outside the repo root
+- filters hidden entries and `node_modules`
+- returns file/directory metadata in the same general shape expected by the frontend client
 
-### 2.3 Added Direct Session Activity Read Route
-Updated `backend-go/api/routes.go` to add:
-- `GET /api/sessions/:id/activities`
+#### `GET /api/fs/read`
+- accepts a `path` query param
+- resolves the path relative to the project root
+- denies access outside the repo root
+- verifies the target exists and is a file
+- returns file content as text
 
-This closes another practical read-surface gap and means the Go runtime can now expose direct session history retrieval without relying only on replay/export endpoints.
-
-### 2.4 Added Go-Native RAG Reindex Trigger Route
-Updated `backend-go/api/routes.go` to add:
-- `POST /api/rag/reindex`
-
-This route enqueues the Go `index_codebase` job directly and returns a success payload, bringing Go closer to the Bun daemon's direct RAG-control surface.
+### 2.3 Added Project-Root Resolution in the Go API Layer
+To support the filesystem endpoints safely, I added a project-root detection helper in the Go API layer. This keeps the file utility routes anchored to the repo root rather than whichever working directory the Go backend happened to be launched from.
 
 ## 3. Validation Results
 ### Passing
@@ -51,30 +55,24 @@ This route enqueues the Go `index_codebase` job directly and returns a success p
 - `node scripts/check-version-sync.js`
 
 ## 4. Key Findings
-### 4.1 The remaining differences are getting narrower and more product-surface oriented
-At this point, the Go backend covers the core session/memory/control loop much more completely:
-- session read
-- session update
-- session message send
-- session activity read
-- plan approval
-- nudges
-- failed-session recovery
-- replay/export/save-memory
-- issue-driven autonomy
-- indexing/retrieval/reindex control
+### 4.1 Non-core surfaces still matter when they are in active use
+The filesystem utility endpoints are not as glamorous as debates or RAG, but they are directly used by the client for repository context gathering. That makes them a reasonable and valuable migration target rather than speculative parity work.
 
-That means the remaining gaps are increasingly outside the core loop and more in secondary product surfaces or edge-case refinements.
+### 4.2 The Go migration is now extending beyond the core autonomy loop into utility surfaces
+By this point, the Go backend already covered most of the major session/memory/autonomy behavior. This pass shows the migration is also becoming credible on practical utility surfaces that real client flows rely on.
 
-### 4.2 Practical route completeness matters for treating Go as a primary runtime candidate
-Even when a capability exists internally, missing top-level routes still create parity friction. This pass helps reduce that friction by giving the Go backend more of the direct control/read endpoints an operator-facing runtime is expected to have.
+### 4.3 Remaining gaps are increasingly selective rather than broad
+After this pass, the most obvious remaining Go migration questions are no longer about the core control loop or memory loop. They are more about:
+- recovery-state refinement
+- provider/runtime abstraction polish
+- a few remaining non-core product surfaces such as templates, local review, and import/export if those are intended to move into Go as well
 
 ## 5. Remaining Work
 ### Highest-value next Go ports
 1. Refine Go-side recovery state tracking and edge-case handling
-2. Tighten Go provider abstractions for structured review/debate/recommendation workflows
+2. Tighten Go-side provider abstractions for structured review/debate/recommendation workflows
 3. Add richer Go-native retrieval/result presentation hooks where the UI would benefit from explicit memory reasoning metadata
-4. Audit non-core product surfaces (templates, filesystem, local review, import/export) for whether they should also migrate into Go
+4. Audit remaining non-core product surfaces (templates, local review, import/export) for whether they should also migrate into Go
 5. Decide whether Go should become the default runtime or remain the parity track during migration
 
 ## 6. Process Safety
@@ -85,8 +83,8 @@ Even when a capability exists internally, missing top-level routes still create 
 
 ## 7. Recommended Next Step
 Recommended next move:
-- continue with **Go Backend Parity Pass #10** by refining Go recovery state tracking and then auditing non-core product surfaces, because the core session/memory/control loop is now far closer to complete parity and the remaining differences are increasingly edge-case or product-surface specific.
+- continue with **Go Backend Parity Pass #11** by refining recovery state handling and then auditing the remaining non-core product surfaces, because the biggest remaining differences are now narrower, edge-case-driven, and product-surface specific.
 
 ## 8. Commit Guidance
 Recommended commit message for this session:
-- `feat: close remaining go session read and rag reindex route gaps (v1.0.17)`
+- `feat: port go filesystem utility route parity (v1.0.18)`

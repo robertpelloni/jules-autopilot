@@ -2,6 +2,18 @@
 
 All notable changes to this project will be documented in this file.
 
+## [1.0.18] - 2026-04-05
+
+### Added
+- **Go Filesystem Utility Parity**: Added Go API support for `GET /api/fs/list` and `GET /api/fs/read`, including project-root path confinement and filtering of hidden entries / `node_modules` for safe repository-context access.
+
+### Changed
+- **Go Repository Context Support**: The Go backend now covers the filesystem utility endpoints used by the client to gather repository structure and key file contents for local review/context workflows.
+- **Non-Core Surface Migration Progress**: Go migration is now extending beyond the core session/memory loop into practical utility surfaces that were still Bun-only but are directly exercised by the frontend client.
+
+### Notes
+- **Validation Status**: `cd backend-go && go test ./...`, `pnpm run lint`, `pnpm run typecheck`, `pnpm run test`, and `node scripts/check-version-sync.js` all pass at `1.0.18`.
+
 ## [1.0.17] - 2026-04-05
 
 ### Added
