@@ -615,10 +615,14 @@ func (w *Worker) handleCheckSession(payload string) (string, error) {
 
 		if !alreadyProcessedFailure {
 			activities, _ := client.ListActivities(session.ID)
-			if hasRecentRecoveryGuidance(activities) {
+			if hasRecentRecoveryGuidance(activities) || hasRecentRecoveryCompletionLog(session.ID, lastActivityTime) {
 				timestamp := lastActivityTime.Format(time.RFC3339)
 				supervisorState.LastProcessedActivityTimestamp = &timestamp
 				_ = saveSupervisorState(supervisorState)
+				addKeeperLog("Skipped duplicate recovery guidance because a recent recovery instruction is already present.", "skip", session.ID, map[string]interface{}{
+					"event":        "session_recovery_skipped",
+					"sessionTitle": session.Title,
+				})
 				return "recovery_already_present", nil
 			}
 			emitDaemonEvent("session_recovery_started", map[string]interface{}{
@@ -741,6 +745,14 @@ func hasRecentRecoveryGuidance(activities []models.JulesActivity) bool {
 		}
 	}
 	return false
+}
+
+func hasRecentRecoveryCompletionLog(sessionID string, since time.Time) bool {
+	var count int64
+	_ = db.DB.Model(&models.KeeperLog{}).
+		Where("session_id = ? AND message = ? AND created_at >= ?", sessionID, "Sent recovery guidance to failed session from Go backend.", since.Add(-2*time.Minute)).
+		Count(&count).Error
+	return count > 0
 }
 
 func buildRecoveryMessage(session models.JulesSession, activities []models.JulesActivity, settings models.KeeperSettings) string {

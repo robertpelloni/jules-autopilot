@@ -1,15 +1,17 @@
-# Project Handoff: Jules Autopilot (v1.0.21 — Go Backend Parity Pass #13)
+# Project Handoff: Jules Autopilot (v1.0.22 — Go Backend Parity Pass #14)
 
 ## 1. Session Summary
-This session continued the next recommended migration slice after review parity and combined two closely related improvements:
-1. Go-native import/export support for the settings portability workflow
-2. refined failed-session recovery dedupe so Go recovery is less likely to resend guidance that is already present in the session
+This session continued the recovery-refinement track after import/export parity and focused on making Go-side failed-session recovery more robust under polling and propagation races.
 
-The result is that the Go backend now covers the settings-dialog portability flow and handles one of the clearer remaining recovery edge cases more carefully.
+The result is that failed-session recovery in the Go backend now uses two duplicate-suppression signals:
+1. recent recovery guidance already present in session activities
+2. recent recovery completion logs already persisted in Keeper logs
+
+This reduces the chance of resending recovery guidance when session activity propagation and queue polling timing are slightly out of sync.
 
 ## 2. Completed Work
 ### 2.1 Versioning & Documentation
-- Bumped the project version from `1.0.20` to `1.0.21`.
+- Bumped the project version from `1.0.21` to `1.0.22`.
 - Re-synced version surfaces via the canonical `VERSION` workflow:
   - `VERSION`
   - `VERSION.md`
@@ -26,31 +28,18 @@ The result is that the Go backend now covers the settings-dialog portability flo
   - `docs/VISION.md`
 - Added a new archived handoff in `logs/handoffs/`.
 
-### 2.2 Added Go Import / Export Routes
-Updated `backend-go/api/routes.go` to add:
-- `GET /api/export`
-- `POST /api/import`
+### 2.2 Hardened Recovery Duplicate Suppression
+Updated `backend-go/services/queue.go` so the Go recovery path now checks:
+- recent session activities for an existing `Recovery Guidance:` message
+- recent Keeper logs for a matching recovery-completion action
 
-The Go export route now returns a backup payload covering:
-- `keeperSettings`
-- `templates`
-- `debates`
-- `repoPaths`
-- version + export timestamp metadata
+If either signal is present, the Go backend:
+- skips sending another recovery instruction
+- updates the processed timestamp
+- writes a `skip` Keeper log with `session_recovery_skipped` metadata
 
-The Go import route now ingests those surfaces back into the local database via save/upsert-style handling.
-
-This directly addresses the settings-dialog portability workflow that previously depended on Bun-only routing.
-
-### 2.3 Refined Failed-Session Recovery Dedupe
-Updated `backend-go/services/queue.go` so failed-session recovery checks for existing recent recovery guidance before injecting another recovery message.
-
-Specifically:
-- recovery messages are now prefixed with `Recovery Guidance:`
-- the Go queue scans recent user activities for that marker
-- if such guidance is already present, it avoids resending another recovery instruction and instead records the latest processed activity timestamp
-
-This is a practical refinement over the prior behavior, where a session's activity state could advance in ways that risked redundant recovery guidance.
+### 2.3 Improved Operator Visibility for Recovery Skips
+The new skip behavior is explicitly logged instead of silently returning. That gives operators a clearer signal that recovery was intentionally suppressed as a dedupe decision rather than simply not running.
 
 ## 3. Validation Results
 ### Passing
@@ -61,27 +50,26 @@ This is a practical refinement over the prior behavior, where a session's activi
 - `node scripts/check-version-sync.js`
 
 ## 4. Key Findings
-### 4.1 Import/export was a good remaining utility-surface target
-The settings dialog already calls `/api/export` and `/api/import`, so porting those endpoints removes another real Bun-only dependency and improves the practical completeness of the Go backend.
+### 4.1 Recovery refinement is now about race resistance, not missing functionality
+The Go backend already had a functioning failed-session recovery path. This pass makes it more resilient under realistic timing conditions where:
+- session activity visibility may lag slightly
+- queue polling may repeat before the remote session fully reflects the latest injected guidance
 
-### 4.2 Recovery refinement is now clearly in edge-case territory
-The core recovery flow was already present from the prior pass. This pass makes it safer and less noisy. That is a good sign: the remaining migration work is increasingly about behavior quality and edge-case control, not missing major subsystems.
+### 4.2 Durable logs are useful as a second dedupe signal
+Using Keeper logs as a second duplicate-suppression signal is a good complement to activity-stream inspection because it gives the Go backend another source of truth when remote activity propagation timing is uncertain.
 
-### 4.3 The Go backend now covers an even broader end-to-end application surface
-At this point, Go covers not only the daemon/autonomy/memory loop but also several product-facing utilities:
-- filesystem access
-- template management
-- direct review
-- import/export portability
-
-That significantly strengthens the case for Go as more than a sidecar parity track.
+### 4.3 Remaining differences are now mostly polish-oriented
+At this point, the remaining gaps are increasingly centered around:
+- provider/runtime abstraction polish
+- retrieval/result presentation richness
+- any last non-core utility surfaces that might still deserve migration
 
 ## 5. Remaining Work
 ### Highest-value next Go ports
-1. Refine Go-side recovery state tracking and edge-case handling further
-2. Tighten Go-side provider abstractions for structured review/debate/recommendation workflows
-3. Add richer Go-native retrieval/result presentation hooks where the UI would benefit from explicit memory reasoning metadata
-4. Audit whether any remaining non-core product surfaces still need Go-native coverage
+1. Tighten Go-side provider abstractions for structured review/debate/recommendation workflows
+2. Add richer Go-native retrieval/result presentation hooks where the UI would benefit from explicit memory reasoning metadata
+3. Audit whether any remaining non-core product surfaces still need Go-native coverage
+4. Continue observing/refining recovery edge cases if duplication or race conditions still surface
 5. Decide whether Go should become the default runtime or remain the parity track during migration
 
 ## 6. Process Safety
@@ -92,8 +80,8 @@ That significantly strengthens the case for Go as more than a sidecar parity tra
 
 ## 7. Recommended Next Step
 Recommended next move:
-- continue with **Go Backend Parity Pass #14** by refining recovery-state handling further and tightening Go-side provider abstractions, because the remaining differences are now increasingly about robustness and implementation polish rather than missing major user-facing workflows.
+- continue with **Go Backend Parity Pass #15** by tightening provider abstractions and reviewing whether any remaining product-surface or UX-oriented gaps still justify Go migration work.
 
 ## 8. Commit Guidance
 Recommended commit message for this session:
-- `feat: port go import-export parity and refine recovery dedupe (v1.0.21)`
+- `feat: harden go recovery dedupe with keeper-log suppression (v1.0.22)`

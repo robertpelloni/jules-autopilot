@@ -2,6 +2,15 @@
 
 All notable changes to this project will be documented in this file.
 
+## [1.0.22] - 2026-04-05
+
+### Changed
+- **Go Recovery Robustness**: Added a secondary duplicate-suppression guard for failed-session recovery that checks recent recovery completion logs in addition to recent recovery messages in the session activity stream.
+- **Recovery Skip Telemetry**: Duplicate recovery suppression now records a `skip` Keeper log with `session_recovery_skipped` metadata so operators can see when Go intentionally avoided resending guidance.
+
+### Notes
+- **Validation Status**: `cd backend-go && go test ./...`, `pnpm run lint`, `pnpm run typecheck`, `pnpm run test`, and `node scripts/check-version-sync.js` all pass at `1.0.22`.
+
 ## [1.0.21] - 2026-04-05
 
 ### Added

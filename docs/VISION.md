@@ -99,7 +99,7 @@ The official interfaces for AI coding agents are often slow and unresponsive. Th
 
 ## Implementation History
 
-### ✅ Milestone: v1.0.21 — Go Backend Parity Pass #13 (Current)
+### ✅ Milestone: v1.0.22 — Go Backend Parity Pass #14 (Current)
 - [x] Consolidated API into a single Bun daemon.
 - [x] Removed "Enterprise" feature bloat (Analytics, Swarms, Side Logs).
 - [x] Implemented the frontend proxy layer for seamless local integration.
@@ -118,6 +118,7 @@ The official interfaces for AI coding agents are often slow and unresponsive. Th
 - [x] Added Go-native template CRUD routes so session template management can run through the Go backend instead of depending on Bun-only template endpoints.
 - [x] Added Go-native review routes so direct code-review workflows can run through the Go backend instead of depending on Bun-only review routing.
 - [x] Added Go-native import/export routes and refined failed-session recovery dedupe so settings portability and recovery edge cases rely less on Bun-specific behavior.
+- [x] Hardened Go failed-session recovery further with log-backed duplicate suppression and explicit skip telemetry for operator visibility.
 
 ### 📋 Future Path
 - [ ] Refined TUI experience for "Mecha Suit" cockpit mode.

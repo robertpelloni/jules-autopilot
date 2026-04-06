@@ -19,7 +19,8 @@ This document tracks granular bugs, missing features, and technical debt. For ep
 - [x] **Go Backend Parity Pass #11:** Ported Go template CRUD so another actively used non-core frontend surface now has Go-native API support.
 - [x] **Go Backend Parity Pass #12:** Ported Go-native `/api/review` and `/api/local/review` support so another actively used non-core product workflow now has Go API coverage.
 - [x] **Go Backend Parity Pass #13:** Added Go-native import/export support and refined recovery dedupe so failed sessions are less likely to receive repeated guidance when recovery instructions are already present.
-- [ ] **Go Backend Parity Pass #14:** Continue tightening recovery-state edge cases and audit whether any remaining non-core utility surfaces still need Go-native API coverage.
+- [x] **Go Backend Parity Pass #14:** Tightened Go recovery-state edge-case handling by adding a second duplicate-suppression signal based on recent recovery completion logs, plus explicit skip telemetry.
+- [ ] **Go Backend Parity Pass #15:** Continue tightening Go-side provider abstractions and audit whether any remaining non-core utility surfaces still need Go-native API coverage.
 - [x] **Tooling Stabilization:** Added a working ESLint v9 flat config and aligned the Jest harness with the current Vite/Bun + shared-package runtime assumptions.
 - [x] **Lint Coverage Expansion:** Extended the lint command to cover `src/`, `components/`, `lib/`, and `server/` with a staged warning-first rollout.
 - [x] **Lint Warning Burn-Down:** Completed two warning burn-down passes and brought the expanded lint surface to zero warnings.

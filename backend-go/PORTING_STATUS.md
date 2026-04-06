@@ -102,12 +102,12 @@ Move reasonable backend responsibilities from the TypeScript/Bun daemon into the
 ## Still Pending / Partial
 - Additional provider/runtime polish around Go-side structured review/debate abstractions beyond the current practical provider bridge
 - More explicit Go-side retrieval/result presentation surfaces if the UI should call Go-native memory workflows directly more often
-- More refined Go-side recovery state tracking to avoid redundant guidance across edge cases
+- Residual recovery-state edge-case refinement if further duplication/race cases are observed in practice
 - Residual product-surface parity gaps outside the core session/memory/control loop if any are still meant to migrate fully into Go
 
 ## Recommended Next Go Porting Steps
-1. Refine Go-side recovery state tracking and edge-case handling.
-2. Tighten Go-side provider abstractions for structured review/debate/recommendation workflows.
-3. Add richer Go-native retrieval/result presentation hooks where the UI would benefit from more explicit memory reasoning metadata.
-4. Audit whether any remaining non-core product surfaces still need Go-native coverage.
+1. Tighten Go-side provider abstractions for structured review/debate/recommendation workflows.
+2. Add richer Go-native retrieval/result presentation hooks where the UI would benefit from more explicit memory reasoning metadata.
+3. Audit whether any remaining non-core product surfaces still need Go-native coverage.
+4. Continue observing/refining recovery edge cases if duplication or race conditions still surface.
 5. Decide whether the Go backend becomes the primary runtime or remains a parity track during migration.
