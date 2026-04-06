@@ -90,10 +90,17 @@ Move reasonable backend responsibilities from the TypeScript/Bun daemon into the
   - `GET /api/debate/:id`
   - `DELETE /api/debate/:id`
 - Go debate execution/persistence service in `backend-go/services/debate.go`
-- Go Jules client support for GitHub issues + session creation
+- Go Jules client support for source discovery, GitHub issues, and session creation
 - `POST /api/sessions/:id/nudge` now sends a real activity instead of returning a stub response
 - `POST /api/sessions/:id:approvePlan` is now supported through the generic Go session action handler
 - `POST /api/fleet/sync` now also enqueues issue-check jobs and a codebase indexing job
+- Go daemon loop now mirrors more Bun orchestration behavior by:
+  - honoring Keeper `checkIntervalSeconds`
+  - resolving Jules credentials from env or stored Keeper settings
+  - scheduling `check_session` jobs from live Jules sessions
+  - scheduling `check_issues` jobs from discovered Jules sources when smart pilot is enabled
+  - opportunistically enqueueing `index_codebase` when no indexing job is already pending/processing
+  - emitting Keeper-log telemetry for daemon poll/scheduling outcomes
 
 ## Existing Go Coverage
 - Keeper settings routes

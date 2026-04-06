@@ -21,7 +21,8 @@ This document tracks granular bugs, missing features, and technical debt. For ep
 - [x] **Go Backend Parity Pass #13:** Added Go-native import/export support and refined recovery dedupe so failed sessions are less likely to receive repeated guidance when recovery instructions are already present.
 - [x] **Go Backend Parity Pass #14:** Tightened Go recovery-state edge-case handling by adding a second duplicate-suppression signal based on recent recovery completion logs, plus explicit skip telemetry.
 - [x] **Go Backend Parity Pass #15:** Ported Go-native debate execution/history/detail/delete support so another actively used product surface now has Go API coverage.
-- [ ] **Go Backend Parity Pass #16:** Continue tightening Go-side provider abstractions and audit whether any remaining non-core utility surfaces still need Go-native API coverage.
+- [x] **Go Backend Parity Pass #16:** Expanded Go daemon orchestration parity so the Go runtime now honors Keeper cadence, discovers Jules sources, schedules issue checks, opportunistically enqueues indexing, and resolves Jules API credentials more like the Bun daemon.
+- [ ] **Go Backend Parity Pass #17:** Tighten Go-side provider abstractions for structured review/debate/recommendation workflows and audit whether any remaining residual product or observability surfaces still need Go-native implementation.
 - [x] **Tooling Stabilization:** Added a working ESLint v9 flat config and aligned the Jest harness with the current Vite/Bun + shared-package runtime assumptions.
 - [x] **Lint Coverage Expansion:** Extended the lint command to cover `src/`, `components/`, `lib/`, and `server/` with a staged warning-first rollout.
 - [x] **Lint Warning Burn-Down:** Completed two warning burn-down passes and brought the expanded lint surface to zero warnings.

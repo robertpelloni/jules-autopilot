@@ -1,13 +1,18 @@
-# Project Handoff: Jules Autopilot (v1.0.23 — Go Backend Parity Pass #15)
+# Project Handoff: Jules Autopilot (v1.0.24 — Go Backend Parity Pass #16)
 
 ## 1. Session Summary
-This session continued the product-surface migration after recovery hardening and targeted another actively used frontend workflow: debate execution and debate history/detail management.
+This session continued the Go migration after debate-management parity and targeted a real remaining backend-behavior gap: the Go daemon loop still lagged behind the Bun daemon in orchestration behavior.
 
-The result is that the Go backend now exposes Go-native debate execution, history listing, detail retrieval, and deletion routes, backed by a dedicated Go debate service and the existing `Debate` persistence model.
+The result is that the Go runtime now has stronger daemon-loop parity:
+- keeper-cadence-aware scheduling
+- Go-side Jules source discovery
+- smart-pilot issue-check scheduling
+- opportunistic index scheduling
+- broader Jules credential resolution using env or stored Keeper settings
 
 ## 2. Completed Work
 ### 2.1 Versioning & Documentation
-- Bumped the project version from `1.0.22` to `1.0.23`.
+- Bumped the project version from `1.0.23` to `1.0.24`.
 - Re-synced version surfaces via the canonical `VERSION` workflow:
   - `VERSION`
   - `VERSION.md`
@@ -24,78 +29,61 @@ The result is that the Go backend now exposes Go-native debate execution, histor
   - `docs/VISION.md`
 - Added a new archived handoff in `logs/handoffs/`.
 
-### 2.2 Added Go Debate Service
-Added `backend-go/services/debate.go`.
+### 2.2 Strengthened Go Jules Client Credential Resolution
+Updated `backend-go/services/jules_client.go`.
 
-This new Go service provides:
-- debate request parsing/types
-- multi-round participant turn execution
-- summary generation
-- risk scoring
-- approval status derivation
-- persistence into the `Debate` model
-- stored-debate parsing back into frontend-compatible shapes
+Added broader Jules key resolution so the Go backend can now resolve a usable Jules key from:
+- explicit input
+- `JULES_API_KEY`
+- `GOOGLE_API_KEY`
+- stored Keeper settings (`julesApiKey`)
 
-### 2.3 Added Go Debate Routes
-Updated `backend-go/api/routes.go` to add:
-- `POST /api/debate`
-- `GET /api/debate/history`
-- `GET /api/debate/:id`
-- `DELETE /api/debate/:id`
+This closes an important parity gap with the Bun runtime, which already considered stored settings and alternative env sources.
 
-These routes now support the existing frontend debate-management flow used by:
-- `DebateDialog`
-- `DebateHistoryList`
-- `DebateDetailsDialog`
+### 2.3 Added Go Jules Source Discovery
+Updated `backend-go/services/jules_client.go` to add Go-side source discovery support.
 
-### 2.4 Debate UI Compatibility
-The Go debate result shape was designed to match what the current UI expects:
-- `topic`
-- `rounds`
-- `summary`
-- `history`
-- `metadata`
-- `riskScore`
-- `approvalStatus`
-- `durationMs`
-- persisted `id` for history/detail/delete workflows
+Added:
+- `ListSources(filter string) ([]JulesSource, error)`
+- source normalization into a practical Go shape
 
-This means the Go port is not just endpoint-count parity — it is practical UI-shape parity.
+This was a prerequisite for porting Bun-style autonomous issue-check scheduling into the Go daemon loop.
+
+### 2.4 Expanded Go Daemon Loop Parity
+Updated `backend-go/services/daemon.go`.
+
+The Go daemon now:
+- respects Keeper `checkIntervalSeconds` instead of using a fixed hardcoded tick
+- schedules `check_session` jobs from live Jules sessions
+- schedules `check_issues` jobs from discovered Jules sources when smart pilot is enabled
+- opportunistically enqueues `index_codebase` when no indexing job is already pending/processing
+- emits Keeper-log telemetry for missing Jules key, source-poll failure, session-poll failure, and successful scheduling ticks
+
+This moves the Go daemon much closer to the Bun daemon’s orchestration role instead of leaving Go with a reduced control loop.
 
 ## 3. Validation Results
 ### Passing
-- `cd backend-go && go test ./...`
+- `cd backend-go && gofmt -w services/jules_client.go services/daemon.go && go test ./...`
 - `pnpm run lint`
 - `pnpm run typecheck`
 - `pnpm run test`
 - `node scripts/check-version-sync.js`
 
 ## 4. Key Findings
-### 4.1 Debate management was a real remaining product-surface gap
-The frontend already had a full debate-management UX, but the Go backend did not yet cover the routes that power it. Porting that surface removes another meaningful Bun-only dependency from the active application.
+### 4.1 Remaining Go migration gaps are increasingly behavioral, not just route-shaped
+The largest obvious route gaps have narrowed a lot. A major remaining area was daemon behavior parity rather than endpoint count. This pass materially closes that.
 
-### 4.2 The Go backend now covers an even broader application layer
-At this point, Go covers not only the daemon/autonomy/memory/control loop, but also a significant portion of user-facing utility/product workflows:
-- filesystem context
-- template management
-- direct review
-- import/export portability
-- debate execution/history/detail/delete
+### 4.2 Go autonomy strength depended on Go-side source discovery
+Without `ListSources()`, the Go daemon could not mirror Bun’s smart-pilot issue-check scheduling. That made source discovery a meaningful backend capability, not just a convenience helper.
 
-That materially strengthens the case for Go as a serious primary-runtime candidate.
-
-### 4.3 Remaining work is increasingly about polish and selective residual gaps
-The remaining areas now look more like:
-- provider/runtime abstraction polish
-- richer retrieval/result presentation
-- any residual utility/product surfaces still not covered
-- further recovery edge-case refinement only if needed in practice
+### 4.3 Env-only Jules key assumptions were artificially weakening Go
+The Go backend was unnecessarily weaker than Bun because it assumed env-only Jules credentials in key places. Expanding credential resolution makes Go more realistic in actual operator usage.
 
 ## 5. Remaining Work
-### Highest-value next Go ports
+### Highest-value next Go ports / refinements
 1. Tighten Go-side provider abstractions for structured review/debate/recommendation workflows
-2. Add richer Go-native retrieval/result presentation hooks where the UI would benefit from explicit memory reasoning metadata
-3. Audit whether any remaining non-core product surfaces still need Go-native coverage
+2. Audit any remaining residual product or observability surfaces still worth porting into Go
+3. Add richer Go-native retrieval/result presentation hooks if the UI should surface memory reasoning metadata more explicitly
 4. Continue observing/refining recovery edge cases if duplication or race conditions still surface
 5. Decide whether Go should become the default runtime or remain the parity track during migration
 
@@ -107,8 +95,8 @@ The remaining areas now look more like:
 
 ## 7. Recommended Next Step
 Recommended next move:
-- continue with **Go Backend Parity Pass #16** by tightening provider abstractions and reviewing whether any small but still-meaningful utility or presentation gaps remain, because the broad feature migration is now very far along.
+- continue with **Go Backend Parity Pass #17** by tightening provider abstractions and auditing whether any residual observability or product surfaces still meaningfully depend on Bun behavior.
 
 ## 8. Commit Guidance
 Recommended commit message for this session:
-- `feat: port go debate management parity (v1.0.23)`
+- `feat: expand go daemon orchestration parity (v1.0.24)`

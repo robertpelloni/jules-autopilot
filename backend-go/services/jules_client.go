@@ -10,6 +10,7 @@ import (
 	"time"
 
 	"github.com/joho/godotenv"
+	"github.com/jules-autopilot/backend/db"
 	"github.com/jules-autopilot/backend/models"
 )
 
@@ -20,15 +21,46 @@ type JulesClient struct {
 	apiKey string
 }
 
-// NewJulesClient creates a new instance of JulesClient
-func NewJulesClient() *JulesClient {
-	// Attempt to load .env from the root if JULES_API_KEY is not set
-	if os.Getenv("JULES_API_KEY") == "" {
+type JulesSource struct {
+	ID       string                 `json:"id"`
+	Name     string                 `json:"name"`
+	Type     string                 `json:"type"`
+	Metadata map[string]interface{} `json:"metadata,omitempty"`
+}
+
+func resolveJulesAPIKey(explicit ...string) string {
+	for _, candidate := range explicit {
+		value := strings.TrimSpace(candidate)
+		if value != "" && value != "placeholder" && value != "undefined" && value != "null" {
+			return value
+		}
+	}
+
+	if os.Getenv("JULES_API_KEY") == "" && os.Getenv("GOOGLE_API_KEY") == "" {
 		_ = godotenv.Load("../.env")
 	}
 
+	for _, envKey := range []string{"JULES_API_KEY", "GOOGLE_API_KEY"} {
+		if value := strings.TrimSpace(os.Getenv(envKey)); value != "" && value != "placeholder" && value != "undefined" && value != "null" {
+			return value
+		}
+	}
+
+	var settings models.KeeperSettings
+	if err := db.DB.First(&settings, "id = ?", "default").Error; err == nil && settings.JulesApiKey != nil {
+		value := strings.TrimSpace(*settings.JulesApiKey)
+		if value != "" && value != "placeholder" && value != "undefined" && value != "null" {
+			return value
+		}
+	}
+
+	return ""
+}
+
+// NewJulesClient creates a new instance of JulesClient
+func NewJulesClient(explicit ...string) *JulesClient {
 	return &JulesClient{
-		apiKey: os.Getenv("JULES_API_KEY"),
+		apiKey: resolveJulesAPIKey(explicit...),
 	}
 }
 
@@ -63,6 +95,99 @@ type GitHubIssue struct {
 	Body        string      `json:"body"`
 	HTMLURL     string      `json:"html_url"`
 	PullRequest interface{} `json:"pull_request,omitempty"`
+}
+
+type apiSource struct {
+	Source string                 `json:"source"`
+	Name   string                 `json:"name"`
+	Raw    map[string]interface{} `json:"-"`
+}
+
+func (c *JulesClient) ListSources(filter string) ([]JulesSource, error) {
+	if c.apiKey == "" {
+		return nil, fmt.Errorf("JULES_API_KEY not found in environment")
+	}
+
+	var allSources []apiSource
+	pageToken := ""
+
+	for {
+		url := fmt.Sprintf("%s/sources?pageSize=100", JulesApiBaseUrl)
+		params := make([]string, 0, 2)
+		if pageToken != "" {
+			params = append(params, "pageToken="+pageToken)
+		}
+		if strings.TrimSpace(filter) != "" {
+			params = append(params, "filter="+filter)
+		}
+		if len(params) > 0 {
+			url += "&" + strings.Join(params, "&")
+		}
+
+		req, err := http.NewRequest(http.MethodGet, url, nil)
+		if err != nil {
+			return nil, err
+		}
+		req.Header.Set("X-Goog-Api-Key", c.apiKey)
+		req.Header.Set("Content-Type", "application/json")
+
+		resp, err := http.DefaultClient.Do(req)
+		if err != nil {
+			return nil, err
+		}
+
+		var payload struct {
+			Sources       []map[string]interface{} `json:"sources"`
+			NextPageToken string                   `json:"nextPageToken"`
+		}
+		if err := json.NewDecoder(resp.Body).Decode(&payload); err != nil {
+			resp.Body.Close()
+			return nil, err
+		}
+		resp.Body.Close()
+
+		if resp.StatusCode >= 400 {
+			return nil, fmt.Errorf("Jules API sources request failed with status %d", resp.StatusCode)
+		}
+
+		for _, source := range payload.Sources {
+			item := apiSource{Raw: source}
+			if value, ok := source["source"].(string); ok {
+				item.Source = value
+			}
+			if value, ok := source["name"].(string); ok {
+				item.Name = value
+			}
+			allSources = append(allSources, item)
+		}
+
+		pageToken = payload.NextPageToken
+		if pageToken == "" {
+			break
+		}
+	}
+
+	results := make([]JulesSource, 0, len(allSources))
+	for _, source := range allSources {
+		id := source.Source
+		if id == "" {
+			id = source.Name
+		}
+		repoPath := id
+		if trimmed := strings.TrimPrefix(id, "sources/github/"); trimmed != id {
+			repoPath = trimmed
+		}
+		if strings.TrimSpace(repoPath) == "" {
+			repoPath = "Unknown Source"
+		}
+		results = append(results, JulesSource{
+			ID:       id,
+			Name:     repoPath,
+			Type:     "github",
+			Metadata: source.Raw,
+		})
+	}
+	return results, nil
 }
 
 // ListSessions fetches all sessions from the Jules API

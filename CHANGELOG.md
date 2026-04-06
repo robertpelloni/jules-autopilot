@@ -2,6 +2,20 @@
 
 All notable changes to this project will be documented in this file.
 
+## [1.0.24] - 2026-04-05
+
+### Added
+- **Go Daemon Orchestration Parity**: The Go daemon now mirrors more of the Bun daemon loop by scheduling session checks, smart-pilot issue checks, and opportunistic codebase indexing from the Go runtime.
+- **Go Jules Source Discovery**: Added Go-side `ListSources()` support so autonomous issue-check scheduling no longer depends on Bun-only Jules source discovery behavior.
+
+### Changed
+- **Go Jules Credential Resolution**: The Go Jules client now resolves credentials from explicit input, `JULES_API_KEY`, `GOOGLE_API_KEY`, and stored Keeper settings, reducing env-only runtime assumptions.
+- **Go Daemon Cadence**: The Go daemon now respects `checkIntervalSeconds` from Keeper settings instead of using a fixed hardcoded tick interval.
+- **Go Daemon Telemetry**: Added Keeper-log coverage for missing-key, source-poll failure, session-poll failure, and successful daemon scheduling ticks.
+
+### Notes
+- **Validation Status**: `cd backend-go && go test ./...`, `pnpm run lint`, `pnpm run typecheck`, `pnpm run test`, and `node scripts/check-version-sync.js` all pass at `1.0.24`.
+
 ## [1.0.23] - 2026-04-05
 
 ### Added

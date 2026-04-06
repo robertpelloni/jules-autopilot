@@ -2,6 +2,7 @@ package services
 
 import (
 	"log"
+	"strings"
 	"sync"
 	"time"
 
@@ -40,14 +41,23 @@ func (d *Daemon) Run() {
 	d.mu.Unlock()
 
 	log.Println("[Daemon] Starting background monitoring loop...")
-	ticker := time.NewTicker(10 * time.Second)
-	defer ticker.Stop()
 
 	for {
+		interval := d.tick()
+		if interval <= 0 {
+			interval = 30 * time.Second
+		}
+
+		timer := time.NewTimer(interval)
 		select {
-		case <-ticker.C:
-			d.tick()
+		case <-timer.C:
 		case <-d.stopChan:
+			if !timer.Stop() {
+				select {
+				case <-timer.C:
+				default:
+				}
+			}
 			d.mu.Lock()
 			d.isRunning = false
 			d.mu.Unlock()
@@ -57,31 +67,96 @@ func (d *Daemon) Run() {
 	}
 }
 
-func (d *Daemon) tick() {
+func (d *Daemon) tick() time.Duration {
 	var settings models.KeeperSettings
 	if err := db.DB.First(&settings, "id = ?", "default").Error; err != nil {
-		return
+		return 30 * time.Second
+	}
+
+	interval := time.Duration(settings.CheckIntervalSeconds) * time.Second
+	if interval <= 0 {
+		interval = 30 * time.Second
 	}
 
 	if !settings.IsEnabled {
-		return
+		return interval
 	}
 
 	client := NewJulesClient()
+	if client.apiKey == "" {
+		addKeeperLog("Daemon enabled but no Jules API key found.", "error", "global", map[string]interface{}{
+			"event": "daemon_missing_jules_api_key",
+		})
+		return interval
+	}
+
 	sessions, err := client.ListSessions()
 	if err != nil {
 		log.Printf("[Daemon] Failed to fetch live sessions: %v", err)
-		return
+		addKeeperLog("Failed to fetch live Jules sessions in Go daemon.", "error", "global", map[string]interface{}{
+			"event": "daemon_session_poll_failed",
+			"error": err.Error(),
+		})
+		return interval
 	}
 
+	queuedSessions := 0
 	for _, session := range sessions {
 		payload := map[string]interface{}{
 			"session": session,
 		}
 		if _, err := AddJob("check_session", payload); err != nil {
 			log.Printf("[Daemon] Failed to enqueue check_session for %s: %v", session.ID, err)
+			continue
+		}
+		queuedSessions++
+	}
+
+	queuedIssueChecks := 0
+	if settings.SmartPilotEnabled {
+		sources, err := client.ListSources("")
+		if err != nil {
+			log.Printf("[Daemon] Failed to fetch sources for issue checks: %v", err)
+			addKeeperLog("Failed to fetch sources for issue checks in Go daemon.", "error", "global", map[string]interface{}{
+				"event": "daemon_source_poll_failed",
+				"error": err.Error(),
+			})
+		} else {
+			for _, source := range sources {
+				if strings.TrimSpace(source.ID) == "" {
+					continue
+				}
+				payload := map[string]interface{}{"sourceId": source.ID}
+				if _, err := AddJob("check_issues", payload); err != nil {
+					log.Printf("[Daemon] Failed to enqueue check_issues for %s: %v", source.ID, err)
+					continue
+				}
+				queuedIssueChecks++
+			}
 		}
 	}
+
+	var existingIndexJob models.QueueJob
+	indexJobPending := db.DB.Where("type = ? AND status IN ?", "index_codebase", []string{"pending", "processing"}).First(&existingIndexJob).Error == nil
+	queuedIndexing := false
+	if !indexJobPending {
+		if _, err := AddJob("index_codebase", map[string]string{}); err != nil {
+			log.Printf("[Daemon] Failed to enqueue index_codebase: %v", err)
+		} else {
+			queuedIndexing = true
+		}
+	}
+
+	if queuedSessions > 0 || queuedIssueChecks > 0 || queuedIndexing {
+		addKeeperLog("Go daemon scheduled monitoring work.", "info", "global", map[string]interface{}{
+			"event":             "daemon_tick_enqueued",
+			"queuedSessions":    queuedSessions,
+			"queuedIssueChecks": queuedIssueChecks,
+			"queuedIndexing":    queuedIndexing,
+		})
+	}
+
+	return interval
 }
 
 // StartDaemon starts the global daemon in a goroutine
