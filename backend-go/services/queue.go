@@ -913,6 +913,10 @@ func fetchEmbedding(input, apiKey string) ([]byte, error) {
 }
 
 func (w *Worker) handleIndexCodebase(payload string) (string, error) {
+	return IndexCodebase()
+}
+
+func IndexCodebase() (string, error) {
 	settings, err := getSettings()
 	if err != nil {
 		return "skip", err

@@ -2,6 +2,19 @@
 
 All notable changes to this project will be documented in this file.
 
+## [1.0.34] - 2026-04-05
+
+### Added
+- **Go Webhook Parity Expansion**: Updated the Go webhook handler (`postBorgWebhook`) to support `dependency_alert`, `fleet_command: clear_logs`, and high-priority `issue_detected` signals, matching Bun’s automation triggers.
+- **Go CLI Indexer**: Added a standalone Go-native indexer utility at `backend-go/cmd/index-repo/main.go` for CLI-based repository indexing.
+
+### Changed
+- **Go Indexer Refactor**: Pulled codebase indexing logic into a standalone Go service method (`services.IndexCodebase()`) so it can be shared between the queue worker and the new CLI utility.
+- **Project Boot Hardening**: Hardened `scripts/run-it.js` to avoid environment variable case conflicts in PowerShell and ensure the Go backend persists reliably in the background.
+
+### Notes
+- **Validation Status**: `cd backend-go && gofmt -w api/routes.go services/queue.go main.go && go test ./...`, `pnpm run lint`, `pnpm run typecheck`, `pnpm run test`, and `node scripts/check-version-sync.js` all pass at `1.0.34`.
+
 ## [1.0.33] - 2026-04-05
 
 ### Added

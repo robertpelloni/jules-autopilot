@@ -513,9 +513,21 @@ func postBorgWebhook(c *fiber.Ctx) error {
 	if payload.Type == "repo_updated" {
 		_, _ = services.AddJob("index_codebase", map[string]string{})
 	}
+	if payload.Type == "dependency_alert" {
+		log.Printf("[Webhooks] Borg Dependency Alert: %v", payload.Data)
+	}
 	if payload.Type == "fleet_command" {
-		if action, ok := payload.Data["action"].(string); ok && action == "reindex_all" {
-			_, _ = services.AddJob("index_codebase", map[string]string{})
+		if action, ok := payload.Data["action"].(string); ok {
+			if action == "reindex_all" {
+				_, _ = services.AddJob("index_codebase", map[string]string{})
+			} else if action == "clear_logs" {
+				db.DB.Where("1 = 1").Delete(&models.KeeperLog{})
+			}
+		}
+	}
+	if payload.Type == "issue_detected" {
+		if sourceID, ok := payload.Data["sourceId"].(string); ok && sourceID != "" {
+			_, _ = services.AddJob("check_issues", map[string]string{"sourceId": sourceID})
 		}
 	}
 

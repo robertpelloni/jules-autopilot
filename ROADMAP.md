@@ -49,6 +49,7 @@ For granular tasks and immediate bug fixes, see `TODO.md`.
 * [x] **Go Backend Parity Pass #23**: Aligned Go daemon/worker lifecycle semantics with Bun more closely by coordinating startup/stop behavior, making worker lifecycle restartable, and surfacing worker-running observability.
 * [x] **Go Backend Parity Pass #24**: Ported resilient degraded-mode session handling (mock/error sessions) and hardened client-side transformation compatibility so the Go runtime is safer for dashboard usage during auth/API failures.
 * [x] **Go Backend Parity Pass #25**: Added Go-native scheduled task engine and graceful shutdown handling, closing more primary-runtime operational gaps and implementing initial v4.0 roadmap items.
+* [x] **Go Backend Parity Pass #26**: Expanded Go webhook parity (alerts, cleanup, issue triggers) and added a Go-native CLI indexer utility.
 
 ## Milestone: v1.5 — "Shadow Pilot"
 * [ ] **Background Anomaly Detection:** Agents silently monitoring `git diffs` background tasks, fixing failing CI pipelines before human review.

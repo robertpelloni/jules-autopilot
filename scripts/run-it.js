@@ -11,11 +11,18 @@ const logStream = fs.createWriteStream(join(root, 'run-it.log'), { flags: 'a' })
 
 function spawnProcess(command, args, cwd, name) {
   logStream.write(`[${name}] Spawning ${command} ${args.join(' ')} in ${cwd}\n`);
+  
+  // Create a clean environment to avoid PowerShell 'HOME'/'Home' duplicate key errors
+  const env = { ...process.env };
+  delete env.HOME;
+  delete env.Home;
+
   const child = spawn(command, args, {
     cwd,
     detached: true,
     stdio: 'ignore',
-    shell: true // Add shell: true for pnpm
+    shell: true,
+    env
   });
   child.unref();
   logStream.write(`[${name}] Spawned with PID ${child.pid}\n`);
