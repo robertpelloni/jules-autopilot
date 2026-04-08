@@ -1,12 +1,12 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Github, Brain, Palette, Key, ShieldCheck, Database, Download, Upload, Loader2, Zap } from 'lucide-react';
+import { Github, Brain, Palette, Key, ShieldCheck, Database, Download, Upload, Loader2, Zap, Plus, Trash2 } from 'lucide-react';
 import { SessionKeeperSettingsContent } from './session-keeper-settings-content';
 import { ThemeCustomizer } from './theme-customizer';
 import { useSessionKeeperStore } from '@/lib/stores/session-keeper';
@@ -20,6 +20,15 @@ interface SettingsDialogProps {
   trigger?: React.ReactNode;
 }
 
+interface ApiKey {
+  id: string;
+  name: string;
+  keyPrefix: string;
+  keyHash: string;
+  isActive: boolean;
+  createdAt: string;
+}
+
 export function SettingsDialog({ open: propOpen, onOpenChange: propOnOpenChange, trigger }: SettingsDialogProps) {
   const { config, setConfig } = useSessionKeeperStore();
   const [internalOpen, setInternalOpen] = useState(false);
@@ -27,9 +36,53 @@ export function SettingsDialog({ open: propOpen, onOpenChange: propOnOpenChange,
   const [openAIKey, setOpenAIKey] = useState('');
   const [julesKey, setJulesKey] = useState('');
   const [isImporting, setIsImporting] = useState(false);
+  const [apiKeys, setApiKeys] = useState<ApiKey[]>([]);
+  const [_isKeysLoading, setIsKeysLoading] = useState(false);
+  const [newKeyName, setNewKeyName] = useState('');
 
   const open = propOpen !== undefined ? propOpen : internalOpen;
   const onOpenChange = propOnOpenChange || setInternalOpen;
+
+  const fetchApiKeys = useCallback(async () => {
+    try {
+      setIsKeysLoading(true);
+      const res = await fetch('/api/keys');
+      if (res.ok) setApiKeys(await res.json());
+    } catch (err) { console.error(err); }
+    finally { setIsKeysLoading(false); }
+  }, []);
+
+  const handleCreateKey = async () => {
+    if (!newKeyName.trim()) return;
+    try {
+      const res = await fetch('/api/keys', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ name: newKeyName })
+      });
+      if (res.ok) {
+        toast.success('API Key generated');
+        setNewKeyName('');
+        void fetchApiKeys();
+      }
+    } catch (err) { console.error(err); }
+  };
+
+  const handleDeleteKey = async (id: string) => {
+    try {
+      const res = await fetch(`/api/keys/${id}`, { method: 'DELETE' });
+      if (res.ok) {
+        toast.success('API Key revoked');
+        void fetchApiKeys();
+      }
+    } catch (err) { console.error(err); }
+  };
+
+  useEffect(() => {
+    if (open) {
+      void fetchApiKeys();
+    }
+  }, [open, fetchApiKeys]);
 
   // Initialize tokens from localStorage on mount
   useEffect(() => {
@@ -134,6 +187,10 @@ export function SettingsDialog({ open: propOpen, onOpenChange: propOnOpenChange,
                 <Palette className="h-3.5 w-3.5" />
                 Appearance
               </TabsTrigger>
+              <TabsTrigger value="keys" className="text-xs flex items-center gap-2">
+                <Key className="h-3.5 w-3.5" />
+                API Keys
+              </TabsTrigger>
               <TabsTrigger value="system" className="text-xs flex items-center gap-2">
                 <Database className="h-3.5 w-3.5" />
                 System
@@ -230,6 +287,70 @@ export function SettingsDialog({ open: propOpen, onOpenChange: propOnOpenChange,
             />
           </TabsContent>
 
+          <TabsContent value="keys" className="flex-1 p-6 overflow-y-auto">
+            <div className="space-y-6">
+              <div className="space-y-4 border border-white/10 p-4 rounded-lg bg-white/5">
+                <div className="flex items-center gap-2 mb-2">
+                  <Key className="h-5 w-5 text-purple-400" />
+                  <h3 className="text-sm font-bold">Node Access Keys</h3>
+                </div>
+                <p className="text-xs text-zinc-400 leading-relaxed">
+                  Generate scoped API keys to allow external tools and collective nodes to interact with this Autopilot instance.
+                </p>
+                
+                <div className="flex gap-2">
+                  <Input 
+                    placeholder="Key Label (e.g. CI-Pipeline)" 
+                    value={newKeyName}
+                    onChange={e => setNewKeyName(e.target.value)}
+                    className="bg-black/50 border-white/10 text-xs font-mono h-9"
+                  />
+                  <Button onClick={handleCreateKey} size="sm" className="bg-purple-600 hover:bg-purple-500 text-white font-bold uppercase tracking-widest text-[10px] h-9 shrink-0">
+                    <Plus className="h-3.5 w-3.5 mr-1.5" /> Generate
+                  </Button>
+                </div>
+              </div>
+
+              <div className="rounded-lg border border-white/10 overflow-hidden">
+                <table className="w-full text-left text-[10px] font-mono text-white">
+                  <thead className="bg-white/5 text-zinc-500 uppercase tracking-widest border-b border-white/10">
+                    <tr>
+                      <th className="px-4 py-2 font-bold">Name</th>
+                      <th className="px-4 py-2 font-bold">Key Preview</th>
+                      <th className="px-4 py-2 font-bold text-right">Actions</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-white/5 bg-black/20">
+                    {apiKeys.length === 0 ? (
+                      <tr>
+                        <td colSpan={3} className="px-4 py-8 text-center text-zinc-600 uppercase italic">No access keys configured</td>
+                      </tr>
+                    ) : (
+                      apiKeys.map(key => (
+                        <tr key={key.id} className="group hover:bg-white/[0.02]">
+                          <td className="px-4 py-3 text-zinc-300 font-bold">{key.name}</td>
+                          <td className="px-4 py-3 text-zinc-500">
+                            {key.keyPrefix}••••••••
+                          </td>
+                          <td className="px-4 py-3 text-right">
+                            <Button 
+                              variant="ghost" 
+                              size="icon" 
+                              onClick={() => void handleDeleteKey(key.id)}
+                              className="h-7 w-7 text-red-400 hover:bg-red-500/10 opacity-0 group-hover:opacity-100"
+                            >
+                              <Trash2 className="h-3.5 w-3.5" />
+                            </Button>
+                          </td>
+                        </tr>
+                      ))
+                    )}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </TabsContent>
+
           <TabsContent value="appearance" className="flex-1 p-6">
             <div className="max-w-md">
               <ThemeCustomizer />
@@ -258,36 +379,19 @@ export function SettingsDialog({ open: propOpen, onOpenChange: propOnOpenChange,
                     <Input
                       type="file"
                       accept=".json"
-                      onChange={handleImport}
-                      className="hidden"
-                      id="import-upload"
-                      disabled={isImporting}
+                      onChange={e => void handleImport(e)}
+                      className="absolute inset-0 opacity-0 cursor-pointer z-10"
                     />
-                    <Button 
-                      asChild 
-                      variant="outline" 
-                      className="w-full border-white/10 hover:bg-white/5 text-xs font-mono uppercase tracking-widest h-9"
-                      disabled={isImporting}
-                    >
-                      <label htmlFor="import-upload" className="cursor-pointer">
-                        {isImporting ? <Loader2 className="mr-2 h-3.5 w-3.5 animate-spin" /> : <Upload className="mr-2 h-3.5 w-3.5" />}
-                        Import
-                      </label>
+                    <Button variant="outline" className="w-full border-white/10 hover:bg-white/5 text-xs font-mono uppercase tracking-widest h-9">
+                      {isImporting ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <><Upload className="mr-2 h-3.5 w-3.5" /> Import</>}
                     </Button>
                   </div>
                 </div>
-              </div>
-
-              <div className="p-4 border border-yellow-500/20 rounded-lg bg-yellow-500/5">
-                <h4 className="text-[10px] font-bold text-yellow-500 uppercase tracking-widest mb-1">Warning</h4>
-                <p className="text-[10px] text-yellow-500/70 leading-normal font-mono">
-                  Importing data will overwrite your existing local database. This action is atomic but non-reversible without a backup.
-                </p>
               </div>
             </div>
           </TabsContent>
         </Tabs>
       </DialogContent>
     </Dialog>
-  )
+  );
 }
