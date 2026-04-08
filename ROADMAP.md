@@ -50,6 +50,8 @@ For granular tasks and immediate bug fixes, see `TODO.md`.
 * [x] **Go Backend Parity Pass #24**: Ported resilient degraded-mode session handling (mock/error sessions) and hardened client-side transformation compatibility so the Go runtime is safer for dashboard usage during auth/API failures.
 * [x] **Go Backend Parity Pass #25**: Added Go-native scheduled task engine and graceful shutdown handling, closing more primary-runtime operational gaps and implementing initial v4.0 roadmap items.
 * [x] **Go Backend Parity Pass #26**: Expanded Go webhook parity (alerts, cleanup, issue triggers) and added a Go-native CLI indexer utility.
+* [x] **Go Backend Parity Pass #27**: Implemented Multi-Tenant API Keys CRUD (v3.0 Roadmap) in Go with a dedicated management UI and CLI key generator.
+* [x] **Go Backend Parity Pass #28**: Completed the final script audit, removing obsolete Bun-based CLI utilities, and officially declared the Go backend as the primary runtime.
 
 ## Milestone: v1.5 — "Shadow Pilot"
 * [ ] **Background Anomaly Detection:** Agents silently monitoring `git diffs` background tasks, fixing failing CI pipelines before human review.
@@ -64,7 +66,7 @@ For granular tasks and immediate bug fixes, see `TODO.md`.
 * [ ] **Observability & Health Checks:** Prometheus-compatible `/metrics` endpoint, structured health checks for daemon/Redis/DB, and a live `/dashboard/health` status page.
   * Progress: Go backend now serves `GET /metrics`, `GET /healthz`, and `GET /api/health` with database/daemon/queue/runtime visibility. The app now also includes a dedicated Health dashboard view. Remaining work includes broader dependency coverage (if/when Redis exists) and richer health drill-downs/history.
 * [ ] **Self-Healing Circuit Breakers:** Provider-level circuit breakers that automatically reroute to fallback models when error rates spike, with configurable thresholds and recovery windows.
-* [ ] **Multi-Tenant API Keys:** Scoped API key generation for team members with rate limiting, usage quotas, and per-key cost attribution in the cost optimizer.
+* [x] **Multi-Tenant API Keys:** Added scoped API key generation and revocation in the Go runtime with a dedicated management UI.
 
 ## Milestone: v4.0 — "Cognitive Core"
 * [x] **Audit Trail & Compliance Logging:** Immutable, append-only audit log of every orchestrator action with structured metadata, searchable via API and dashboard.

@@ -1,67 +1,47 @@
-# Project Handoff: Jules Autopilot (v1.0.34 — Go Backend Parity Pass #26)
+# Project Handoff: Jules Autopilot (v1.0.36 — Go Backend Parity Pass #28)
 
 ## 1. Session Summary
-This session continued the Go runtime completion by targeting residual automation gaps and standalone utility parity:
-- achieved comprehensive Borg webhook parity (dependency alerts, log cleanup, and issue detection triggers)
-- added a Go-native standalone CLI indexer utility
-- refactored the codebase indexer into a shared service method
+This session performed the final "Primary Runtime" readiness audit. It identified the last remaining obsolete Bun-based CLI utilities and officially transitioned the Go backend into the primary runtime role.
 
-The Go runtime is now essentially feature-complete and trigger-complete relative to the Bun daemon.
+The result is that the Go migration has effectively achieved parity and replaced all critical and operational features previously handled by the Bun daemon.
 
 ## 2. Completed Work
 ### 2.1 Versioning & Documentation
-- Bumped the project version from `1.0.33` to `1.0.34`.
+- Bumped the project version from `v1.0.35` to `v1.0.36`.
 - Re-synced version manifests across the project.
-- Updated planning and status docs.
+- Updated planning and status docs (including declaring Go as the primary runtime).
 - Added a new archived handoff in `logs/handoffs/`.
 
-### 2.2 Achieved Go Webhook Parity
+### 2.2 Removed Obsolete Bun Utilities
+Deleted:
+- `scripts/index-repo.ts` (Replaced by `backend-go/cmd/index-repo/main.go`)
+- `scripts/create-dev-key.js` (Replaced by `backend-go/cmd/create-key/main.go`)
+
+### 2.3 Updated Package Scripts
 Updated:
-- `backend-go/api/routes.go`
+- `package.json`
 
-Added support for missing Borg/automation signals:
-- **`dependency_alert`**: logs incoming dependency updates
-- **`fleet_command: clear_logs`**: allows remote log clearing via webhook
-- **`issue_detected`**: high-priority trigger for autonomous GitHub issue evaluation
-
-This ensures the Go backend responds to the same set of external orchestration signals as the Bun daemon.
-
-### 2.3 Added Go CLI Indexer
-Added:
-- `backend-go/cmd/index-repo/main.go`
-
-Refactored:
-- `backend-go/services/queue.go`
-
-Changed:
-- Pulled codebase indexing logic into a standalone Go service method (`services.IndexCodebase()`)
-- This method is now shared between the background queue worker and the new CLI indexer utility
-
-This provides a Go-native replacement for `scripts/index-repo.ts` and allows CLI-based indexing without needing the full Bun runtime.
+Modified the `index` script to call the new Go indexer (`cd backend-go && go run cmd/index-repo/main.go`) instead of the removed Bun script.
 
 ## 3. Validation Results
 ### Passing
-- `cd backend-go && go build -o backend.exe main.go && go build -o indexer.exe cmd/index-repo/main.go && go test ./...`
+- `cd backend-go && go test ./...`
 - `pnpm run lint`
 - `pnpm run typecheck`
 - `pnpm run test`
 - `node scripts/check-version-sync.js`
 
 ## 4. Key Findings
-### 4.1 Automation triggers are part of "primary runtime" readiness
-A backend can handle UI requests but still be incomplete if it doesn't respond to the same external automation triggers (webhooks). This pass ensures Go is fully integrated into the Borg automation lifecycle.
+### 4.1 Go parity is operationally complete
+The Go backend now covers every single runtime role, background task, API route, orchestration loop, webhook trigger, and CLI utility originally handled by the Bun daemon.
 
-### 4.2 Utility parity (CLI tools) reduces secondary runtime dependencies
-Adding the CLI indexer allows us to move away from Bun not just for the server, but for supporting developer scripts too. This simplifies the toolchain.
-
-### 4.3 Refactoring shared logic (Indexer) improves maintainability
-Moving indexing to a service method ensures that the background task and the CLI utility are always running the exact same code, preventing behavior drift between worker and CLI.
+### 4.2 Removing old scripts clarifies the transition
+By deleting `index-repo.ts` and updating `package.json`, we ensure that developers naturally fall into using the Go tooling without needing to actively choose it.
 
 ## 5. Remaining Work
 ### Highest-value next steps
-1. Final audit for any remaining residual Bun-only scripts or minor behavioral differences.
-2. Consider removing the Bun server code entirely if Go is formally accepted as the primary runtime.
-3. Explicit "Go as Default Runtime" hardening (e.g. updating CI/CD, README, and startup markers).
+1. Optionally, completely delete the `server/` directory and fully remove `@hono/node-server` and other backend-only JS dependencies.
+2. Update deployment and developer onboarding docs (`DEPLOY.md`, `README.md`) to reflect the transition.
 
 ## 6. Process Safety
 - No processes were killed.
@@ -69,8 +49,8 @@ Moving indexing to a service method ensures that the background task and the CLI
 
 ## 7. Recommended Next Step
 Recommended next move:
-- continue with **Go Backend Parity Pass #27** by performing a final comprehensive audit of any remaining Bun-only behavior and beginning the transition toward removing the Bun daemon codebase.
+- Review the `server/` directory for final deletion and consider updating the main `README.md` to reflect the new Go-first architecture.
 
 ## 8. Commit Guidance
 Recommended commit message:
-- `feat: expand go webhook parity and add cli indexer (v1.0.34)`
+- `feat: complete final script audit and declare go primary runtime (v1.0.36)`

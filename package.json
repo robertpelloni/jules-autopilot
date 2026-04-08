@@ -1,7 +1,7 @@
 {
   "name": "jules-ui",
   "description": "The modern, developer-first interface for Google's Jules AI agent. Features live code diffs, interactive terminal outputs, and a streamlined pure React experience.",
-  "version": "1.0.34",
+  "version": "1.0.36",
   "private": true,
   "type": "module",
   "workspaces": [
@@ -18,7 +18,7 @@
     "build:vercel": "pnpm run build:shared && vite build",
     "preview": "vite preview",
     "daemon": "bun run server/index.ts",
-    "index": "bun run scripts/index-repo.ts",
+    "index": "cd backend-go && go run cmd/index-repo/main.go",
     "lint": "eslint src components lib server",
     "test": "jest",
     "test:e2e": "playwright test",

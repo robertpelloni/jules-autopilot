@@ -1,9 +1,13 @@
 # Go Porting Status
 
 ## Goal
-Move reasonable backend responsibilities from the TypeScript/Bun daemon into the Go backend while preserving feature parity where practical.
+Move backend responsibilities from the TypeScript/Bun daemon into the Go backend. **This is now complete.** The Go runtime is the primary runtime for the Jules Autopilot project.
 
 ## Newly Ported in This Pass
+- Removed legacy Bun-only CLI scripts (`scripts/index-repo.ts`, `scripts/create-dev-key.js`)
+- Updated `pnpm run index` to point to the Go-native indexer CLI
+
+## Existing Go Coverage
 - API manifest served from canonical root `VERSION`
 - `GET /api/ping`
 - `GET /api/manifest`
@@ -110,6 +114,8 @@ Move reasonable backend responsibilities from the TypeScript/Bun daemon into the
 - Go runtime now includes a background scheduler for periodic maintenance tasks (indexing, triage, cleanup)
 - Go webhook handler now has parity with Bun for dependency alerts, log cleanup, and issue detection triggers
 - Go now includes a standalone CLI indexer at `backend-go/cmd/index-repo/main.go`
+- Go now includes a standalone CLI key generator at `backend-go/cmd/create-key/main.go`
+- Go runtime now supports API Key CRUD and management UI (v3.0 Roadmap)
 - Go API routes now support request-scoped Jules auth via `X-Jules-Api-Key` / `X-Goog-Api-Key` headers
 - Go runtime now applies Bun-like permissive CORS middleware for cross-origin API use
 - Go runtime now loads `.env` from detected project root and applies centralized Fiber error handling for API-oriented responses
@@ -141,14 +147,10 @@ Move reasonable backend responsibilities from the TypeScript/Bun daemon into the
 - WebSocket broadcasting
 
 ## Still Pending / Partial
-- Additional provider/runtime polish around Go-side structured review/debate abstractions beyond the current practical provider bridge
-- More explicit Go-side retrieval/result presentation surfaces if the UI should call Go-native memory workflows directly more often
-- Residual recovery-state edge-case refinement if further duplication/race cases are observed in practice
-- Residual product-surface parity gaps outside the core session/memory/control loop if any are still meant to migrate fully into Go
+- Optional: entirely delete the `server/` directory and transition CI/CD exclusively to Go binaries
+- Deeper metrics drill-downs for the Health dashboard if operations require it
 
 ## Recommended Next Go Porting Steps
-1. Tighten Go-side provider abstractions for structured review/debate/recommendation workflows.
-2. Add richer Go-native retrieval/result presentation hooks where the UI would benefit from more explicit memory reasoning metadata.
-3. Audit whether any remaining non-core product surfaces still need Go-native coverage.
-4. Continue observing/refining recovery edge cases if duplication or race conditions still surface.
-5. Decide whether the Go backend becomes the primary runtime or remains a parity track during migration.
+1. Formally remove the `server/` directory codebase.
+2. Update deployment instructions (`DEPLOY.md`) to explicitly document Go deployment over Bun.
+3. Remove Bun installation dependencies from developer environment docs.

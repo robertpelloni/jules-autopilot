@@ -2,6 +2,29 @@
 
 All notable changes to this project will be documented in this file.
 
+## [1.0.36] - 2026-04-05
+
+### Changed
+- **Go as Primary Runtime**: Completed the final script audit and officially declared the Go backend as the primary runtime for the Jules Autopilot project.
+- **Obsolete Tooling Removed**: Deleted residual Bun-based developer scripts (`index-repo.ts` and `create-dev-key.js`) that were fully replaced by Go-native CLI binaries.
+- **Project Configuration**: Updated `package.json` index commands to target the new Go indexer.
+
+### Notes
+- **Validation Status**: `cd backend-go && go test ./...`, `pnpm run lint`, `pnpm run typecheck`, `pnpm run test`, and `node scripts/check-version-sync.js` all pass at `1.0.36`.
+
+## [1.0.35] - 2026-04-05
+
+### Added
+- **API Key Management UI**: Added a dedicated "API Keys" tab in the Settings dialog to allow operators to generate, view, and revoke node-access keys directly from the dashboard.
+- **Go CLI Key Generator**: Added a Go-native CLI utility at `backend-go/cmd/create-key/main.go` for manual API key generation.
+
+### Changed
+- **Roadmap Progress**: Implemented the first slice of the v3.0 "Multi-Tenant API Keys" milestone, enabling scoped key management in the Go runtime.
+- **UI Refinement**: Refactored `SettingsDialog` to support the new key management flow with improved dependency tracking and clean build state.
+
+### Notes
+- **Validation Status**: `cd backend-go && go build -o backend.exe main.go && go build -o indexer.exe cmd/index-repo/main.go && go build -o create-key.exe cmd/create-key/main.go && go test ./...`, `pnpm run lint`, `pnpm run typecheck`, `pnpm run test`, and `node scripts/check-version-sync.js` all pass at `1.0.35`.
+
 ## [1.0.34] - 2026-04-05
 
 ### Added

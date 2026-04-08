@@ -35,7 +35,9 @@ This document tracks granular bugs, missing features, and technical debt. For ep
 - [x] **Go Backend Parity Pass #24:** Ported resilient degraded-mode session handling (mock/error sessions) and hardened client-side transformation compatibility so the Go runtime is safer for dashboard usage during auth/API failures.
 - [x] **Go Backend Parity Pass #25:** Added Go-native scheduled task engine and graceful shutdown handling, closing more primary-runtime operational gaps and implementing initial v4.0 roadmap items.
 - [x] **Go Backend Parity Pass #26:** Expanded Go webhook parity (alerts, cleanup, issue triggers) and added a Go-native CLI indexer utility.
-- [ ] **Go Backend Parity Pass #27:** Final audit for any remaining residual Bun-only behavior (e.g. final script parity) and consider explicit "Go as Default Runtime" hardening.
+- [x] **Go Backend Parity Pass #27:** Implemented Multi-Tenant API Keys CRUD (v3.0 Roadmap) in Go with a dedicated management UI and CLI key generator.
+- [x] **Go Backend Parity Pass #28:** Final audit for any remaining residual Bun-only behavior (e.g. final script parity), officially declaring the Go backend as the primary runtime.
+- [ ] **Phase 2:** Consider completely deleting the `server/` directory to formally lock the runtime pivot.
 - [x] **Tooling Stabilization:** Added a working ESLint v9 flat config and aligned the Jest harness with the current Vite/Bun + shared-package runtime assumptions.
 - [x] **Lint Coverage Expansion:** Extended the lint command to cover `src/`, `components/`, `lib/`, and `server/` with a staged warning-first rollout.
 - [x] **Lint Warning Burn-Down:** Completed two warning burn-down passes and brought the expanded lint surface to zero warnings.
