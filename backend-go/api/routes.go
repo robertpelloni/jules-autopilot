@@ -570,6 +570,16 @@ func SetupRoutes(app *fiber.App) {
 	api.Post("/rag/reindex", postRAGReindex)
 	api.Post("/webhooks/borg", postBorgWebhook)
 	api.Post("/webhooks/hypercode", postBorgWebhook)
+	api.Post("/webhooks/github", postGitHubWebhook)
+	api.Post("/webhooks/slack", postSlackWebhook)
+	api.Post("/webhooks/linear", postLinearWebhook)
+	api.Post("/webhooks/generic", postGenericWebhook)
+
+	// Webhook rule management
+	api.Get("/webhooks/rules", getWebhookRulesAPI)
+	api.Post("/webhooks/rules", addWebhookRuleAPI)
+	api.Delete("/webhooks/rules/:id", deleteWebhookRuleAPI)
+	api.Patch("/webhooks/rules/:id/toggle", toggleWebhookRuleAPI)
 
 	// Daemon routes
 	api.Get("/daemon/status", getDaemonStatus)
@@ -1843,4 +1853,105 @@ func deleteScheduledTask(c *fiber.Ctx) error {
 		return c.Status(404).JSON(fiber.Map{"error": err.Error()})
 	}
 	return c.JSON(fiber.Map{"status": "deleted", "name": name})
+}
+
+func postGitHubWebhook(c *fiber.Ctx) error {
+	eventType := c.Get("X-GitHub-Event", "push")
+	var body map[string]interface{}
+	if err := c.BodyParser(&body); err != nil {
+		return c.Status(400).JSON(fiber.Map{"error": "Invalid JSON"})
+	}
+	event := services.ProcessGitHubWebhook(eventType, body)
+	if err := services.ProcessWebhook(event); err != nil {
+		return c.Status(500).JSON(fiber.Map{"error": err.Error()})
+	}
+	return c.JSON(fiber.Map{"status": "processed", "event": eventType})
+}
+
+func postSlackWebhook(c *fiber.Ctx) error {
+	var body map[string]interface{}
+	if err := c.BodyParser(&body); err != nil {
+		return c.Status(400).JSON(fiber.Map{"error": "Invalid JSON"})
+	}
+	event := services.ProcessSlackWebhook(body)
+	if err := services.ProcessWebhook(event); err != nil {
+		return c.Status(500).JSON(fiber.Map{"error": err.Error()})
+	}
+	return c.JSON(fiber.Map{"status": "processed"})
+}
+
+func postLinearWebhook(c *fiber.Ctx) error {
+	var body map[string]interface{}
+	if err := c.BodyParser(&body); err != nil {
+		return c.Status(400).JSON(fiber.Map{"error": "Invalid JSON"})
+	}
+	event := services.ProcessLinearWebhook(body)
+	if err := services.ProcessWebhook(event); err != nil {
+		return c.Status(500).JSON(fiber.Map{"error": err.Error()})
+	}
+	return c.JSON(fiber.Map{"status": "processed"})
+}
+
+func postGenericWebhook(c *fiber.Ctx) error {
+	var body struct {
+		Provider  string                 `json:"provider"`
+		EventType string                 `json:"eventType"`
+		Data      map[string]interface{} `json:"data"`
+	}
+	if err := c.BodyParser(&body); err != nil {
+		return c.Status(400).JSON(fiber.Map{"error": "Invalid JSON"})
+	}
+	provider := services.WebhookProviderGeneric
+	if body.Provider != "" {
+		provider = services.WebhookProvider(body.Provider)
+	}
+	event := services.WebhookEvent{
+		Provider:  provider,
+		EventType: body.EventType,
+		RawBody:   body.Data,
+	}
+	if err := services.ProcessWebhook(event); err != nil {
+		return c.Status(500).JSON(fiber.Map{"error": err.Error()})
+	}
+	return c.JSON(fiber.Map{"status": "processed"})
+}
+
+func getWebhookRulesAPI(c *fiber.Ctx) error {
+	return c.JSON(services.GetWebhookRules())
+}
+
+func addWebhookRuleAPI(c *fiber.Ctx) error {
+	var rule services.WebhookRule
+	if err := c.BodyParser(&rule); err != nil {
+		return c.Status(400).JSON(fiber.Map{"error": "Invalid request"})
+	}
+	if rule.Name == "" || rule.Action == "" {
+		return c.Status(400).JSON(fiber.Map{"error": "name and action are required"})
+	}
+	if err := services.AddWebhookRule(rule); err != nil {
+		return c.Status(400).JSON(fiber.Map{"error": err.Error()})
+	}
+	return c.Status(201).JSON(fiber.Map{"status": "created"})
+}
+
+func deleteWebhookRuleAPI(c *fiber.Ctx) error {
+	id := c.Params("id")
+	if err := services.RemoveWebhookRule(id); err != nil {
+		return c.Status(404).JSON(fiber.Map{"error": err.Error()})
+	}
+	return c.JSON(fiber.Map{"status": "deleted"})
+}
+
+func toggleWebhookRuleAPI(c *fiber.Ctx) error {
+	id := c.Params("id")
+	var req struct {
+		Enabled bool `json:"enabled"`
+	}
+	if err := c.BodyParser(&req); err != nil {
+		return c.Status(400).JSON(fiber.Map{"error": "Invalid request"})
+	}
+	if err := services.ToggleWebhookRule(id, req.Enabled); err != nil {
+		return c.Status(404).JSON(fiber.Map{"error": err.Error()})
+	}
+	return c.JSON(fiber.Map{"status": "updated"})
 }
