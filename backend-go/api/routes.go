@@ -643,6 +643,11 @@ func SetupRoutes(app *fiber.App) {
 	api.Get("/shadow-pilot/status", getShadowPilotStatus)
 	api.Post("/shadow-pilot/start", startShadowPilotAPI)
 	api.Post("/shadow-pilot/stop", stopShadowPilotAPI)
+
+	// Dependency checks
+	api.Get("/health/dependencies", getDependencyChecks)
+	api.Get("/health/trend", getHealthTrend)
+	api.Get("/system/info", getSystemInfoAPI)
 }
 
 func triggerFleetSync(c *fiber.Ctx) error {

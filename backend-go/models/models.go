@@ -326,6 +326,9 @@ type HealthSnapshot struct {
 	ResponseTimeMs    int            `json:"responseTimeMs"`
 	MemoryUsageMB     float64        `json:"memoryUsageMB"`
 	GoroutineCount    int            `json:"goroutineCount"`
+	CheckName         string         `json:"checkName,omitempty"` // Per-check dependency name
+	Message           string         `json:"message,omitempty"`   // Per-check message
+	Latency           int64          `json:"latency"`             // Per-check latency in ms
 	CreatedAt         time.Time      `gorm:"index" json:"createdAt"`
 	DeletedAt         gorm.DeletedAt `gorm:"index" json:"-"`
 }
