@@ -476,6 +476,18 @@ export function ActivityFeed({
       .replaceAll('_', ' ');
   };
 
+  const getEventBadgeStyles = (eventName: string) => {
+    if (eventName.includes('debate') || eventName.includes('escalat')) return 'bg-pink-500/10 text-pink-300 border-pink-500/20';
+    if (eventName.includes('recovery')) return 'bg-orange-500/10 text-orange-300 border-orange-500/20';
+    if (eventName.includes('circuit_breaker')) return 'bg-red-500/10 text-red-300 border-red-500/20';
+    if (eventName.includes('approved')) return 'bg-green-500/10 text-green-300 border-green-500/20';
+    if (eventName.includes('rejected')) return 'bg-red-500/10 text-red-300 border-red-500/20';
+    if (eventName.includes('nudged')) return 'bg-blue-500/10 text-blue-300 border-blue-500/20';
+    if (eventName.includes('index')) return 'bg-cyan-500/10 text-cyan-300 border-cyan-500/20';
+    if (eventName.includes('spawned') || eventName.includes('issue')) return 'bg-yellow-500/10 text-yellow-300 border-yellow-500/20';
+    return 'bg-purple-500/10 text-purple-300 border-purple-500/20';
+  };
+
   const getActivityIcon = (activity: Activity) => {
     if (activity.role === 'user') {
       return <AvatarFallback className="bg-purple-500 text-white text-[9px] font-bold uppercase tracking-wider">U</AvatarFallback>;
@@ -642,11 +654,13 @@ export function ActivityFeed({
                     </div>
                     <div className="flex items-center gap-2">
                       {eventDetails?.event && (
-                        <Badge variant="outline" className="h-4 border-purple-500/20 bg-purple-500/10 px-1.5 text-[8px] uppercase tracking-widest text-purple-300">
+                        <Badge variant="outline" className={`h-4 px-1.5 text-[8px] uppercase tracking-widest ${getEventBadgeStyles(eventDetails.event)}`}>
                           {getEventBadgeLabel(eventDetails.event)}
                         </Badge>
                       )}
-                      <span className="uppercase tracking-widest text-zinc-500">{log.type}</span>
+                      <Badge variant="outline" className={`h-4 px-1.5 text-[8px] uppercase tracking-widest ${log.type === 'error' ? 'bg-red-500/10 text-red-300 border-red-500/20' : log.type === 'action' ? 'bg-blue-500/10 text-blue-300 border-blue-500/20' : 'border-white/10 text-zinc-500'}`}>
+                        {log.type}
+                      </Badge>
                     </div>
                   </div>
                   <p className="mt-1.5 leading-relaxed">{log.message}</p>
@@ -662,16 +676,30 @@ export function ActivityFeed({
                         <p className="uppercase tracking-wide">Issue: #{eventDetails.issueNumber}</p>
                       )}
                       {typeof eventDetails.confidence === 'number' && (
-                        <p className="uppercase tracking-wide">Confidence: {eventDetails.confidence}%</p>
+                        <div className="flex items-center gap-2">
+                          <span className="uppercase tracking-wide">Confidence:</span>
+                          <div className="flex-1 h-1 bg-zinc-800 rounded-full overflow-hidden">
+                            <div className={`h-full rounded-full ${eventDetails.confidence >= 80 ? 'bg-green-500' : eventDetails.confidence >= 50 ? 'bg-yellow-500' : 'bg-red-500'}`} style={{ width: `${eventDetails.confidence}%` }} />
+                          </div>
+                          <span>{eventDetails.confidence}%</span>
+                        </div>
                       )}
                       {typeof eventDetails.isFixable === 'boolean' && (
                         <p className="uppercase tracking-wide">Fixable: {eventDetails.isFixable ? 'yes' : 'no'}</p>
                       )}
                       {typeof eventDetails.riskScore === 'number' && (
-                        <p className="uppercase tracking-wide">Risk Score: {eventDetails.riskScore}/100</p>
+                        <div className="flex items-center gap-2">
+                          <span className="uppercase tracking-wide">Risk:</span>
+                          <div className="flex-1 h-1.5 bg-zinc-800 rounded-full overflow-hidden">
+                            <div className={`h-full rounded-full transition-all ${eventDetails.riskScore >= 70 ? 'bg-red-500' : eventDetails.riskScore >= 40 ? 'bg-yellow-500' : 'bg-green-500'}`} style={{ width: `${eventDetails.riskScore}%` }} />
+                          </div>
+                          <span className={`font-bold ${eventDetails.riskScore >= 70 ? 'text-red-400' : eventDetails.riskScore >= 40 ? 'text-yellow-400' : 'text-green-400'}`}>{eventDetails.riskScore}/100</span>
+                        </div>
                       )}
                       {eventDetails.approvalStatus && (
-                        <p className="uppercase tracking-wide">Decision: {eventDetails.approvalStatus}</p>
+                        <p className={`uppercase tracking-wide font-bold ${eventDetails.approvalStatus === 'approved' ? 'text-green-400' : eventDetails.approvalStatus === 'rejected' ? 'text-red-400' : 'text-yellow-400'}`}>
+                          Decision: {eventDetails.approvalStatus}
+                        </p>
                       )}
                       {typeof eventDetails.newChunks === 'number' && (
                         <p className="uppercase tracking-wide">New Chunks: {eventDetails.newChunks}</p>

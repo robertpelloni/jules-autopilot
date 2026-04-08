@@ -6,7 +6,7 @@ This document tracks granular bugs, missing features, and technical debt. For ep
 - [x] **Submodule Dashboard Live Integration:** `SubmoduleList` now uses `useSWR` against `/api/system/submodules` with 30s refresh and manual revalidation.
 - [x] **Daemon API Discovery:** Formally established `/api/manifest` for node capability discovery.
 - [x] **SSE/WebSocket Log Streaming:** Injected `useDaemonEvent('log_added')` into the session activity view and surfaced a live Keeper feed for session/global daemon events without manual refresh.
-- [ ] **Session Event Timeline Enrichment:** Optionally render richer structured cards for debate/escalation/recovery events beyond the current Keeper feed strip.
+- [x] **Session Event Timeline Enrichment:** Enhanced Keeper Feed event cards with color-coded event badges (debate=red, recovery=orange, nudge=blue, index=cyan, spawn=yellow), visual risk score bars, confidence meters, and styled approval status indicators.
 - [x] **Dashboard Health Surface:** Added a Fleet Intelligence runtime health block that consumes `/api/health` and surfaces daemon/database/credential state plus key backend totals.
 - [x] **Expanded Dashboard Health Surface:** Added a dedicated Health dashboard view with runtime status, queue/totals cards, and metrics preview.
 - [ ] **Deep Observability Surface:** Add richer health history, dependency-specific checks, and deeper metrics drill-downs beyond the current Health dashboard.
