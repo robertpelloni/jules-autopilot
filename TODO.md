@@ -9,8 +9,7 @@ This document tracks granular bugs, missing features, and technical debt. For ep
 - [x] **Session Event Timeline Enrichment:** Enhanced Keeper Feed event cards with color-coded event badges (debate=red, recovery=orange, nudge=blue, index=cyan, spawn=yellow), visual risk score bars, confidence meters, and styled approval status indicators.
 - [x] **Dashboard Health Surface:** Added a Fleet Intelligence runtime health block that consumes `/api/health` and surfaces daemon/database/credential state plus key backend totals.
 - [x] **Expanded Dashboard Health Surface:** Added a dedicated Health dashboard view with runtime status, queue/totals cards, and metrics preview.
-- [ ] **Deep Observability Surface:** Add richer health history, dependency-specific checks, and deeper metrics drill-downs beyond the current Health dashboard.
-  - Progress: Health history snapshots, anomaly detection engine, and token budget tracker are now implemented. The Health dashboard shows active anomalies and per-provider token costs. Remaining work includes richer dependency-specific checks and longer trend analysis.
+- [x] **Deep Observability Surface:** Rich dependency health checks (7 checks: database, disk, memory, git, queue, scheduler, websocket) with per-check status/latency/details. System runtime info (Go version, CPU, heap, goroutines, uptime). Health trend analysis API for historical snapshots.
 - [x] **Go Backend Parity Pass #2:** Ported the highest-value queue intelligence path (`handleCheckSession`) plus Go-side event/log bridging and real session actions so the Go backend can nudge sessions, enqueue memory sync, and conservatively auto-approve low-risk plans.
 - [x] **Go Backend Parity Pass #3:** Ported `handleIndexCodebase` so Go can now walk the repo, chunk source files, request embeddings, and upsert `CodeChunk` rows without Bun.
 - [x] **Go Backend Parity Pass #4:** Ported `handleCheckIssues` plus Go-side issue fetching/session spawning support so the Go backend can now discover GitHub work and open Jules sessions autonomously.
@@ -39,12 +38,13 @@ This document tracks granular bugs, missing features, and technical debt. For ep
 - [x] **Go Backend Parity Pass #27:** Implemented Multi-Tenant API Keys CRUD (v3.0 Roadmap) in Go with a dedicated management UI and CLI key generator.
 - [x] **Go Backend Parity Pass #28:** Final audit for any remaining residual Bun-only behavior (e.g. final script parity), officially declaring the Go backend as the primary runtime.
 - [x] **Phase 2:** Completely deleted the `server/` directory and backend-only dependencies to formally lock the runtime pivot.
-- [ ] **Phase 3:** Explore the next v4.0/v5.0 roadmap items (e.g., Scheduled Automation UI, deep observability drill-downs, or background anomaly detection).
+- [x] **Phase 3:** Implemented deep dependency checks, webhook event router with multi-provider support, scheduled automation CRUD, and code-split frontend bundle.
 - [x] **Tooling Stabilization:** Added a working ESLint v9 flat config and aligned the Jest harness with the current Vite/Bun + shared-package runtime assumptions.
 - [x] **Lint Coverage Expansion:** Extended the lint command to cover `src/`, `components/`, `lib/`, and `server/` with a staged warning-first rollout.
 - [x] **Lint Warning Burn-Down:** Completed two warning burn-down passes and brought the expanded lint surface to zero warnings.
 - [x] **Lint Strictness Ratchet:** Tightened `no-explicit-any`, `no-unused-vars`, and `no-empty` from `warn` to `error` with zero violations.
 - [x] **Notification Center (v5.0):** Implemented unified notification hub with Go backend service and frontend UI, auto-generated from keeper events with read/dismiss state, priority levels, and real-time WebSocket push.
+- [x] **Webhook Event Router (v5.0 Enhanced):** Configurable rule-based routing with 4 action types (log, enqueue, notify, delegate) and 5 providers (borg, github, slack, linear, generic) with CRUD API.
 - [x] **Audit Trail (v4.0):** Implemented immutable append-only audit log in Go with structured metadata, paginated frontend view, and aggregate statistics.
 - [x] **Borg Collective UI:** Implemented the "Collective Signals" feed in the Fleet tab to visualize incoming Borg signals.
 
