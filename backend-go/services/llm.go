@@ -8,7 +8,53 @@ import (
 	"net/http"
 	"os"
 	"strings"
+	"sync"
+	"time"
 )
+
+type circuitBreaker struct {
+	mu           sync.RWMutex
+	failures     map[string]int
+	openUntil    map[string]time.Time
+	failureLimit int
+	openDuration time.Duration
+}
+
+var cb = &circuitBreaker{
+	failures:     make(map[string]int),
+	openUntil:    make(map[string]time.Time),
+	failureLimit: 3,
+	openDuration: 5 * time.Minute,
+}
+
+func (c *circuitBreaker) isOpen(provider string) bool {
+	c.mu.RLock()
+	defer c.mu.RUnlock()
+	if t, exists := c.openUntil[provider]; exists && time.Now().Before(t) {
+		return true
+	}
+	return false
+}
+
+func (c *circuitBreaker) recordSuccess(provider string) {
+	c.mu.Lock()
+	defer c.mu.Unlock()
+	delete(c.failures, provider)
+	delete(c.openUntil, provider)
+}
+
+func (c *circuitBreaker) recordFailure(provider string) {
+	c.mu.Lock()
+	defer c.mu.Unlock()
+	c.failures[provider]++
+	if c.failures[provider] >= c.failureLimit {
+		c.openUntil[provider] = time.Now().Add(c.openDuration)
+		addKeeperLog(fmt.Sprintf("Circuit breaker tripped for %s provider. Traffic will be routed to fallbacks for %v.", provider, c.openDuration), "error", "global", map[string]interface{}{
+			"event":    "circuit_breaker_tripped",
+			"provider": provider,
+		})
+	}
+}
 
 type LLMMessage struct {
 	Role    string `json:"role"`
@@ -88,18 +134,74 @@ func getSupervisorAPIKey(provider string, explicit *string) string {
 	return ""
 }
 
-func generateLLMText(provider, apiKey, model, systemPrompt string, messages []LLMMessage) (LLMResult, error) {
-	provider = normalizeProvider(provider)
-	model = resolveModel(provider, model)
+func generateLLMText(primaryProvider, primaryApiKey, primaryModel, systemPrompt string, messages []LLMMessage) (LLMResult, error) {
+	primaryProvider = normalizeProvider(primaryProvider)
+	primaryModel = resolveModel(primaryProvider, primaryModel)
 
-	switch provider {
-	case "anthropic":
-		return generateAnthropicText(apiKey, model, systemPrompt, messages)
-	case "gemini":
-		return generateGeminiText(apiKey, model, systemPrompt, messages)
-	default:
-		return generateOpenAIText(apiKey, model, systemPrompt, messages)
+	providers := []string{primaryProvider}
+	for _, p := range []string{"openai", "anthropic", "gemini"} {
+		if p != primaryProvider {
+			providers = append(providers, p)
+		}
 	}
+
+	var lastErr error
+	for i, provider := range providers {
+		if cb.isOpen(provider) {
+			lastErr = fmt.Errorf("provider %s is currently unavailable (circuit breaker open)", provider)
+			continue
+		}
+
+		apiKey := primaryApiKey
+		model := primaryModel
+
+		if i > 0 {
+			// This is a fallback attempt
+			apiKey = getSupervisorAPIKey(provider, nil)
+			if apiKey == "" || apiKey == "placeholder" {
+				continue // Cannot fallback without an API key
+			}
+			model = resolveModel(provider, "")
+		}
+
+		var result LLMResult
+		var err error
+
+		switch provider {
+		case "anthropic":
+			result, err = generateAnthropicText(apiKey, model, systemPrompt, messages)
+		case "gemini":
+			result, err = generateGeminiText(apiKey, model, systemPrompt, messages)
+		default:
+			result, err = generateOpenAIText(apiKey, model, systemPrompt, messages)
+		}
+
+		if err != nil {
+			lastErr = err
+			errStr := err.Error()
+			// Track failure if it's a rate limit or server error
+			if strings.Contains(errStr, "(429)") || strings.Contains(errStr, "(50") || strings.Contains(errStr, "(52") || strings.Contains(errStr, "(53") || strings.Contains(errStr, "timeout") {
+				cb.recordFailure(provider)
+			}
+			continue // Try the next fallback provider
+		}
+
+		// Success
+		cb.recordSuccess(provider)
+
+		// If we used a fallback, log that we successfully recovered
+		if i > 0 {
+			addKeeperLog(fmt.Sprintf("Self-healing successful: rerouted LLM request from %s to %s.", primaryProvider, provider), "action", "global", map[string]interface{}{
+				"event":            "llm_fallback_success",
+				"originalProvider": primaryProvider,
+				"fallbackProvider": provider,
+			})
+		}
+
+		return result, nil
+	}
+
+	return LLMResult{}, fmt.Errorf("all LLM providers failed. last error: %v", lastErr)
 }
 
 func extractJSONBlock(input string) string {

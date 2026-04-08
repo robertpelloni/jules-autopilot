@@ -2,6 +2,16 @@
 
 All notable changes to this project will be documented in this file.
 
+## [1.2.0] - 2026-04-05
+
+### Added
+- **Self-Healing LLM Circuit Breakers**: Implemented provider-level circuit breakers in the Go runtime (`backend-go/services/llm.go`). The backend now automatically tracks 429 (Rate Limit) and 5xx (Server Error) responses from OpenAI, Anthropic, and Gemini. 
+- **Autonomous Provider Fallbacks**: If a provider fails 3 consecutive times, the circuit opens for 5 minutes and the orchestrator automatically reroutes requests to the next available provider (using stored or env credentials) without failing the session or interrupting the operator.
+- **Resilience Telemetry**: Added `circuit_breaker_tripped` and `llm_fallback_success` event logs to the Keeper timeline, providing operators with full visibility into the AI swarm's self-healing actions.
+
+### Notes
+- **Validation Status**: `cd backend-go && gofmt -w services/llm.go && go test ./...`, `pnpm run lint`, `pnpm run typecheck`, `pnpm run test`, and `node scripts/check-version-sync.js` all pass at `1.2.0`.
+
 ## [1.1.0] - 2026-04-05
 
 ### Changed

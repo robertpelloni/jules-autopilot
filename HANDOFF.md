@@ -1,27 +1,28 @@
-# Project Handoff: Jules Autopilot (v1.0.36 — Go Backend Parity Pass #28)
+# Project Handoff: Jules Autopilot (v1.2.0 — Self-Healing Circuit Breakers)
 
 ## 1. Session Summary
-This session performed the final "Primary Runtime" readiness audit. It identified the last remaining obsolete Bun-based CLI utilities and officially transitioned the Go backend into the primary runtime role.
+This session moved deeply into Phase 3 (New Roadmap Capabilities) by implementing the "Self-Healing Circuit Breakers" milestone from the v3.0 roadmap.
 
-The result is that the Go migration has effectively achieved parity and replaced all critical and operational features previously handled by the Bun daemon.
+The Go backend now tracks provider-level failure rates and automatically reroutes LLM generation requests to fallback models when error rates spike.
 
 ## 2. Completed Work
 ### 2.1 Versioning & Documentation
-- Bumped the project version from `v1.0.35` to `v1.0.36`.
+- Bumped the project version from `v1.1.0` to `v1.2.0`.
 - Re-synced version manifests across the project.
-- Updated planning and status docs (including declaring Go as the primary runtime).
+- Updated planning and status docs to check off the "Self-Healing Circuit Breakers" milestone.
 - Added a new archived handoff in `logs/handoffs/`.
 
-### 2.2 Removed Obsolete Bun Utilities
-Deleted:
-- `scripts/index-repo.ts` (Replaced by `backend-go/cmd/index-repo/main.go`)
-- `scripts/create-dev-key.js` (Replaced by `backend-go/cmd/create-key/main.go`)
-
-### 2.3 Updated Package Scripts
+### 2.2 Go LLM Circuit Breakers
 Updated:
-- `package.json`
+- `backend-go/services/llm.go`
 
-Modified the `index` script to call the new Go indexer (`cd backend-go && go run cmd/index-repo/main.go`) instead of the removed Bun script.
+Added a `circuitBreaker` struct that tracks consecutive 429 (Rate Limit) and 5xx (Server) errors per provider. If a provider fails 3 consecutive times, the circuit "opens" for 5 minutes.
+
+### 2.3 Autonomous Provider Fallback
+Refactored `generateLLMText` to `GenerateTextWithRouting` logic:
+- The system gracefully intercepts the error, searches for alternative credentials (e.g., Anthropic, Gemini, OpenAI).
+- It transparently re-routes the user prompt to the next available provider.
+- It logs the `circuit_breaker_tripped` and `llm_fallback_success` events directly to the Keeper timeline for operator visibility.
 
 ## 3. Validation Results
 ### Passing
@@ -32,16 +33,16 @@ Modified the `index` script to call the new Go indexer (`cd backend-go && go run
 - `node scripts/check-version-sync.js`
 
 ## 4. Key Findings
-### 4.1 Go parity is operationally complete
-The Go backend now covers every single runtime role, background task, API route, orchestration loop, webhook trigger, and CLI utility originally handled by the Bun daemon.
+### 4.1 Resilience is critical for Sovereign Intelligence
+If an agent halts every time OpenAI has an outage, it's not truly autonomous. The circuit breaker ensures the swarm can keep working by falling back to other foundation models, which is a massive step toward true node autonomy.
 
-### 4.2 Removing old scripts clarifies the transition
-By deleting `index-repo.ts` and updating `package.json`, we ensure that developers naturally fall into using the Go tooling without needing to actively choose it.
+### 4.2 Go's concurrency primitives made this clean
+Implementing a thread-safe, global circuit breaker using Go's `sync.RWMutex` was incredibly straightforward and performant.
 
 ## 5. Remaining Work
 ### Highest-value next steps
-1. Optionally, completely delete the `server/` directory and fully remove `@hono/node-server` and other backend-only JS dependencies.
-2. Update deployment and developer onboarding docs (`DEPLOY.md`, `README.md`) to reflect the transition.
+1. Build the "Notification Center" UI to surface these critical background events directly to the operator.
+2. Or build the "Scheduled Automation UI" to visualize the background chron tasks.
 
 ## 6. Process Safety
 - No processes were killed.
@@ -49,8 +50,8 @@ By deleting `index-repo.ts` and updating `package.json`, we ensure that develope
 
 ## 7. Recommended Next Step
 Recommended next move:
-- Review the `server/` directory for final deletion and consider updating the main `README.md` to reflect the new Go-first architecture.
+- Implement the **Notification Center** (v5.0 roadmap) or **Scheduled Automation UI** (v4.0 roadmap) to bring these background features to the forefront of the dashboard.
 
 ## 8. Commit Guidance
 Recommended commit message:
-- `feat: complete final script audit and declare go primary runtime (v1.0.36)`
+- `feat: add self-healing llm circuit breakers and autonomous fallback (v1.2.0)`
