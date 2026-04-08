@@ -628,6 +628,16 @@ func SetupRoutes(app *fiber.App) {
 	// Audit routes
 	api.Get("/audit", getAuditEntries)
 	api.Get("/audit/stats", getAuditStatsAPI)
+
+	// Observability routes (Deep Health)
+	api.Get("/health/history", getHealthHistory)
+	api.Get("/health/anomalies", getActiveAnomalies)
+	api.Post("/health/anomalies/:id/resolve", resolveAnomalyAPI)
+	api.Get("/health/anomalies/history", getAnomalyHistory)
+
+	// Token usage routes
+	api.Get("/tokens/usage", getTokenUsageStats)
+	api.Get("/tokens/session/:id", getSessionTokenUsage)
 }
 
 func triggerFleetSync(c *fiber.Ctx) error {
@@ -1153,7 +1163,7 @@ func getHealth(c *fiber.Ctx) error {
 		julesConfigured = strings.TrimSpace(*settings.JulesApiKey) != "" && strings.TrimSpace(*settings.JulesApiKey) != "placeholder"
 	}
 
-	return c.JSON(fiber.Map{
+	result := c.JSON(fiber.Map{
 		"status":    status,
 		"timestamp": time.Now().Format(time.RFC3339),
 		"version":   getVersion(),
@@ -1193,6 +1203,37 @@ func getHealth(c *fiber.Ctx) error {
 			"wsClients": wsCount,
 		},
 	})
+
+	// Capture health snapshot for trend analysis (fire-and-forget)
+	go func() {
+		_ = services.CaptureHealthSnapshot(map[string]interface{}{
+			"status": status,
+			"checks": fiber.Map{
+				"database": fiber.Map{"status": databaseStatus},
+				"daemon":   fiber.Map{"running": services.GetDaemon().IsRunning()},
+				"worker":   fiber.Map{"running": services.IsWorkerRunning()},
+				"scheduler": fiber.Map{"running": true},
+			},
+			"queue": fiber.Map{
+				"pending":    pendingCount,
+				"processing": processingCount,
+			},
+			"totals": fiber.Map{
+				"sessions":      sessionCount,
+				"codeChunks":    codeChunkCount,
+				"memoryChunks":  memoryChunkCount,
+				"notifications": notificationCount,
+				"auditEntries":  auditCount,
+			},
+			"realtime": fiber.Map{
+				"wsClients": wsCount,
+			},
+		})
+		// Run anomaly detection alongside health capture
+		_, _ = services.DetectAnomalies()
+	}()
+
+	return result
 }
 
 func getMetrics(c *fiber.Ctx) error {
@@ -1281,6 +1322,31 @@ func getMetrics(c *fiber.Ctx) error {
 	fmt.Fprintf(&body, "# HELP jules_autopilot_audit_entries_total Total audit trail entries.\n")
 	fmt.Fprintf(&body, "# TYPE jules_autopilot_audit_entries_total gauge\n")
 	fmt.Fprintf(&body, "jules_autopilot_audit_entries_total %d\n", auditCount)
+
+	// Token usage metrics
+	var totalTokensUsed int64
+	var totalCostCents float64
+	var failedRequests int64
+	db.DB.Model(&models.TokenUsage{}).Select("COALESCE(SUM(total_tokens), 0)").Row().Scan(&totalTokensUsed)
+	db.DB.Model(&models.TokenUsage{}).Select("COALESCE(SUM(cost_cents), 0)").Row().Scan(&totalCostCents)
+	db.DB.Model(&models.TokenUsage{}).Where("success = ?", false).Count(&failedRequests)
+
+	fmt.Fprintf(&body, "# HELP jules_autopilot_tokens_used_total Total LLM tokens consumed.\n")
+	fmt.Fprintf(&body, "# TYPE jules_autopilot_tokens_used_total counter\n")
+	fmt.Fprintf(&body, "jules_autopilot_tokens_used_total %d\n", totalTokensUsed)
+	fmt.Fprintf(&body, "# HELP jules_autopilot_cost_cents_total Total LLM cost in cents.\n")
+	fmt.Fprintf(&body, "# TYPE jules_autopilot_cost_cents_total counter\n")
+	fmt.Fprintf(&body, "jules_autopilot_cost_cents_total %.2f\n", totalCostCents)
+	fmt.Fprintf(&body, "# HELP jules_autopilot_llm_failures_total Total failed LLM requests.\n")
+	fmt.Fprintf(&body, "# TYPE jules_autopilot_llm_failures_total counter\n")
+	fmt.Fprintf(&body, "jules_autopilot_llm_failures_total %d\n", failedRequests)
+
+	// Anomaly metrics
+	var activeAnomalies int64
+	db.DB.Model(&models.AnomalyRecord{}).Where("is_resolved = ?", false).Count(&activeAnomalies)
+	fmt.Fprintf(&body, "# HELP jules_autopilot_active_anomalies Currently active anomalies.\n")
+	fmt.Fprintf(&body, "# TYPE jules_autopilot_active_anomalies gauge\n")
+	fmt.Fprintf(&body, "jules_autopilot_active_anomalies %d\n", activeAnomalies)
 
 	c.Set("Content-Type", "text/plain; version=0.0.4; charset=utf-8")
 	return c.SendString(body.String())
@@ -1599,4 +1665,86 @@ func getAuditStatsAPI(c *fiber.Ctx) error {
 		return c.Status(500).JSON(fiber.Map{"error": err.Error()})
 	}
 	return c.JSON(stats)
+}
+
+// Deep Observability: Health History
+func getHealthHistory(c *fiber.Ctx) error {
+	hours := c.QueryInt("hours", 24)
+	limit := c.QueryInt("limit", 100)
+
+	snapshots, err := services.GetHealthHistory(hours, limit)
+	if err != nil {
+		return c.Status(500).JSON(fiber.Map{"error": err.Error()})
+	}
+	return c.JSON(fiber.Map{
+		"snapshots": snapshots,
+		"total":     len(snapshots),
+	})
+}
+
+// Anomaly Detection: Active anomalies
+func getActiveAnomalies(c *fiber.Ctx) error {
+	anomalies, err := services.GetActiveAnomalies()
+	if err != nil {
+		return c.Status(500).JSON(fiber.Map{"error": err.Error()})
+	}
+	return c.JSON(fiber.Map{
+		"anomalies": anomalies,
+		"total":     len(anomalies),
+	})
+}
+
+// Anomaly Detection: Resolve an anomaly
+func resolveAnomalyAPI(c *fiber.Ctx) error {
+	id := c.Params("id")
+	if err := services.ResolveAnomaly(id); err != nil {
+		return c.Status(500).JSON(fiber.Map{"error": err.Error()})
+	}
+	return c.JSON(fiber.Map{"status": "resolved"})
+}
+
+// Anomaly Detection: History of resolved anomalies
+func getAnomalyHistory(c *fiber.Ctx) error {
+	limit := c.QueryInt("limit", 50)
+	anomalies, err := services.GetAnomalyHistory(limit)
+	if err != nil {
+		return c.Status(500).JSON(fiber.Map{"error": err.Error()})
+	}
+	return c.JSON(fiber.Map{
+		"anomalies": anomalies,
+		"total":     len(anomalies),
+	})
+}
+
+// Token Usage: Aggregate stats
+func getTokenUsageStats(c *fiber.Ctx) error {
+	opts := []services.TokenUsageOpt{}
+
+	if provider := c.Query("provider"); provider != "" {
+		opts = append(opts, services.WithTokenProvider(provider))
+	}
+	if sessionID := c.Query("sessionId"); sessionID != "" {
+		opts = append(opts, services.WithTokenSession(sessionID))
+	}
+	if since := c.Query("since"); since != "" {
+		if t, err := time.Parse(time.RFC3339, since); err == nil {
+			opts = append(opts, services.WithTokenSince(t))
+		}
+	}
+
+	report, err := services.GetTokenUsageStats(opts...)
+	if err != nil {
+		return c.Status(500).JSON(fiber.Map{"error": err.Error()})
+	}
+	return c.JSON(report)
+}
+
+// Token Usage: Per-session breakdown
+func getSessionTokenUsage(c *fiber.Ctx) error {
+	sessionID := c.Params("id")
+	report, err := services.GetTokenUsageStats(services.WithTokenSession(sessionID))
+	if err != nil {
+		return c.Status(500).JSON(fiber.Map{"error": err.Error()})
+	}
+	return c.JSON(report)
 }

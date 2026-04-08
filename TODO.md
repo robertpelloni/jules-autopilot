@@ -10,6 +10,7 @@ This document tracks granular bugs, missing features, and technical debt. For ep
 - [x] **Dashboard Health Surface:** Added a Fleet Intelligence runtime health block that consumes `/api/health` and surfaces daemon/database/credential state plus key backend totals.
 - [x] **Expanded Dashboard Health Surface:** Added a dedicated Health dashboard view with runtime status, queue/totals cards, and metrics preview.
 - [ ] **Deep Observability Surface:** Add richer health history, dependency-specific checks, and deeper metrics drill-downs beyond the current Health dashboard.
+  - Progress: Health history snapshots, anomaly detection engine, and token budget tracker are now implemented. The Health dashboard shows active anomalies and per-provider token costs. Remaining work includes richer dependency-specific checks and longer trend analysis.
 - [x] **Go Backend Parity Pass #2:** Ported the highest-value queue intelligence path (`handleCheckSession`) plus Go-side event/log bridging and real session actions so the Go backend can nudge sessions, enqueue memory sync, and conservatively auto-approve low-risk plans.
 - [x] **Go Backend Parity Pass #3:** Ported `handleIndexCodebase` so Go can now walk the repo, chunk source files, request embeddings, and upsert `CodeChunk` rows without Bun.
 - [x] **Go Backend Parity Pass #4:** Ported `handleCheckIssues` plus Go-side issue fetching/session spawning support so the Go backend can now discover GitHub work and open Jules sessions autonomously.

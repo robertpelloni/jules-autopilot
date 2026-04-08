@@ -189,6 +189,15 @@ func generateLLMText(primaryProvider, primaryApiKey, primaryModel, systemPrompt 
 		// Success
 		cb.recordSuccess(provider)
 
+		// Record token usage for budget tracking
+		if result.Usage != nil {
+			go func() {
+				_ = RecordTokenUsage(nil, provider, model,
+					result.Usage.PromptTokens, result.Usage.CompletionTokens,
+					"other", 0, true)
+			}()
+		}
+
 		// If we used a fallback, log that we successfully recovered
 		if i > 0 {
 			addKeeperLog(fmt.Sprintf("Self-healing successful: rerouted LLM request from %s to %s.", primaryProvider, provider), "action", "global", map[string]interface{}{

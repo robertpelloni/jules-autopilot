@@ -1,10 +1,11 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { Activity, Cpu, Database, HeartPulse, RefreshCw, Wifi, Clock, Play, Loader2 } from 'lucide-react';
+import { Activity, Cpu, Database, HeartPulse, RefreshCw, Wifi, Clock, Play, Loader2, AlertTriangle, DollarSign, Zap, CheckCircle2, XCircle } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { fetchHealth, fetchMetricsText, fetchScheduledTasks, triggerScheduledTask, type HealthResponse, type ScheduledTask } from '@/lib/api/health';
+import { fetchActiveAnomalies, resolveAnomaly, fetchTokenUsageStats, type AnomalyRecord, type TokenUsageReport } from '@/lib/api/observability';
 import { toast } from 'sonner';
 
 export function SystemHealthDashboard() {
@@ -13,14 +14,19 @@ export function SystemHealthDashboard() {
   const [metricsText, setMetricsText] = useState('');
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [triggeringTask, setTriggeringTask] = useState<string | null>(null);
+  const [anomalies, setAnomalies] = useState<AnomalyRecord[]>([]);
+  const [tokenReport, setTokenReport] = useState<TokenUsageReport | null>(null);
+  const [resolvingAnomaly, setResolvingAnomaly] = useState<string | null>(null);
 
   const load = async (showToast = false) => {
     try {
       setIsRefreshing(true);
-      const [healthData, taskData, metrics] = await Promise.allSettled([
+      const [healthData, taskData, metrics, anomalyData, tokenData] = await Promise.allSettled([
         fetchHealth(), 
         fetchScheduledTasks().catch(() => []), 
-        fetchMetricsText()
+        fetchMetricsText(),
+        fetchActiveAnomalies(),
+        fetchTokenUsageStats(),
       ]);
 
       if (healthData.status === 'fulfilled') {
@@ -31,6 +37,12 @@ export function SystemHealthDashboard() {
       }
       if (metrics.status === 'fulfilled') {
         setMetricsText(metrics.value);
+      }
+      if (anomalyData.status === 'fulfilled') {
+        setAnomalies(anomalyData.value.anomalies || []);
+      }
+      if (tokenData.status === 'fulfilled') {
+        setTokenReport(tokenData.value);
       }
 
       if (showToast) {
@@ -222,7 +234,101 @@ export function SystemHealthDashboard() {
           </div>
         )}
 
-        <div className="rounded-xl border border-white/5 bg-zinc-900 p-4">          <div className="flex items-center justify-between">
+        {anomalies.length > 0 && (
+          <div className="rounded-xl border border-red-500/20 bg-red-500/5 p-4">
+            <div className="flex items-center justify-between mb-4">
+              <div className="flex items-center gap-2">
+                <AlertTriangle className="h-4 w-4 text-red-400" />
+                <h2 className="text-xs font-bold uppercase tracking-widest text-red-400">Active Anomalies</h2>
+              </div>
+              <Badge variant="destructive" className="text-[9px] uppercase">{anomalies.length} Detected</Badge>
+            </div>
+            <div className="space-y-2">
+              {anomalies.map(anomaly => (
+                <div key={anomaly.id} className="rounded-lg border border-white/5 bg-black/20 p-3 flex items-start justify-between gap-3">
+                  <div className="flex-1">
+                    <div className="flex items-center gap-2 mb-1">
+                      <span className="text-xs font-bold text-white">{anomaly.title}</span>
+                      <Badge variant={anomaly.severity === 'critical' ? 'destructive' : 'outline'} className={`text-[9px] px-1.5 py-0 h-4 ${anomaly.severity === 'high' ? 'bg-orange-500/10 text-orange-400 border-orange-500/30' : anomaly.severity === 'medium' ? 'bg-yellow-500/10 text-yellow-400 border-yellow-500/30' : 'border-zinc-700'}`}>
+                        {anomaly.severity}
+                      </Badge>
+                    </div>
+                    <p className="text-[10px] text-zinc-400">{anomaly.description}</p>
+                    <span className="text-[9px] text-zinc-600 mt-1 block">{new Date(anomaly.createdAt).toLocaleString()}</span>
+                  </div>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="h-6 text-[9px] border-green-800/50 text-green-400 hover:bg-green-500/10"
+                    disabled={resolvingAnomaly === anomaly.id}
+                    onClick={() => {
+                      setResolvingAnomaly(anomaly.id);
+                      resolveAnomaly(anomaly.id).then(() => load()).finally(() => setResolvingAnomaly(null));
+                    }}
+                  >
+                    {resolvingAnomaly === anomaly.id ? <Loader2 className="h-3 w-3 animate-spin" /> : <CheckCircle2 className="h-3 w-3 mr-1" />}
+                    Resolve
+                  </Button>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {tokenReport && tokenReport.totalRequests > 0 && (
+          <div className="rounded-xl border border-white/5 bg-zinc-900 p-4">
+            <div className="flex items-center justify-between mb-4">
+              <div className="flex items-center gap-2">
+                <DollarSign className="h-4 w-4 text-green-400" />
+                <h2 className="text-xs font-bold uppercase tracking-widest text-white">Token Budget Tracker</h2>
+              </div>
+              <Badge variant="outline" className="border-white/10 text-zinc-500 text-[9px] uppercase">
+                ${((tokenReport.totalCostCents || 0) / 100).toFixed(2)} total
+              </Badge>
+            </div>
+            <div className="grid grid-cols-1 md:grid-cols-4 gap-3 mb-4">
+              <div className="rounded-lg border border-white/5 bg-black/20 p-3">
+                <div className="text-[10px] font-mono uppercase tracking-widest text-zinc-500">Total Requests</div>
+                <div className="mt-2 text-xl font-bold">{tokenReport.totalRequests}</div>
+              </div>
+              <div className="rounded-lg border border-white/5 bg-black/20 p-3">
+                <div className="text-[10px] font-mono uppercase tracking-widest text-zinc-500">Total Tokens</div>
+                <div className="mt-2 text-xl font-bold">{(tokenReport.totalTokens || 0).toLocaleString()}</div>
+              </div>
+              <div className="rounded-lg border border-white/5 bg-black/20 p-3">
+                <div className="text-[10px] font-mono uppercase tracking-widest text-zinc-500">Prompt / Completion</div>
+                <div className="mt-2 text-sm font-bold">{(tokenReport.totalPromptTokens || 0).toLocaleString()} / {(tokenReport.totalCompletionTokens || 0).toLocaleString()}</div>
+              </div>
+              <div className="rounded-lg border border-white/5 bg-black/20 p-3">
+                <div className="flex items-center gap-1 text-[10px] font-mono uppercase tracking-widest text-zinc-500">
+                  {tokenReport.failedRequests > 0 ? <XCircle className="h-2.5 w-2.5 text-red-400" /> : <CheckCircle2 className="h-2.5 w-2.5 text-green-400" />}
+                  Failed
+                </div>
+                <div className="mt-2 text-xl font-bold">{tokenReport.failedRequests || 0}</div>
+              </div>
+            </div>
+            {Object.keys(tokenReport.byProvider || {}).length > 0 && (
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+                {Object.entries(tokenReport.byProvider).map(([provider, stats]) => (
+                  <div key={provider} className="rounded-lg border border-white/5 bg-black/20 p-3">
+                    <div className="flex items-center justify-between mb-2">
+                      <span className="text-[11px] font-bold text-white capitalize">{provider}</span>
+                      <span className="text-[9px] text-zinc-500">${((stats.costCents || 0) / 100).toFixed(2)}</span>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <Zap className="h-3 w-3 text-zinc-500" />
+                      <span className="text-[10px] text-zinc-400">{(stats.totalTokens || 0).toLocaleString()} tokens</span>
+                    </div>
+                    <div className="text-[9px] text-zinc-600 mt-1">{stats.requests} requests</div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        )}
+
+        <div className="rounded-xl border border-white/5 bg-zinc-900 p-4">
+          <div className="flex items-center justify-between">
             <h2 className="text-xs font-bold uppercase tracking-widest text-zinc-400">Prometheus Metrics Preview</h2>
             <Badge variant="outline" className="border-white/10 text-zinc-500 text-[9px] uppercase">Raw</Badge>
           </div>

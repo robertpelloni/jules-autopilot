@@ -306,6 +306,62 @@ type Notification struct {
 	DeletedAt    gorm.DeletedAt `gorm:"index" json:"-"`
 }
 
+// HealthSnapshot captures a point-in-time system health reading
+// Used for trend analysis and anomaly detection
+type HealthSnapshot struct {
+	ID                string         `gorm:"primaryKey" json:"id"`
+	Status            string         `json:"status"` // 'ok', 'degraded', 'down'
+	DatabaseUp        bool           `json:"databaseUp"`
+	DaemonRunning     bool           `json:"daemonRunning"`
+	WorkerRunning     bool           `json:"workerRunning"`
+	SchedulerRunning  bool           `json:"schedulerRunning"`
+	PendingJobs       int            `json:"pendingJobs"`
+	ProcessingJobs    int            `json:"processingJobs"`
+	WSClients         int            `json:"wsClients"`
+	Sessions          int            `json:"sessions"`
+	CodeChunks        int            `json:"codeChunks"`
+	MemoryChunks      int            `json:"memoryChunks"`
+	Notifications     int            `json:"notifications"`
+	AuditEntries      int            `json:"auditEntries"`
+	ResponseTimeMs    int            `json:"responseTimeMs"`
+	MemoryUsageMB     float64        `json:"memoryUsageMB"`
+	GoroutineCount    int            `json:"goroutineCount"`
+	CreatedAt         time.Time      `gorm:"index" json:"createdAt"`
+	DeletedAt         gorm.DeletedAt `gorm:"index" json:"-"`
+}
+
+// TokenUsage tracks LLM token consumption per session and provider
+type TokenUsage struct {
+	ID               string         `gorm:"primaryKey" json:"id"`
+	SessionID        *string        `gorm:"index" json:"sessionId,omitempty"`
+	Provider         string         `gorm:"index" json:"provider"` // 'openai', 'anthropic', 'gemini'
+	Model            string         `json:"model"`
+	PromptTokens     int            `json:"promptTokens"`
+	CompletionTokens int            `json:"completionTokens"`
+	TotalTokens      int            `json:"totalTokens"`
+	RequestType      string         `gorm:"index" json:"requestType"` // 'nudge', 'review', 'debate', 'risk_score', 'recovery', 'issue_eval', 'embedding', 'other'
+	CostCents        float64        `json:"costCents"`
+	DurationMs       int64          `json:"durationMs"`
+	Success          bool           `json:"success"`
+	CreatedAt        time.Time      `gorm:"index" json:"createdAt"`
+	DeletedAt        gorm.DeletedAt `gorm:"index" json:"-"`
+}
+
+// AnomalyRecord represents a detected anomaly in the system
+type AnomalyRecord struct {
+	ID          string         `gorm:"primaryKey" json:"id"`
+	Type        string         `gorm:"index" json:"type"` // 'session_stuck', 'error_spike', 'token_overuse', 'queue_backlog', 'worker_down', 'circuit_breaker'
+	Severity    string         `json:"severity"` // 'low', 'medium', 'high', 'critical'
+	Title       string         `json:"title"`
+	Description string         `json:"description"`
+	SessionID   *string        `gorm:"index" json:"sessionId,omitempty"`
+	Metadata    *string        `json:"metadata,omitempty"`
+	IsResolved  bool           `gorm:"default:false;index" json:"isResolved"`
+	ResolvedAt  *time.Time     `json:"resolvedAt,omitempty"`
+	CreatedAt   time.Time      `gorm:"index" json:"createdAt"`
+	DeletedAt   gorm.DeletedAt `gorm:"index" json:"-"`
+}
+
 // QueueJob represents the QueueJob model from Prisma
 type QueueJob struct {
 	ID          string         `gorm:"primaryKey" json:"id"`

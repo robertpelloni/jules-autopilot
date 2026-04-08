@@ -1,158 +1,145 @@
-# Project Handoff: Jules Autopilot (v1.3.0 — Notification Center & Audit Trail)
+# Project Handoff: Jules Autopilot (v1.4.0 — Deep Observability & Anomaly Detection)
 
 ## 1. Session Summary
-This session implemented two major roadmap milestones: the **Notification Center** (v5.0) and the **Immutable Audit Trail** (v4.0), along with a comprehensive Go backend test suite covering all services.
+This session built on the v1.3.0 Notification Center and Audit Trail foundation to implement three major new systems: **Deep Observability** with health history snapshots, **Autonomous Anomaly Detection** (v1.5 Shadow Pilot foundations), and a **Token Budget Tracker** for LLM cost attribution.
 
 ## 2. Completed Work
 
-### 2.1 Notification Center (v5.0 Roadmap)
-Implemented a complete notification system from Go backend to React frontend:
+### 2.1 Deep Observability Surface
+Implemented health history tracking with periodic snapshots:
 
-**Go Backend (`backend-go/services/notification.go`):**
-- `CreateNotification()` with functional options pattern (WithSessionID, WithSourceID, WithMetadata, WithPriority)
-- Full CRUD: GetNotifications with filtering (category, type, sessionID, read/dismissed state, pagination)
-- MarkNotificationRead / MarkAllNotificationsRead / DismissNotification / DismissAllNotifications
-- GetUnreadNotificationCount for badge display
-- CleanupOldNotifications for automatic retention policy (90 days)
-- `AutoNotifyFromKeeperLog()` - automatically creates notifications from keeper log events
-
-**API Routes (`backend-go/api/routes.go`):**
-- `GET /api/notifications` - List with filtering and pagination
-- `POST /api/notifications/:id/read` - Mark as read
-- `POST /api/notifications/read-all` - Mark all as read
-- `POST /api/notifications/:id/dismiss` - Dismiss single
-- `POST /api/notifications/dismiss-all` - Dismiss all
-- `GET /api/notifications/unread-count` - Badge count
-
-**Frontend (`components/notification-center.tsx`):**
-- Sheet-based notification panel with bell icon trigger
-- Unread badge counter with 15s polling
-- Filter tabs: All, Unread, Errors, Actions
-- Notification cards with type-based styling (info/success/warning/error/action)
-- Category badges, priority indicators (HIGH/CRITICAL), relative timestamps
-- Mark all read / Clear all actions
-- Real-time WebSocket push via daemon-event listener
-
-### 2.2 Immutable Audit Trail (v4.0 Roadmap)
-Implemented a complete audit logging system:
-
-**Go Backend (`backend-go/services/audit.go`):**
-- `AuditAction()` records immutable entries with actor, resource type/ID, status, provider, model, token usage, duration
-- `GetAuditEntries()` with rich filtering (action, actor, resource type, status, date range, pagination)
-- `GetAuditStats()` returns aggregate statistics (total, last 24h, token usage, by action/actor/status)
+**Go Backend (`backend-go/services/observability.go`):**
+- `CaptureHealthSnapshot()` - Rate-limited (5min) point-in-time health capture including database, daemon, worker, scheduler status, queue depth, session/chunk counts, memory usage, and goroutine count
+- `GetHealthHistory()` - Returns health snapshots within a configurable time window
+- Automatically triggered on every `/api/health` request via fire-and-forget goroutine
 
 **API Routes:**
-- `GET /api/audit` - Paginated audit entries with filtering
-- `GET /api/audit/stats` - Aggregate statistics
+- `GET /api/health/history?hours=24&limit=100` - Historical health snapshots
 
-**Frontend (`components/audit-trail.tsx`):**
-- Full audit trail page with stats dashboard
-- Filterable by action type (nudges, approvals, debates, recovery, indexing, circuit breakers)
-- Paginated entry list with status badges and actor indicators
-- Resource type badges, provider/token usage/duration metadata
+### 2.2 Autonomous Anomaly Detection Engine
+Implemented 5 types of autonomous anomaly detection:
 
-### 2.3 Keeper Log → Notification/Audit Pipeline
-Enhanced `addKeeperLog()` in `realtime.go` to automatically:
-1. Create notifications for important keeper events via `AutoNotifyFromKeeperLog()`
-2. Record audit trail entries via `auditAction()`
-This means ALL existing keeper log calls throughout the codebase now generate notifications and audit entries automatically.
+1. **Queue Backlog** (>10 pending jobs for 30+ min) → HIGH severity
+2. **LLM Error Spike** (>5 failures in last hour) → MEDIUM severity
+3. **Token Overuse** (>$10/day) → HIGH severity
+4. **Stuck Sessions** (active >4h without update) → MEDIUM severity
+5. **Circuit Breaker Instability** (>3 trips in last hour) → CRITICAL severity
 
-### 2.4 Comprehensive Go Test Suite
-Created 50+ test cases across 5 test files:
+**Key Features:**
+- 30-minute deduplication window prevents alert storms
+- Anomalies persist in SQLite for audit trail
+- One-click resolve via API and dashboard
+- Background detection runs alongside health snapshot capture
 
-**`services/notification_test.go`** (7 tests):
-- CreateNotification with options, GetNotifications with filtering
-- MarkNotificationRead, MarkAllNotificationsRead
-- DismissNotification, pagination, cleanup
+**API Routes:**
+- `GET /api/health/anomalies` - Active anomalies with severity
+- `POST /api/health/anomalies/:id/resolve` - Resolve an anomaly
+- `GET /api/health/anomalies/history` - Historical resolved anomalies
 
-**`services/audit_test.go`** (5 tests):
-- AuditAction with options, GetAuditEntries with filtering
-- GetAuditStats, pagination, immutability verification
+### 2.3 Token Budget Tracker
+Implemented comprehensive LLM token usage tracking:
 
-**`services/queue_test.go`** (17 tests):
-- AddJob, scheduled jobs, worker lifecycle (start/stop/double-start/double-stop)
-- Worker default concurrency, job processing
-- GetSettings, parseMessages, isRiskyPlan, computeChecksum
-- chooseNudgeMessage, heuristicIssueEvaluation
-- approvalStatusFromRisk, mapState, hasRecentRecoveryGuidance
-- resolveRepoPath, buildRecoveryMessage, shouldIndexFile
+**Go Backend:**
+- `RecordTokenUsage()` - Records every LLM call's token consumption with provider, model, request type, cost estimate, and success/failure
+- `GetTokenUsageStats()` - Aggregate report with per-provider and per-request-type breakdowns
+- `estimateCostCents()` - Provider-aware cost estimation for GPT-4o, GPT-4o-mini, Claude 3.5 Sonnet, Claude 3 Opus, Gemini
+- Automatic recording in `generateLLMText()` - Every LLM call tracks tokens without code changes
 
-**`services/llm_test.go`** (8 tests):
-- normalizeProvider, defaultModelForProvider, resolveModel
-- extractJSONBlock, extractRiskScoreFromText
-- circuitBreaker (open/close/reset), generateRiskScore fallback
-- debateApprovalStatus, normalizeReviewProvider
+**API Routes:**
+- `GET /api/tokens/usage` - Aggregate stats with optional provider/session/since filters
+- `GET /api/tokens/session/:id` - Per-session token breakdown
 
-**`services/rag_test.go`** (3 tests):
-- bytesToFloat32Slice, cosineSimilarityFloat32 (identical/orthogonal/opposite/empty/mismatched)
-- QueryCodebase with empty DB
+### 2.4 Enhanced Prometheus Metrics
+Extended `/metrics` endpoint with:
+- `jules_autopilot_tokens_used_total` - Cumulative token consumption counter
+- `jules_autopilot_cost_cents_total` - Cumulative cost counter (cents)
+- `jules_autopilot_llm_failures_total` - Cumulative LLM failure counter
+- `jules_autopilot_active_anomalies` - Current active anomaly gauge
 
-### 2.5 Infrastructure Improvements
-- Added `db.InitTestDB()` for in-memory SQLite testing
-- Extended `/api/health` and `/metrics` with notification and audit counts
-- Added notification cleanup to scheduler alongside log cleanup
-- Added "Audit Trail" sidebar nav item with Shield icon
+### 2.5 Health Dashboard Enhancement
+- **Active Anomalies Panel**: Red-bordered alert panel showing all detected anomalies with severity badges and one-click resolve buttons
+- **Token Budget Tracker**: 4-stat overview (total requests, total tokens, prompt/completion split, failures) plus per-provider cost breakdown cards
 
-### 2.6 Version & Documentation
-- Bumped version to 1.3.0 across all manifests
-- Updated CHANGELOG.md with detailed release notes
-- Updated ROADMAP.md to check off completed milestones
-- Updated TODO.md to mark notification center and audit trail items
-- All version files synchronized (VERSION, VERSION.md, package.json, lib/version.ts)
+### 2.6 New Models
+- `HealthSnapshot` - Point-in-time system health with memory/goroutine metrics
+- `TokenUsage` - Per-request LLM token consumption with cost attribution
+- `AnomalyRecord` - Detected system anomalies with severity, resolution tracking
 
-## 3. Validation Results
+### 2.7 Comprehensive Test Coverage
+Added 13 new test cases in `services/observability_test.go`:
+- TestRecordTokenUsage, TestEstimateCostCents
+- TestCaptureHealthSnapshot, TestHealthSnapshotRateLimit
+- TestGetHealthHistory, TestGetTokenUsageStats, TestGetTokenUsageStatsWithFilters
+- TestDetectAnomalies, TestResolveAnomaly
+- TestGetActiveAnomalies, TestGetAnomalyHistory
+- TestAnomalyDeduplication
+
+## 3. Total Test Coverage
+### Go Backend: 60+ Tests
+- `notification_test.go`: 7 tests
+- `audit_test.go`: 5 tests
+- `queue_test.go`: 17 tests
+- `llm_test.go`: 8 tests
+- `rag_test.go`: 3 tests
+- `observability_test.go`: 13 tests (NEW)
+
+### Frontend: 36 Tests
+- All passing
+
+## 4. Validation Results
 ### All Passing ✅
 - `cd backend-go && go build -o backend.exe main.go` - Clean build
-- `cd backend-go && go test ./...` - 50+ tests pass (10.3s)
+- `cd backend-go && go test ./...` - 60+ tests pass
 - `pnpm run typecheck` - Clean
 - `pnpm run lint` - 0 errors, 0 warnings
 - `pnpm run test` - 36 tests pass
-- `pnpm run build` - Clean build (production)
-- `node scripts/check-version-sync.js` - ✅ (1.3.0)
+- `pnpm run build` - Clean production build
+- `node scripts/check-version-sync.js` - ✅ (1.4.0)
 
-### Running Services
-- Go backend: `http://localhost:8080` (88 handlers, all endpoints operational)
-- Frontend dev: `http://localhost:3006` (proxied to Go backend)
+## 5. Architecture Notes
 
-## 4. Architecture Notes
-
-### Notification Flow
+### Anomaly Detection Flow
 ```
-Keeper Event → addKeeperLog() → AutoNotifyFromKeeperLog() → CreateNotification()
-                                     ↓                              ↓
-                              auditAction()                 WebSocket broadcast
-                                     ↓
-                              AuditAction() → SQLite
+/api/health request → CaptureHealthSnapshot() [rate-limited 5min]
+                   → DetectAnomalies() [rate-limited 2min]
+                       ├── Check queue backlog
+                       ├── Check LLM error spike
+                       ├── Check token overuse
+                       ├── Check stuck sessions
+                       └── Check circuit breaker trips
+                   → Persist new anomalies (skip duplicates)
 ```
 
-### New Models
-- `Notification` - User-facing notifications with type/category/priority/read/dismiss state
-- `AuditEntry` - Immutable audit trail with action/actor/resource/metadata
+### Token Tracking Flow
+```
+generateLLMText() → generateOpenAI/Anthropic/GeminiText()
+                 → Returns LLMResult with Usage
+                 → RecordTokenUsage() [fire-and-forget goroutine]
+                 → TokenUsage row in SQLite
+                 → Cost estimated per provider/model
+```
 
-### New API Endpoints
-- 7 notification endpoints
-- 2 audit endpoints
-- Total: 88 registered handlers (up from ~80)
+### New API Endpoints (total: ~95 registered handlers)
+- 3 health history/anomaly endpoints
+- 2 token usage endpoints
 
-## 5. Remaining Work
-### Highest-value next steps
-1. **Background Anomaly Detection** (v1.5 Roadmap) - Monitor git diffs, fix failing CI
-2. **Deep Observability Surface** - Richer health history, dependency-specific checks
-3. **Session Event Timeline Enrichment** - Richer structured cards for debate/escalation/recovery events
-4. **Prisma Connection Pooling** - Evaluate for high-concurrency scenarios
-5. **WebAssembly Plugin Isolation** (v1.5) - Zero-trust security for MCP tools
+## 6. Remaining High-Value Work
+1. **Git Diff Monitoring** (v1.5 Shadow Pilot) - Watch for regressions in tracked repos
+2. **CI Pipeline Auto-Fix** (v1.5 Shadow Pilot) - Detect and auto-fix failing CI
+3. **Session Event Timeline Enrichment** - Richer structured cards for debate/escalation/recovery
+4. **Vector Search Optimization** - Dedicated vector extension if RAG index exceeds 50k chunks
+5. **Predictive Cost Optimizer** (v2.0) - ML model for optimal provider routing
 
-## 6. Process Safety
-- No processes were killed during this session.
-- Go backend and frontend dev server remain running.
-- Live DB sidecars remain intentionally unstaged.
+## 7. Process Safety
+- No processes were killed during this session
+- Go backend and frontend dev server remain running from previous context
 
-## 7. Key Findings
-### 7.1 Auto-notification from keeper logs is powerful
-By hooking into the existing `addKeeperLog()` function, every automation action in the codebase now automatically creates user-facing notifications without any changes to the calling code. This is a clean, non-invasive integration.
+## 8. Key Findings
+### 8.1 Health endpoint is the perfect observability hook
+By piggy-backing on the existing `/api/health` endpoint that the frontend polls every 30 seconds, we get automatic periodic snapshot capture and anomaly detection without any additional cron jobs or polling infrastructure.
 
-### 7.2 Go test infrastructure is now mature
-The `db.InitTestDB()` helper with in-memory SQLite enables fast, isolated testing of all service layer logic. Tests run in ~10 seconds including the worker processing test that verifies actual job execution.
+### 8.2 Anomaly detection deduplication is critical
+Without the 30-minute deduplication window, the queue backlog detector would create a new anomaly record every 2 minutes. The dedup ensures operators see one persistent anomaly until resolved.
 
-### 7.3 The codebase has grown significantly
-With 88 registered API handlers, the Go backend now provides comprehensive coverage of all product surfaces, and the addition of notifications and audit trail completes the observability story for operators.
+### 8.3 Token cost estimation enables budget enforcement
+The provider-aware cost model means operators can now see exact dollar amounts per provider, enabling data-driven decisions about model routing and budget caps.

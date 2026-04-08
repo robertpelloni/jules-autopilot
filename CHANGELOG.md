@@ -2,6 +2,33 @@
 
 All notable changes to this project will be documented in this file.
 
+## [1.4.0] - 2026-04-08
+
+### Added
+- **Deep Observability Surface**: Health history tracking with periodic snapshots captured automatically on every health check. New `GET /api/health/history` endpoint returns trend data for dashboard analysis.
+- **Anomaly Detection Engine (v1.5 Shadow Pilot foundations)**: Autonomous background detection of queue backlogs, LLM error spikes, token budget overuse, stuck sessions, and circuit breaker instability. Anomalies are deduplicated within 30-minute windows and can be resolved via API.
+  - `GET /api/health/anomalies` - Active anomalies with severity levels
+  - `POST /api/health/anomalies/:id/resolve` - Resolve an anomaly
+  - `GET /api/health/anomalies/history` - Resolved anomaly history
+- **Token Budget Tracker**: Per-request LLM token usage tracking with automatic cost estimation for OpenAI, Anthropic, and Gemini models. Records prompt/completion tokens, cost in cents, and request type.
+  - `GET /api/tokens/usage` - Aggregate token usage with provider/request-type breakdowns
+  - `GET /api/tokens/session/:id` - Per-session token usage
+- **Prometheus Metrics v2**: Extended `/metrics` endpoint with token consumption counters, cost tracking, LLM failure rates, and active anomaly gauges.
+- **Health Dashboard Enhancement**: System Health view now shows active anomaly alerts with severity badges and one-click resolve, plus a full token budget tracker with per-provider cost breakdowns.
+- **Token Usage Recording**: `generateLLMText()` now automatically records token usage for every LLM call, enabling cost attribution without code changes.
+
+### Changed
+- **Health endpoint auto-captures snapshots**: Every `/api/health` request now triggers a background health snapshot capture (rate-limited to 5 minutes) and anomaly detection run.
+- **Observability Service**: New `backend-go/services/observability.go` provides centralized health history, token tracking, and anomaly detection.
+
+### Validation
+- All Go tests pass: `cd backend-go && go test ./...` (60+ test cases)
+- All frontend tests pass: `pnpm run test` (36 tests)
+- Frontend typecheck passes: `pnpm run typecheck`
+- Frontend lint clean: `pnpm run lint` (0 errors, 0 warnings)
+- Build succeeds: `pnpm run build`
+- Version sync check: `node scripts/check-version-sync.js` ✅ (1.4.0)
+
 ## [1.3.0] - 2026-04-08
 
 ### Added
