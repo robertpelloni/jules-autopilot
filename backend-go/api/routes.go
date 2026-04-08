@@ -1775,3 +1775,31 @@ func stopShadowPilotAPI(c *fiber.Ctx) error {
 	services.StopShadowPilot()
 	return c.JSON(fiber.Map{"status": "stopped"})
 }
+
+func getDependencyChecks(c *fiber.Ctx) error {
+	report := services.RunDependencyChecks()
+	return c.JSON(report)
+}
+
+func getHealthTrend(c *fiber.Ctx) error {
+	checkName := c.Query("check", "")
+	hours := c.QueryInt("hours", 24)
+	limit := c.QueryInt("limit", 100)
+
+	since := time.Now().Add(-time.Duration(hours) * time.Hour)
+	snapshots, err := services.GetHealthTrend(checkName, since, limit)
+	if err != nil {
+		return c.Status(500).JSON(fiber.Map{"error": err.Error()})
+	}
+	return c.JSON(fiber.Map{
+		"check":      checkName,
+		"since":      since,
+		"snapshots":  snapshots,
+		"count":      len(snapshots),
+	})
+}
+
+func getSystemInfoAPI(c *fiber.Ctx) error {
+	info := services.GetSystemInfo()
+	return c.JSON(info)
+}

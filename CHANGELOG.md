@@ -2,6 +2,28 @@
 
 All notable changes to this project will be documented in this file.
 
+## [1.6.0] - 2026-04-08
+
+### Added
+- **Deep Dependency Health Checks**: New `/api/health/dependencies` endpoint that runs comprehensive checks across 7 system dependencies: database (ping + pool stats), disk space, memory pressure (heap/GC), git availability, queue worker (backlog/failed count), scheduler (task registration), and websocket broadcaster status. Each check reports status (ok/degraded/down), latency, and structured details.
+- **Health Trend Analysis**: New `GET /api/health/trend` endpoint for querying historical health snapshots by check name and time range, enabling trend visualization and alerting.
+- **System Runtime Info**: New `GET /api/system/info` endpoint exposing Go version, OS, architecture, CPU count, goroutine count, heap/stack memory, uptime, PID, and working directory.
+- **Dependency Check UI**: New panel in the Health dashboard showing all 7 dependency checks as color-coded cards with per-check status, latency, and messages. Includes runtime info footer with Go version, CPU, heap, goroutines, stack, and uptime.
+- **Comprehensive Go Test Suite**: Added 42 new test cases across 5 new test files (daemon_test.go, debate_test.go, realtime_test.go, review_test.go, scheduler_test.go) and 13 tests for dependency checks. Total: **117 passing Go tests** (up from 60).
+
+### Changed
+- **Frontend bundle code-split**: Split monolithic 1054KB bundle into 7 vendor chunks (react, data, icons, utils, radix, markdown) reducing main chunk to 659KB.
+- **ESLint rules tightened**: `no-explicit-any`, `no-unused-vars`, `no-empty` all promoted from `warn` to `error` with zero violations.
+- **HealthSnapshot model extended**: Added `CheckName`, `Message`, `Latency` fields for per-check dependency tracking.
+
+### Validation
+- All Go tests pass: `cd backend-go && go test ./...` (117 test cases)
+- All frontend tests pass: `pnpm run test` (36 tests)
+- Frontend typecheck passes: `pnpm run typecheck`
+- Frontend lint clean: `pnpm run lint` (0 errors, 0 warnings)
+- Build succeeds: `pnpm run build` (7 vendor chunks + 1 app chunk)
+- Version sync check: `node scripts/check-version-sync.js` ✅ (1.6.0)
+
 ## [1.5.0] - 2026-04-08
 
 ### Added

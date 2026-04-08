@@ -5,7 +5,7 @@ import { Activity, Cpu, Database, HeartPulse, RefreshCw, Wifi, Clock, Play, Load
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { fetchHealth, fetchMetricsText, fetchScheduledTasks, triggerScheduledTask, type HealthResponse, type ScheduledTask } from '@/lib/api/health';
-import { fetchActiveAnomalies, resolveAnomaly, fetchTokenUsageStats, fetchShadowPilotStatus, startShadowPilot, stopShadowPilot, type AnomalyRecord, type TokenUsageReport } from '@/lib/api/observability';
+import { fetchActiveAnomalies, resolveAnomaly, fetchTokenUsageStats, fetchShadowPilotStatus, startShadowPilot, stopShadowPilot, fetchDependencyReport, type AnomalyRecord, type TokenUsageReport, type DependencyReport } from '@/lib/api/observability';
 import { toast } from 'sonner';
 
 export function SystemHealthDashboard() {
@@ -19,6 +19,7 @@ export function SystemHealthDashboard() {
   const [resolvingAnomaly, setResolvingAnomaly] = useState<string | null>(null);
   const [shadowPilot, setShadowPilot] = useState<Record<string, unknown> | null>(null);
   const [togglingPilot, setTogglingPilot] = useState(false);
+  const [depReport, setDepReport] = useState<DependencyReport | null>(null);
 
   const load = async (showToast = false) => {
     try {
@@ -48,6 +49,8 @@ export function SystemHealthDashboard() {
       }
       const pilotData = await fetchShadowPilotStatus().catch(() => ({ running: false }));
       setShadowPilot(pilotData);
+      const depData = await fetchDependencyReport().catch(() => null);
+      if (depData) setDepReport(depData);
 
       if (showToast) {
         toast.success('Health dashboard refreshed');
@@ -380,6 +383,47 @@ export function SystemHealthDashboard() {
               <p className="mt-3 text-[10px] text-zinc-500">
                 Shadow Pilot is actively monitoring repository changes and detecting potential regressions.
               </p>
+            )}
+          </div>
+        )}
+
+        {depReport && (
+          <div className="rounded-xl border border-white/5 bg-zinc-900 p-4">
+            <div className="flex items-center justify-between mb-4">
+              <div className="flex items-center gap-2">
+                <HeartPulse className={`h-4 w-4 ${depReport.overall === 'ok' ? 'text-green-400' : depReport.overall === 'degraded' ? 'text-yellow-400' : 'text-red-400'}`} />
+                <h2 className="text-xs font-bold uppercase tracking-widest text-white">Dependency Checks</h2>
+                <Badge variant="outline" className={`text-[9px] uppercase ${depReport.overall === 'ok' ? 'bg-green-500/10 text-green-400 border-green-500/20' : depReport.overall === 'degraded' ? 'bg-yellow-500/10 text-yellow-400 border-yellow-500/20' : 'bg-red-500/10 text-red-400 border-red-500/20'}`}>
+                  {depReport.overall}
+                </Badge>
+              </div>
+              <div className="text-[9px] text-zinc-500 font-mono">
+                {new Date(depReport.checkedAt).toLocaleTimeString()}
+              </div>
+            </div>
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-2">
+              {depReport.checks.map((check) => (
+                <div key={check.name} className={`rounded-lg border p-3 ${check.status === 'ok' ? 'border-green-500/10 bg-green-500/5' : check.status === 'degraded' ? 'border-yellow-500/10 bg-yellow-500/5' : check.status === 'down' ? 'border-red-500/10 bg-red-500/5' : 'border-white/5 bg-black/20'}`}>
+                  <div className="flex items-center justify-between">
+                    <span className="text-[10px] font-mono uppercase tracking-widest text-zinc-400">{check.name}</span>
+                    <span className={`text-[9px] font-bold uppercase ${check.status === 'ok' ? 'text-green-400' : check.status === 'degraded' ? 'text-yellow-400' : 'text-red-400'}`}>{check.status}</span>
+                  </div>
+                  <p className="mt-1 text-[10px] text-zinc-500 truncate">{check.message}</p>
+                  {check.latencyMs > 0 && (
+                    <p className="mt-0.5 text-[9px] text-zinc-600">{check.latencyMs}ms</p>
+                  )}
+                </div>
+              ))}
+            </div>
+            {depReport.systemInfo && (
+              <div className="mt-3 grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-2 text-[9px]">
+                <div className="text-zinc-500">Go: <span className="text-zinc-300">{depReport.systemInfo.goVersion?.slice(0, 12)}</span></div>
+                <div className="text-zinc-500">CPU: <span className="text-zinc-300">{depReport.systemInfo.numCPU}</span></div>
+                <div className="text-zinc-500">Heap: <span className="text-zinc-300">{depReport.systemInfo.heapAllocMB}MB</span></div>
+                <div className="text-zinc-500">Goroutines: <span className="text-zinc-300">{depReport.systemInfo.numGoroutine}</span></div>
+                <div className="text-zinc-500">Stack: <span className="text-zinc-300">{depReport.systemInfo.stackInUseMB}MB</span></div>
+                <div className="text-zinc-500">Uptime: <span className="text-zinc-300">{Math.floor(depReport.systemInfo.uptimeSeconds / 60)}m</span></div>
+              </div>
             )}
           </div>
         )}

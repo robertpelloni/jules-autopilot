@@ -86,7 +86,7 @@ func RunDependencyChecks() DependencyReport {
 	}
 
 	var m runtime.MemStats
-	runtime.ReadMemStats(m)
+	runtime.ReadMemStats(&m)
 
 	wd, _ := os.Getwd()
 
@@ -209,7 +209,7 @@ func checkMemory() DependencyCheck {
 	}
 
 	var m runtime.MemStats
-	runtime.ReadMemStats(m)
+	runtime.ReadMemStats(&m)
 
 	heapAllocMB := m.HeapAlloc / 1024 / 1024
 	sysMB := m.Sys / 1024 / 1024
@@ -389,7 +389,7 @@ func GetHealthTrend(checkName string, since time.Time, limit int) ([]models.Heal
 // GetSystemInfo returns current system runtime information
 func GetSystemInfo() SystemInfo {
 	var m runtime.MemStats
-	runtime.ReadMemStats(m)
+	runtime.ReadMemStats(&m)
 	wd, _ := os.Getwd()
 
 	return SystemInfo{
