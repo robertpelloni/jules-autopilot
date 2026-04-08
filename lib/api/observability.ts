@@ -94,3 +94,19 @@ export async function fetchSessionTokenUsage(sessionId: string): Promise<TokenUs
   if (!response.ok) throw new Error('Failed to load session token usage');
   return response.json();
 }
+
+export async function fetchShadowPilotStatus(): Promise<Record<string, unknown>> {
+  const response = await fetch('/api/shadow-pilot/status');
+  if (!response.ok) throw new Error('Failed to load shadow pilot status');
+  return response.json();
+}
+
+export async function startShadowPilot(): Promise<void> {
+  const response = await fetch('/api/shadow-pilot/start', { method: 'POST' });
+  if (!response.ok) throw new Error('Failed to start shadow pilot');
+}
+
+export async function stopShadowPilot(): Promise<void> {
+  const response = await fetch('/api/shadow-pilot/stop', { method: 'POST' });
+  if (!response.ok) throw new Error('Failed to stop shadow pilot');
+}

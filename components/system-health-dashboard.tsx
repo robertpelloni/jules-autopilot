@@ -1,11 +1,11 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { Activity, Cpu, Database, HeartPulse, RefreshCw, Wifi, Clock, Play, Loader2, AlertTriangle, DollarSign, Zap, CheckCircle2, XCircle } from 'lucide-react';
+import { Activity, Cpu, Database, HeartPulse, RefreshCw, Wifi, Clock, Play, Loader2, AlertTriangle, DollarSign, Zap, CheckCircle2, XCircle, Eye, EyeOff } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { fetchHealth, fetchMetricsText, fetchScheduledTasks, triggerScheduledTask, type HealthResponse, type ScheduledTask } from '@/lib/api/health';
-import { fetchActiveAnomalies, resolveAnomaly, fetchTokenUsageStats, type AnomalyRecord, type TokenUsageReport } from '@/lib/api/observability';
+import { fetchActiveAnomalies, resolveAnomaly, fetchTokenUsageStats, fetchShadowPilotStatus, startShadowPilot, stopShadowPilot, type AnomalyRecord, type TokenUsageReport } from '@/lib/api/observability';
 import { toast } from 'sonner';
 
 export function SystemHealthDashboard() {
@@ -17,6 +17,8 @@ export function SystemHealthDashboard() {
   const [anomalies, setAnomalies] = useState<AnomalyRecord[]>([]);
   const [tokenReport, setTokenReport] = useState<TokenUsageReport | null>(null);
   const [resolvingAnomaly, setResolvingAnomaly] = useState<string | null>(null);
+  const [shadowPilot, setShadowPilot] = useState<Record<string, unknown> | null>(null);
+  const [togglingPilot, setTogglingPilot] = useState(false);
 
   const load = async (showToast = false) => {
     try {
@@ -44,6 +46,8 @@ export function SystemHealthDashboard() {
       if (tokenData.status === 'fulfilled') {
         setTokenReport(tokenData.value);
       }
+      const pilotData = await fetchShadowPilotStatus().catch(() => ({ running: false }));
+      setShadowPilot(pilotData);
 
       if (showToast) {
         toast.success('Health dashboard refreshed');
@@ -323,6 +327,59 @@ export function SystemHealthDashboard() {
                   </div>
                 ))}
               </div>
+            )}
+          </div>
+        )}
+
+        {shadowPilot && (
+          <div className="rounded-xl border border-white/5 bg-zinc-900 p-4">
+            <div className="flex items-center justify-between mb-4">
+              <div className="flex items-center gap-2">
+                {shadowPilot.running ? (
+                  <Eye className="h-4 w-4 text-blue-400" />
+                ) : (
+                  <EyeOff className="h-4 w-4 text-zinc-500" />
+                )}
+                <h2 className="text-xs font-bold uppercase tracking-widest text-white">Shadow Pilot</h2>
+                <Badge variant="outline" className={`text-[9px] uppercase ${shadowPilot.running ? 'bg-blue-500/10 text-blue-400 border-blue-500/20' : 'border-zinc-700 text-zinc-500'}`}>
+                  v1.5
+                </Badge>
+              </div>
+              <Button
+                variant={shadowPilot.running ? "destructive" : "outline"}
+                size="sm"
+                className="h-7 text-[9px] uppercase tracking-widest"
+                disabled={togglingPilot}
+                onClick={() => {
+                  setTogglingPilot(true);
+                  (shadowPilot.running ? stopShadowPilot() : startShadowPilot())
+                    .then(() => fetchShadowPilotStatus())
+                    .then((data) => setShadowPilot(data))
+                    .finally(() => setTogglingPilot(false));
+                }}
+              >
+                {togglingPilot ? <Loader2 className="h-3 w-3 animate-spin mr-2" /> : shadowPilot.running ? <EyeOff className="h-3 w-3 mr-2" /> : <Play className="h-3 w-3 mr-2" />}
+                {shadowPilot.running ? 'Disable' : 'Enable'}
+              </Button>
+            </div>
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+              <div className="rounded-lg border border-white/5 bg-black/20 p-3">
+                <div className="text-[10px] font-mono uppercase tracking-widest text-zinc-500">Monitored Repos</div>
+                <div className="mt-2 text-xl font-bold">{String(shadowPilot.repoCount ?? 0)}</div>
+              </div>
+              <div className="rounded-lg border border-white/5 bg-black/20 p-3">
+                <div className="text-[10px] font-mono uppercase tracking-widest text-zinc-500">Diff Events</div>
+                <div className="mt-2 text-xl font-bold">{String(shadowPilot.diffEvents ?? 0)}</div>
+              </div>
+              <div className="rounded-lg border border-white/5 bg-black/20 p-3">
+                <div className="text-[10px] font-mono uppercase tracking-widest text-zinc-500">Check Interval</div>
+                <div className="mt-2 text-xl font-bold">{String(shadowPilot.interval ?? '5m0s')}</div>
+              </div>
+            </div>
+            {Boolean(shadowPilot.running) && (
+              <p className="mt-3 text-[10px] text-zinc-500">
+                Shadow Pilot is actively monitoring repository changes and detecting potential regressions.
+              </p>
             )}
           </div>
         )}

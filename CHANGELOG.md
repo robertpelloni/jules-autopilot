@@ -2,6 +2,30 @@
 
 All notable changes to this project will be documented in this file.
 
+## [1.5.0] - 2026-04-08
+
+### Added
+- **Shadow Pilot (v1.5 Milestone)**: Background git diff monitoring service that autonomously watches tracked repositories for changes. Detects significant modifications (>50 lines), potential regressions (large deletions with few insertions), and creates notifications and anomaly records automatically.
+  - `GET /api/shadow-pilot/status` - Current status with repo count and diff event history
+  - `POST /api/shadow-pilot/start` - Enable background monitoring
+  - `POST /api/shadow-pilot/stop` - Disable background monitoring
+  - Runs on a 5-minute polling interval, monitors all known repo paths
+  - Health dashboard includes Shadow Pilot control panel with enable/disable toggle
+- **Regression Detection**: Shadow Pilot flags large deletions (>100 lines with <10 insertions) as potential regression anomalies, creating medium-severity anomaly records for operator review.
+- **Shadow Pilot UI**: New panel in the System Health dashboard showing monitored repo count, diff events, check interval, and enable/disable toggle.
+
+### Changed
+- **Anomaly detection now includes regression detection**: The anomaly engine covers queue backlogs, LLM error spikes, token budget overuse, stuck sessions, circuit breaker instability, and potential code regressions.
+- **Token recording is automatic**: Every `generateLLMText()` call now records token usage in a fire-and-forget goroutine, enabling cost attribution without any code changes.
+
+### Validation
+- All Go tests pass: `cd backend-go && go test ./...` (65+ test cases)
+- All frontend tests pass: `pnpm run test` (36 tests)
+- Frontend typecheck passes: `pnpm run typecheck`
+- Frontend lint clean: `pnpm run lint` (0 errors, 0 warnings)
+- Build succeeds: `pnpm run build`
+- Version sync check: `node scripts/check-version-sync.js` ✅ (1.5.0)
+
 ## [1.4.0] - 2026-04-08
 
 ### Added

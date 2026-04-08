@@ -638,6 +638,11 @@ func SetupRoutes(app *fiber.App) {
 	// Token usage routes
 	api.Get("/tokens/usage", getTokenUsageStats)
 	api.Get("/tokens/session/:id", getSessionTokenUsage)
+
+	// Shadow Pilot routes
+	api.Get("/shadow-pilot/status", getShadowPilotStatus)
+	api.Post("/shadow-pilot/start", startShadowPilotAPI)
+	api.Post("/shadow-pilot/stop", stopShadowPilotAPI)
 }
 
 func triggerFleetSync(c *fiber.Ctx) error {
@@ -1747,4 +1752,21 @@ func getSessionTokenUsage(c *fiber.Ctx) error {
 		return c.Status(500).JSON(fiber.Map{"error": err.Error()})
 	}
 	return c.JSON(report)
+}
+
+// Shadow Pilot: Status
+func getShadowPilotStatus(c *fiber.Ctx) error {
+	return c.JSON(services.GetShadowPilotStatus())
+}
+
+// Shadow Pilot: Start
+func startShadowPilotAPI(c *fiber.Ctx) error {
+	services.StartShadowPilot()
+	return c.JSON(fiber.Map{"status": "started"})
+}
+
+// Shadow Pilot: Stop
+func stopShadowPilotAPI(c *fiber.Ctx) error {
+	services.StopShadowPilot()
+	return c.JSON(fiber.Map{"status": "stopped"})
 }
