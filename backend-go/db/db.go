@@ -41,6 +41,7 @@ func InitDB() {
 		&models.HealthSnapshot{},
 		&models.TokenUsage{},
 		&models.AnomalyRecord{},
+		&models.ScheduledTask{},
 	)
 	if err != nil {
 		log.Fatalf("failed to auto-migrate models: %v", err)
@@ -82,6 +83,7 @@ func InitTestDB() (*gorm.DB, error) {
 		&models.HealthSnapshot{},
 		&models.TokenUsage{},
 		&models.AnomalyRecord{},
+		&models.ScheduledTask{},
 	)
 	if err != nil {
 		return nil, err

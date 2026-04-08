@@ -366,6 +366,20 @@ type AnomalyRecord struct {
 }
 
 // QueueJob represents the QueueJob model from Prisma
+
+type ScheduledTask struct {
+	ID         string      `gorm:"primaryKey" json:"id"`
+	Name       string      `gorm:"uniqueIndex" json:"name"`
+	IntervalMs int64       `json:"intervalMs"`
+	JobType    string      `json:"jobType"`
+	Payload    interface{} `gorm:"type:text" json:"payload"`
+	IsEnabled  bool        `gorm:"default:true" json:"isEnabled"`
+	LastRunAt  *time.Time  `json:"lastRunAt,omitempty"`
+	NextRunAt  *time.Time  `json:"nextRunAt,omitempty"`
+	CreatedAt  time.Time   `json:"createdAt"`
+	UpdatedAt  time.Time   `json:"updatedAt"`
+}
+
 type QueueJob struct {
 	ID          string         `gorm:"primaryKey" json:"id"`
 	Type        string         `json:"type"`

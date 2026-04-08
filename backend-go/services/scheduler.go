@@ -199,3 +199,98 @@ func StopScheduler() {
 	s := GetScheduler()
 	s.Stop()
 }
+
+// CreateCustomTask adds a new custom scheduled task
+func CreateCustomTask(name string, intervalMs int64, jobType string, payload interface{}) error {
+	s := GetScheduler()
+	s.mu.Lock()
+	defer s.mu.Unlock()
+
+	if _, exists := s.tasks[name]; exists {
+		return fmt.Errorf("task %s already exists", name)
+	}
+
+	// Store in DB for persistence
+	task := models.ScheduledTask{
+		ID:         fmt.Sprintf("task-%d", time.Now().UnixNano()),
+		Name:       name,
+		IntervalMs: intervalMs,
+		JobType:    jobType,
+		Payload:    payload,
+		IsEnabled:  true,
+		CreatedAt:  time.Now(),
+		UpdatedAt:  time.Now(),
+	}
+	if db.DB != nil {
+		if err := db.DB.Create(&task).Error; err != nil {
+			return fmt.Errorf("failed to persist task: %w", err)
+		}
+	}
+
+	s.ScheduleTask(name, time.Duration(intervalMs)*time.Millisecond)
+	s.wg.Add(1)
+	go s.runCustomTaskLoop(name, intervalMs, jobType, payload)
+
+	return nil
+}
+
+// DeleteCustomTask removes a scheduled task
+func DeleteCustomTask(name string) error {
+	s := GetScheduler()
+	s.mu.Lock()
+	defer s.mu.Unlock()
+
+	if _, exists := s.tasks[name]; !exists {
+		return fmt.Errorf("task %s not found", name)
+	}
+
+	delete(s.tasks, name)
+	delete(s.triggers, name)
+
+	if db.DB != nil {
+		db.DB.Where("name = ?", name).Delete(&models.ScheduledTask{})
+	}
+
+	return nil
+}
+
+// GetCustomTasks returns all custom persisted tasks
+func GetCustomTasks() []models.ScheduledTask {
+	if db.DB == nil {
+		return nil
+	}
+	var tasks []models.ScheduledTask
+	db.DB.Find(&tasks)
+	return tasks
+}
+
+func (s *Scheduler) runCustomTaskLoop(name string, intervalMs int64, jobType string, payload interface{}) {
+	defer s.wg.Done()
+
+	interval := time.Duration(intervalMs) * time.Millisecond
+	if interval <= 0 {
+		interval = 5 * time.Minute
+	}
+
+	timer := time.NewTimer(1 * time.Minute) // Initial delay
+
+	for {
+		select {
+		case <-timer.C:
+			if _, err := AddJob(jobType, payload); err != nil {
+				log.Printf("[Scheduler] Custom task %s failed: %v", name, err)
+			} else {
+				log.Printf("[Scheduler] Custom task %s enqueued %s job", name, jobType)
+			}
+			timer.Reset(interval)
+		case <-s.stopChan:
+			if !timer.Stop() {
+				select {
+				case <-timer.C:
+				default:
+				}
+			}
+			return
+		}
+	}
+}

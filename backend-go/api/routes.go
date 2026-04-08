@@ -648,6 +648,11 @@ func SetupRoutes(app *fiber.App) {
 	api.Get("/health/dependencies", getDependencyChecks)
 	api.Get("/health/trend", getHealthTrend)
 	api.Get("/system/info", getSystemInfoAPI)
+
+	// Scheduled tasks CRUD
+	api.Get("/scheduler/tasks", getScheduledTasks)
+	api.Post("/scheduler/tasks", createScheduledTask)
+	api.Delete("/scheduler/tasks/:name", deleteScheduledTask)
 }
 
 func triggerFleetSync(c *fiber.Ctx) error {
@@ -1802,4 +1807,40 @@ func getHealthTrend(c *fiber.Ctx) error {
 func getSystemInfoAPI(c *fiber.Ctx) error {
 	info := services.GetSystemInfo()
 	return c.JSON(info)
+}
+
+func getScheduledTasks(c *fiber.Ctx) error {
+	tasks := services.GetScheduler().GetTasks()
+	customTasks := services.GetCustomTasks()
+	return c.JSON(fiber.Map{
+		"builtInTasks": tasks,
+		"customTasks":  customTasks,
+	})
+}
+
+func createScheduledTask(c *fiber.Ctx) error {
+	var req struct {
+		Name       string                 `json:"name"`
+		IntervalMs int64                  `json:"intervalMs"`
+		JobType    string                 `json:"jobType"`
+		Payload    map[string]interface{} `json:"payload"`
+	}
+	if err := c.BodyParser(&req); err != nil {
+		return c.Status(400).JSON(fiber.Map{"error": "Invalid request body"})
+	}
+	if req.Name == "" || req.JobType == "" || req.IntervalMs <= 0 {
+		return c.Status(400).JSON(fiber.Map{"error": "name, jobType, and intervalMs are required"})
+	}
+	if err := services.CreateCustomTask(req.Name, req.IntervalMs, req.JobType, req.Payload); err != nil {
+		return c.Status(409).JSON(fiber.Map{"error": err.Error()})
+	}
+	return c.Status(201).JSON(fiber.Map{"status": "created", "name": req.Name})
+}
+
+func deleteScheduledTask(c *fiber.Ctx) error {
+	name := c.Params("name")
+	if err := services.DeleteCustomTask(name); err != nil {
+		return c.Status(404).JSON(fiber.Map{"error": err.Error()})
+	}
+	return c.JSON(fiber.Map{"status": "deleted", "name": name})
 }
