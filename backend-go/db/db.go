@@ -36,6 +36,8 @@ func InitDB() {
 		&models.MemoryChunk{},
 		&models.RepoPath{},
 		&models.QueueJob{},
+		&models.Notification{},
+		&models.AuditEntry{},
 	)
 	if err != nil {
 		log.Fatalf("failed to auto-migrate models: %v", err)
@@ -44,6 +46,56 @@ func InitDB() {
 	log.Println("Database initialized and migrated successfully")
 
 	seedDefaultSettings()
+}
+
+// InitTestDB creates an in-memory SQLite database for testing
+func InitTestDB() (*gorm.DB, error) {
+	var err error
+	DB, err = gorm.Open(sqlite.Open(":memory:"), &gorm.Config{})
+	if err != nil {
+		return nil, err
+	}
+
+	err = DB.AutoMigrate(
+		&models.Account{},
+		&models.ApiKey{},
+		&models.Debate{},
+		&models.KeeperLog{},
+		&models.KeeperSettings{},
+		&models.Session{},
+		&models.JulesSession{},
+		&models.SessionTemplate{},
+		&models.SupervisorState{},
+		&models.User{},
+		&models.VerificationToken{},
+		&models.Workspace{},
+		&models.WorkspaceMember{},
+		&models.CodeChunk{},
+		&models.MemoryChunk{},
+		&models.RepoPath{},
+		&models.QueueJob{},
+		&models.Notification{},
+		&models.AuditEntry{},
+	)
+	if err != nil {
+		return nil, err
+	}
+
+	// Seed default settings for tests
+	settings := models.KeeperSettings{
+		ID:                         "default",
+		IsEnabled:                  false,
+		CheckIntervalSeconds:       30,
+		InactivityThresholdMinutes: 10,
+		ActiveWorkThresholdMinutes: 5,
+		Messages:                   "[]",
+		CustomMessages:             "[]",
+		SupervisorProvider:         "openai",
+		SupervisorModel:            "gpt-4o",
+	}
+	DB.Create(&settings)
+
+	return DB, nil
 }
 
 func seedDefaultSettings() {

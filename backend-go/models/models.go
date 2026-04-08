@@ -268,6 +268,44 @@ type RepoPath struct {
 	DeletedAt gorm.DeletedAt `gorm:"index" json:"-"`
 }
 
+// Notification represents a user-facing notification in the system
+type Notification struct {
+	ID          string         `gorm:"primaryKey" json:"id"`
+	Type        string         `gorm:"index" json:"type"` // 'info', 'success', 'warning', 'error', 'action'
+	Category    string         `gorm:"index" json:"category"` // 'session', 'debate', 'recovery', 'indexing', 'issues', 'circuit_breaker', 'scheduler', 'webhook', 'system'
+	Title       string         `json:"title"`
+	Message     string         `json:"message"`
+	SessionID   *string        `gorm:"index" json:"sessionId,omitempty"`
+	SourceID    *string        `json:"sourceId,omitempty"`
+	Metadata    *string        `json:"metadata,omitempty"`
+	IsRead      bool           `gorm:"default:false;index" json:"isRead"`
+	IsDismissed bool           `gorm:"default:false;index" json:"isDismissed"`
+	Priority    int            `gorm:"default:0" json:"priority"` // 0=normal, 1=high, 2=critical
+	CreatedAt   time.Time      `gorm:"index" json:"createdAt"`
+	ReadAt      *time.Time     `json:"readAt,omitempty"`
+	DismissedAt *time.Time     `json:"dismissedAt,omitempty"`
+	DeletedAt   gorm.DeletedAt `gorm:"index" json:"-"`
+}
+
+// AuditEntry represents an immutable audit trail entry
+// Every orchestrator action is recorded here for compliance and debugging
+ type AuditEntry struct {
+	ID           string         `gorm:"primaryKey" json:"id"`
+	Action       string         `gorm:"index" json:"action"` // e.g. 'session_nudged', 'plan_approved', 'recovery_sent'
+	Actor        string         `gorm:"index" json:"actor"` // 'daemon', 'scheduler', 'circuit_breaker', 'operator', 'system'
+	ResourceType string         `gorm:"index" json:"resourceType"` // 'session', 'debate', 'codebase', 'issue', 'job'
+	ResourceID   string         `gorm:"index" json:"resourceId"`
+	Status       string         `json:"status"` // 'success', 'failure', 'skipped'
+	Summary      string         `json:"summary"`
+	Details      *string        `json:"details,omitempty"`
+	Provider     *string        `json:"provider,omitempty"`
+	Model        *string        `json:"model,omitempty"`
+	TokenUsage   *int           `json:"tokenUsage,omitempty"`
+	DurationMs   *int64         `json:"durationMs,omitempty"`
+	CreatedAt    time.Time      `gorm:"index" json:"createdAt"`
+	DeletedAt    gorm.DeletedAt `gorm:"index" json:"-"`
+}
+
 // QueueJob represents the QueueJob model from Prisma
 type QueueJob struct {
 	ID          string         `gorm:"primaryKey" json:"id"`

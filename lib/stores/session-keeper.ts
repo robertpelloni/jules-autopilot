@@ -69,6 +69,7 @@ interface SessionKeeperState {
   isLoading: boolean;
   isPausedAll: boolean;
   lastForcedCheckAt: number;
+  lastReadLogTime: number;
 
   // Actions
   loadConfig: () => Promise<void>;
@@ -77,6 +78,7 @@ interface SessionKeeperState {
 
   loadLogs: () => Promise<void>;
   addLog: (message: string, type: Log['type'], details?: Record<string, unknown>, sessionId?: string) => void;
+  markLogsAsRead: () => void;
   addDebate: (debate: DebateResult) => void;
   addBorgSignal: (signal: BorgSignal) => void;
 
@@ -125,6 +127,7 @@ export const useSessionKeeperStore = create<SessionKeeperState>()(
       isLoading: false,
       isPausedAll: false,
       lastForcedCheckAt: 0,
+      lastReadLogTime: Date.now(),
 
       loadConfig: async () => {
         set({ isLoading: true });
@@ -207,6 +210,7 @@ export const useSessionKeeperStore = create<SessionKeeperState>()(
 
       addLog: (message, type, details, sessionId = 'global') => {
         const newLog: Log = {
+          id: `log-${Date.now()}-${Math.random().toString(36).substring(7)}`,
           sessionId,
           time: new Date().toLocaleTimeString(),
           message,
@@ -218,6 +222,8 @@ export const useSessionKeeperStore = create<SessionKeeperState>()(
           logs: [newLog, ...state.logs].slice(0, 100)
         }));
       },
+
+      markLogsAsRead: () => set({ lastReadLogTime: Date.now() }),
 
       addDebate: (debate) => set((state) => ({
         debates: [debate, ...state.debates].slice(0, 50)

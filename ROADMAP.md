@@ -65,7 +65,7 @@ For granular tasks and immediate bug fixes, see `TODO.md`.
 
 ## Milestone: v3.0 — "Neural Autonomy"
 * [ ] **Observability & Health Checks:** Prometheus-compatible `/metrics` endpoint, structured health checks for daemon/Redis/DB, and a live `/dashboard/health` status page.
-  * Progress: Go backend now serves `GET /metrics`, `GET /healthz`, and `GET /api/health` with database/daemon/queue/runtime visibility. The app now also includes a dedicated Health dashboard view. Remaining work includes broader dependency coverage (if/when Redis exists) and richer health drill-downs/history.
+  * Progress: Go backend now serves `GET /metrics`, `GET /healthz`, and `GET /api/health` with database/daemon/queue/runtime/notification/audit visibility. The app includes a dedicated Health dashboard view and an immutable Audit Trail view. Remaining work includes broader dependency coverage (if/when Redis exists) and richer health drill-downs/history.
 * [x] **Self-Healing Circuit Breakers:** Provider-level circuit breakers automatically reroute to fallback models when error rates (5xx, 429) spike, with configurable thresholds and recovery windows in the Go runtime.
 * [x] **Multi-Tenant API Keys:** Added scoped API key generation and revocation in the Go runtime with a dedicated management UI.
 
@@ -77,4 +77,4 @@ For granular tasks and immediate bug fixes, see `TODO.md`.
 ## Milestone: v5.0 — "Sovereign Intelligence"
 * [x] **Webhook Event Router:** Configurable inbound webhook router that maps external service events (Slack, Linear, Jira, Borg) to orchestrator actions.
 * [x] **Session Templates & Presets:** Reusable session configuration templates with pre-filled prompts, repos, and settings — launchable from the dashboard with one click.
-* [ ] **Notification Center:** Unified notification hub aggregating alerts from CI fixes, swarm completions, circuit breaker trips, and scheduled job results with read/dismiss state.
+* [x] **Notification Center:** Unified notification hub aggregating alerts from CI fixes, swarm completions, circuit breaker trips, and scheduled job results with read/dismiss state.

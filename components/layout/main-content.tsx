@@ -6,14 +6,15 @@ import { CodeDiffSidebar } from "@/components/code-diff-sidebar";
 import { DebateHistoryList } from "@/components/debate-history-list";
 import { SystemLogs } from "@/components/system-logs";
 import { SystemHealthDashboard } from "@/components/system-health-dashboard";
+import { AuditTrail } from "@/components/audit-trail";
 import { Session, Activity, SessionTemplate } from '@jules/shared';
 
 interface MainContentProps {
-  view: 'sessions' | 'templates' | 'kanban' | 'debates' | 'logs' | 'health';
+  view: 'sessions' | 'templates' | 'kanban' | 'debates' | 'logs' | 'health' | 'audit';
   selectedSession: Session | null;
   onSessionSelect: (session: Session | string) => void;
   onStartSessionFromTemplate: (template: SessionTemplate) => void;
-  onViewChange: (view: 'sessions' | 'templates' | 'kanban' | 'debates' | 'logs' | 'health') => void;
+  onViewChange: (view: 'sessions' | 'templates' | 'kanban' | 'debates' | 'logs' | 'health' | 'audit') => void;
   showCodeDiffs: boolean;
   onToggleCodeDiffs: (show: boolean) => void;
   onActivitiesChange: (activities: Activity[]) => void;
@@ -56,6 +57,8 @@ export function MainContent({
           <SystemLogs />
         ) : view === "health" ? (
           <SystemHealthDashboard />
+        ) : view === "audit" ? (
+          <AuditTrail />
         ) : selectedSession ? (
           <ActivityFeed
             session={selectedSession}

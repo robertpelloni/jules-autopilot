@@ -183,6 +183,10 @@ func (s *Scheduler) executeTask(name string) {
 		if result.Error == nil && result.RowsAffected > 0 {
 			log.Printf("[Scheduler] Cleaned up %d old keeper logs", result.RowsAffected)
 		}
+		// Cleanup old dismissed notifications
+		if count, err := CleanupOldNotifications(90); err == nil && count > 0 {
+			log.Printf("[Scheduler] Cleaned up %d old notifications", count)
+		}
 	}
 }
 

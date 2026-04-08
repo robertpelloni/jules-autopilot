@@ -10,7 +10,8 @@ import {
   Brain,
   Zap,
   Activity,
-  HeartPulse
+  HeartPulse,
+  Shield
 } from "lucide-react";
 import { SessionList } from "@/components/session-list";
 import { Session } from '@jules/shared';
@@ -22,8 +23,8 @@ interface AppSidebarProps {
   onToggleCollapse: () => void;
   onSessionSelect: (session: Session | string) => void;
   selectedSessionId?: string;
-  currentView: 'sessions' | 'templates' | 'kanban' | 'debates' | 'logs' | 'health';
-  onViewChange: (view: 'sessions' | 'templates' | 'kanban' | 'debates' | 'logs' | 'health') => void;
+  currentView: 'sessions' | 'templates' | 'kanban' | 'debates' | 'logs' | 'health' | 'audit';
+  onViewChange: (view: 'sessions' | 'templates' | 'kanban' | 'debates' | 'logs' | 'health' | 'audit') => void;
 }
 
 export function AppSidebar({
@@ -47,6 +48,7 @@ export function AppSidebar({
     { id: 'debates', label: 'Debates', icon: Users },
     { id: 'logs', label: 'System Logs', icon: Terminal },
     { id: 'health', label: 'Health', icon: HeartPulse },
+    { id: 'audit', label: 'Audit Trail', icon: Shield },
   ] as const;
 
   return (

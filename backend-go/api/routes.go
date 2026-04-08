@@ -616,6 +616,18 @@ func SetupRoutes(app *fiber.App) {
 	// File system routes
 	api.Get("/fs/list", getFSList)
 	api.Get("/fs/read", getFSRead)
+
+	// Notification routes
+	api.Get("/notifications", getNotifications)
+	api.Post("/notifications/:id/read", markNotificationRead)
+	api.Post("/notifications/read-all", markAllNotificationsRead)
+	api.Post("/notifications/:id/dismiss", dismissNotification)
+	api.Post("/notifications/dismiss-all", dismissAllNotificationsAPI)
+	api.Get("/notifications/unread-count", getUnreadNotificationCountAPI)
+
+	// Audit routes
+	api.Get("/audit", getAuditEntries)
+	api.Get("/audit/stats", getAuditStatsAPI)
 }
 
 func triggerFleetSync(c *fiber.Ctx) error {
@@ -1121,7 +1133,7 @@ func getHealth(c *fiber.Ctx) error {
 
 	var settings models.KeeperSettings
 	settingsFound := db.DB.First(&settings, "id = ?", "default").Error == nil
-	var pendingCount, processingCount, codeChunkCount, memoryChunkCount, templateCount, debateCount, sessionCount int64
+	var pendingCount, processingCount, codeChunkCount, memoryChunkCount, templateCount, debateCount, sessionCount, notificationCount, auditCount int64
 	db.DB.Model(&models.QueueJob{}).Where("status = ?", "pending").Count(&pendingCount)
 	db.DB.Model(&models.QueueJob{}).Where("status = ?", "processing").Count(&processingCount)
 	db.DB.Model(&models.CodeChunk{}).Count(&codeChunkCount)
@@ -1129,6 +1141,8 @@ func getHealth(c *fiber.Ctx) error {
 	db.DB.Model(&models.SessionTemplate{}).Count(&templateCount)
 	db.DB.Model(&models.Debate{}).Count(&debateCount)
 	db.DB.Model(&models.JulesSession{}).Count(&sessionCount)
+	db.DB.Model(&models.Notification{}).Where("is_read = ? AND is_dismissed = ?", false, false).Count(&notificationCount)
+	db.DB.Model(&models.AuditEntry{}).Count(&auditCount)
 
 	ClientsMutex.Lock()
 	wsCount := len(ActiveClients)
@@ -1167,11 +1181,13 @@ func getHealth(c *fiber.Ctx) error {
 			"processing": processingCount,
 		},
 		"totals": fiber.Map{
-			"sessions":     sessionCount,
-			"codeChunks":   codeChunkCount,
-			"memoryChunks": memoryChunkCount,
-			"templates":    templateCount,
-			"debates":      debateCount,
+			"sessions":      sessionCount,
+			"codeChunks":    codeChunkCount,
+			"memoryChunks":  memoryChunkCount,
+			"templates":     templateCount,
+			"debates":       debateCount,
+			"notifications": notificationCount,
+			"auditEntries":  auditCount,
 		},
 		"realtime": fiber.Map{
 			"wsClients": wsCount,
@@ -1183,7 +1199,7 @@ func getMetrics(c *fiber.Ctx) error {
 	var settings models.KeeperSettings
 	settingsFound := db.DB.First(&settings, "id = ?", "default").Error == nil
 
-	var pendingCount, processingCount, codeChunkCount, memoryChunkCount, templateCount, debateCount, sessionCount int64
+	var pendingCount, processingCount, codeChunkCount, memoryChunkCount, templateCount, debateCount, sessionCount, notificationCount, auditCount int64
 	db.DB.Model(&models.QueueJob{}).Where("status = ?", "pending").Count(&pendingCount)
 	db.DB.Model(&models.QueueJob{}).Where("status = ?", "processing").Count(&processingCount)
 	db.DB.Model(&models.CodeChunk{}).Count(&codeChunkCount)
@@ -1191,6 +1207,8 @@ func getMetrics(c *fiber.Ctx) error {
 	db.DB.Model(&models.SessionTemplate{}).Count(&templateCount)
 	db.DB.Model(&models.Debate{}).Count(&debateCount)
 	db.DB.Model(&models.JulesSession{}).Count(&sessionCount)
+	db.DB.Model(&models.Notification{}).Where("is_read = ? AND is_dismissed = ?", false, false).Count(&notificationCount)
+	db.DB.Model(&models.AuditEntry{}).Count(&auditCount)
 
 	ClientsMutex.Lock()
 	wsCount := len(ActiveClients)
@@ -1257,6 +1275,12 @@ func getMetrics(c *fiber.Ctx) error {
 	fmt.Fprintf(&body, "# HELP jules_autopilot_ws_clients WebSocket clients connected to the Go backend.\n")
 	fmt.Fprintf(&body, "# TYPE jules_autopilot_ws_clients gauge\n")
 	fmt.Fprintf(&body, "jules_autopilot_ws_clients %d\n", wsCount)
+	fmt.Fprintf(&body, "# HELP jules_autopilot_notifications_unread Unread notifications.\n")
+	fmt.Fprintf(&body, "# TYPE jules_autopilot_notifications_unread gauge\n")
+	fmt.Fprintf(&body, "jules_autopilot_notifications_unread %d\n", notificationCount)
+	fmt.Fprintf(&body, "# HELP jules_autopilot_audit_entries_total Total audit trail entries.\n")
+	fmt.Fprintf(&body, "# TYPE jules_autopilot_audit_entries_total gauge\n")
+	fmt.Fprintf(&body, "jules_autopilot_audit_entries_total %d\n", auditCount)
 
 	c.Set("Content-Type", "text/plain; version=0.0.4; charset=utf-8")
 	return c.SendString(body.String())
@@ -1473,4 +1497,106 @@ func postBroadcast(c *fiber.Ctx) error {
 	}
 	Broadcast(msg)
 	return c.Status(200).JSON(fiber.Map{"success": true})
+}
+
+// Notification handlers
+
+func getNotifications(c *fiber.Ctx) error {
+	filter := services.NotificationFilter{
+		Category:         c.Query("category"),
+		Type:             c.Query("type"),
+		SessionID:        c.Query("sessionId"),
+		IncludeRead:      c.Query("includeRead") == "true",
+		IncludeDismissed: c.Query("includeDismissed") == "true",
+	}
+	if limit := c.QueryInt("limit"); limit > 0 {
+		filter.Limit = limit
+	}
+	if offset := c.QueryInt("offset"); offset > 0 {
+		filter.Offset = offset
+	}
+
+	notifications, total, err := services.GetNotifications(filter)
+	if err != nil {
+		return c.Status(500).JSON(fiber.Map{"error": err.Error()})
+	}
+	return c.JSON(fiber.Map{
+		"notifications": notifications,
+		"total":        total,
+	})
+}
+
+func markNotificationRead(c *fiber.Ctx) error {
+	id := c.Params("id")
+	if err := services.MarkNotificationRead(id); err != nil {
+		return c.Status(500).JSON(fiber.Map{"error": err.Error()})
+	}
+	return c.JSON(fiber.Map{"success": true})
+}
+
+func markAllNotificationsRead(c *fiber.Ctx) error {
+	if err := services.MarkAllNotificationsRead(); err != nil {
+		return c.Status(500).JSON(fiber.Map{"error": err.Error()})
+	}
+	return c.JSON(fiber.Map{"success": true})
+}
+
+func dismissNotification(c *fiber.Ctx) error {
+	id := c.Params("id")
+	if err := services.DismissNotification(id); err != nil {
+		return c.Status(500).JSON(fiber.Map{"error": err.Error()})
+	}
+	return c.JSON(fiber.Map{"success": true})
+}
+
+func dismissAllNotificationsAPI(c *fiber.Ctx) error {
+	if err := services.DismissAllNotifications(); err != nil {
+		return c.Status(500).JSON(fiber.Map{"error": err.Error()})
+	}
+	return c.JSON(fiber.Map{"success": true})
+}
+
+func getUnreadNotificationCountAPI(c *fiber.Ctx) error {
+	count, err := services.GetUnreadNotificationCount()
+	if err != nil {
+		return c.Status(500).JSON(fiber.Map{"error": err.Error()})
+	}
+	return c.JSON(fiber.Map{"count": count})
+}
+
+// Audit handlers
+
+func getAuditEntries(c *fiber.Ctx) error {
+	filter := services.AuditFilter{
+		Action:       c.Query("action"),
+		Actor:        c.Query("actor"),
+		ResourceType: c.Query("resourceType"),
+		ResourceID:   c.Query("resourceId"),
+		Status:       c.Query("status"),
+		From:         c.Query("from"),
+		To:           c.Query("to"),
+	}
+	if limit := c.QueryInt("limit"); limit > 0 {
+		filter.Limit = limit
+	}
+	if offset := c.QueryInt("offset"); offset > 0 {
+		filter.Offset = offset
+	}
+
+	entries, total, err := services.GetAuditEntries(filter)
+	if err != nil {
+		return c.Status(500).JSON(fiber.Map{"error": err.Error()})
+	}
+	return c.JSON(fiber.Map{
+		"entries": entries,
+		"total":   total,
+	})
+}
+
+func getAuditStatsAPI(c *fiber.Ctx) error {
+	stats, err := services.GetAuditStats()
+	if err != nil {
+		return c.Status(500).JSON(fiber.Map{"error": err.Error()})
+	}
+	return c.JSON(stats)
 }

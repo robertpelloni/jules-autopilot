@@ -2,6 +2,31 @@
 
 All notable changes to this project will be documented in this file.
 
+## [1.3.0] - 2026-04-08
+
+### Added
+- **Notification Center (v5.0 Roadmap)**: Implemented a comprehensive notification system with Go backend service (`backend-go/services/notification.go`) and full frontend UI (`components/notification-center.tsx`). Notifications are automatically generated from important keeper events including session nudges, plan approvals, debate escalations, recovery actions, indexing, issue spawns, and circuit breaker trips.
+- **Immutable Audit Trail (v4.0 Roadmap)**: Added a complete audit logging system (`backend-go/services/audit.go`) that records every orchestrator action with structured metadata including actor, resource type, provider, token usage, and duration. Includes a paginated frontend Audit Trail view (`components/audit-trail.tsx`).
+- **Go Backend Test Suite**: Created comprehensive test coverage for all Go services with 50+ test cases covering notification CRUD, audit trail operations, queue processing, worker lifecycle, LLM helpers, circuit breakers, RAG similarity functions, risk scoring, session state mapping, and more.
+- **Notification API**: Added `GET/POST /api/notifications`, `/api/notifications/:id/read`, `/api/notifications/:id/dismiss`, `/api/notifications/read-all`, `/api/notifications/dismiss-all`, `/api/notifications/unread-count` endpoints.
+- **Audit API**: Added `GET /api/audit`, `GET /api/audit/stats` endpoints with full filtering by action, actor, resource type, status, and date range.
+- **Health/Metrics Enhancement**: Extended `/api/health` and `/metrics` endpoints with notification counts and audit entry totals.
+- **Scheduler Cleanup**: Added automatic notification cleanup (90-day retention) to the background scheduler alongside existing log cleanup.
+- **Real-time Notification Push**: Notifications are broadcast via WebSocket as `notification_created` events for live operator updates.
+- **Audit Sidebar Nav**: Added a new "Audit Trail" nav item to the command center sidebar with Shield icon.
+
+### Changed
+- **Enhanced Keeper Log Pipeline**: Every keeper log now automatically creates notifications for important events and records audit trail entries, providing full observability without code changes.
+- **In-memory Test Database**: Added `db.InitTestDB()` for isolated unit testing with in-memory SQLite.
+
+### Validation
+- All Go tests pass: `cd backend-go && go test ./...` (50+ test cases, 0 failures)
+- Frontend typecheck passes: `pnpm run typecheck`
+- Frontend lint clean: `pnpm run lint` (0 errors, 0 warnings)
+- Frontend tests pass: `pnpm run test` (36 tests)
+- Build succeeds: `pnpm run build`
+- Version sync check: `node scripts/check-version-sync.js` ✅ (1.3.0)
+
 ## [1.2.0] - 2026-04-05
 
 ### Added

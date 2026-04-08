@@ -38,11 +38,13 @@ This document tracks granular bugs, missing features, and technical debt. For ep
 - [x] **Go Backend Parity Pass #27:** Implemented Multi-Tenant API Keys CRUD (v3.0 Roadmap) in Go with a dedicated management UI and CLI key generator.
 - [x] **Go Backend Parity Pass #28:** Final audit for any remaining residual Bun-only behavior (e.g. final script parity), officially declaring the Go backend as the primary runtime.
 - [x] **Phase 2:** Completely deleted the `server/` directory and backend-only dependencies to formally lock the runtime pivot.
-- [ ] **Phase 3:** Explore the next v4.0/v5.0 roadmap items (e.g., Scheduled Automation UI, Notification Center, or deep observability drill-downs).
+- [ ] **Phase 3:** Explore the next v4.0/v5.0 roadmap items (e.g., Scheduled Automation UI, deep observability drill-downs, or background anomaly detection).
 - [x] **Tooling Stabilization:** Added a working ESLint v9 flat config and aligned the Jest harness with the current Vite/Bun + shared-package runtime assumptions.
 - [x] **Lint Coverage Expansion:** Extended the lint command to cover `src/`, `components/`, `lib/`, and `server/` with a staged warning-first rollout.
 - [x] **Lint Warning Burn-Down:** Completed two warning burn-down passes and brought the expanded lint surface to zero warnings.
 - [ ] **Lint Strictness Ratchet:** Revisit warning-first rule downgrades (`no-explicit-any`, `no-unused-vars`, `no-empty`) and progressively tighten them once the team is ready for stricter enforcement. The actionable backlog is cleared; next step is policy tightening rather than cleanup.
+- [x] **Notification Center (v5.0):** Implemented unified notification hub with Go backend service and frontend UI, auto-generated from keeper events with read/dismiss state, priority levels, and real-time WebSocket push.
+- [x] **Audit Trail (v4.0):** Implemented immutable append-only audit log in Go with structured metadata, paginated frontend view, and aggregate statistics.
 - [x] **Borg Collective UI:** Implemented the "Collective Signals" feed in the Fleet tab to visualize incoming Borg signals.
 
 ## Technical Debt & Refactoring

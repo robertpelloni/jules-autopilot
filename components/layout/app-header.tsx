@@ -11,6 +11,7 @@ import {
 import { useState, useEffect } from "react";
 import { SettingsDialog } from "@/components/settings-dialog";
 import { BroadcastDialog } from "@/components/broadcast-dialog";
+import { NotificationCenter } from "@/components/notification-center";
 import { useJules } from "@/lib/jules/provider";
 import { Badge } from "@/components/ui/badge";
 import { toast } from "sonner";
@@ -113,6 +114,8 @@ export function AppHeader({ onSearchClick, onNewSession }: AppHeaderProps) {
         </Button>
 
         <BroadcastDialog sessions={sessions} />
+
+        <NotificationCenter />
 
         <Button
           size="sm"

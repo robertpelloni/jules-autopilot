@@ -3,10 +3,14 @@
 ## Goal
 Move backend responsibilities from the TypeScript/Bun daemon into the Go backend. **This is now fully complete.** The legacy `server/` directory has been deleted, cementing Go as the sole backend runtime.
 
-## Newly Ported in This Pass
-- Deleted the `server/` directory and obsolete backend JS dependencies.
-- Updated `vite.config.ts` to proxy API and WS requests exclusively to port `8080`.
-- Documented Go as the sole deployment pathway in `README.md` and `DEPLOY.md`.
+## Newly Ported in This Pass (v1.3.0)
+- Notification Center service with full CRUD, filtering, and auto-generation from keeper events
+- Immutable Audit Trail service with structured logging and aggregate statistics
+- Notification API routes (7 endpoints) and Audit API routes (2 endpoints)
+- Health/Metrics enhanced with notification and audit totals
+- Scheduler notification cleanup (90-day retention)
+- Comprehensive Go test suite (50+ test cases across 5 test files)
+- In-memory SQLite test database helper (`db.InitTestDB()`)
 
 ## Existing Go Coverage
 - API manifest served from canonical root `VERSION`
@@ -136,6 +140,16 @@ Move backend responsibilities from the TypeScript/Bun daemon into the Go backend
   - scheduling `check_issues` jobs from discovered Jules sources when smart pilot is enabled
   - opportunistically enqueueing `index_codebase` when no indexing job is already pending/processing
   - emitting Keeper-log telemetry for daemon poll/scheduling outcomes
+- **Notification Center** (v5.0) with full Go backend + React frontend:
+  - `backend-go/services/notification.go` - notification CRUD, auto-generation from keeper events
+  - 7 notification API endpoints
+  - Real-time WebSocket push
+  - Frontend notification panel with filtering, read/dismiss, priority badges
+- **Immutable Audit Trail** (v4.0) with Go backend + React frontend:
+  - `backend-go/services/audit.go` - structured audit logging with metadata
+  - 2 audit API endpoints (list with filtering + aggregate stats)
+  - Frontend paginated audit trail view with stats dashboard
+- **Self-Healing Circuit Breakers** for LLM providers with automatic fallback routing
 
 ## Existing Go Coverage
 - Keeper settings routes
@@ -149,7 +163,7 @@ Move backend responsibilities from the TypeScript/Bun daemon into the Go backend
 
 ## Still Pending / Partial
 - Deeper metrics drill-downs for the Health dashboard if operations require it
-- Implementation of new roadmap items (v4.0+) atop the stable Go foundation
+- Implementation of new roadmap items (v1.5+) atop the stable Go foundation
 
 ## Recommended Next Go Porting Steps
 The migration is complete. Future work will focus on adding new features to the Go runtime rather than porting legacy behavior.
