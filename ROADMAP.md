@@ -52,6 +52,7 @@ For granular tasks and immediate bug fixes, see `TODO.md`.
 * [x] **Go Backend Parity Pass #26**: Expanded Go webhook parity (alerts, cleanup, issue triggers) and added a Go-native CLI indexer utility.
 * [x] **Go Backend Parity Pass #27**: Implemented Multi-Tenant API Keys CRUD (v3.0 Roadmap) in Go with a dedicated management UI and CLI key generator.
 * [x] **Go Backend Parity Pass #28**: Completed the final script audit, removing obsolete Bun-based CLI utilities, and officially declared the Go backend as the primary runtime.
+* [x] **Phase 2: Lock the Pivot**: Completely deleted the legacy `server/` directory and backend-only JS dependencies, finalizing the transition to a Go-only architecture.
 
 ## Milestone: v1.5 — "Shadow Pilot"
 * [ ] **Background Anomaly Detection:** Agents silently monitoring `git diffs` background tasks, fixing failing CI pipelines before human review.

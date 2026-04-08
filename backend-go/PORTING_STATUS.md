@@ -1,11 +1,12 @@
 # Go Porting Status
 
 ## Goal
-Move backend responsibilities from the TypeScript/Bun daemon into the Go backend. **This is now complete.** The Go runtime is the primary runtime for the Jules Autopilot project.
+Move backend responsibilities from the TypeScript/Bun daemon into the Go backend. **This is now fully complete.** The legacy `server/` directory has been deleted, cementing Go as the sole backend runtime.
 
 ## Newly Ported in This Pass
-- Removed legacy Bun-only CLI scripts (`scripts/index-repo.ts`, `scripts/create-dev-key.js`)
-- Updated `pnpm run index` to point to the Go-native indexer CLI
+- Deleted the `server/` directory and obsolete backend JS dependencies.
+- Updated `vite.config.ts` to proxy API and WS requests exclusively to port `8080`.
+- Documented Go as the sole deployment pathway in `README.md` and `DEPLOY.md`.
 
 ## Existing Go Coverage
 - API manifest served from canonical root `VERSION`
@@ -147,10 +148,8 @@ Move backend responsibilities from the TypeScript/Bun daemon into the Go backend
 - WebSocket broadcasting
 
 ## Still Pending / Partial
-- Optional: entirely delete the `server/` directory and transition CI/CD exclusively to Go binaries
 - Deeper metrics drill-downs for the Health dashboard if operations require it
+- Implementation of new roadmap items (v4.0+) atop the stable Go foundation
 
 ## Recommended Next Go Porting Steps
-1. Formally remove the `server/` directory codebase.
-2. Update deployment instructions (`DEPLOY.md`) to explicitly document Go deployment over Bun.
-3. Remove Bun installation dependencies from developer environment docs.
+The migration is complete. Future work will focus on adding new features to the Go runtime rather than porting legacy behavior.

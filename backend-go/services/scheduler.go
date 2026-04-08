@@ -1,6 +1,7 @@
 package services
 
 import (
+	"fmt"
 	"log"
 	"sync"
 	"time"
@@ -9,10 +10,16 @@ import (
 	"github.com/jules-autopilot/backend/models"
 )
 
-type ScheduledTask func()
+type TaskInfo struct {
+	Name     string     `json:"name"`
+	Interval int64      `json:"intervalMs"` // milliseconds for frontend mapping
+	NextRun  time.Time  `json:"nextRun"`
+	LastRun  *time.Time `json:"lastRun,omitempty"`
+}
 
 type Scheduler struct {
-	tasks    map[string]time.Duration
+	tasks    map[string]*TaskInfo
+	triggers map[string]chan struct{}
 	stopChan chan struct{}
 	mu       sync.Mutex
 	wg       sync.WaitGroup
@@ -26,7 +33,8 @@ var (
 func GetScheduler() *Scheduler {
 	schedulerOnce.Do(func() {
 		globalScheduler = &Scheduler{
-			tasks:    make(map[string]time.Duration),
+			tasks:    make(map[string]*TaskInfo),
+			triggers: make(map[string]chan struct{}),
 			stopChan: make(chan struct{}),
 		}
 	})
@@ -35,16 +43,17 @@ func GetScheduler() *Scheduler {
 
 func (s *Scheduler) Start() {
 	log.Println("[Scheduler] Starting scheduled task engine...")
-	
-	// Default tasks
+
 	s.ScheduleTask("index_codebase", 24*time.Hour)
 	s.ScheduleTask("check_issues", 1*time.Hour)
 	s.ScheduleTask("cleanup_logs", 7*24*time.Hour)
 
-	for name, interval := range s.tasks {
+	s.mu.Lock()
+	for name := range s.tasks {
 		s.wg.Add(1)
-		go s.runTaskLoop(name, interval)
+		go s.runTaskLoop(name)
 	}
+	s.mu.Unlock()
 }
 
 func (s *Scheduler) Stop() {
@@ -57,19 +66,70 @@ func (s *Scheduler) Stop() {
 func (s *Scheduler) ScheduleTask(name string, interval time.Duration) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
-	s.tasks[name] = interval
+	s.tasks[name] = &TaskInfo{
+		Name:     name,
+		Interval: interval.Milliseconds(),
+	}
+	s.triggers[name] = make(chan struct{}, 1)
 }
 
-func (s *Scheduler) runTaskLoop(name string, interval time.Duration) {
+func (s *Scheduler) GetTasks() []TaskInfo {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	var result []TaskInfo
+	for _, info := range s.tasks {
+		result = append(result, *info)
+	}
+	return result
+}
+
+func (s *Scheduler) Trigger(name string) error {
+	s.mu.Lock()
+	ch, exists := s.triggers[name]
+	s.mu.Unlock()
+
+	if !exists {
+		return fmt.Errorf("task %s not found", name)
+	}
+
+	select {
+	case ch <- struct{}{}:
+	default:
+		// already triggered
+	}
+	return nil
+}
+
+func (s *Scheduler) runTaskLoop(name string) {
 	defer s.wg.Done()
-	
+
+	s.mu.Lock()
+	info := s.tasks[name]
+	triggerCh := s.triggers[name]
+	interval := time.Duration(info.Interval) * time.Millisecond
+	s.mu.Unlock()
+
 	// Initial delay to avoid hammering at boot
-	timer := time.NewTimer(1 * time.Minute)
-	
+	delay := 1 * time.Minute
+	timer := time.NewTimer(delay)
+
+	s.mu.Lock()
+	info.NextRun = time.Now().Add(delay)
+	s.mu.Unlock()
+
 	for {
 		select {
 		case <-timer.C:
-			s.executeTask(name)
+			s.executeAndUpdate(name, info, interval)
+			timer.Reset(interval)
+		case <-triggerCh:
+			if !timer.Stop() {
+				select {
+				case <-timer.C:
+				default:
+				}
+			}
+			s.executeAndUpdate(name, info, interval)
 			timer.Reset(interval)
 		case <-s.stopChan:
 			if !timer.Stop() {
@@ -81,6 +141,15 @@ func (s *Scheduler) runTaskLoop(name string, interval time.Duration) {
 			return
 		}
 	}
+}
+
+func (s *Scheduler) executeAndUpdate(name string, info *TaskInfo, interval time.Duration) {
+	now := time.Now()
+	s.executeTask(name)
+	s.mu.Lock()
+	info.LastRun = &now
+	info.NextRun = time.Now().Add(interval)
+	s.mu.Unlock()
 }
 
 func (s *Scheduler) executeTask(name string) {

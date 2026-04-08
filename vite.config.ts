@@ -21,11 +21,11 @@ export default defineConfig({
     port: 3006,
     proxy: {
       '/api': {
-        target: 'http://localhost:8085',
+        target: 'http://localhost:8080',
         changeOrigin: true,
       },
       '/ws': {
-        target: 'ws://localhost:8085',
+        target: 'ws://localhost:8080',
         ws: true,
       },
     },

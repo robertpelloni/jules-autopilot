@@ -609,6 +609,10 @@ func SetupRoutes(app *fiber.App) {
 	api.Post("/keys", createApiKey)
 	api.Delete("/keys/:id", deleteApiKey)
 
+	// Scheduler routes
+	api.Get("/scheduler", getSchedulerTasks)
+	api.Post("/scheduler/:name/trigger", triggerSchedulerTask)
+
 	// File system routes
 	api.Get("/fs/list", getFSList)
 	api.Get("/fs/read", getFSRead)
@@ -1381,6 +1385,19 @@ func deleteApiKey(c *fiber.Ctx) error {
 		return c.Status(500).JSON(fiber.Map{"error": err.Error()})
 	}
 	return c.JSON(fiber.Map{"success": true})
+}
+
+func getSchedulerTasks(c *fiber.Ctx) error {
+	tasks := services.GetScheduler().GetTasks()
+	return c.JSON(tasks)
+}
+
+func triggerSchedulerTask(c *fiber.Ctx) error {
+	name := c.Params("name")
+	if err := services.GetScheduler().Trigger(name); err != nil {
+		return c.Status(404).JSON(fiber.Map{"error": err.Error()})
+	}
+	return c.JSON(fiber.Map{"success": true, "message": "Task triggered manually"})
 }
 
 func getSessions(c *fiber.Ctx) error {

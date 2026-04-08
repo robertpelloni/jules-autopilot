@@ -1,24 +1,33 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { Activity, Cpu, Database, HeartPulse, RefreshCw, Wifi } from 'lucide-react';
+import { Activity, Cpu, Database, HeartPulse, RefreshCw, Wifi, Clock, Play, Loader2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { fetchHealth, fetchMetricsText, type HealthResponse } from '@/lib/api/health';
+import { fetchHealth, fetchMetricsText, fetchScheduledTasks, triggerScheduledTask, type HealthResponse, type ScheduledTask } from '@/lib/api/health';
 import { toast } from 'sonner';
 
 export function SystemHealthDashboard() {
   const [health, setHealth] = useState<HealthResponse | null>(null);
+  const [tasks, setTasks] = useState<ScheduledTask[]>([]);
   const [metricsText, setMetricsText] = useState('');
   const [isRefreshing, setIsRefreshing] = useState(false);
+  const [triggeringTask, setTriggeringTask] = useState<string | null>(null);
 
   const load = async (showToast = false) => {
     try {
       setIsRefreshing(true);
-      const [healthData, metrics] = await Promise.allSettled([fetchHealth(), fetchMetricsText()]);
+      const [healthData, taskData, metrics] = await Promise.allSettled([
+        fetchHealth(), 
+        fetchScheduledTasks().catch(() => []), 
+        fetchMetricsText()
+      ]);
 
       if (healthData.status === 'fulfilled') {
         setHealth(healthData.value);
+      }
+      if (taskData.status === 'fulfilled') {
+        setTasks(taskData.value);
       }
       if (metrics.status === 'fulfilled') {
         setMetricsText(metrics.value);
@@ -37,8 +46,21 @@ export function SystemHealthDashboard() {
     }
   };
 
-  useEffect(() => {
-    void load();
+  const handleTriggerTask = async (name: string) => {
+    try {
+      setTriggeringTask(name);
+      await triggerScheduledTask(name);
+      toast.success(`Task ${name} triggered manually`);
+      void load();
+    } catch (err) {
+      console.error(err);
+      toast.error(`Failed to trigger task ${name}`);
+    } finally {
+      setTriggeringTask(null);
+    }
+  };
+
+  useEffect(() => {    void load();
     const intervalId = window.setInterval(() => {
       void load();
     }, 30000);
@@ -160,8 +182,47 @@ export function SystemHealthDashboard() {
           </div>
         </div>
 
-        <div className="rounded-xl border border-white/5 bg-zinc-900 p-4">
-          <div className="flex items-center justify-between">
+        {tasks.length > 0 && (
+          <div className="rounded-xl border border-white/5 bg-zinc-900 p-4">
+            <div className="flex items-center justify-between mb-4">
+              <div className="flex items-center gap-2">
+                <Clock className="h-4 w-4 text-blue-400" />
+                <h2 className="text-xs font-bold uppercase tracking-widest text-white">Scheduled Automation Engine</h2>
+              </div>
+              <Badge variant="outline" className="border-white/10 text-zinc-500 text-[9px] uppercase">Active</Badge>
+            </div>
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              {tasks.map(task => (
+                <div key={task.name} className="rounded-lg border border-white/5 bg-black/20 p-3 flex flex-col justify-between">
+                  <div>
+                    <div className="text-[11px] font-bold text-white mb-2">{task.name}</div>
+                    <div className="text-[9px] font-mono text-zinc-500 mb-1">
+                      Interval: {task.intervalMs / 1000 / 60} minutes
+                    </div>
+                    <div className="text-[9px] font-mono text-zinc-500 mb-1">
+                      Next run: {new Date(task.nextRun).toLocaleTimeString()}
+                    </div>
+                    <div className="text-[9px] font-mono text-zinc-500">
+                      Last run: {task.lastRun ? new Date(task.lastRun).toLocaleTimeString() : 'Never'}
+                    </div>
+                  </div>
+                  <Button 
+                    variant="outline" 
+                    size="sm" 
+                    className="mt-3 w-full border-white/10 hover:bg-white/5 text-[9px] uppercase tracking-widest h-7"
+                    disabled={triggeringTask === task.name}
+                    onClick={() => void handleTriggerTask(task.name)}
+                  >
+                    {triggeringTask === task.name ? <Loader2 className="h-3 w-3 animate-spin mr-2" /> : <Play className="h-3 w-3 mr-2" />}
+                    Run Now
+                  </Button>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
+        <div className="rounded-xl border border-white/5 bg-zinc-900 p-4">          <div className="flex items-center justify-between">
             <h2 className="text-xs font-bold uppercase tracking-widest text-zinc-400">Prometheus Metrics Preview</h2>
             <Badge variant="outline" className="border-white/10 text-zinc-500 text-[9px] uppercase">Raw</Badge>
           </div>

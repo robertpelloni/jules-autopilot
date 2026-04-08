@@ -19,7 +19,6 @@ export default tseslint.config(
       'src/**/*.{ts,tsx}',
       'components/**/*.{ts,tsx}',
       'lib/**/*.{ts,tsx}',
-      'server/**/*.ts',
     ],
     extends: [js.configs.recommended, ...tseslint.configs.recommended],
     languageOptions: {

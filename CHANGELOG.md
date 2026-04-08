@@ -2,6 +2,17 @@
 
 All notable changes to this project will be documented in this file.
 
+## [1.1.0] - 2026-04-05
+
+### Changed
+- **Architecture Pivot Complete**: Officially removed the legacy `server/` directory and all Node/Bun-only backend JS dependencies (`@hono/node-server`, `hono`, `@types/bun`).
+- **Primary Runtime Shift**: The Go backend is now the exclusive and mandatory runtime for Jules Autopilot.
+- **Project Toolchain Cleanup**: Updated `package.json`, `eslint.config.js`, and `vite.config.ts` to fully sever ties with the legacy Bun backend and ensure proper proxying to Go's default `8080` port.
+- **Documentation**: Updated `README.md` and `DEPLOY.md` to reflect the Go-only architecture.
+
+### Notes
+- **Validation Status**: `cd backend-go && go test ./...`, `pnpm run lint`, `pnpm run typecheck`, `pnpm run test`, and `node scripts/check-version-sync.js` all pass at `1.1.0`.
+
 ## [1.0.36] - 2026-04-05
 
 ### Changed
