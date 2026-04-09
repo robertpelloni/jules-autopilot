@@ -581,6 +581,15 @@ func SetupRoutes(app *fiber.App) {
 	api.Delete("/webhooks/rules/:id", deleteWebhookRuleAPI)
 	api.Patch("/webhooks/rules/:id/toggle", toggleWebhookRuleAPI)
 
+	// Swarm orchestration
+	api.Post("/swarms", createSwarmAPI)
+	api.Get("/swarms", listSwarmsAPI)
+	api.Get("/swarms/:id", getSwarmAPI)
+	api.Get("/swarms/:id/agents", getSwarmAgentsAPI)
+	api.Get("/swarms/:id/events", getSwarmEventsAPI)
+	api.Post("/swarms/:id/cancel", cancelSwarmAPI)
+	api.Post("/swarms/:id/decompose", decomposeSwarmAPI)
+
 	// Daemon routes
 	api.Get("/daemon/status", getDaemonStatus)
 	api.Post("/daemon/status", postDaemonStatus)
@@ -1954,4 +1963,88 @@ func toggleWebhookRuleAPI(c *fiber.Ctx) error {
 		return c.Status(404).JSON(fiber.Map{"error": err.Error()})
 	}
 	return c.JSON(fiber.Map{"status": "updated"})
+}
+
+func createSwarmAPI(c *fiber.Ctx) error {
+	var req services.CreateSwarmRequest
+	if err := c.BodyParser(&req); err != nil {
+		return c.Status(400).JSON(fiber.Map{"error": "Invalid request"})
+	}
+	if req.RootTask == "" {
+		return c.Status(400).JSON(fiber.Map{"error": "rootTask is required"})
+	}
+	swarm, err := services.CreateSwarm(req)
+	if err != nil {
+		return c.Status(500).JSON(fiber.Map{"error": err.Error()})
+	}
+	return c.Status(201).JSON(swarm)
+}
+
+func listSwarmsAPI(c *fiber.Ctx) error {
+	status := c.Query("status", "")
+	limit := c.QueryInt("limit", 50)
+	swarms, err := services.ListSwarms(status, limit)
+	if err != nil {
+		return c.Status(500).JSON(fiber.Map{"error": err.Error()})
+	}
+	return c.JSON(swarms)
+}
+
+func getSwarmAPI(c *fiber.Ctx) error {
+	id := c.Params("id")
+	swarm, err := services.GetSwarm(id)
+	if err != nil {
+		return c.Status(404).JSON(fiber.Map{"error": "Swarm not found"})
+	}
+	return c.JSON(swarm)
+}
+
+func getSwarmAgentsAPI(c *fiber.Ctx) error {
+	id := c.Params("id")
+	agents, err := services.GetSwarmAgents(id)
+	if err != nil {
+		return c.Status(500).JSON(fiber.Map{"error": err.Error()})
+	}
+	return c.JSON(agents)
+}
+
+func getSwarmEventsAPI(c *fiber.Ctx) error {
+	id := c.Params("id")
+	events, err := services.GetSwarmEvents(id)
+	if err != nil {
+		return c.Status(500).JSON(fiber.Map{"error": err.Error()})
+	}
+	return c.JSON(events)
+}
+
+func cancelSwarmAPI(c *fiber.Ctx) error {
+	id := c.Params("id")
+	if err := services.CancelSwarm(id); err != nil {
+		return c.Status(404).JSON(fiber.Map{"error": err.Error()})
+	}
+	return c.JSON(fiber.Map{"status": "cancelled"})
+}
+
+func decomposeSwarmAPI(c *fiber.Ctx) error {
+	id := c.Params("id")
+	var req struct {
+		Task    string `json:"task"`
+		Context string `json:"context"`
+	}
+	c.BodyParser(&req)
+	swarm, err := services.GetSwarm(id)
+	if err != nil {
+		return c.Status(404).JSON(fiber.Map{"error": "Swarm not found"})
+	}
+	result, err := services.DecomposeTask(services.DecomposeTaskRequest{
+		Task:    req.Task,
+		Context: req.Context,
+	})
+	if err != nil {
+		return c.Status(500).JSON(fiber.Map{"error": err.Error()})
+	}
+	if err := services.AssignSwarmAgents(swarm.ID, result); err != nil {
+		return c.Status(500).JSON(fiber.Map{"error": err.Error()})
+	}
+	return c.JSON(result)
 }

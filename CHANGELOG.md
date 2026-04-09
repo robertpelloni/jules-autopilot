@@ -2,6 +2,43 @@
 
 All notable changes to this project will be documented in this file.
 
+## [2.0.0] - 2026-04-08 — "Autonomous Fleet" Milestone
+
+### Added
+- **Multi-Agent Swarm Orchestration (v2.0 Milestone)**: Full parallel and sequential agent swarm system with LLM-powered task decomposition, dependency management, and automatic agent lifecycle. Swarms decompose root tasks into subtasks, create specialized agents (architect, engineer, auditor, coordinator), and execute them in parallel, sequentially, or as a pipeline.
+  - `POST /api/swarms` - Create a new swarm with root task
+  - `GET /api/swarms` - List swarms with status filter
+  - `GET /api/swarms/:id` - Get swarm details
+  - `GET /api/swarms/:id/agents` - Get swarm agents
+  - `GET /api/swarms/:id/events` - Get swarm event timeline
+  - `POST /api/swarms/:id/cancel` - Cancel running swarm
+  - `POST /api/swarms/:id/decompose` - Manual decomposition trigger
+  - Queue job `decompose_task` handles async decomposition
+  - Agents execute via Jules sessions or fallback to direct LLM calls
+  - Swarm events emitted via WebSocket for real-time UI updates
+
+- **Webhook Event Router (Enhanced)**: Configurable rule-based routing engine with 4 action types (log, enqueue, notify, delegate) and 5 provider types (borg, github, slack, linear, generic).
+  - Provider-specific endpoints: GitHub, Slack, Linear, Generic
+  - CRUD API for rule management: create, delete, toggle enable/disable
+
+- **Deep Dependency Health Checks**: 7 system dependency checks (database, disk, memory, git, queue, scheduler, websocket) with per-check status/latency/details, system runtime info, and health trend analysis.
+
+- **15 New Swarm Tests**: Creation, retrieval, listing, cancellation, heuristic decomposition, role prompts, constants validation.
+- **21 New Webhook Router Tests**: Rule CRUD, event processing, provider normalization, filtering.
+- **13 New Dependency Check Tests**: Database, memory, git, disk, scheduler, queue, broadcaster, system info, trends.
+
+### Changed
+- **Total Go tests**: 147 passing (up from 132)
+- **Total API routes**: ~109 handlers (up from ~98)
+- **Frontend code-split**: 7 vendor chunks, main chunk 659KB (down from 1054KB)
+- **ESLint**: All rules at `error` level, zero violations
+
+### Validation
+- All Go tests pass: 147 test cases
+- All frontend tests pass: 36 tests
+- Typecheck, lint, build: All clean
+- Version sync: ✅ (2.0.0)
+
 ## [1.6.0] - 2026-04-08
 
 ### Added

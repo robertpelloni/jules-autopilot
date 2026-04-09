@@ -182,6 +182,8 @@ func (w *Worker) executeJob(job models.QueueJob) {
 		result, executeErr = w.handleSyncSessionMemory(job.Payload)
 	case "check_issues":
 		result, executeErr = w.handleCheckIssues(job.Payload)
+	case "decompose_task":
+		result, executeErr = w.handleDecomposeTask(job.Payload)
 	default:
 		executeErr = fmt.Errorf("unknown job type: %s", job.Type)
 	}
@@ -1302,4 +1304,30 @@ func (w *Worker) handleCheckIssues(payload string) (string, error) {
 	}
 
 	return "none", nil
+}
+
+func (w *Worker) handleDecomposeTask(payload string) (string, error) {
+	var p struct {
+		SwarmID string `json:"swarmId"`
+		Task    string `json:"task"`
+		Context string `json:"context"`
+	}
+	if err := json.Unmarshal([]byte(payload), &p); err != nil {
+		return "", fmt.Errorf("invalid payload: %w", err)
+	}
+
+	result, err := DecomposeTask(DecomposeTaskRequest{
+		Task:        p.Task,
+		Context:     p.Context,
+		MaxSubtasks: 5,
+	})
+	if err != nil {
+		return "", err
+	}
+
+	if err := AssignSwarmAgents(p.SwarmID, result); err != nil {
+		return "", err
+	}
+
+	return fmt.Sprintf("decomposed:%d_subtasks", len(result.SubTasks)), nil
 }

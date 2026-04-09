@@ -395,3 +395,49 @@ type QueueJob struct {
 	UpdatedAt   time.Time      `json:"updatedAt"`
 	DeletedAt   gorm.DeletedAt `gorm:"index" json:"-"`
 }
+
+// Swarm represents a coordinated group of agents
+type Swarm struct {
+	ID            string     `gorm:"primaryKey" json:"id"`
+	Title         string     `json:"title"`
+	Description   string     `json:"description"`
+	SourceRepo    string     `json:"sourceRepo,omitempty"`
+	Strategy      string     `json:"strategy"`
+	Status        string     `gorm:"index" json:"status"`
+	ParentSwarmID *string    `json:"parentSwarmId,omitempty"`
+	RootTask      string     `json:"rootTask"`
+	Decomposition string     `json:"decomposition,omitempty"`
+	SharedContext string     `json:"sharedContext,omitempty"`
+	Metadata      string     `json:"metadata,omitempty"`
+	CreatedAt     time.Time  `gorm:"index" json:"createdAt"`
+	UpdatedAt     time.Time  `json:"updatedAt"`
+	CompletedAt   *time.Time `json:"completedAt,omitempty"`
+}
+
+// SwarmAgent represents a single agent in a swarm
+type SwarmAgent struct {
+	ID          string     `gorm:"primaryKey" json:"id"`
+	SwarmID     string     `gorm:"index" json:"swarmId"`
+	Role        string     `json:"role"`
+	SessionID   *string    `json:"sessionId,omitempty"`
+	Task        string     `json:"task"`
+	Status      string     `gorm:"index" json:"status"`
+	Output      string     `json:"output,omitempty"`
+	Provider    string     `json:"provider,omitempty"`
+	Model       string     `json:"model,omitempty"`
+	DependsOn   string     `json:"dependsOn,omitempty"`
+	CreatedAt   time.Time  `json:"createdAt"`
+	StartedAt   *time.Time `json:"startedAt,omitempty"`
+	CompletedAt *time.Time `json:"completedAt,omitempty"`
+}
+
+// SwarmEvent records state changes in a swarm
+type SwarmEvent struct {
+	ID        string    `gorm:"primaryKey" json:"id"`
+	SwarmID   string    `gorm:"index" json:"swarmId"`
+	AgentID   string    `json:"agentId,omitempty"`
+	EventType string    `json:"eventType"`
+	Message   string    `json:"message"`
+	Data      string    `json:"data,omitempty"`
+	CreatedAt time.Time `gorm:"index" json:"createdAt"`
+}

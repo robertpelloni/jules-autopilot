@@ -60,7 +60,7 @@ For granular tasks and immediate bug fixes, see `TODO.md`.
 * [ ] **WebAssembly Plugin Isolation:** Absolute zero-trust security architecture enforcing memory ceilings on external MCP tool capabilities locally.
 
 ## Milestone: v2.0 — "Autonomous Fleet"
-* [ ] **Multi-Agent Collaboration:** Orchestrate parallel agent swarms working on decomposed sub-tasks with shared context via the RAG mesh and real-time coordination events.
+* [x] **Multi-Agent Collaboration:** Orchestrate parallel agent swarms working on decomposed sub-tasks with shared context via the RAG mesh and real-time coordination events. Swarms support parallel, sequential, and pipeline strategies with LLM-powered task decomposition and automatic agent lifecycle management.
 * [ ] **Plugin Marketplace:** Browseable registry of community Wasm plugins with install-from-URL, version management, and signature verification in the dashboard UI.
 * [ ] **Predictive Cost Optimizer:** Machine learning model trained on provider telemetry to predict optimal routing decisions, token budgets, and session timing for minimum cost per task.
 
