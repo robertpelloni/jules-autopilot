@@ -47,6 +47,7 @@ func (s *Scheduler) Start() {
 	s.ScheduleTask("index_codebase", 24*time.Hour)
 	s.ScheduleTask("check_issues", 1*time.Hour)
 	s.ScheduleTask("cleanup_logs", 7*24*time.Hour)
+	s.ScheduleTask("ci_monitor", 30*time.Minute)
 
 	s.mu.Lock()
 	for name := range s.tasks {
@@ -187,6 +188,8 @@ func (s *Scheduler) executeTask(name string) {
 		if count, err := CleanupOldNotifications(90); err == nil && count > 0 {
 			log.Printf("[Scheduler] Cleaned up %d old notifications", count)
 		}
+	case "ci_monitor":
+		RunCIMonitor()
 	}
 }
 
