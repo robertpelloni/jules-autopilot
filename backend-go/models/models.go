@@ -441,3 +441,21 @@ type SwarmEvent struct {
 	Data      string    `json:"data,omitempty"`
 	CreatedAt time.Time `gorm:"index" json:"createdAt"`
 }
+
+// Plugin represents an installed plugin
+type Plugin struct {
+	ID           string         `gorm:"primaryKey" json:"id"`
+	Name         string         `gorm:"uniqueIndex:idx_plugin_name_version" json:"name"`
+	Version      string         `gorm:"uniqueIndex:idx_plugin_name_version" json:"version"`
+	Author       string         `json:"author,omitempty"`
+	Description  string         `json:"description,omitempty"`
+	SourceURL    string         `json:"sourceUrl"`
+	Signature    string         `json:"signature,omitempty"`
+	Status       string         `gorm:"index" json:"status"`
+	Capabilities string         `json:"capabilities,omitempty"` // JSON array
+	Config       string         `json:"config,omitempty"`
+	Size         int            `json:"size"`
+	InstalledAt  time.Time      `gorm:"index" json:"installedAt"`
+	UpdatedAt    time.Time      `json:"updatedAt"`
+	DeletedAt    gorm.DeletedAt `gorm:"index" json:"-"`
+}

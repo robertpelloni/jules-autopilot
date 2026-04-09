@@ -601,6 +601,16 @@ func SetupRoutes(app *fiber.App) {
 	api.Post("/ci/monitor", runCIMonitorAPI)
 	api.Get("/ci/failures", getCIFailuresAPI)
 
+	// Plugin management
+	api.Get("/plugins", listPluginsAPI)
+	api.Get("/plugins/stats", getPluginStatsAPI)
+	api.Get("/plugins/:id", getPluginAPI)
+	api.Post("/plugins/install", installPluginAPI)
+	api.Post("/plugins/:id/enable", enablePluginAPI)
+	api.Post("/plugins/:id/disable", disablePluginAPI)
+	api.Delete("/plugins/:id", uninstallPluginAPI)
+	api.Patch("/plugins/:id/config", updatePluginConfigAPI)
+
 	// Daemon routes
 	api.Get("/daemon/status", getDaemonStatus)
 	api.Post("/daemon/status", postDaemonStatus)
@@ -2109,4 +2119,76 @@ func getCIFailuresAPI(c *fiber.Ctx) error {
 	var anomalies []models.AnomalyRecord
 	db.DB.Where("type LIKE ?", "ci_failure_%").Order("created_at DESC").Limit(50).Find(&anomalies)
 	return c.JSON(anomalies)
+}
+
+func listPluginsAPI(c *fiber.Ctx) error {
+	status := c.Query("status", "")
+	plugins, err := services.ListPlugins(status)
+	if err != nil {
+		return c.Status(500).JSON(fiber.Map{"error": err.Error()})
+	}
+	return c.JSON(plugins)
+}
+
+func getPluginStatsAPI(c *fiber.Ctx) error {
+	return c.JSON(services.GetPluginStats())
+}
+
+func getPluginAPI(c *fiber.Ctx) error {
+	id := c.Params("id")
+	plugin, err := services.GetPlugin(id)
+	if err != nil {
+		return c.Status(404).JSON(fiber.Map{"error": "Plugin not found"})
+	}
+	return c.JSON(plugin)
+}
+
+func installPluginAPI(c *fiber.Ctx) error {
+	var req services.InstallPluginRequest
+	if err := c.BodyParser(&req); err != nil {
+		return c.Status(400).JSON(fiber.Map{"error": "Invalid request"})
+	}
+	plugin, err := services.InstallPluginFromURL(req)
+	if err != nil {
+		return c.Status(400).JSON(fiber.Map{"error": err.Error()})
+	}
+	return c.Status(201).JSON(plugin)
+}
+
+func enablePluginAPI(c *fiber.Ctx) error {
+	id := c.Params("id")
+	if err := services.EnablePlugin(id); err != nil {
+		return c.Status(404).JSON(fiber.Map{"error": err.Error()})
+	}
+	return c.JSON(fiber.Map{"status": "enabled"})
+}
+
+func disablePluginAPI(c *fiber.Ctx) error {
+	id := c.Params("id")
+	if err := services.DisablePlugin(id); err != nil {
+		return c.Status(404).JSON(fiber.Map{"error": err.Error()})
+	}
+	return c.JSON(fiber.Map{"status": "disabled"})
+}
+
+func uninstallPluginAPI(c *fiber.Ctx) error {
+	id := c.Params("id")
+	if err := services.UninstallPlugin(id); err != nil {
+		return c.Status(404).JSON(fiber.Map{"error": err.Error()})
+	}
+	return c.JSON(fiber.Map{"status": "uninstalled"})
+}
+
+func updatePluginConfigAPI(c *fiber.Ctx) error {
+	id := c.Params("id")
+	var req struct {
+		Config string `json:"config"`
+	}
+	if err := c.BodyParser(&req); err != nil {
+		return c.Status(400).JSON(fiber.Map{"error": "Invalid request"})
+	}
+	if err := services.UpdatePluginConfig(id, req.Config); err != nil {
+		return c.Status(404).JSON(fiber.Map{"error": err.Error()})
+	}
+	return c.JSON(fiber.Map{"status": "updated"})
 }
