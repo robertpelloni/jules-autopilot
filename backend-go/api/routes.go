@@ -646,6 +646,11 @@ func SetupRoutes(app *fiber.App) {
 	api.Post("/agents/record", recordAgentTaskAPI)
 	api.Delete("/agents/:agentId", resetAgentScoreAPI)
 
+	// AST modification tracking
+	api.Post("/ast/analyze", analyzeASTAPI)
+	api.Get("/ast/modifications", getASTModificationsAPI)
+	api.Get("/ast/stats", getASTStatsAPI)
+
 	// Daemon routes
 	api.Get("/daemon/status", getDaemonStatus)
 	api.Post("/daemon/status", postDaemonStatus)
@@ -2394,4 +2399,31 @@ func resetAgentScoreAPI(c *fiber.Ctx) error {
 	agentID := c.Params("agentId")
 	services.GetAgentPerformanceTracker().ResetAgentScore(agentID)
 	return c.JSON(fiber.Map{"status": "reset"})
+}
+
+func analyzeASTAPI(c *fiber.Ctx) error {
+	var req struct {
+		FilePath   string `json:"filePath"`
+		SessionID  string `json:"sessionId"`
+		OldContent string `json:"oldContent"`
+		NewContent string `json:"newContent"`
+	}
+	if err := c.BodyParser(&req); err != nil {
+		return c.Status(400).JSON(fiber.Map{"error": "Invalid request"})
+	}
+	if req.FilePath == "" {
+		return c.Status(400).JSON(fiber.Map{"error": "filePath is required"})
+	}
+	diff := services.AnalyzeDiff(req.FilePath, req.SessionID, req.OldContent, req.NewContent)
+	return c.JSON(diff)
+}
+
+func getASTModificationsAPI(c *fiber.Ctx) error {
+	sessionID := c.Query("sessionId")
+	limit := c.QueryInt("limit", 50)
+	return c.JSON(services.GetASTModifications(sessionID, limit))
+}
+
+func getASTStatsAPI(c *fiber.Ctx) error {
+	return c.JSON(services.GetASTModificationStats())
 }
