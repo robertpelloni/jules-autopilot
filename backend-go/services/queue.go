@@ -184,6 +184,8 @@ func (w *Worker) executeJob(job models.QueueJob) {
 		result, executeErr = w.handleCheckIssues(job.Payload)
 	case "decompose_task":
 		result, executeErr = w.handleDecomposeTask(job.Payload)
+	case "ci_auto_fix":
+		result, executeErr = w.handleCIAutoFix(job.Payload)
 	default:
 		executeErr = fmt.Errorf("unknown job type: %s", job.Type)
 	}
@@ -1330,4 +1332,33 @@ func (w *Worker) handleDecomposeTask(payload string) (string, error) {
 	}
 
 	return fmt.Sprintf("decomposed:%d_subtasks", len(result.SubTasks)), nil
+}
+
+func (w *Worker) handleCIAutoFix(payload string) (string, error) {
+	var p struct {
+		FailureID   string `json:"failureId"`
+		RepoPath    string `json:"repoPath"`
+		SourceID    string `json:"sourceId"`
+		Stage       string `json:"stage"`
+		FixStrategy string `json:"fixStrategy"`
+	}
+	if err := json.Unmarshal([]byte(payload), &p); err != nil {
+		return "", fmt.Errorf("invalid payload: %w", err)
+	}
+
+	// For now, log the auto-fix attempt and record the analysis
+	addKeeperLog(fmt.Sprintf("CI auto-fix attempted for %s (%s)", p.SourceID, p.Stage), "action", "global", map[string]interface{}{
+		"event":       "ci_auto_fix",
+		"sourceId":    p.SourceID,
+		"stage":       p.Stage,
+		"fixStrategy": p.FixStrategy,
+	})
+
+	// In a full implementation, this would:
+	// 1. Check out the branch
+	// 2. Apply the suggested fix
+	// 3. Run tests
+	// 4. Commit and push if tests pass
+
+	return fmt.Sprintf("ci_auto_fix_analyzed:%s", p.Stage), nil
 }

@@ -597,6 +597,10 @@ func SetupRoutes(app *fiber.App) {
 	api.Get("/cost/trend", getSpendingTrendAPI)
 	api.Get("/cost/optimize/:taskType", optimizeProviderAPI)
 
+	// CI monitoring
+	api.Post("/ci/monitor", runCIMonitorAPI)
+	api.Get("/ci/failures", getCIFailuresAPI)
+
 	// Daemon routes
 	api.Get("/daemon/status", getDaemonStatus)
 	api.Post("/daemon/status", postDaemonStatus)
@@ -2091,4 +2095,18 @@ func optimizeProviderAPI(c *fiber.Ctx) error {
 		"model":    model,
 		"strategy": strategy,
 	})
+}
+
+func runCIMonitorAPI(c *fiber.Ctx) error {
+	services.RunCIMonitor()
+	return c.JSON(fiber.Map{"status": "monitoring_complete"})
+}
+
+func getCIFailuresAPI(c *fiber.Ctx) error {
+	if db.DB == nil {
+		return c.JSON([]interface{}{})
+	}
+	var anomalies []models.AnomalyRecord
+	db.DB.Where("type LIKE ?", "ci_failure_%").Order("created_at DESC").Limit(50).Find(&anomalies)
+	return c.JSON(anomalies)
 }

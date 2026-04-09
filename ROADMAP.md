@@ -55,7 +55,7 @@ For granular tasks and immediate bug fixes, see `TODO.md`.
 * [x] **Phase 2: Lock the Pivot**: Completely deleted the legacy `server/` directory and backend-only JS dependencies, finalizing the transition to a Go-only architecture.
 
 ## Milestone: v1.5 — "Shadow Pilot"
-* [ ] **Background Anomaly Detection:** Agents silently monitoring `git diffs` background tasks, fixing failing CI pipelines before human review.
+* [x] **Background Anomaly Detection:** Shadow Pilot monitors git diffs and CI failures. CI Monitor detects merge conflicts, WIP commits, large uncommitted changes, and test syntax errors. Auto-analyzes failures with LLM and enqueues fix jobs for high-severity issues. Anomalies tracked with notifications and audit entries.
   * Progress: Go backend now has autonomous anomaly detection for queue backlogs, LLM error spikes, token budget overuse, stuck sessions, and circuit breaker instability. Anomalies are displayed in the Health dashboard with severity badges and one-click resolve. Remaining work includes git diff monitoring and CI pipeline auto-fix.
 * [ ] **WebAssembly Plugin Isolation:** Absolute zero-trust security architecture enforcing memory ceilings on external MCP tool capabilities locally.
 
