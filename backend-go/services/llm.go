@@ -71,8 +71,9 @@ type LLMUsage struct {
 }
 
 type LLMResult struct {
-	Content string
-	Usage   *LLMUsage
+	Content    string
+	Usage      *LLMUsage
+	LatencyMs  float64
 }
 
 func normalizeProvider(provider string) string {
@@ -193,6 +194,7 @@ func generateLLMText(primaryProvider, primaryApiKey, primaryModel, systemPrompt 
 		if err != nil {
 			lastErr = err
 			errStr := err.Error()
+			RecordLLMLatency(provider, result.LatencyMs, false)
 			// Track failure if it's a rate limit or server error
 			if strings.Contains(errStr, "(429)") || strings.Contains(errStr, "(50") || strings.Contains(errStr, "(52") || strings.Contains(errStr, "(53") || strings.Contains(errStr, "timeout") {
 				cb.recordFailure(provider)
@@ -202,6 +204,9 @@ func generateLLMText(primaryProvider, primaryApiKey, primaryModel, systemPrompt 
 
 		// Success
 		cb.recordSuccess(provider)
+
+		// Record LLM latency metric
+		RecordLLMLatency(provider, result.LatencyMs, true)
 
 		// Record token usage for budget tracking
 		if result.Usage != nil {
@@ -282,6 +287,7 @@ func generateRiskScore(provider, apiKey, model, topic, summary string, fallback 
 }
 
 func generateOpenAIText(apiKey, model, systemPrompt string, messages []LLMMessage) (LLMResult, error) {
+	start := time.Now()
 
 	requestMessages := make([]map[string]string, 0, len(messages)+1)
 	if strings.TrimSpace(systemPrompt) != "" {
@@ -335,7 +341,8 @@ func generateOpenAIText(apiKey, model, systemPrompt string, messages []LLMMessag
 	}
 
 	return LLMResult{
-		Content: strings.TrimSpace(data.Choices[0].Message.Content),
+		Content:   strings.TrimSpace(data.Choices[0].Message.Content),
+		LatencyMs: float64(time.Since(start).Milliseconds()),
 		Usage: &LLMUsage{
 			PromptTokens:     data.Usage.PromptTokens,
 			CompletionTokens: data.Usage.CompletionTokens,
@@ -345,6 +352,7 @@ func generateOpenAIText(apiKey, model, systemPrompt string, messages []LLMMessag
 }
 
 func generateAnthropicText(apiKey, model, systemPrompt string, messages []LLMMessage) (LLMResult, error) {
+	start := time.Now()
 
 	anthropicMessages := make([]map[string]string, 0, len(messages))
 	for _, message := range messages {
@@ -409,7 +417,8 @@ func generateAnthropicText(apiKey, model, systemPrompt string, messages []LLMMes
 	}
 
 	return LLMResult{
-		Content: strings.TrimSpace(strings.Join(contentParts, "\n")),
+		Content:   strings.TrimSpace(strings.Join(contentParts, "\n")),
+		LatencyMs: float64(time.Since(start).Milliseconds()),
 		Usage: &LLMUsage{
 			PromptTokens:     data.Usage.InputTokens,
 			CompletionTokens: data.Usage.OutputTokens,
@@ -419,6 +428,7 @@ func generateAnthropicText(apiKey, model, systemPrompt string, messages []LLMMes
 }
 
 func generateGeminiText(apiKey, model, systemPrompt string, messages []LLMMessage) (LLMResult, error) {
+	start := time.Now()
 
 	type part struct {
 		Text string `json:"text"`
@@ -498,7 +508,8 @@ func generateGeminiText(apiKey, model, systemPrompt string, messages []LLMMessag
 	}
 
 	return LLMResult{
-		Content: strings.TrimSpace(strings.Join(contentParts, "\n")),
+		Content:   strings.TrimSpace(strings.Join(contentParts, "\n")),
+		LatencyMs: float64(time.Since(start).Milliseconds()),
 		Usage: &LLMUsage{
 			PromptTokens:     data.UsageMetadata.PromptTokenCount,
 			CompletionTokens: data.UsageMetadata.CandidatesTokenCount,

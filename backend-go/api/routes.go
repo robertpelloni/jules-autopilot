@@ -629,6 +629,23 @@ func SetupRoutes(app *fiber.App) {
 	api.Get("/rag/index/stats", getVectorIndexStatsAPI)
 	api.Post("/rag/index/rebuild", rebuildVectorIndexAPI)
 
+	// Metrics & SLA monitoring
+	api.Get("/metrics/dashboard", getMetricsDashboardAPI)
+	api.Get("/metrics/names", getMetricNamesAPI)
+	api.Get("/metrics/:name", getMetricSummaryAPI)
+	api.Get("/metrics/sla/targets", getSLATargetsAPI)
+	api.Post("/metrics/sla/targets", registerSLATargetAPI)
+
+	// Agent performance scoring
+	api.Get("/agents/scores", getAgentScoresAPI)
+	api.Get("/agents/leaderboard/:role", getAgentLeaderboardAPI)
+	api.Get("/agents/leaderboards", getAllAgentLeaderboardsAPI)
+	api.Get("/agents/stats", getAgentStatsAPI)
+	api.Get("/agents/recommend/:role", recommendProviderAPI)
+	api.Get("/agents/provider-efficiency", getProviderEfficiencyAPI)
+	api.Post("/agents/record", recordAgentTaskAPI)
+	api.Delete("/agents/:agentId", resetAgentScoreAPI)
+
 	// Daemon routes
 	api.Get("/daemon/status", getDaemonStatus)
 	api.Post("/daemon/status", postDaemonStatus)
@@ -2287,4 +2304,94 @@ func rebuildVectorIndexAPI(c *fiber.Ctx) error {
 		return c.Status(500).JSON(fiber.Map{"error": err.Error()})
 	}
 	return c.JSON(services.GetVectorIndex().Stats())
+}
+
+func getMetricsDashboardAPI(c *fiber.Ctx) error {
+	return c.JSON(services.GetMetricsDashboard())
+}
+
+func getMetricNamesAPI(c *fiber.Ctx) error {
+	return c.JSON(services.GetMetricsCollector().GetMetricNames())
+}
+
+func getMetricSummaryAPI(c *fiber.Ctx) error {
+	name := c.Params("name")
+	windowMin := c.QueryFloat("window", 15)
+	summary := services.GetMetricsCollector().GetSummary(name, time.Duration(windowMin)*time.Minute)
+	return c.JSON(summary)
+}
+
+func getSLATargetsAPI(c *fiber.Ctx) error {
+	return c.JSON(services.GetMetricsCollector().GetSLATargets())
+}
+
+func registerSLATargetAPI(c *fiber.Ctx) error {
+	var target services.SLATarget
+	if err := c.BodyParser(&target); err != nil {
+		return c.Status(400).JSON(fiber.Map{"error": "Invalid request"})
+	}
+	services.GetMetricsCollector().RegisterSLA(target)
+	return c.JSON(fiber.Map{"status": "registered"})
+}
+
+func getAgentScoresAPI(c *fiber.Ctx) error {
+	agentID := c.Query("agentId")
+	if agentID != "" {
+		score, found := services.GetAgentPerformanceTracker().GetAgentScore(agentID)
+		if !found {
+			return c.Status(404).JSON(fiber.Map{"error": "Agent not found"})
+		}
+		return c.JSON(score)
+	}
+	// Return all scores
+	stats := services.GetAgentPerformanceTracker().GetAgentStats()
+	return c.JSON(stats)
+}
+
+func getAgentLeaderboardAPI(c *fiber.Ctx) error {
+	role := services.AgentRole(c.Params("role"))
+	return c.JSON(services.GetAgentPerformanceTracker().GetLeaderboard(role))
+}
+
+func getAllAgentLeaderboardsAPI(c *fiber.Ctx) error {
+	return c.JSON(services.GetAgentPerformanceTracker().GetAllLeaderboards())
+}
+
+func getAgentStatsAPI(c *fiber.Ctx) error {
+	return c.JSON(services.GetAgentPerformanceTracker().GetAgentStats())
+}
+
+func recommendProviderAPI(c *fiber.Ctx) error {
+	role := services.AgentRole(c.Params("role"))
+	provider := services.GetAgentPerformanceTracker().RecommendProvider(role)
+	return c.JSON(fiber.Map{"role": role, "recommendedProvider": provider})
+}
+
+func getProviderEfficiencyAPI(c *fiber.Ctx) error {
+	return c.JSON(services.GetAgentPerformanceTracker().GetProviderEfficiency())
+}
+
+func recordAgentTaskAPI(c *fiber.Ctx) error {
+	var task struct {
+		AgentID    string  `json:"agentId"`
+		Role       string  `json:"role"`
+		Provider   string  `json:"provider"`
+		TaskType   string  `json:"taskType"`
+		Success    bool    `json:"success"`
+		LatencyMs  float64 `json:"latencyMs"`
+		TokensUsed int     `json:"tokensUsed"`
+		CostCents  float64 `json:"costCents"`
+	}
+	if err := c.BodyParser(&task); err != nil {
+		return c.Status(400).JSON(fiber.Map{"error": "Invalid request"})
+	}
+
+	services.RecordSwarmAgentTask(task.AgentID, services.AgentRole(task.Role), task.Provider, task.TaskType, task.Success, task.LatencyMs, task.TokensUsed, task.CostCents)
+	return c.JSON(fiber.Map{"status": "recorded"})
+}
+
+func resetAgentScoreAPI(c *fiber.Ctx) error {
+	agentID := c.Params("agentId")
+	services.GetAgentPerformanceTracker().ResetAgentScore(agentID)
+	return c.JSON(fiber.Map{"status": "reset"})
 }
