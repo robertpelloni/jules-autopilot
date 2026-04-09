@@ -1,80 +1,60 @@
-'use client';
-
-import { useState } from 'react';
-import { useRouter } from 'next/navigation';
+import { signIn } from '@/lib/auth/config';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
-import { toast } from 'sonner';
-import { Loader2, Key } from 'lucide-react';
+import { Label } from '@/components/ui/label';
 
 export default function LoginPage() {
-  const [apiKey, setApiKey] = useState('');
-  const [loading, setLoading] = useState(false);
-  const router = useRouter();
-
-  const handleLogin = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!apiKey.trim()) return;
-
-    setLoading(true);
-
-    try {
-        const res = await fetch('/api/auth/login', {
-            method: 'POST',
-            body: JSON.stringify({ apiKey })
-        });
-
-        if (res.ok) {
-            toast.success('Logged in successfully');
-            window.location.href = '/';
-        } else {
-            const data = await res.json();
-            toast.error(data.error || 'Login failed');
-        }
-    } catch (error) {
-        toast.error('An error occurred during login');
-        console.error(error);
-    } finally {
-        setLoading(false);
-    }
-  };
-
   return (
     <div className="flex min-h-screen items-center justify-center bg-black p-4">
-      <Card className="w-full max-w-md border-white/10 bg-zinc-950">
-        <CardHeader className="space-y-1">
-          <CardTitle className="text-2xl font-bold tracking-tight text-white flex items-center gap-2">
-            <Key className="h-6 w-6 text-purple-500" />
-            Jules UI
-          </CardTitle>
-          <CardDescription className="text-white/60">
-            Enter your Jules API key to access the workspace.
-          </CardDescription>
+      <Card className="w-full max-w-sm bg-zinc-950 border-zinc-800">
+        <CardHeader>
+          <CardTitle>Jules UI</CardTitle>
+          <CardDescription>Sign in to your command center</CardDescription>
         </CardHeader>
-        <CardContent>
-          <form onSubmit={handleLogin} className="space-y-4">
+        <CardContent className="space-y-4">
+          <form
+            action={async (formData) => {
+              'use server';
+              await signIn('credentials', formData);
+            }}
+            className="space-y-4"
+          >
             <div className="space-y-2">
+              <Label htmlFor="password">Password</Label>
               <Input
+                id="password"
+                name="password"
                 type="password"
-                placeholder="Google Jules API Key"
-                value={apiKey}
-                onChange={(e) => setApiKey(e.target.value)}
-                className="bg-zinc-900 border-white/10 text-white placeholder:text-white/20"
-                disabled={loading}
+                placeholder="Enter password..."
+                className="bg-black border-zinc-800"
               />
             </div>
-            <Button
-                type="submit"
-                className="w-full bg-purple-600 hover:bg-purple-500 text-white"
-                disabled={loading || !apiKey}
-            >
-              {loading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-              {loading ? 'Authenticating...' : 'Enter Workspace'}
+            <Button type="submit" className="w-full">
+              Sign In
             </Button>
-            <p className="text-xs text-center text-white/30 pt-4">
-              Your key is encrypted and stored in a secure HTTP-only cookie.
-            </p>
+          </form>
+
+          <div className="relative">
+            <div className="absolute inset-0 flex items-center">
+              <span className="w-full border-t border-zinc-800" />
+            </div>
+            <div className="relative flex justify-center text-xs uppercase">
+              <span className="bg-zinc-950 px-2 text-muted-foreground">
+                Or
+              </span>
+            </div>
+          </div>
+
+          <form
+            action={async () => {
+              'use server';
+              await signIn('github');
+            }}
+          >
+            <Button variant="outline" className="w-full bg-black border-zinc-800 hover:bg-zinc-900">
+              Sign in with GitHub
+            </Button>
           </form>
         </CardContent>
       </Card>

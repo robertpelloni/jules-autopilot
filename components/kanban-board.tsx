@@ -245,18 +245,9 @@ export function KanbanBoard({ onSelectSession }: KanbanBoardProps) {
             <Badge variant="outline" className="h-4 px-1.5 text-[9px] border-white/10 bg-white/5 text-white/40 font-mono">
               {sessions.filter(s => !archivedSessionIds.has(s.id)).length} TOTAL
             </Badge>
-            <TooltipProvider>
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <Badge variant="outline" className="h-4 px-1.5 text-[8px] border-purple-500/30 bg-purple-500/10 text-purple-400 font-mono uppercase tracking-tighter cursor-help">
-                    Beta
-                  </Badge>
-                </TooltipTrigger>
-                <TooltipContent side="bottom" className="bg-zinc-900 border-white/10 text-white text-[10px] max-w-[200px]">
-                  <p>Status changes are currently local-only and will be lost on page refresh. Persistence is coming soon.</p>
-                </TooltipContent>
-              </Tooltip>
-            </TooltipProvider>
+            <Badge variant="outline" className="h-4 px-1.5 text-[8px] border-green-500/30 bg-green-500/10 text-green-400 font-mono uppercase tracking-tighter">
+              Live
+            </Badge>
           </div>
           <p className="text-[10px] text-white/40 uppercase tracking-wider mt-0.5">Manage session lifecycle</p>
         </div>

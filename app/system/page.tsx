@@ -24,7 +24,7 @@ interface LiveSubmoduleStatus {
 
 export default function SystemDashboard() {
   const { submodules: buildSubmodules, generatedAt } = (submodulesData as unknown as { 
-    submodules: { path: string; commit: string; describe: string; lastUpdated: string }[], 
+    submodules: { name: string; path: string; commit: string; describe: string; lastCommitDate: string }[],
     generatedAt: string 
   });
 
@@ -253,33 +253,35 @@ export default function SystemDashboard() {
           <h2 className="text-lg font-bold tracking-wide text-white/80">Submodules</h2>
           <div className="grid gap-4">
             {buildSubmodules.map((mod) => (
-              <Card key={mod.path} className="bg-zinc-950 border-white/10 hover:border-white/20 transition-colors">
-                <CardContent className="p-4 flex items-center justify-between">
-                  <div className="flex items-center gap-4">
-                    <div className="h-10 w-10 rounded bg-white/5 flex items-center justify-center">
-                      <GitBranch className="h-5 w-5 text-white/40" />
-                    </div>
-                    <div>
-                      <div className="font-bold text-sm text-white/90">{mod.path}</div>
-                      <div className="text-xs text-white/40 font-mono mt-1 flex items-center gap-2">
-                        <Hash className="h-3 w-3" />
-                        {mod.commit.substring(0, 7)}
-                        <span className="w-1 h-1 rounded-full bg-white/20" />
-                        {mod.describe}
-                        <span className="w-1 h-1 rounded-full bg-white/20" />
-                        <Clock className="h-3 w-3" />
-                        {new Date(mod.lastUpdated).toLocaleDateString()}
+              <Link key={mod.path} href={`/system/submodules/${encodeURIComponent(mod.name || mod.path.split('/').pop() || 'unknown')}`}>
+                <Card className="bg-zinc-950 border-white/10 hover:border-purple-500/30 hover:bg-zinc-900/50 transition-all duration-300 cursor-pointer group">
+                  <CardContent className="p-4 flex items-center justify-between">
+                    <div className="flex items-center gap-4">
+                      <div className="h-10 w-10 rounded bg-white/5 flex items-center justify-center group-hover:bg-purple-500/10 transition-colors">
+                        <GitBranch className="h-5 w-5 text-white/40 group-hover:text-purple-400 transition-colors" />
+                      </div>
+                      <div>
+                        <div className="font-bold text-sm text-white/90 group-hover:text-white transition-colors">{mod.name || mod.path}</div>
+                        <div className="text-xs text-white/40 font-mono mt-1 flex items-center gap-2">
+                          <Hash className="h-3 w-3" />
+                          {mod.commit.substring(0, 7)}
+                          <span className="w-1 h-1 rounded-full bg-white/20" />
+                          {mod.describe}
+                          <span className="w-1 h-1 rounded-full bg-white/20" />
+                          <Clock className="h-3 w-3" />
+                          {mod.lastCommitDate ? new Date(mod.lastCommitDate).toLocaleDateString() : 'Unknown'}
+                        </div>
                       </div>
                     </div>
-                  </div>
-                  <div className="flex items-center gap-4">
-                    {getStatusBadge(mod.path)}
-                    <Badge variant="secondary" className="bg-white/5 text-white/60 hover:bg-white/10">
-                      {mod.path.split('/')[0]}
-                    </Badge>
-                  </div>
-                </CardContent>
-              </Card>
+                    <div className="flex items-center gap-4">
+                      {getStatusBadge(mod.path)}
+                      <Badge variant="secondary" className="bg-white/5 text-white/60 hover:bg-white/10 hidden sm:inline-flex">
+                        {mod.path.split('/')[0]}
+                      </Badge>
+                    </div>
+                  </CardContent>
+                </Card>
+              </Link>
             ))}
           </div>
         </div>

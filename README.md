@@ -1,152 +1,83 @@
 # Jules UI
 
-![Build Status](https://github.com/sbhavani/jules-app/actions/workflows/ci.yml/badge.svg)
+![Build Status](https://github.com/robertpelloni/jules-autopilot/actions/workflows/ci.yml/badge.svg)
 ![Next.js](https://img.shields.io/badge/Next.js-16.0-black)
 ![TypeScript](https://img.shields.io/badge/TypeScript-5.0-blue)
 ![Tailwind CSS](https://img.shields.io/badge/Tailwind-4.0-38bdf8)
 
-![Session View](public/assets/session-screenshot.png)
+**A powerful, self-hosted workspace for Google's Jules AI agent.**
 
-**A powerful, self-hosted workspace for Google's Jules AI agent.** Transform standard agent interactions into an engineering command center with live code diffs, real-time activity monitoring, session analytics, and comprehensive terminal output inspection.
+Transform standard agent interactions into an engineering command center with live code diffs, real-time activity monitoring, session analytics, and comprehensive terminal output inspection.
 
 ## ✨ Key Features
 
-- 🔄 **Real-Time Updates** - Live activity feed with auto-polling
+- 🔄 **Real-Time Updates** - Live activity feed with auto-polling.
 - 🤖 **Auto-Pilot (Session Keeper)** - Keep sessions active automatically with smart nudges and plan approvals.
 - ⚖️ **Council Debate Mode** - Multi-agent debate system (Architect vs Security) to guide the primary agent.
 - 🛡️ **Deep Code Analysis** - Parallel code audits for Security, Performance, and Maintainability.
-- 📊 **Code Diff Viewer** - Visualize git patches and changes instantly
+- 📊 **Code Diff Viewer** - Visualize git patches and changes instantly.
 - 📁 **Artifact Browser** - Browse and review generated files (diffs, logs, media) with one click.
-- 📋 **Kanban Board** - Visual session management (Active, Paused, Completed).
-- 💻 **Integrated Terminal** - Full web-based terminal with local machine access
-- 📈 **Analytics Dashboard** - Track session metrics and trends
+- 💻 **Integrated Terminal** - Full web-based terminal with local machine access.
+- 📈 **Analytics Dashboard** - Track session metrics and trends.
 - ⚙️ **System Dashboard** - View submodules, build versions, and project structure.
-- 📱 **Mobile-First** - Fully responsive design
-- 🔒 **Secure** - Container isolation and API keys stored locally
 
 ## 🚀 Quick Start
 
-**Prerequisites:** Node.js 18+, Jules API key from [jules.google.com](https://jules.google.com), and a connected GitHub repository.
+### Prerequisites
 
-### Option 1: Standalone Mode
+*   **Node.js 18+** (Node 20+ recommended)
+*   **pnpm** (Required for workspace management)
+*   **Jules API Key**
 
-Run just the Next.js app without the terminal server:
+### Option 1: Local Development
 
-```bash
-# Clone and install
-git clone <your-repo-url>
-cd jules-ui
-npm install
+1.  **Clone the repository:**
+    ```bash
+    git clone https://github.com/robertpelloni/jules-autopilot.git
+    cd jules-autopilot
+    ```
 
-# Start development server
-npm run dev
-```
+2.  **Install dependencies:**
+    ```bash
+    pnpm install
+    ```
 
-Open [http://localhost:3000](http://localhost:3000) - the Terminal button will be visible but show setup instructions when clicked.
+3.  **Start the development server:**
+    ```bash
+    pnpm run dev
+    ```
+    Open [http://localhost:3000](http://localhost:3000).
 
-**To hide the Terminal button completely**, add to `.env.local`:
+### Option 2: Vercel Deployment
 
-```bash
-NEXT_PUBLIC_DISABLE_TERMINAL=true
-```
+Click the button below to deploy your own instance of Jules UI to Vercel:
 
-### Option 2: With Docker Compose (Recommended)
+[![Deploy with Vercel](https://vercel.com/button)](https://vercel.com/new/clone?repository-url=https%3A%2F%2Fgithub.com%2Frobertpelloni%2Fjules-autopilot)
 
-Run both the Next.js app AND the terminal server together:
+**Important:** This project uses `pnpm`. Vercel should automatically detect `pnpm-lock.yaml` and use it.
 
-```bash
-# Clone and install
-git clone <your-repo-url>
-cd jules-ui
+See [docs/DEPLOY.md](docs/DEPLOY.md) for detailed deployment instructions.
 
-# Configure your repository path (optional)
-cp deploy/.env.local.example .env.local
-# Edit .env.local and set REPO_PATH=/path/to/your/repo
+## 🛠️ Architecture
 
-# (Optional) Configure custom base image for terminal
-# export TERMINAL_BASE_IMAGE=ubuntu:22.04
+This project is a **monorepo workspace** optimized for both local (Bun) and cloud (Node.js) environments.
 
-# Start all services (frontend + terminal server)
-docker-compose -f deploy/docker-compose.yml up
-```
+*   `packages/shared`: Shared business logic, types, and orchestration.
+*   `app/`: Main Next.js application (Frontend + API Routes).
+*   `server/`: Background Session Keeper daemon.
 
-Open [http://localhost:3002](http://localhost:3002) - the Terminal will connect automatically.
+See [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) for a deep dive.
 
-**Note:** Uses port 3002 to avoid conflicts with other services (like Dokploy on 3000).
+## 📚 Documentation
 
-### Option 3: Run Services Independently
-
-Run the terminal server and Next.js app separately (useful for development):
-
-```bash
-# Terminal 1: Start the terminal server
-cd terminal-server
-npm install
-npm start
-
-# Terminal 2: Start the Next.js app
-npm install
-npm run dev
-```
-
-Open [http://localhost:3000](http://localhost:3000) - the Terminal will connect to the server on port 8080.
-
-**Note:** Your Jules API key is stored securely in browser localStorage. See [docs/TERMINAL.md](docs/TERMINAL.md) for detailed terminal setup and usage.
-
-## 🤖 Auto-Pilot (Session Keeper)
-
-The **Session Keeper** is a background utility that ensures your Jules sessions remain active and productive.
-
-*   **Smart Nudges:** Uses a Supervisor LLM (OpenAI, Anthropic, Gemini, etc.) to analyze chat history and send context-aware prompts if the agent becomes inactive.
-*   **Plan Approval:** Automatically approves plans generated by the agent to keep the workflow moving.
-*   **Council Mode:** Enables a multi-agent debate system where different personas (e.g., "Security Expert", "Performance Engineer") discuss the next step before instructing the agent.
-*   **Configurable:** Adjust check intervals, inactivity thresholds (separate for "In Progress" vs "Idle"), and customize fallback messages.
-
-Access these settings via the **Gear Icon** in the top right or the **Logs** panel at the bottom of the screen.
-
-## 📸 More Screenshots
-
-![Integrated Terminal](public/assets/jules-terminal.png)
-_Integrated Terminal - Full web-based terminal with real-time command execution and output_
-
-![Dashboard View](public/assets/dashboard-screenshot.png)
-_Analytics Dashboard - Track session success rates, duration, and activity volume_
-
-## 🛠️ Tech Stack
-
-**Frontend:** [Next.js 16](https://nextjs.org/), [TypeScript](https://www.typescriptlang.org/), [Tailwind CSS](https://tailwindcss.com/), [shadcn/ui](https://ui.shadcn.com/), [xterm.js](https://xtermjs.org/)
-
-**Terminal Server:** [Node.js](https://nodejs.org/), [Socket.io](https://socket.io/), [node-pty](https://github.com/microsoft/node-pty)
-
-- **Base Image:** `python:3.11-slim-bookworm` (Configurable)
-- **Pre-installed Tools:** `gemini-cli`, `python3`, `git`, `bash`
-
-**Infrastructure:** [Docker](https://www.docker.com/), [Docker Compose](https://docs.docker.com/compose/)
-
-## 🔧 Development
-
-```bash
-npm run dev      # Start dev server
-npm run build    # Build for production
-npm run lint     # Run linter
-npm test         # Run tests
-```
-
-### SDK Reference
-The project includes the official Python SDK as a reference submodule at `jules-sdk-reference`. This is used to ensure the TypeScript client implementation (`lib/jules/client.ts`) remains compliant with the official API models and logic.
-
-## 📚 API Integration
-
-Integrates with Jules API (`https://jules.googleapis.com/v1alpha`) for session management, activity streaming, and real-time updates. See [developers.google.com/jules/api](https://developers.google.com/jules/api) for full documentation.
+*   [Deployment Guide](docs/DEPLOY.md)
+*   [Architecture Overview](docs/ARCHITECTURE.md)
+*   [API Reference](docs/API_REFERENCE.md)
 
 ## 🤝 Contributing
 
-Contributions welcome! Feel free to submit a Pull Request.
+Contributions are welcome! Please read [CONTRIBUTING.md](CONTRIBUTING.md) for details.
 
 ## 📄 License
 
-MIT License - see LICENSE file for details.
-
----
-
-Built with ❤️ for the Jules Community
+MIT License - see [LICENSE](LICENSE) for details.

@@ -2,6 +2,8 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/com
 import { Badge } from "@/components/ui/badge";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { GitBranch, Clock, FolderGit2, Hash, BookOpen, Info, ShieldCheck } from "lucide-react";
+import { ContextHelp } from "@/components/context-help";
+import Link from "next/link";
 import submoduleInfo from "@/app/submodules.json";
 import { formatDistanceToNow } from "date-fns";
 
@@ -55,6 +57,7 @@ export function SubmoduleDashboard() {
         <div className="flex items-center gap-3">
           <h1 className="text-2xl font-bold tracking-tight text-white">Engineering Command Center</h1>
           <Badge className="bg-blue-500/10 text-blue-400 border-blue-500/20">v0.7.1</Badge>
+          <ContextHelp topic="submodules" className="h-6 w-6 text-muted-foreground hover:text-white" />
         </div>
         <p className="text-muted-foreground">
           System-wide overview of Jules orchestration, submodules, and specialized agents.
@@ -66,7 +69,8 @@ export function SubmoduleDashboard() {
         {submodules.map((submodule) => {
           const features = getSubmoduleFeatures(submodule.name);
           return (
-            <Card key={submodule.path} className="bg-zinc-950 border-white/10 flex flex-col group hover:border-purple-500/30 transition-all duration-300">
+            <Link key={submodule.path} href={`/system/submodules/${encodeURIComponent(submodule.name)}`}>
+            <Card className="bg-zinc-950 border-white/10 flex flex-col group hover:border-purple-500/30 transition-all duration-300 cursor-pointer h-full">
               <CardHeader className="pb-3">
                 <div className="flex items-start justify-between">
                   <div>
@@ -138,6 +142,7 @@ export function SubmoduleDashboard() {
                 </div>
               </CardContent>
             </Card>
+            </Link>
           );
         })}
       </div>

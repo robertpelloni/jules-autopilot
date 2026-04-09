@@ -1,5 +1,5 @@
 import { create } from 'zustand';
-import { persist } from 'zustand/middleware';
+import { persist, createJSONStorage } from 'zustand/middleware';
 import { SessionKeeperConfig } from '@/types/jules';
 import type { DebateResult as OrchestrationDebateResult } from '@/lib/orchestration/types';
 
@@ -103,8 +103,6 @@ const DEFAULT_CONFIG: SessionKeeperConfig = {
   debateParticipants: []
 };
 
-const BUN_SERVER_URL = 'http://localhost:8080';
-
 export const useSessionKeeperStore = create<SessionKeeperState>()(
   persist(
     (set, get) => ({
@@ -121,12 +119,12 @@ export const useSessionKeeperStore = create<SessionKeeperState>()(
       loadConfig: async () => {
         set({ isLoading: true });
         try {
-          const res = await fetch(`${BUN_SERVER_URL}/api/settings/keeper`);
+          const res = await fetch('/api/settings/keeper');
           if (res.ok) {
             const config = await res.json();
             set({ config });
             
-            const statusRes = await fetch(`${BUN_SERVER_URL}/api/daemon/status`);
+            const statusRes = await fetch('/api/daemon/status');
             if (statusRes.ok) {
               const statusData = await statusRes.json();
               set((state) => ({
@@ -153,14 +151,14 @@ export const useSessionKeeperStore = create<SessionKeeperState>()(
       saveConfig: async (config) => {
         set({ config, isLoading: true });
         try {
-          await fetch(`${BUN_SERVER_URL}/api/settings/keeper`, {
+          await fetch('/api/settings/keeper', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify(config),
           });
 
           const endpoint = config.isEnabled ? '/api/daemon/start' : '/api/daemon/stop';
-          await fetch(`${BUN_SERVER_URL}${endpoint}`, { method: 'POST' });
+          await fetch(endpoint, { method: 'POST' });
           
         } catch (error) {
           console.error('Failed to save keeper config:', error);
@@ -171,7 +169,7 @@ export const useSessionKeeperStore = create<SessionKeeperState>()(
 
       loadLogs: async () => {
         try {
-          const res = await fetch(`${BUN_SERVER_URL}/api/daemon/status`);
+          const res = await fetch('/api/daemon/status');
           if (res.ok) {
             const statusData = await res.json();
             const mappedLogs: Log[] = statusData.logs.map((l: any) => ({
@@ -201,7 +199,7 @@ export const useSessionKeeperStore = create<SessionKeeperState>()(
         }));
 
         try {
-          await fetch(`${BUN_SERVER_URL}/api/logs/keeper`, {
+          await fetch('/api/logs/keeper', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
@@ -252,7 +250,7 @@ export const useSessionKeeperStore = create<SessionKeeperState>()(
         const { addLog } = get();
         set({ isPausedAll: true });
         try {
-          const res = await fetch(`${BUN_SERVER_URL}/api/sessions/interrupt-all`, { method: 'POST' });
+          const res = await fetch('/api/sessions/interrupt-all', { method: 'POST' });
           if (res.ok) {
             const data = await res.json();
             await addLog(`Global Interrupt: ${data.interruptedCount} sessions paused.`, 'action');
@@ -269,7 +267,7 @@ export const useSessionKeeperStore = create<SessionKeeperState>()(
         const { addLog } = get();
         set({ isPausedAll: false });
         try {
-          const res = await fetch(`${BUN_SERVER_URL}/api/sessions/continue-all`, { method: 'POST' });
+          const res = await fetch('/api/sessions/continue-all', { method: 'POST' });
           if (res.ok) {
             const data = await res.json();
             await addLog(`Global Continue: ${data.continuedCount} sessions resumed.`, 'action');
@@ -284,12 +282,23 @@ export const useSessionKeeperStore = create<SessionKeeperState>()(
     }),
     {
       name: 'jules-session-keeper-store',
+      storage: createJSONStorage(() => {
+        if (typeof window !== 'undefined') {
+          return localStorage;
+        }
+        return {
+          getItem: () => null,
+          setItem: () => {},
+          removeItem: () => {},
+        };
+      }),
       partialize: (state) => ({ 
         stats: state.stats, 
         isPausedAll: state.isPausedAll,
         lastForcedCheckAt: state.lastForcedCheckAt,
         debates: state.debates
       }),
+      skipHydration: true,
     }
   )
 );

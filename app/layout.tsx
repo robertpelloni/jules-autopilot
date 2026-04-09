@@ -4,6 +4,7 @@ import { JulesProvider } from "@/lib/jules/provider";
 import { ThemeProvider } from "@/components/theme-provider";
 import { Toaster } from "sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
+import { SessionProvider } from "next-auth/react";
 import "./globals.css";
 
 const geistSans = Geist({
@@ -35,19 +36,21 @@ export default function RootLayout({
       <body
         className={`${geistSans.variable} ${geistMono.variable} antialiased bg-background text-foreground`}
       >
-        <ThemeProvider
-          attribute="class"
-          defaultTheme="system"
-          enableSystem
-          disableTransitionOnChange
-        >
-          <JulesProvider>
-            <TooltipProvider>
-              {children}
-              <Toaster position="bottom-right" theme="dark" className="font-mono text-xs uppercase" />
-            </TooltipProvider>
-          </JulesProvider>
-        </ThemeProvider>
+        <SessionProvider>
+          <ThemeProvider
+            attribute="class"
+            defaultTheme="system"
+            enableSystem
+            disableTransitionOnChange
+          >
+            <JulesProvider>
+              <TooltipProvider>
+                {children}
+                <Toaster position="bottom-right" theme="dark" className="font-mono text-xs uppercase" />
+              </TooltipProvider>
+            </JulesProvider>
+          </ThemeProvider>
+        </SessionProvider>
       </body>
     </html>
   );

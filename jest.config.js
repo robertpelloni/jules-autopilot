@@ -13,6 +13,7 @@ const customJestConfig = {
   moduleNameMapper: {
     "^@/(.*)$": "<rootDir>/$1",
   },
+  modulePathIgnorePatterns: ["<rootDir>/external/"],
   testMatch: ["<rootDir>/app/**/*.test.ts", "<rootDir>/lib/**/*.test.ts"], // Run tests in app and lib directory
 };
 

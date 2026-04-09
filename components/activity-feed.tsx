@@ -670,13 +670,19 @@ export function ActivityFeed({ session, onArchive, showCodeDiffs, onToggleCodeDi
           >
             {groupedActivities.length === 0 && !loading && !error && (
               <div className="flex items-center justify-center min-h-[200px]">
-                <div className="text-center space-y-2">
-                  <p className="text-[10px] font-mono text-white/40 uppercase tracking-widest">No activities yet</p>
-                  {session.status !== 'completed' && session.status !== 'failed' && (
-                    <p className="text-[9px] font-mono text-white/30 uppercase tracking-wide">
-                      Session may be queued or in progress
+                <div className="text-center space-y-4 max-w-md">
+                  <Sparkles className="h-8 w-8 text-white/10 mx-auto" />
+                  <div className="space-y-2">
+                    <p className="text-[10px] font-mono text-white/40 uppercase tracking-widest">No activities yet</p>
+                    <p className="text-xs text-white/30 leading-relaxed">
+                      Jules is initializing or waiting for input. Send a message below to start the conversation, or wait for the agent to begin processing the initial prompt.
                     </p>
-                  )}
+                    {session.status !== 'completed' && session.status !== 'failed' && (
+                      <p className="text-[9px] font-mono text-purple-400/50 uppercase tracking-wide">
+                        Session is {session.status}
+                      </p>
+                    )}
+                  </div>
                 </div>
               </div>
             )}

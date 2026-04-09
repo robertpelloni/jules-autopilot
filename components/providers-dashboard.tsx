@@ -43,6 +43,7 @@ import {
 import { cn } from '@/lib/utils';
 import Link from 'next/link';
 import { formatDistanceToNow } from 'date-fns';
+import { TransferSessionDialog } from './transfer-session-dialog';
 
 const PROVIDER_ICONS: Record<CloudDevProviderId, React.ReactNode> = {
   jules: <Sparkles className="h-5 w-5" />,
@@ -106,13 +107,6 @@ export function ProvidersDashboard() {
     initializeProviders();
   }, [initializeProviders]);
 
-  useEffect(() => {
-    if (configuredProviders.length > 0) {
-      fetchAllSessions();
-      checkAllHealth();
-    }
-  }, [configuredProviders.length]);
-
   const checkAllHealth = async () => {
     setIsCheckingHealth(true);
     const newHealthStates: ProviderHealthState = {};
@@ -135,6 +129,13 @@ export function ProvidersDashboard() {
     setHealthStates(newHealthStates);
     setIsCheckingHealth(false);
   };
+
+  useEffect(() => {
+    if (configuredProviders.length > 0) {
+      fetchAllSessions();
+      checkAllHealth();
+    }
+  }, [configuredProviders.length]);
 
   const getSessionCountByProvider = (providerId: CloudDevProviderId) => {
     return sessions.filter((s) => s.providerId === providerId).length;
@@ -476,6 +477,9 @@ function SessionRow({ session }: { session: UnifiedSession }) {
               : formatDistanceToNow(new Date(session.updatedAt), { addSuffix: true })}
           </span>
         </div>
+      </TableCell>
+      <TableCell>
+        <TransferSessionDialog session={session} />
       </TableCell>
     </TableRow>
   );

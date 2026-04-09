@@ -1,26 +1,7 @@
-# Gemini Assistant Guidelines
+See [LLM_INSTRUCTIONS.md](LLM_INSTRUCTIONS.md) for primary instructions.
 
-**IMPORTANT**: Please refer to [LLM_INSTRUCTIONS.md](./LLM_INSTRUCTIONS.md) for the master set of instructions, coding standards, and versioning protocols.
+## 🤖 Agent-Specific Overrides: Gemini
 
-## Git Workflow
-
-- **Commit Messages**:
-  - Must be concise.
-  - Must follow [Conventional Commits](https://www.conventionalcommits.org/) format (e.g., `feat: ...`, `fix: ...`, `docs: ...`, `chore: ...`).
-  - Examples:
-    - `feat: add user login`
-    - `fix: resolve crash on startup`
-    - `docs: update readme`
-
-- **Commit Frequency**:
-  - Commit every major change or distinct logical unit of work. Do not bundle unrelated changes.
-
-- **Pushing**:
-  - Push changes to the remote repository approximately every 5 commits, or after a significant milestone is reached.
-
-- **GitHub CLI**:
-  - The GitHub CLI (`gh`) is always available. Use it for creating pull requests, managing issues, and other GitHub-integrated workflows.
-
-## Model-Specific Notes
-*   Follow the Git Workflow described in the universal instructions.
-*   Prioritize "developer-first" UX in all implementations.
+*   **Focus**: Speed and concise answers.
+*   **Integration**: Check for Google-specific integrations (Gemini API, Google Workspace).
+*   **Context**: You have a large context window; use it to analyze multiple files at once.

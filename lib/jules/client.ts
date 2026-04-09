@@ -140,7 +140,6 @@ export class JulesAPIError extends Error {
 }
 
 const DEFAULT_API_BASE_URL = '/api/jules';
-const BUN_SERVER_URL = 'http://localhost:8080';
 
 export class JulesClient {
   private apiKey?: string;
@@ -264,7 +263,7 @@ export class JulesClient {
       // Extract repo name from source field (e.g., "sources/github/owner/repo")
       const sourcePath = source.source || source.name || "";
       const match = sourcePath.match(/sources\/github\/(.+)/);
-      const repoPath = match ? match[1] : sourcePath;
+      const repoPath = (match ? match[1] : sourcePath) || "Unknown Source";
 
       return {
         id: sourcePath, // Keep full path for API calls
@@ -490,9 +489,11 @@ export class JulesClient {
       const artifacts = activity.progressUpdated.artifacts || [];
       if (artifacts.length > 0) {
           const artifact = artifacts[0];
-          diff = artifact.changeSet?.gitPatch?.unidiffPatch || artifact.changeSet?.unidiffPatch;
-          bashOutput = artifact.bashOutput?.output;
-          media = artifact.media;
+          if (artifact) {
+              diff = artifact.changeSet?.gitPatch?.unidiffPatch || artifact.changeSet?.unidiffPatch;
+              bashOutput = artifact.bashOutput?.output;
+              media = artifact.media;
+          }
       }
     } else if (activity.sessionCompleted) {
       type = 'result';
@@ -683,7 +684,9 @@ export class JulesClient {
 
   // Template Management (Local API)
   private async fetchLocal<T>(endpoint: string, options: RequestInit = {}): Promise<T> {
-      const res = await fetch(endpoint, {
+      // Ensure we have a valid URL for server-side fetches if needed, though this is primarily client-side
+      const url = endpoint.startsWith('http') ? endpoint : endpoint;
+      const res = await fetch(url, {
           ...options,
           headers: { 'Content-Type': 'application/json', ...options.headers }
       });
@@ -692,25 +695,25 @@ export class JulesClient {
   }
 
   async listTemplates(): Promise<SessionTemplate[]> {
-    return this.fetchLocal<SessionTemplate[]>(`${BUN_SERVER_URL}/api/templates`);
+    return this.fetchLocal<SessionTemplate[]>('/api/templates');
   }
 
   async createTemplate(template: Omit<SessionTemplate, 'id' | 'createdAt' | 'updatedAt'>): Promise<SessionTemplate> {
-    return this.fetchLocal<SessionTemplate>(`${BUN_SERVER_URL}/api/templates`, {
+    return this.fetchLocal<SessionTemplate>('/api/templates', {
       method: 'POST',
       body: JSON.stringify(template),
     });
   }
 
   async updateTemplate(id: string, template: Partial<SessionTemplate>): Promise<SessionTemplate> {
-    return this.fetchLocal<SessionTemplate>(`${BUN_SERVER_URL}/api/templates/${id}`, {
+    return this.fetchLocal<SessionTemplate>(`/api/templates/${id}`, {
       method: 'PUT',
       body: JSON.stringify(template),
     });
   }
 
   async deleteTemplate(id: string): Promise<void> {
-    return this.fetchLocal<void>(`${BUN_SERVER_URL}/api/templates/${id}`, {
+    return this.fetchLocal<void>(`/api/templates/${id}`, {
       method: 'DELETE',
     });
   }
