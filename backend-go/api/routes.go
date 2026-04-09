@@ -651,6 +651,17 @@ func SetupRoutes(app *fiber.App) {
 	api.Get("/ast/modifications", getASTModificationsAPI)
 	api.Get("/ast/stats", getASTStatsAPI)
 
+	// Workflow tracing
+	api.Post("/traces", startTraceAPI)
+	api.Get("/traces", listTracesAPI)
+	api.Get("/traces/active", getActiveTracesAPI)
+	api.Get("/traces/stats", getTraceStatsAPI)
+	api.Get("/traces/:traceId", getTraceAPI)
+	api.Post("/traces/:traceId/steps", addTraceStepAPI)
+	api.Post("/traces/:traceId/steps/:stepId/complete", completeStepAPI)
+	api.Post("/traces/:traceId/finish", finishTraceAPI)
+	api.Post("/traces/:traceId/cancel", cancelTraceAPI)
+
 	// Daemon routes
 	api.Get("/daemon/status", getDaemonStatus)
 	api.Post("/daemon/status", postDaemonStatus)
@@ -2426,4 +2437,106 @@ func getASTModificationsAPI(c *fiber.Ctx) error {
 
 func getASTStatsAPI(c *fiber.Ctx) error {
 	return c.JSON(services.GetASTModificationStats())
+}
+
+func startTraceAPI(c *fiber.Ctx) error {
+	var req struct {
+		SessionID string   `json:"sessionId"`
+		Name      string   `json:"name"`
+		Tags      []string `json:"tags"`
+	}
+	if err := c.BodyParser(&req); err != nil {
+		return c.Status(400).JSON(fiber.Map{"error": "Invalid request"})
+	}
+	if req.Name == "" {
+		return c.Status(400).JSON(fiber.Map{"error": "name is required"})
+	}
+	trace := services.GetWorkflowTracer().StartTrace(req.SessionID, req.Name, req.Tags)
+	return c.JSON(trace)
+}
+
+func listTracesAPI(c *fiber.Ctx) error {
+	limit := c.QueryInt("limit", 50)
+	sessionID := c.Query("sessionId")
+	if sessionID != "" {
+		return c.JSON(services.GetWorkflowTracer().GetTracesForSession(sessionID))
+	}
+	return c.JSON(services.GetWorkflowTracer().GetAllTraces(limit))
+}
+
+func getActiveTracesAPI(c *fiber.Ctx) error {
+	return c.JSON(services.GetWorkflowTracer().GetActiveTraces())
+}
+
+func getTraceStatsAPI(c *fiber.Ctx) error {
+	return c.JSON(services.GetWorkflowTracer().GetTraceStats())
+}
+
+func getTraceAPI(c *fiber.Ctx) error {
+	traceID := c.Params("traceId")
+	trace, err := services.GetWorkflowTracer().GetTrace(traceID)
+	if err != nil {
+		return c.Status(404).JSON(fiber.Map{"error": err.Error()})
+	}
+	return c.JSON(trace)
+}
+
+func addTraceStepAPI(c *fiber.Ctx) error {
+	traceID := c.Params("traceId")
+	var req struct {
+		Name     string                 `json:"name"`
+		Type     string                 `json:"type"`
+		ParentID string                 `json:"parentId"`
+		Input    map[string]interface{} `json:"input"`
+	}
+	if err := c.BodyParser(&req); err != nil {
+		return c.Status(400).JSON(fiber.Map{"error": "Invalid request"})
+	}
+	step, err := services.GetWorkflowTracer().AddStep(traceID, req.Name, req.Type, req.ParentID, req.Input)
+	if err != nil {
+		return c.Status(404).JSON(fiber.Map{"error": err.Error()})
+	}
+	return c.JSON(step)
+}
+
+func completeStepAPI(c *fiber.Ctx) error {
+	traceID := c.Params("traceId")
+	stepID := c.Params("stepId")
+	var req struct {
+		Output map[string]interface{} `json:"output"`
+		Error  string                 `json:"error"`
+	}
+	c.BodyParser(&req)
+	var stepErr error
+	if req.Error != "" {
+		stepErr = fmt.Errorf(req.Error)
+	}
+	if err := services.GetWorkflowTracer().CompleteStep(traceID, stepID, req.Output, stepErr); err != nil {
+		return c.Status(404).JSON(fiber.Map{"error": err.Error()})
+	}
+	return c.JSON(fiber.Map{"status": "completed"})
+}
+
+func finishTraceAPI(c *fiber.Ctx) error {
+	traceID := c.Params("traceId")
+	var req struct {
+		Error string `json:"error"`
+	}
+	c.BodyParser(&req)
+	var traceErr error
+	if req.Error != "" {
+		traceErr = fmt.Errorf(req.Error)
+	}
+	if err := services.GetWorkflowTracer().FinishTrace(traceID, traceErr); err != nil {
+		return c.Status(404).JSON(fiber.Map{"error": err.Error()})
+	}
+	return c.JSON(fiber.Map{"status": "finished"})
+}
+
+func cancelTraceAPI(c *fiber.Ctx) error {
+	traceID := c.Params("traceId")
+	if err := services.GetWorkflowTracer().CancelTrace(traceID); err != nil {
+		return c.Status(404).JSON(fiber.Map{"error": err.Error()})
+	}
+	return c.JSON(fiber.Map{"status": "cancelled"})
 }
