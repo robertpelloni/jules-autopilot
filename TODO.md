@@ -52,7 +52,7 @@ This document tracks granular bugs, missing features, and technical debt. For ep
 - [x] **Auth Protocol Enforcement:** Locked down Jules Portal `AQ.A` tokens to use `x-goog-api-key` and strictly delete `Authorization` headers to prevent gateway blocks.
 - [x] **Connection Pooling:** SQLite connection pool configured with WAL mode, busy timeout (5s), NORMAL synchronous, 64MB cache, foreign keys enabled. Single-writer constraint honored with MaxOpenConns(1).
 - [x] **Cross-Session Memory Storage:** Implemented the `MemoryChunk` model for persistent, semantic history tracking.
-- [ ] **Vector Search Optimization:** Transition to a dedicated vector extension if the RAG index exceeds 50,000 chunks.
+- [x] **Vector Search Optimization:** Implemented two-phase approximate nearest neighbor search with dimensionality reduction (64-dim coarse filter + full cosine). Pre-computed norms, vector index service with rebuild/stats APIs, automatic index-then-fallback search path.
 
 ## Intelligence & Autonomy
 - [x] **Autonomous Self-Healing:** Autopilot now detects `FAILED` sessions and enqueues recovery plans.

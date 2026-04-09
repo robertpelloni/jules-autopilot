@@ -625,6 +625,10 @@ func SetupRoutes(app *fiber.App) {
 	api.Post("/budget/:workspaceId/check", checkBudgetAPI)
 	api.Delete("/budget/:workspaceId", removeBudgetAPI)
 
+	// Vector index
+	api.Get("/rag/index/stats", getVectorIndexStatsAPI)
+	api.Post("/rag/index/rebuild", rebuildVectorIndexAPI)
+
 	// Daemon routes
 	api.Get("/daemon/status", getDaemonStatus)
 	api.Post("/daemon/status", postDaemonStatus)
@@ -2272,4 +2276,15 @@ func removeBudgetAPI(c *fiber.Ctx) error {
 	workspaceID := c.Params("workspaceId")
 	services.RemoveWorkspaceBudget(workspaceID)
 	return c.JSON(fiber.Map{"status": "removed"})
+}
+
+func getVectorIndexStatsAPI(c *fiber.Ctx) error {
+	return c.JSON(services.GetVectorIndex().Stats())
+}
+
+func rebuildVectorIndexAPI(c *fiber.Ctx) error {
+	if err := services.GetVectorIndex().Rebuild(); err != nil {
+		return c.Status(500).JSON(fiber.Map{"error": err.Error()})
+	}
+	return c.JSON(services.GetVectorIndex().Stats())
 }
