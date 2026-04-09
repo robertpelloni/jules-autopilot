@@ -2,6 +2,26 @@
 
 All notable changes to this project will be documented in this file.
 
+## [2.1.0] - 2026-04-08
+
+### Added
+- **Predictive Cost Optimizer**: LLM-aware cost prediction engine that estimates token usage and cost per task type using historical data with heuristic fallback. Provider cost efficiency profiling with composite scoring. Monthly budget tracking with utilization, projection, and trend analysis. 14-day spending trend visualization.
+  - `GET /api/cost/predict` - Cost prediction per task type
+  - `GET /api/cost/providers` - Provider efficiency profiles
+  - `GET /api/cost/budget` - Monthly budget report
+  - `GET /api/cost/trend` - Daily spending trend
+  - `GET /api/cost/optimize/:taskType` - Optimal provider recommendation
+
+- **Swarm Dashboard UI**: Full visual dashboard for managing agent swarms. Create new swarms with strategy selection (parallel/sequential/pipeline), view agent status cards with role icons and color coding, event timeline, and budget tracking panel with utilization bar and spending trend chart. Integrated into sidebar navigation.
+
+- **15 New Cost Optimizer Tests**: Prediction with/without data, heuristic fallbacks, provider profiling, budget reporting, spending trends, provider selection optimization.
+
+### Changed
+- **Total Go tests**: 167 passing (up from 154)
+- **Total API routes**: ~95 unique handlers
+- **Frontend components**: 37 (added swarm-dashboard.tsx, lib/api/swarm.ts)
+- **Frontend bundle**: 672KB main + 7 vendor chunks
+
 ## [2.0.0] - 2026-04-08 — "Autonomous Fleet" Milestone
 
 ### Added

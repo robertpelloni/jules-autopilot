@@ -590,6 +590,13 @@ func SetupRoutes(app *fiber.App) {
 	api.Post("/swarms/:id/cancel", cancelSwarmAPI)
 	api.Post("/swarms/:id/decompose", decomposeSwarmAPI)
 
+	// Predictive cost optimizer
+	api.Get("/cost/predict", predictCostAPI)
+	api.Get("/cost/providers", getProviderProfilesAPI)
+	api.Get("/cost/budget", getBudgetReportAPI)
+	api.Get("/cost/trend", getSpendingTrendAPI)
+	api.Get("/cost/optimize/:taskType", optimizeProviderAPI)
+
 	// Daemon routes
 	api.Get("/daemon/status", getDaemonStatus)
 	api.Post("/daemon/status", postDaemonStatus)
@@ -2047,4 +2054,41 @@ func decomposeSwarmAPI(c *fiber.Ctx) error {
 		return c.Status(500).JSON(fiber.Map{"error": err.Error()})
 	}
 	return c.JSON(result)
+}
+
+func predictCostAPI(c *fiber.Ctx) error {
+	taskType := c.Query("task", "check_session")
+	prediction := services.PredictCost(taskType)
+	return c.JSON(prediction)
+}
+
+func getProviderProfilesAPI(c *fiber.Ctx) error {
+	profiles := services.GetProviderCostProfiles()
+	return c.JSON(profiles)
+}
+
+func getBudgetReportAPI(c *fiber.Ctx) error {
+	dailyBudget := float64(c.QueryInt("dailyBudgetCents", 100))
+	report := services.GetBudgetReport(dailyBudget)
+	return c.JSON(report)
+}
+
+func getSpendingTrendAPI(c *fiber.Ctx) error {
+	days := c.QueryInt("days", 30)
+	trend, err := services.GetSpendingTrend(days)
+	if err != nil {
+		return c.Status(500).JSON(fiber.Map{"error": err.Error()})
+	}
+	return c.JSON(trend)
+}
+
+func optimizeProviderAPI(c *fiber.Ctx) error {
+	taskType := c.Params("taskType")
+	provider, model, strategy := services.OptimizeProviderSelection(taskType)
+	return c.JSON(fiber.Map{
+		"taskType": taskType,
+		"provider": provider,
+		"model":    model,
+		"strategy": strategy,
+	})
 }

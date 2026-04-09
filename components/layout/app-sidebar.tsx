@@ -23,8 +23,8 @@ interface AppSidebarProps {
   onToggleCollapse: () => void;
   onSessionSelect: (session: Session | string) => void;
   selectedSessionId?: string;
-  currentView: 'sessions' | 'templates' | 'kanban' | 'debates' | 'logs' | 'health' | 'audit';
-  onViewChange: (view: 'sessions' | 'templates' | 'kanban' | 'debates' | 'logs' | 'health' | 'audit') => void;
+  currentView: 'sessions' | 'templates' | 'kanban' | 'debates' | 'logs' | 'health' | 'audit' | 'swarms';
+  onViewChange: (view: 'sessions' | 'templates' | 'kanban' | 'debates' | 'logs' | 'health' | 'audit' | 'swarms') => void;
 }
 
 export function AppSidebar({
@@ -49,6 +49,7 @@ export function AppSidebar({
     { id: 'logs', label: 'System Logs', icon: Terminal },
     { id: 'health', label: 'Health', icon: HeartPulse },
     { id: 'audit', label: 'Audit Trail', icon: Shield },
+    { id: 'swarms', label: 'Agent Swarms', icon: Users },
   ] as const;
 
   return (

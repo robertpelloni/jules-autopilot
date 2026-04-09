@@ -7,14 +7,15 @@ import { DebateHistoryList } from "@/components/debate-history-list";
 import { SystemLogs } from "@/components/system-logs";
 import { SystemHealthDashboard } from "@/components/system-health-dashboard";
 import { AuditTrail } from "@/components/audit-trail";
+import { SwarmDashboard } from "@/components/swarm-dashboard";
 import { Session, Activity, SessionTemplate } from '@jules/shared';
 
 interface MainContentProps {
-  view: 'sessions' | 'templates' | 'kanban' | 'debates' | 'logs' | 'health' | 'audit';
+  view: 'sessions' | 'templates' | 'kanban' | 'debates' | 'logs' | 'health' | 'audit' | 'swarms';
   selectedSession: Session | null;
   onSessionSelect: (session: Session | string) => void;
   onStartSessionFromTemplate: (template: SessionTemplate) => void;
-  onViewChange: (view: 'sessions' | 'templates' | 'kanban' | 'debates' | 'logs' | 'health' | 'audit') => void;
+  onViewChange: (view: 'sessions' | 'templates' | 'kanban' | 'debates' | 'logs' | 'health' | 'audit' | 'swarms') => void;
   showCodeDiffs: boolean;
   onToggleCodeDiffs: (show: boolean) => void;
   onActivitiesChange: (activities: Activity[]) => void;
@@ -59,6 +60,8 @@ export function MainContent({
           <SystemHealthDashboard />
         ) : view === "audit" ? (
           <AuditTrail />
+        ) : view === "swarms" ? (
+          <SwarmDashboard />
         ) : selectedSession ? (
           <ActivityFeed
             session={selectedSession}

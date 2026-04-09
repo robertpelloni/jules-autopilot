@@ -62,7 +62,7 @@ For granular tasks and immediate bug fixes, see `TODO.md`.
 ## Milestone: v2.0 — "Autonomous Fleet"
 * [x] **Multi-Agent Collaboration:** Orchestrate parallel agent swarms working on decomposed sub-tasks with shared context via the RAG mesh and real-time coordination events. Swarms support parallel, sequential, and pipeline strategies with LLM-powered task decomposition and automatic agent lifecycle management.
 * [ ] **Plugin Marketplace:** Browseable registry of community Wasm plugins with install-from-URL, version management, and signature verification in the dashboard UI.
-* [ ] **Predictive Cost Optimizer:** Machine learning model trained on provider telemetry to predict optimal routing decisions, token budgets, and session timing for minimum cost per task.
+* [x] **Predictive Cost Optimizer:** Token budget prediction engine with historical analysis, provider efficiency profiling, monthly budget tracking with utilization/projection, and optimal provider routing recommendations.
 
 ## Milestone: v3.0 — "Neural Autonomy"
 * [x] **Observability & Health Checks:** Prometheus-compatible `/metrics` endpoint, structured health checks for 7 dependencies (database, disk, memory, git, queue, scheduler, websocket), trend analysis API, system runtime info, and a dedicated Health dashboard with dependency check cards, anomaly alerts, token budget tracker, and Shadow Pilot control panel.
