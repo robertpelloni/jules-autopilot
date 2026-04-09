@@ -611,6 +611,12 @@ func SetupRoutes(app *fiber.App) {
 	api.Delete("/plugins/:id", uninstallPluginAPI)
 	api.Patch("/plugins/:id/config", updatePluginConfigAPI)
 
+	// Wasm sandbox
+	api.Get("/sandbox/status", getSandboxStatusAPI)
+	api.Post("/sandbox/warmup", warmupSandboxAPI)
+	api.Post("/sandbox/execute/:pluginId", executePluginAPI)
+	api.Post("/sandbox/validate", validateWasmAPI)
+
 	// Daemon routes
 	api.Get("/daemon/status", getDaemonStatus)
 	api.Post("/daemon/status", postDaemonStatus)
@@ -2191,4 +2197,29 @@ func updatePluginConfigAPI(c *fiber.Ctx) error {
 		return c.Status(404).JSON(fiber.Map{"error": err.Error()})
 	}
 	return c.JSON(fiber.Map{"status": "updated"})
+}
+
+func getSandboxStatusAPI(c *fiber.Ctx) error {
+	return c.JSON(services.GetSandboxStatus())
+}
+
+func warmupSandboxAPI(c *fiber.Ctx) error {
+	services.WarmupSandbox()
+	return c.JSON(fiber.Map{"status": "warmed_up"})
+}
+
+func executePluginAPI(c *fiber.Ctx) error {
+	pluginID := c.Params("pluginId")
+	result, err := services.GetWasmSandbox().ExecutePlugin(pluginID, c.Body())
+	if err != nil {
+		return c.Status(500).JSON(fiber.Map{"error": err.Error(), "result": result})
+	}
+	return c.JSON(result)
+}
+
+func validateWasmAPI(c *fiber.Ctx) error {
+	if err := services.ValidateWasmBinary(c.Body()); err != nil {
+		return c.Status(400).JSON(fiber.Map{"valid": false, "error": err.Error()})
+	}
+	return c.JSON(fiber.Map{"valid": true})
 }
