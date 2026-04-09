@@ -2,20 +2,38 @@ package db
 
 import (
 	"log"
+	"time"
 
 	"github.com/glebarez/sqlite"
 	"github.com/jules-autopilot/backend/models"
 	"gorm.io/gorm"
+	"gorm.io/gorm/logger"
 )
 
 var DB *gorm.DB
 
 func InitDB() {
 	var err error
-	DB, err = gorm.Open(sqlite.Open("dev.db"), &gorm.Config{})
+
+	// Open SQLite with WAL mode for concurrent read/write performance
+	dsn := "dev.db?_journal_mode=WAL&_busy_timeout=5000&_synchronous=NORMAL&_cache_size=-64000&_foreign_keys=1"
+	DB, err = gorm.Open(sqlite.Open(dsn), &gorm.Config{
+		Logger: logger.Default.LogMode(logger.Silent),
+	})
 	if err != nil {
 		log.Fatalf("failed to connect database: %v", err)
 	}
+
+	// Configure connection pool for SQLite
+	sqlDB, err := DB.DB()
+	if err != nil {
+		log.Fatalf("failed to get underlying DB: %v", err)
+	}
+
+	sqlDB.SetMaxOpenConns(1) // SQLite single-writer
+	sqlDB.SetMaxIdleConns(1)
+	sqlDB.SetConnMaxLifetime(0)
+	sqlDB.SetConnMaxIdleTime(30 * time.Minute)
 
 	// AutoMigrate models
 	err = DB.AutoMigrate(

@@ -617,6 +617,14 @@ func SetupRoutes(app *fiber.App) {
 	api.Post("/sandbox/execute/:pluginId", executePluginAPI)
 	api.Post("/sandbox/validate", validateWasmAPI)
 
+	// Workspace budget enforcement
+	api.Get("/budget/status", getBudgetStatusesAPI)
+	api.Get("/budget/stats", getBudgetStatsAPI)
+	api.Get("/budget/:workspaceId", getBudgetStatusAPI)
+	api.Post("/budget/:workspaceId", setBudgetAPI)
+	api.Post("/budget/:workspaceId/check", checkBudgetAPI)
+	api.Delete("/budget/:workspaceId", removeBudgetAPI)
+
 	// Daemon routes
 	api.Get("/daemon/status", getDaemonStatus)
 	api.Post("/daemon/status", postDaemonStatus)
@@ -2222,4 +2230,46 @@ func validateWasmAPI(c *fiber.Ctx) error {
 		return c.Status(400).JSON(fiber.Map{"valid": false, "error": err.Error()})
 	}
 	return c.JSON(fiber.Map{"valid": true})
+}
+
+func getBudgetStatusesAPI(c *fiber.Ctx) error {
+	return c.JSON(services.GetAllBudgetStatuses())
+}
+
+func getBudgetStatsAPI(c *fiber.Ctx) error {
+	return c.JSON(services.GetBudgetStats())
+}
+
+func getBudgetStatusAPI(c *fiber.Ctx) error {
+	workspaceID := c.Params("workspaceId")
+	return c.JSON(services.GetBudgetStatus(workspaceID))
+}
+
+func setBudgetAPI(c *fiber.Ctx) error {
+	workspaceID := c.Params("workspaceId")
+	var budget services.WorkspaceBudget
+	if err := c.BodyParser(&budget); err != nil {
+		return c.Status(400).JSON(fiber.Map{"error": "Invalid request"})
+	}
+	budget.WorkspaceID = workspaceID
+	if err := services.SetWorkspaceBudget(budget); err != nil {
+		return c.Status(400).JSON(fiber.Map{"error": err.Error()})
+	}
+	return c.JSON(fiber.Map{"status": "set"})
+}
+
+func checkBudgetAPI(c *fiber.Ctx) error {
+	workspaceID := c.Params("workspaceId")
+	var req struct {
+		EstimatedCostCents float64 `json:"estimatedCostCents"`
+	}
+	c.BodyParser(&req)
+	allowed, reason := services.CheckBudgetAllowance(workspaceID, req.EstimatedCostCents)
+	return c.JSON(fiber.Map{"allowed": allowed, "reason": reason})
+}
+
+func removeBudgetAPI(c *fiber.Ctx) error {
+	workspaceID := c.Params("workspaceId")
+	services.RemoveWorkspaceBudget(workspaceID)
+	return c.JSON(fiber.Map{"status": "removed"})
 }

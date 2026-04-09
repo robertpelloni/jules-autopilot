@@ -50,7 +50,7 @@ This document tracks granular bugs, missing features, and technical debt. For ep
 
 ## Technical Debt & Refactoring
 - [x] **Auth Protocol Enforcement:** Locked down Jules Portal `AQ.A` tokens to use `x-goog-api-key` and strictly delete `Authorization` headers to prevent gateway blocks.
-- [ ] **Prisma Connection Pooling:** Evaluate `connection_limit` for high-concurrency swarm operations in the Docker environment.
+- [x] **Connection Pooling:** SQLite connection pool configured with WAL mode, busy timeout (5s), NORMAL synchronous, 64MB cache, foreign keys enabled. Single-writer constraint honored with MaxOpenConns(1).
 - [x] **Cross-Session Memory Storage:** Implemented the `MemoryChunk` model for persistent, semantic history tracking.
 - [ ] **Vector Search Optimization:** Transition to a dedicated vector extension if the RAG index exceeds 50,000 chunks.
 
