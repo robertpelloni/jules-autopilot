@@ -86,6 +86,10 @@ func normalizeProvider(provider string) string {
 
 func defaultModelForProvider(provider string) string {
 	switch normalizeProvider(provider) {
+	case "lmstudio":
+		return "gemma-4-e2b-uncensored-hauhaucs-aggressive"
+	case "openrouter":
+		return "free"
 	case "anthropic":
 		return "claude-3-5-sonnet-latest"
 	case "gemini":
@@ -123,6 +127,12 @@ func getSupervisorAPIKey(provider string, explicit *string) string {
 	}
 
 	switch strings.ToLower(strings.TrimSpace(provider)) {
+	case "lmstudio":
+		return "placeholder" // LM Studio usually doesn't need a key
+	case "openrouter":
+		if key := strings.TrimSpace(os.Getenv("OPENROUTER_API_KEY")); key != "" {
+			return key
+		}
 	case "anthropic":
 		if key := strings.TrimSpace(os.Getenv("ANTHROPIC_API_KEY")); key != "" {
 			return key
@@ -154,8 +164,18 @@ func generateLLMText(primaryProvider, primaryApiKey, primaryModel, systemPrompt 
 	primaryModel = resolveModel(primaryProvider, primaryModel)
 
 	providers := []string{primaryProvider}
-	for _, p := range []string{"openai", "anthropic", "gemini"} {
-		if p != primaryProvider {
+	
+	// Intelligent Fallback Chain
+	fallbacks := []string{"lmstudio", "openrouter", "openai", "anthropic", "gemini"}
+	for _, p := range fallbacks {
+		exists := false
+		for _, existing := range providers {
+			if existing == p {
+				exists = true
+				break
+			}
+		}
+		if !exists {
 			providers = append(providers, p)
 		}
 	}
@@ -289,6 +309,13 @@ func generateRiskScore(provider, apiKey, model, topic, summary string, fallback 
 func generateOpenAIText(apiKey, model, systemPrompt string, messages []LLMMessage) (LLMResult, error) {
 	start := time.Now()
 
+	provider := "openai"
+	if strings.HasPrefix(model, "gemma") || strings.Contains(model, "lmstudio") {
+		provider = "lmstudio"
+	} else if strings.Contains(model, "openrouter") || strings.Contains(apiKey, "sk-or-") {
+		provider = "openrouter"
+	}
+
 	requestMessages := make([]map[string]string, 0, len(messages)+1)
 	if strings.TrimSpace(systemPrompt) != "" {
 		requestMessages = append(requestMessages, map[string]string{"role": "system", "content": systemPrompt})
@@ -303,12 +330,25 @@ func generateOpenAIText(apiKey, model, systemPrompt string, messages []LLMMessag
 		"temperature": 0.2,
 	})
 
-	req, err := http.NewRequest(http.MethodPost, "https://api.openai.com/v1/chat/completions", bytes.NewReader(requestBody))
+	apiURL := "https://api.openai.com/v1/chat/completions"
+	switch provider {
+	case "lmstudio":
+		apiURL = "http://localhost:1234/v1/chat/completions"
+	case "openrouter":
+		apiURL = "https://openrouter.ai/api/v1/chat/completions"
+	}
+
+	req, err := http.NewRequest(http.MethodPost, apiURL, bytes.NewReader(requestBody))
 	if err != nil {
 		return LLMResult{}, err
 	}
 	req.Header.Set("Authorization", "Bearer "+apiKey)
 	req.Header.Set("Content-Type", "application/json")
+
+	if provider == "openrouter" {
+		req.Header.Set("HTTP-Referer", "https://jules-autopilot.render.com")
+		req.Header.Set("X-Title", "Jules Autopilot")
+	}
 
 	resp, err := http.DefaultClient.Do(req)
 	if err != nil {

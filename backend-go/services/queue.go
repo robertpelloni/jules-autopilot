@@ -256,6 +256,22 @@ func IsWorkerRunning() bool {
 func getSettings() (models.KeeperSettings, error) {
 	var settings models.KeeperSettings
 	err := db.DB.First(&settings, "id = ?", "default").Error
+
+	// Override with environment variables if present (Env-First Architecture)
+	if envKey := os.Getenv("JULES_API_KEY"); envKey != "" {
+		settings.JulesApiKey = &envKey
+		settings.IsEnabled = true // Auto-enable if key is provided via ENV
+	}
+	if supervisorKey := os.Getenv("SUPERVISOR_API_KEY"); supervisorKey != "" {
+		settings.SupervisorApiKey = &supervisorKey
+	}
+	if supervisorProvider := os.Getenv("SUPERVISOR_PROVIDER"); supervisorProvider != "" {
+		settings.SupervisorProvider = supervisorProvider
+	}
+	if supervisorModel := os.Getenv("SUPERVISOR_MODEL"); supervisorModel != "" {
+		settings.SupervisorModel = supervisorModel
+	}
+
 	return settings, err
 }
 
