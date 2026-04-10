@@ -1,6 +1,6 @@
 module github.com/jules-autopilot/backend
 
-go 1.26.1
+go 1.26.0
 
 require (
 	github.com/glebarez/sqlite v1.11.0
