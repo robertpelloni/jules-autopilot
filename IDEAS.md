@@ -31,3 +31,7 @@ This document serves as a brainstorming hub for future features, architectural s
 ## 5. Security & Isolation
 * **Wasm/Firecracker Sandboxing:** Execute all agent-generated shell commands and code within ephemeral Firecracker microVMs or WebAssembly sandboxes to guarantee zero-trust execution.
 * **Secret-Scanning Pre-Commit Hook:** A specialized agent that runs locally and scans every outbound payload and commit for accidental API key or secret exposures.
+## 6. Plugin Ecosystem & Extensions
+* **Community Plugin Registry:** Launch a public registry where developers can publish, share, and discover Wasm plugins specifically built for Jules Autopilot.
+* **Smart Plugin Suggestions:** Use LLMs to analyze session failures or code requirements and dynamically suggest or auto-install relevant plugins to assist with the task.
+* **Plugin Analytics Dashboard:** Track granular metrics on plugin execution times, error rates, and resource usage to identify bottlenecks or malicious plugins.

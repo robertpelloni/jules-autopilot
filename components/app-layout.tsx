@@ -9,8 +9,8 @@ import type { Session } from '@jules/shared';
 
 export interface AppLayoutProps {
   children: React.ReactNode;
-  currentView: 'sessions' | 'templates' | 'kanban' | 'debates' | 'logs' | 'health' | 'audit' | 'swarms';
-  onViewChange: (view: 'sessions' | 'templates' | 'kanban' | 'debates' | 'logs' | 'health' | 'audit' | 'swarms') => void;
+  currentView: 'sessions' | 'templates' | 'kanban' | 'debates' | 'logs' | 'health' | 'audit' | 'swarms' | 'plugins';
+  onViewChange: (view: 'sessions' | 'templates' | 'kanban' | 'debates' | 'logs' | 'health' | 'audit' | 'swarms' | 'plugins') => void;
   selectedSessionId?: string;
   onSessionSelect: (session: Session | string) => void;
 }
