@@ -41,8 +41,8 @@ SwarmAgent, SwarmEvent, SupervisorState, TokenUsage, User,
 VerificationToken, Workspace, WorkspaceMember
 
 ## Remaining Roadmap (2 items)
-- **WebAssembly Plugin Isolation** - Requires Wasm runtime dependency
-- **Plugin Marketplace** - UI + registry, depends on Wasm isolation
+- ~~**WebAssembly Plugin Isolation**~~ - (Completed) Pure-Go Wasm sandbox implemented via wazero.
+- ~~**Plugin Marketplace**~~ - (Completed) UI and registry integrated.
 
 ## Validation (All Passing ✅)
 ```

@@ -2,6 +2,12 @@
 
 All notable changes to this project will be documented in this file.
 
+## [3.6.0] - 2026-04-10
+
+### Added
+- **Plugin Marketplace:** Full UI for viewing, installing, and managing Wasm plugins integrated into the Command Center.
+- **WebAssembly Plugin Isolation:** Pure-Go Wasm sandbox via wazero, providing secure, isolated execution for plugins with memory, CPU, and network controls.
+
 ## [2.1.0] - 2026-04-08
 
 ### Added

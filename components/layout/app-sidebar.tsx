@@ -1,4 +1,6 @@
 import { Button } from "@/components/ui/button";
+import { Box } from "lucide-react";
+
 import { 
   ChevronLeft, 
   ChevronRight, 
@@ -23,8 +25,8 @@ interface AppSidebarProps {
   onToggleCollapse: () => void;
   onSessionSelect: (session: Session | string) => void;
   selectedSessionId?: string;
-  currentView: 'sessions' | 'templates' | 'kanban' | 'debates' | 'logs' | 'health' | 'audit' | 'swarms';
-  onViewChange: (view: 'sessions' | 'templates' | 'kanban' | 'debates' | 'logs' | 'health' | 'audit' | 'swarms') => void;
+  currentView: 'sessions' | 'templates' | 'kanban' | 'debates' | 'logs' | 'health' | 'audit' | 'swarms' | 'plugins';
+  onViewChange: (view: 'sessions' | 'templates' | 'kanban' | 'debates' | 'logs' | 'health' | 'audit' | 'swarms' | 'plugins') => void;
 }
 
 export function AppSidebar({
@@ -50,6 +52,7 @@ export function AppSidebar({
     { id: 'health', label: 'Health', icon: HeartPulse },
     { id: 'audit', label: 'Audit Trail', icon: Shield },
     { id: 'swarms', label: 'Agent Swarms', icon: Users },
+    { id: 'plugins', label: 'Plugins', icon: Box },
   ] as const;
 
   return (
