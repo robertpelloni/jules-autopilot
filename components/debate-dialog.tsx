@@ -299,10 +299,10 @@ export function DebateDialog({
       <DialogTrigger asChild>
         {trigger}
       </DialogTrigger>
-      <DialogContent className="sm:max-w-[700px] h-[80vh] flex flex-col bg-zinc-950 border-zinc-800 text-white p-0 gap-0">
+      <DialogContent className="sm:max-w-[700px] h-[80vh] flex flex-col bg-zinc-950 border-zinc-800 text-white p-0 gap-0" aria-describedby="debate-dialog-description">
         <DialogHeader className="p-6 pb-4 border-b border-zinc-800">
           <DialogTitle>Start Multi-Agent Debate</DialogTitle>
-          <DialogDescription>
+          <DialogDescription id="debate-dialog-description">
             Configure participants and topic for the debate session.
           </DialogDescription>
         </DialogHeader>

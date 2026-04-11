@@ -82,7 +82,7 @@ export function SessionReplayDialog({ sessionId, open, onOpenChange }: SessionRe
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-4xl h-[85vh] bg-zinc-950 border-white/10 text-white flex flex-col p-0 shadow-2xl">
+      <DialogContent className="max-w-4xl h-[85vh] bg-zinc-950 border-white/10 text-white flex flex-col p-0 shadow-2xl" aria-describedby="session-replay-description">
         <DialogHeader className="px-6 py-4 border-b border-white/10 shrink-0">
           <div className="flex items-center justify-between">
             <div className="space-y-1">
@@ -90,7 +90,7 @@ export function SessionReplayDialog({ sessionId, open, onOpenChange }: SessionRe
                 <History className="h-4 w-4 text-purple-500" />
                 <DialogTitle className="text-lg font-bold tracking-tight uppercase">Cognitive Replay</DialogTitle>
               </div>
-              <DialogDescription className="text-zinc-500 font-mono text-[10px] uppercase tracking-widest">
+              <DialogDescription id="session-replay-description" className="text-zinc-500 font-mono text-[10px] uppercase tracking-widest">
                 {data?.title || "Loading Session Timeline..."}
               </DialogDescription>
             </div>

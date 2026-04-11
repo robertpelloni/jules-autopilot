@@ -160,9 +160,12 @@ export function SettingsDialog({ open: propOpen, onOpenChange: propOnOpenChange,
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       {trigger && <DialogTrigger asChild>{trigger}</DialogTrigger>}
-      <DialogContent className="max-w-3xl bg-zinc-950 border-white/10 text-white h-[80vh] flex flex-col p-0 shadow-2xl">
+      <DialogContent className="max-w-3xl bg-zinc-950 border-white/10 text-white h-[80vh] flex flex-col p-0 shadow-2xl" aria-describedby="settings-dialog-description">
         <DialogHeader className="px-6 py-4 border-b border-white/10">
           <DialogTitle>Core Configuration</DialogTitle>
+          <div id="settings-dialog-description" className="sr-only">
+            Configure integrations, fleet intelligence, submodules, supervisor settings, and more.
+          </div>
         </DialogHeader>
         <Tabs defaultValue="integrations" className="flex-1 flex flex-col min-h-0">
           <div className="px-6 pt-4">

@@ -1,10 +1,109 @@
 package models
 
 import (
+	"encoding/json"
 	"time"
 
 	"gorm.io/gorm"
 )
+
+type KeeperSettingsDTO struct {
+	ID                         string        `json:"id"`
+	IsEnabled                  bool          `json:"isEnabled"`
+	AutoSwitch                 bool          `json:"autoSwitch"`
+	CheckIntervalSeconds       int           `json:"checkIntervalSeconds"`
+	InactivityThresholdMinutes int           `json:"inactivityThresholdMinutes"`
+	ActiveWorkThresholdMinutes int           `json:"activeWorkThresholdMinutes"`
+	Messages                   []string      `json:"messages"`
+	CustomMessages             []string      `json:"customMessages"`
+	DebateEnabled              bool          `json:"debateEnabled"`
+	DebateParticipants         []Participant `json:"debateParticipants"`
+	SmartPilotEnabled          bool          `json:"smartPilotEnabled"`
+	SupervisorProvider         string        `json:"supervisorProvider"`
+	SupervisorApiKey           *string       `json:"supervisorApiKey"`
+	JulesApiKey                *string       `json:"julesApiKey"`
+	SupervisorModel            string        `json:"supervisorModel"`
+	ContextMessageCount        int           `json:"contextMessageCount"`
+	ResumePaused               bool          `json:"resumePaused"`
+	UserID                     *string       `json:"userId"`
+	UpdatedAt                  time.Time     `json:"updatedAt"`
+}
+
+type Participant struct {
+	ID           string `json:"id"`
+	Name         string `json:"name"`
+	Role         string `json:"role"`
+	SystemPrompt string `json:"systemPrompt"`
+	Provider     string `json:"provider"`
+	Model        string `json:"model"`
+	ApiKey       string `json:"apiKey,omitempty"`
+}
+
+func (s *KeeperSettings) ToDTO() KeeperSettingsDTO {
+	dto := KeeperSettingsDTO{
+		ID:                         s.ID,
+		IsEnabled:                  s.IsEnabled,
+		AutoSwitch:                 s.AutoSwitch,
+		CheckIntervalSeconds:       s.CheckIntervalSeconds,
+		InactivityThresholdMinutes: s.InactivityThresholdMinutes,
+		ActiveWorkThresholdMinutes: s.ActiveWorkThresholdMinutes,
+		DebateEnabled:              s.DebateEnabled,
+		SmartPilotEnabled:          s.SmartPilotEnabled,
+		SupervisorProvider:         s.SupervisorProvider,
+		SupervisorApiKey:           s.SupervisorApiKey,
+		JulesApiKey:                s.JulesApiKey,
+		SupervisorModel:            s.SupervisorModel,
+		ContextMessageCount:        s.ContextMessageCount,
+		ResumePaused:               s.ResumePaused,
+		UserID:                     s.UserID,
+		UpdatedAt:                  s.UpdatedAt,
+	}
+
+	_ = json.Unmarshal([]byte(s.Messages), &dto.Messages)
+	if len(dto.Messages) == 0 {
+		dto.Messages = []string{}
+	}
+	_ = json.Unmarshal([]byte(s.CustomMessages), &dto.CustomMessages)
+	if len(dto.CustomMessages) == 0 {
+		dto.CustomMessages = []string{}
+	}
+	_ = json.Unmarshal([]byte(s.DebateParticipants), &dto.DebateParticipants)
+	if len(dto.DebateParticipants) == 0 {
+		dto.DebateParticipants = []Participant{}
+	}
+
+	return dto
+}
+
+func (dto *KeeperSettingsDTO) ToModel() KeeperSettings {
+	s := KeeperSettings{
+		ID:                         dto.ID,
+		IsEnabled:                  dto.IsEnabled,
+		AutoSwitch:                 dto.AutoSwitch,
+		CheckIntervalSeconds:       dto.CheckIntervalSeconds,
+		InactivityThresholdMinutes: dto.InactivityThresholdMinutes,
+		ActiveWorkThresholdMinutes: dto.ActiveWorkThresholdMinutes,
+		DebateEnabled:              dto.DebateEnabled,
+		SmartPilotEnabled:          dto.SmartPilotEnabled,
+		SupervisorProvider:         dto.SupervisorProvider,
+		SupervisorApiKey:           dto.SupervisorApiKey,
+		JulesApiKey:                dto.JulesApiKey,
+		SupervisorModel:            dto.SupervisorModel,
+		ContextMessageCount:        dto.ContextMessageCount,
+		ResumePaused:               dto.ResumePaused,
+		UserID:                     dto.UserID,
+		UpdatedAt:                  dto.UpdatedAt,
+	}
+
+	msgs, _ := json.Marshal(dto.Messages)
+	s.Messages = string(msgs)
+	cmsgs, _ := json.Marshal(dto.CustomMessages)
+	s.CustomMessages = string(cmsgs)
+	parts, _ := json.Marshal(dto.DebateParticipants)
+	s.DebateParticipants = string(parts)
+
+	return s
+}
 
 // Account represents the Account model from Prisma
 type Account struct {
@@ -85,6 +184,8 @@ type KeeperSettings struct {
 	ActiveWorkThresholdMinutes int            `gorm:"default:5" json:"activeWorkThresholdMinutes"`
 	Messages                   string         `json:"messages"`
 	CustomMessages             string         `json:"customMessages"`
+	DebateEnabled              bool           `gorm:"default:false" json:"debateEnabled"`
+	DebateParticipants         string         `json:"debateParticipants"`
 	SmartPilotEnabled          bool           `gorm:"default:false" json:"smartPilotEnabled"`
 	SupervisorProvider         string         `gorm:"default:openai" json:"supervisorProvider"`
 	SupervisorApiKey           *string        `json:"supervisorApiKey"`

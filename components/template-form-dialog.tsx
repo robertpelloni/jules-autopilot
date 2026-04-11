@@ -134,7 +134,7 @@ export function TemplateFormDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-[600px] border-purple-500/20 shadow-[0_0_15px_rgba(168,85,247,0.15)] bg-zinc-950 text-white">
+      <DialogContent className="sm:max-w-[600px] border-purple-500/20 shadow-[0_0_15px_rgba(168,85,247,0.15)] bg-zinc-950 text-white" aria-describedby="template-form-description">
         <DialogHeader>
           <DialogTitle>
             {template
@@ -143,7 +143,7 @@ export function TemplateFormDialog({
                 : "Edit Template"
               : "Create New Template"}
           </DialogTitle>
-          <DialogDescription>
+          <DialogDescription id="template-form-description">
             {template
               ? isPrebuilt
                 ? "This is a system template. Saving will create a customizable copy."

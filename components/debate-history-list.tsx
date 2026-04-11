@@ -187,10 +187,10 @@ export function DebateHistoryList({ onRefresh: _onRefresh }: DebateHistoryListPr
             )}
 
             <Dialog open={!!deleteId} onOpenChange={(open) => !open && setDeleteId(null)}>
-                <DialogContent className="bg-zinc-950 border-zinc-800 text-white">
+                <DialogContent className="bg-zinc-950 border-zinc-800 text-white" aria-describedby="delete-debate-description">
                     <DialogHeader>
                         <DialogTitle>Delete Debate</DialogTitle>
-                        <DialogDescription className="text-zinc-400">
+                        <DialogDescription id="delete-debate-description" className="text-zinc-400">
                             Are you sure you want to delete this debate? This action cannot be undone.
                         </DialogDescription>
                     </DialogHeader>

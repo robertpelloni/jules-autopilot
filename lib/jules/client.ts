@@ -1,4 +1,5 @@
 import { safeLocalStorage } from '@/lib/utils';
+import { globalRequestQueue } from './request-queue';
 import type {
   Source,
   Session,
@@ -218,12 +219,19 @@ export class JulesClient {
       if (typeof window === 'undefined') {
         console.log(`[JulesClient] Outgoing to Google: auth=${!!this.authToken} key=${!!this.apiKey}`);
       }
+
+      // THROTTLE GOOGLE API REQUESTS
+      return globalRequestQueue.add(() => this.performRequest<T>(url, options, headers));
     } else {
       // Local daemon headers
       if (this.apiKey) headers['X-Jules-Api-Key'] = this.apiKey;
       if (this.authToken) headers['X-Jules-Auth-Token'] = this.authToken;
     }
+    
+    return this.performRequest<T>(url, options, headers);
+  }
 
+  private async performRequest<T>(url: string, options: RequestInit, headers: Record<string, string>): Promise<T> {
     try {
       // USE MANUAL FETCH WITHOUT MIDDLEWARE SPREADING
       const response = await fetch(url, {

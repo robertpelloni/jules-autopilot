@@ -1492,30 +1492,33 @@ func getKeeperSettings(c *fiber.Ctx) error {
 	if err := db.DB.First(&settings, "id = ?", "default").Error; err != nil {
 		return c.Status(404).JSON(fiber.Map{"error": "Settings not found"})
 	}
-	return c.JSON(settings)
+	return c.JSON(settings.ToDTO())
 }
 
 func updateKeeperSettings(c *fiber.Ctx) error {
+	var dto models.KeeperSettingsDTO
+	if err := c.BodyParser(&dto); err != nil {
+		return c.Status(400).JSON(fiber.Map{"error": "Invalid request body: " + err.Error()})
+	}
+
 	var settings models.KeeperSettings
 	if err := db.DB.First(&settings, "id = ?", "default").Error; err != nil {
 		// If not found, create new one
+		settings = dto.ToModel()
 		settings.ID = "default"
-		if err := c.BodyParser(&settings); err != nil {
-			return c.Status(400).JSON(fiber.Map{"error": "Invalid request body"})
-		}
 		if err := db.DB.Create(&settings).Error; err != nil {
 			return c.Status(500).JSON(fiber.Map{"error": err.Error()})
 		}
 	} else {
-		if err := c.BodyParser(&settings); err != nil {
-			return c.Status(400).JSON(fiber.Map{"error": "Invalid request body"})
-		}
-		settings.UpdatedAt = time.Now()
-		if err := db.DB.Save(&settings).Error; err != nil {
+		updated := dto.ToModel()
+		updated.ID = "default"
+		updated.UpdatedAt = time.Now()
+		if err := db.DB.Save(&updated).Error; err != nil {
 			return c.Status(500).JSON(fiber.Map{"error": err.Error()})
 		}
+		settings = updated
 	}
-	return c.JSON(settings)
+	return c.JSON(settings.ToDTO())
 }
 
 func getMockSessions() []models.JulesSession {

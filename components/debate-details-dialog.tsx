@@ -92,12 +92,12 @@ export function DebateDetailsDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-4xl max-h-[85vh] overflow-y-auto bg-zinc-950 border-zinc-800 text-white">
+      <DialogContent className="max-w-4xl max-h-[85vh] overflow-y-auto bg-zinc-950 border-zinc-800 text-white" aria-describedby="debate-details-description">
         <DialogHeader>
           <div className="flex flex-row items-start justify-between">
             <div className="space-y-1">
               <DialogTitle>Debate Details</DialogTitle>
-              <DialogDescription>
+              <DialogDescription id="debate-details-description">
                 {loading ? 'Loading debate...' : debate?.topic || 'Debate Session'}
               </DialogDescription>
             </div>
