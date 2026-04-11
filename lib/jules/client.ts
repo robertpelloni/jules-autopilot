@@ -3,7 +3,6 @@ import type {
   Source,
   Session,
   Activity,
-  CreateSessionRequest,
   SessionOutput,
   SessionTemplate,
   Artifact
@@ -84,6 +83,20 @@ interface ApiArtifact {
   [key: string]: unknown;
 }
 
+interface ApiErrorResponse {
+  message?: string;
+  error?: {
+    message?: string;
+    details?: Array<{ reason?: string }>;
+  };
+}
+
+interface GitHubIssue {
+  number: number;
+  title: string;
+  body?: string;
+}
+
 interface ApiActivity {
   name?: string;
   id?: string;
@@ -148,8 +161,16 @@ function getDefaultApiBaseUrl(): string {
     }
   })();
 
+  const processEnv = (() => {
+    try {
+      return process.env as { VITE_JULES_API_BASE_URL?: string } | undefined;
+    } catch {
+      return undefined;
+    }
+  })();
+
   return viteEnv?.VITE_JULES_API_BASE_URL
-    || process.env.VITE_JULES_API_BASE_URL
+    || processEnv?.VITE_JULES_API_BASE_URL
     || '/api';
 }
 export class JulesClient {
@@ -192,10 +213,8 @@ export class JulesClient {
         headers['X-Goog-Api-Key'] = this.apiKey;
       }
       
-      // LOG THE CLEAN HEADERS (MASKED)
+      // LOG THE CLEAN HEADERS
       if (typeof window === 'undefined') {
-        const maskedToken = this.authToken ? `${this.authToken.slice(0, 4)}...${this.authToken.slice(-4)}` : 'None';
-        const maskedKey = this.apiKey ? `${this.apiKey.slice(0, 4)}...${this.apiKey.slice(-4)}` : 'None';
         console.log(`[JulesClient] Outgoing to Google: auth=${!!this.authToken} key=${!!this.apiKey}`);
       }
     } else {
@@ -214,8 +233,8 @@ export class JulesClient {
 
       if (!response.ok) {
         const errorText = await response.text().catch(() => 'No error body');
-        let errorData: any = {};
-        try { errorData = JSON.parse(errorText); } catch { /* ignore */ }
+        let errorData: ApiErrorResponse = {};
+        try { errorData = JSON.parse(errorText) as ApiErrorResponse; } catch { /* ignore */ }
 
         console.error(`[Jules Client] Request failed: ${response.status} ${response.statusText}`, errorText);
 
@@ -350,14 +369,14 @@ export class JulesClient {
 
       const transformed = {
         id: session.id,
-        sourceId: session.sourceContext?.source?.replace('sources/github/', '') || '',
+        sourceId: session.sourceContext?.source?.replace('sources/github/', '') || (session.sourceId as string) || '',
         title: session.title || '',
-        status: this.mapState(session.state || ''),
-        rawState: session.state,
-        createdAt: session.createTime,
-        updatedAt: session.updateTime,
+        status: this.mapState(session.state || (session.status as string) || ''),
+        rawState: session.state || (session.rawState as string),
+        createdAt: session.createTime || (session.createdAt as string),
+        updatedAt: session.updateTime || (session.updatedAt as string),
         lastActivityAt: session.lastActivityAt,
-        branch: session.sourceContext?.githubRepoContext?.startingBranch || 'main',
+        branch: session.sourceContext?.githubRepoContext?.startingBranch || (session.branch as string) || 'main',
         outputs: outputs.length > 0 ? outputs : undefined
       };
       return transformed;
@@ -528,7 +547,7 @@ export class JulesClient {
       diff,
       bashOutput,
       media,
-      createdAt: activity.createTime,
+      createdAt: activity.createTime || (activity.createdAt as string),
       metadata: activity as Record<string, unknown>
     };
   }
@@ -686,7 +705,7 @@ export class JulesClient {
   }
 
   // GitHub Integration
-  async listIssues(sourceId: string): Promise<any[]> {
+  async listIssues(sourceId: string): Promise<GitHubIssue[]> {
     // sourceId format: "sources/github/owner/repo"
     const match = sourceId.match(/sources\/github\/(.+)/);
     if (!match) throw new Error("Invalid sourceId format for GitHub issues");

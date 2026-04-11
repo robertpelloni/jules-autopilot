@@ -2,11 +2,12 @@
 
 import { useEffect, useState, useCallback, useRef, useMemo } from 'react';
 import { useJules } from '@/lib/jules/provider';
+import { useSessionKeeperStore } from '@/lib/stores/session-keeper';
 import type { Activity, Session } from '@jules/shared';
 import { exportSessionToJSON, exportSessionToMarkdown } from '@/lib/export';
 import { useNotifications } from '@/hooks/use-notifications';
 import { useDaemonEvent } from '@/lib/hooks/use-daemon-events';
-import type { ActivitiesUpdatedPayload } from '@jules/shared';
+import type { ActivitiesUpdatedPayload, LogAddedPayload } from '@jules/shared';
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { ScrollArea } from '@/components/ui/scroll-area';
@@ -20,7 +21,6 @@ import {
   Play, 
   GitBranch, 
   MoreVertical, 
-  Book, 
   Download, 
   Copy, 
   Check, 
@@ -31,7 +31,8 @@ import {
   ArrowUp,
   ArrowDown,
   FileText,
-  Brain
+  Brain,
+  Radio
 } from 'lucide-react';
 import { useVirtualizer } from '@tanstack/react-virtual';
 import { ActivityInput } from './activity-input';
@@ -60,6 +61,23 @@ interface ActivityFeedProps {
   refreshTrigger?: number;
 }
 
+interface KeeperEventDetails {
+  event?: string;
+  nudgeMessage?: string;
+  sessionTitle?: string;
+  inactiveMinutes?: number;
+  riskScore?: number;
+  approvalStatus?: 'approved' | 'rejected' | 'pending';
+  summary?: string;
+  sourceId?: string;
+  issueNumber?: number;
+  confidence?: number;
+  isFixable?: boolean;
+  newChunks?: number;
+  totalFilesScanned?: number;
+  usedRAG?: boolean;
+}
+
 export function ActivityFeed({ 
   session, 
   onArchive, 
@@ -71,6 +89,7 @@ export function ActivityFeed({
   refreshTrigger = 0 
 }: ActivityFeedProps) {
   const { client } = useJules();
+  const keeperLogs = useSessionKeeperStore((state) => state.logs);
   const [sending, setSending] = useState(false);
   const [approvingPlan, setApprovingPlan] = useState(false);
   const [copiedId, setCopiedId] = useState<string | null>(null);
@@ -78,6 +97,7 @@ export function ActivityFeed({
   const { sendNotification, permission } = useNotifications();
   const [loading, setLoading] = useState(true);
   const [activities, setActivities] = useState<Activity[]>([]);
+  const [highlightedKeeperLogId, setHighlightedKeeperLogId] = useState<string | null>(null);
 
   const formatDate = (dateString: string) => {
     if (!dateString) return 'Unknown date';
@@ -161,6 +181,21 @@ export function ActivityFeed({
       }
     },
     [session.id, isArchived, loadActivities]
+  );
+
+  useDaemonEvent<LogAddedPayload>(
+    'log_added',
+    (data) => {
+      const log = data?.log;
+      if (!log) return;
+      if (log.sessionId !== session.id && log.sessionId !== 'global') return;
+
+      setHighlightedKeeperLogId(String(log.id));
+      window.setTimeout(() => {
+        setHighlightedKeeperLogId((current) => (current === String(log.id) ? null : current));
+      }, 2400);
+    },
+    [session.id]
   );
 
   useEffect(() => {
@@ -422,6 +457,37 @@ export function ActivityFeed({
 
   const hasDiffs = activities.some(activity => activity.diff);
 
+  const sessionScopedKeeperLogs = useMemo(
+    () => keeperLogs.filter((log) => log.sessionId === session.id || log.sessionId === 'global').slice(0, 5),
+    [keeperLogs, session.id]
+  );
+
+  const getKeeperEventDetails = (details?: Record<string, unknown>): KeeperEventDetails | null => {
+    if (!details) return null;
+    return details as KeeperEventDetails;
+  };
+
+  const getEventBadgeLabel = (eventName?: string) => {
+    if (!eventName) return null;
+    return eventName
+      .replace(/^session_/, '')
+      .replace(/^issue_/, 'issue:')
+      .replace(/^codebase_/, 'index:')
+      .replaceAll('_', ' ');
+  };
+
+  const getEventBadgeStyles = (eventName: string) => {
+    if (eventName.includes('debate') || eventName.includes('escalat')) return 'bg-pink-500/10 text-pink-300 border-pink-500/20';
+    if (eventName.includes('recovery')) return 'bg-orange-500/10 text-orange-300 border-orange-500/20';
+    if (eventName.includes('circuit_breaker')) return 'bg-red-500/10 text-red-300 border-red-500/20';
+    if (eventName.includes('approved')) return 'bg-green-500/10 text-green-300 border-green-500/20';
+    if (eventName.includes('rejected')) return 'bg-red-500/10 text-red-300 border-red-500/20';
+    if (eventName.includes('nudged')) return 'bg-blue-500/10 text-blue-300 border-blue-500/20';
+    if (eventName.includes('index')) return 'bg-cyan-500/10 text-cyan-300 border-cyan-500/20';
+    if (eventName.includes('spawned') || eventName.includes('issue')) return 'bg-yellow-500/10 text-yellow-300 border-yellow-500/20';
+    return 'bg-purple-500/10 text-purple-300 border-purple-500/20';
+  };
+
   const getActivityIcon = (activity: Activity) => {
     if (activity.role === 'user') {
       return <AvatarFallback className="bg-purple-500 text-white text-[9px] font-bold uppercase tracking-wider">U</AvatarFallback>;
@@ -559,6 +625,105 @@ export function ActivityFeed({
           </div>
         </div>
       </div>
+
+      {sessionScopedKeeperLogs.length > 0 && (
+        <div className="border-b border-border bg-zinc-950/50 px-4 py-2.5">
+          <div className="mb-2 flex items-center gap-2 text-[9px] font-mono uppercase tracking-[0.2em] text-zinc-500">
+            <Radio className="h-3 w-3 text-purple-400" />
+            <span>Live Keeper Feed</span>
+          </div>
+          <div className="space-y-1.5">
+            {sessionScopedKeeperLogs.map((log) => {
+              const eventDetails = getKeeperEventDetails(log.details);
+
+              return (
+                <div
+                  key={log.id}
+                  className={`rounded-md border px-2.5 py-2 text-[10px] font-mono transition-colors ${
+                    highlightedKeeperLogId === log.id
+                      ? 'border-purple-500/40 bg-purple-500/10 text-purple-100'
+                      : 'border-white/5 bg-white/[0.03] text-zinc-300'
+                  }`}
+                >
+                  <div className="flex items-center justify-between gap-3">
+                    <div className="flex items-center gap-2">
+                      <Badge variant="outline" className="h-4 border-white/10 bg-black/20 px-1.5 text-[8px] uppercase tracking-widest text-zinc-400">
+                        {log.sessionId === 'global' ? 'global' : 'session'}
+                      </Badge>
+                      <span className="text-zinc-400">{log.time}</span>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      {eventDetails?.event && (
+                        <Badge variant="outline" className={`h-4 px-1.5 text-[8px] uppercase tracking-widest ${getEventBadgeStyles(eventDetails.event)}`}>
+                          {getEventBadgeLabel(eventDetails.event)}
+                        </Badge>
+                      )}
+                      <Badge variant="outline" className={`h-4 px-1.5 text-[8px] uppercase tracking-widest ${log.type === 'error' ? 'bg-red-500/10 text-red-300 border-red-500/20' : log.type === 'action' ? 'bg-blue-500/10 text-blue-300 border-blue-500/20' : 'border-white/10 text-zinc-500'}`}>
+                        {log.type}
+                      </Badge>
+                    </div>
+                  </div>
+                  <p className="mt-1.5 leading-relaxed">{log.message}</p>
+                  {(eventDetails?.sessionTitle || eventDetails?.nudgeMessage || eventDetails?.summary || typeof eventDetails?.riskScore === 'number' || eventDetails?.approvalStatus || eventDetails?.sourceId || typeof eventDetails?.issueNumber === 'number' || typeof eventDetails?.confidence === 'number' || typeof eventDetails?.newChunks === 'number' || typeof eventDetails?.totalFilesScanned === 'number' || typeof eventDetails?.usedRAG === 'boolean') && (
+                    <div className="mt-2 space-y-1 text-[9px] text-zinc-400">
+                      {eventDetails.sessionTitle && (
+                        <p className="truncate uppercase tracking-wide">Target: {eventDetails.sessionTitle}</p>
+                      )}
+                      {eventDetails.sourceId && (
+                        <p className="truncate uppercase tracking-wide">Source: {eventDetails.sourceId}</p>
+                      )}
+                      {typeof eventDetails.issueNumber === 'number' && (
+                        <p className="uppercase tracking-wide">Issue: #{eventDetails.issueNumber}</p>
+                      )}
+                      {typeof eventDetails.confidence === 'number' && (
+                        <div className="flex items-center gap-2">
+                          <span className="uppercase tracking-wide">Confidence:</span>
+                          <div className="flex-1 h-1 bg-zinc-800 rounded-full overflow-hidden">
+                            <div className={`h-full rounded-full ${eventDetails.confidence >= 80 ? 'bg-green-500' : eventDetails.confidence >= 50 ? 'bg-yellow-500' : 'bg-red-500'}`} style={{ width: `${eventDetails.confidence}%` }} />
+                          </div>
+                          <span>{eventDetails.confidence}%</span>
+                        </div>
+                      )}
+                      {typeof eventDetails.isFixable === 'boolean' && (
+                        <p className="uppercase tracking-wide">Fixable: {eventDetails.isFixable ? 'yes' : 'no'}</p>
+                      )}
+                      {typeof eventDetails.riskScore === 'number' && (
+                        <div className="flex items-center gap-2">
+                          <span className="uppercase tracking-wide">Risk:</span>
+                          <div className="flex-1 h-1.5 bg-zinc-800 rounded-full overflow-hidden">
+                            <div className={`h-full rounded-full transition-all ${eventDetails.riskScore >= 70 ? 'bg-red-500' : eventDetails.riskScore >= 40 ? 'bg-yellow-500' : 'bg-green-500'}`} style={{ width: `${eventDetails.riskScore}%` }} />
+                          </div>
+                          <span className={`font-bold ${eventDetails.riskScore >= 70 ? 'text-red-400' : eventDetails.riskScore >= 40 ? 'text-yellow-400' : 'text-green-400'}`}>{eventDetails.riskScore}/100</span>
+                        </div>
+                      )}
+                      {eventDetails.approvalStatus && (
+                        <p className={`uppercase tracking-wide font-bold ${eventDetails.approvalStatus === 'approved' ? 'text-green-400' : eventDetails.approvalStatus === 'rejected' ? 'text-red-400' : 'text-yellow-400'}`}>
+                          Decision: {eventDetails.approvalStatus}
+                        </p>
+                      )}
+                      {typeof eventDetails.newChunks === 'number' && (
+                        <p className="uppercase tracking-wide">New Chunks: {eventDetails.newChunks}</p>
+                      )}
+                      {typeof eventDetails.totalFilesScanned === 'number' && (
+                        <p className="uppercase tracking-wide">Files Scanned: {eventDetails.totalFilesScanned}</p>
+                      )}
+                      {typeof eventDetails.usedRAG === 'boolean' && (
+                        <p className="uppercase tracking-wide">RAG Context: {eventDetails.usedRAG ? 'included' : 'not used'}</p>
+                      )}
+                      {eventDetails.nudgeMessage && (
+                        <p className="line-clamp-2 normal-case tracking-normal text-zinc-300/90">{eventDetails.nudgeMessage}</p>
+                      )}
+                      {eventDetails.summary && (
+                        <p className="line-clamp-3 normal-case tracking-normal text-zinc-300/90">{eventDetails.summary}</p>
+                      )}
+                    </div>
+                  )}
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      )}
 
       <div className="flex-1 overflow-hidden relative group">
         <div className="absolute bottom-6 right-6 flex flex-col gap-2 z-20 opacity-0 group-hover:opacity-100 transition-opacity duration-200">

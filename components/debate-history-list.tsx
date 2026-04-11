@@ -31,7 +31,7 @@ interface DebateHistoryListProps {
   onRefresh?: () => void;
 }
 
-export function DebateHistoryList({ onRefresh }: DebateHistoryListProps) {
+export function DebateHistoryList({ onRefresh: _onRefresh }: DebateHistoryListProps) {
     const [debates, setDebates] = useState<StoredDebate[]>([]);
     const [loading, setLoading] = useState(true);
     const [selectedDebateId, setSelectedDebateId] = useState<string | null>(null);

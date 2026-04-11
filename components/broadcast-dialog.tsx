@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, useCallback } from "react";
 import { useJules } from "@/lib/jules/provider";
 import { Button } from "@/components/ui/button";
 import {
@@ -536,7 +536,7 @@ export function BroadcastDialog({ sessions }: BroadcastDialogProps) {
     toast.success("Cleared recovered failed-session context.");
   };
 
-  const handleRefreshRecoveredAvailability = async ({ silent = false }: { silent?: boolean } = {}) => {
+  const handleRefreshRecoveredAvailability = useCallback(async ({ silent = false }: { silent?: boolean } = {}) => {
     if (refreshingRecoveredAvailability || sending || isBackgroundRetrying) {
       return;
     }
@@ -554,7 +554,7 @@ export function BroadcastDialog({ sessions }: BroadcastDialogProps) {
     if (!silent) {
       toast.success("Refreshed session availability.");
     }
-  };
+  }, [autoRefreshRecoveredIntervalMs, isBackgroundRetrying, refreshingRecoveredAvailability, sending, triggerRefresh]);
 
   const handleResetRecoveredPreferences = () => {
     setAutoRefreshRecoveredAvailability(false);

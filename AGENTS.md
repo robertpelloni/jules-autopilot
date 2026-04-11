@@ -1,6 +1,6 @@
 # Multi-Agent Symphony & Orchestration Protocols
 
-> **MANDATORY:** All agents reading this must also integrate the rules defined in `UNIVERSAL_LLM_INSTRUCTIONS.md`.
+> **MANDATORY:** All agents reading this must also integrate the rules defined in `LLM_INSTRUCTIONS.md`.
 
 ## The "Symphony" Architecture
 

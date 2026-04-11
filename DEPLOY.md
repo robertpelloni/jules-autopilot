@@ -1,43 +1,38 @@
-# Deployment Guide: Jules Autopilot
+# Deployment Instructions
 
-This document outlines how to deploy the Jules Autopilot UI and Daemon across various environments.
+## Render Deployment
 
-## 1. Local Deployment (Standard)
-The project is optimized for local execution using Bun and Vite.
+Jules Autopilot is primarily deployed to Render using a Go-first architecture.
 
-1.  **Install Dependencies**: `pnpm install`
-2.  **Start the Daemon**: `pnpm run daemon` (Starts on port 8080)
-3.  **Start the Frontend**: `pnpm run dev` (Starts on port 3006)
+### Environment Setup
+When setting up a new service on Render, configure the following:
 
-## 2. Vercel Deployment (Frontend Only)
-Vercel is used to host the static React frontend. Since the backend is a persistent Bun daemon, it must be hosted elsewhere (e.g., Railway, Render, or a local machine with a tunnel).
+1.  **Build Command:**
+    ```bash
+    pnpm install && pnpm run build && cd backend-go && go build -o jules-backend main.go
+    ```
+2.  **Start Command:**
+    ```bash
+    cd backend-go && ./jules-backend
+    ```
 
-### Steps for Successful Vercel Deploy:
-1.  **Project Settings**:
-    *   **Framework Preset**: Vite
-    *   **Build Command**: `pnpm run build:vercel`
-    *   **Output Directory**: `dist`
-    *   **Install Command**: `pnpm install`
-2.  **Environment Variables**:
-    *   `VITE_JULES_API_BASE_URL`: Set this to your live daemon's URL (e.g., `https://your-daemon.railway.app/api`). If left blank, it defaults to `/api` (which relies on `vercel.json` rewrites).
-3.  **Bypassing Prisma**: The Vercel build automatically uses `build:vercel` which skips Prisma generation to save memory and prevent build-time database connection errors.
+### Required Environment Variables
 
-## 3. Daemon Deployment (Backend)
-The backend daemon (`server/`) is a Bun application. It is best deployed as a long-running process.
+Ensure these environment variables are set in your Render dashboard:
 
-### Docker Strategy:
-Use the provided `Dockerfile` (if available) or a simple Bun-based image:
-```bash
-docker build -t jules-daemon .
-docker run -p 8080:8080 -e JULES_API_KEY=your_key jules-daemon
-```
+-   `NODE_VERSION`: `20.20.2` (Required for building Vite SPA)
+-   `BUN_VERSION`: `1.3.4` (Currently legacy fallback but recommended for consistency)
+-   `GO_VERSION`: `1.26.0` (Ensure this matches the `go.mod` file)
+-   `CGO_ENABLED`: `1` (Required by the wazero runtime and SQLite driver)
+-   `JULES_API_KEY`: Your master API key for orchestration.
 
-### Railway / Render:
-1.  Point to the `server/` directory.
-2.  Start command: `bun run server/index.ts`
-3.  Ensure port `8080` is exposed.
+### Troubleshooting Deploys
 
-## 4. Tunnelling (Local Daemon + Cloud UI)
-If you want to use the Vercel UI with your local daemon:
-1.  Run `cloudflared tunnel` or `ngrok http 8080`.
-2.  In Vercel, set `VITE_JULES_API_BASE_URL` to your tunnel URL.
+1.  **Go Version Mismatches:**
+    If Render complains about `go.mod requires go >= x.y.z`, ensure that `backend-go/go.mod` specifies exactly the Go version available in Render's environment (currently `1.26.0`), or use `render.yaml` to pin the `go` version explicitly.
+
+2.  **Frontend Build Failures:**
+    The React UI requires Node 20.x to compile correctly. If `pnpm run build` fails, verify that `NODE_VERSION` is explicitly set in Render.
+
+3.  **Out of Memory (OOM):**
+    The frontend build step (`vite build`) can be memory intensive. On Free or Starter tiers, Vite may OOM. If this happens, configure `NODE_OPTIONS=--max-old-space-size=4096`.

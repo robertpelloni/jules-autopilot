@@ -1,7 +1,7 @@
 # Jules Autopilot - Product Vision (Lean Core)
 
 **Author:** User (Updated for Lean Core Pivot)
-**Version:** 0.9.1
+**Version:** 1.0.9
 
 ---
 
@@ -99,12 +99,39 @@ The official interfaces for AI coding agents are often slow and unresponsive. Th
 
 ## Implementation History
 
-### ✅ Milestone: v0.9.1 — Lean Core Pivot (Current)
+### ✅ Milestone: v1.0.36 — Go Backend Parity Pass #28 (Current)
 - [x] Consolidated API into a single Bun daemon.
 - [x] Removed "Enterprise" feature bloat (Analytics, Swarms, Side Logs).
-- [x] Implemented Next.js proxy layer for seamless frontend integration.
+- [x] Implemented the frontend proxy layer for seamless local integration.
 - [x] Pruned Prisma schema to core orchestration models.
-- [x] Standardized on TailwindCSS v4 and Next.js 15.
+- [x] Extended the Deep Autonomous Node with version-uniformity fixes across the Web UI, CLI, shared packages, and daemon manifest.
+- [x] Ported practical Go backend control-loop behavior for live session checks, nudges, completed-session memory sync enqueueing, and conservative low-risk plan auto-approval.
+- [x] Added a Go-side Keeper log / realtime event bridge so autonomous behavior can surface into the operator UI without depending exclusively on the Bun daemon.
+- [x] Ported Go-side repository indexing so code chunk traversal, embedding ingestion, and `CodeChunk` persistence can run without Bun.
+- [x] Ported Go-side GitHub issue scanning and autonomous session spawning so issue-driven work discovery can run without Bun.
+- [x] Ported provider-backed Go council review for risky plans so the Go backend can debate, summarize, rescore, and approve/reject plans with richer autonomy.
+- [x] Ported Go semantic retrieval so the Go backend can query indexed code/history memory directly and inject retrieved context into nudges.
+- [x] Broadened Go-originated lifecycle/detail parity so indexing and issue workflows emit explicit realtime events that the frontend can interpret directly.
+- [x] Added Go-side failed-session recovery/self-healing so the backend can generate recovery guidance, send it into the Jules session, and surface recovery lifecycle telemetry without relying on Bun for that path.
+- [x] Added Go-native direct session/activity read routes and RAG reindex triggering so the practical session-control API surface is closer to runtime-complete parity.
+- [x] Added Go-native filesystem utility routes so repository-context gathering can run through the Go backend instead of depending on Bun-only `/api/fs/*` endpoints.
+- [x] Added Go-native template CRUD routes so session template management can run through the Go backend instead of depending on Bun-only template endpoints.
+- [x] Added Go-native review routes so direct code-review workflows can run through the Go backend instead of depending on Bun-only review routing.
+- [x] Added Go-native import/export routes and refined failed-session recovery dedupe so settings portability and recovery edge cases rely less on Bun-specific behavior.
+- [x] Hardened Go failed-session recovery further with log-backed duplicate suppression and explicit skip telemetry for operator visibility.
+- [x] Added Go-native debate execution/history/detail/delete support so the debate-management UI can operate through the Go backend instead of Bun-only APIs.
+- [x] Expanded Go daemon orchestration parity so the Go runtime now respects keeper cadence, discovers Jules sources, schedules issue checks, opportunistically queues indexing, and can use stored Keeper Jules credentials.
+- [x] Added Go-native observability foundations with Prometheus-style metrics, structured health endpoints, and daemon-running telemetry for operator/runtime inspection.
+- [x] Tightened shared Go LLM/provider helper logic for review/debate/issue workflows and surfaced runtime health directly in the Fleet Intelligence UI.
+- [x] Added Go static SPA serving/index fallback parity and a dedicated dashboard Health view so the Go runtime is closer to serving the full application experience directly.
+- [x] Aligned Go websocket protocol behavior with the Bun daemon so realtime connection semantics are closer to full runtime parity.
+- [x] Added request-scoped Jules auth header support and Bun-like CORS middleware in the Go runtime to improve real deployment/runtime flexibility.
+- [x] Hardened Go runtime bootstrap and error handling with project-root `.env` loading and centralized API-oriented Fiber error responses.
+- [x] Aligned Go daemon/worker lifecycle semantics more closely with Bun by coordinating boot/start/stop behavior and surfacing worker-running observability.
+- [x] Ported resilient degraded-mode session handling and hardened client transformation compatibility to ensure the Go runtime is safe for dashboard usage during API failures.
+- [x] Added Go-native scheduled task engine and graceful shutdown handling to improve runtime operational reliability and maintenance.
+- [x] Achieved comprehensive Go webhook parity for automation signals and added a Go-native standalone CLI indexer utility.
+- [x] Implemented initial Multi-Tenant API Keys (v3.0 Roadmap) with Go-native CRUD routes and a dedicated dashboard management UI.
 
 ### 📋 Future Path
 - [ ] Refined TUI experience for "Mecha Suit" cockpit mode.

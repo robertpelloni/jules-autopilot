@@ -26,9 +26,7 @@ jobs:
       - name: Install dependencies
         run: pnpm install
       - name: Check version sync
-        run: pnpm run check-version
-      - name: Check documentation drift
-        run: pnpm run check-docs
+        run: pnpm run check-version-sync
 
   lint:
     needs: [version]

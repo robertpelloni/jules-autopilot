@@ -1,5 +1,5 @@
 
-import { JulesClient, JulesAPIError } from './client';
+import { JulesClient } from './client';
 
 // Mock global fetch
 global.fetch = jest.fn() as unknown as typeof fetch;

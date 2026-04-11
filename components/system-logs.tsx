@@ -3,7 +3,7 @@
 import { useEffect, useRef } from 'react';
 import { useSessionKeeperStore } from '@/lib/stores/session-keeper';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import { Terminal, ShieldAlert, Info, Activity } from 'lucide-react';
+import { Terminal, Activity } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
 export function SystemLogs() {

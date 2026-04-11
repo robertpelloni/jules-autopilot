@@ -1,60 +1,62 @@
 # Jules Autopilot - Architecture Guide
 
-**Version:** 0.9.1
+**Version:** 1.0.35
 **Decision:** Option C - Hono Backend + Ink TUI + Web UI
 
 ---
 
 ## System Overview
 
+> **Migration Note:** The legacy Bun/Hono daemon has been officially deleted. The Go backend (`backend-go/`) is now the exclusive and mandatory runtime for Jules Autopilot. It has reached full functional and operational parity, covering: manifest/summary/webhook/session replay routes, direct session/activity read routes, filesystem utility routes, template CRUD routes, review routes, import/export routes, debate execution/history routes, observability/health routes, static SPA serving/index fallback, websocket protocol alignment (`connected` / `pong` semantics), request-scoped Jules auth header support, resilient degraded-mode session handling, graceful shutdown, background task scheduling, comprehensive Borg webhook parity, Go-native CLI indexing, API Key management (v3.0 Roadmap), Bun-like CORS behavior, root `.env` bootstrap parity, centralized API-oriented error handling, daemon/worker lifecycle semantics, live daemon polling, keeper-cadence-aware daemon scheduling, Go-side Jules source discovery, `check_session` queue automation, provider-backed council debate for risky plans, failed-session recovery guidance, `index_codebase` background indexing, semantic RAG retrieval, autonomous RAG reindex triggering, `check_issues` autonomous work discovery, Keeper log persistence, shared provider/model/risk helper abstractions, and explicit daemon-style lifecycle event emission for Go-originated automation flows.
+
 ```
 ┌─────────────────────────────────────────────────────────────────────────┐
 │                        CLIENT INTERFACES                                 │
 │  ┌─────────────────────────────┐  ┌─────────────────────────────────┐   │
-│  │   Web UI (Browser)          │  │   TUI (Terminal)                │   │
-│  │   Next.js 16 + React 19     │  │   Bun + Ink (React for CLI)     │   │
-│  │   http://localhost:3000     │  │   `jules` command               │   │
-│  │   shadcn/ui + Tailwind      │  │   Keyboard-driven cockpit       │   │
+│  │   Web UI (Browser)          │  │   CLI Tools                     │   │
+│  │   Vite + React 19           │  │   Go Native Binaries            │   │
+│  │   http://localhost:8080     │  │   indexer.exe / create-key.exe  │   │
+│  │   shadcn/ui + Tailwind      │  │                                 │   │
 │  └──────────────┬──────────────┘  └───────────────┬─────────────────┘   │
 │                 │                                 │                      │
 │                 └─────────────┬───────────────────┘                      │
 │                               │                                          │
 │                    ┌──────────▼──────────┐                               │
 │                    │  Shared API Client  │                               │
-│                    │  packages/api/      │                               │
+│                    │  lib/jules/client   │                               │
 │                    └──────────┬──────────┘                               │
 └───────────────────────────────┼──────────────────────────────────────────┘
                                 │ HTTP + WebSocket
                                 ▼
 ┌─────────────────────────────────────────────────────────────────────────┐
-│                        BACKEND (Bun/Hono :8080)                          │
+│                        BACKEND (Go :8080)                                │
 │  ┌─────────────────────────────────────────────────────────────────────┐│
-│  │ server/index.ts                                                     ││
+│  │ backend-go/main.go                                                  ││
 │  │  REST API:                                                          ││
-│  │  • GET/POST /api/daemon/* (start, stop, status)                     ││
-│  │  • POST /api/supervisor (debate, conference, handoff, review)       ││
-│  │  • POST /api/supervisor/clear                                       ││
-│  │  • GET /api/sessions/* (list, get, activities)                      ││
-│  │  • POST /api/sessions/:id/nudge                                     ││
-│  │  • POST /api/broadcast                                              ││
-│  │  WebSocket (NEW):                                                   ││
+│  │  • GET/POST /api/daemon/status                                      ││
+│  │  • GET /api/sessions/*                                              ││
+│  │  • POST /api/sessions/:idAndAction                                  ││
+│  │  • GET/POST /api/keys                                               ││
+│  │  WebSocket:                                                         ││
 │  │  • ws://localhost:8080/ws (real-time session updates)               ││
+│  │  Static Serving:                                                    ││
+│  │  • GET /* (serves dist/ built by Vite)                              ││
 │  └─────────────────────────────────────────────────────────────────────┘│
 │  ┌─────────────────────────────────────────────────────────────────────┐│
-│  │ server/daemon.ts (Background Loop)                                  ││
+│  │ backend-go/services/daemon.go & scheduler.go                        ││
 │  │  • Monitors Jules sessions via jules.googleapis.com                 ││
 │  │  • Auto-nudges stalled agents                                       ││
 │  │  • Auto-approves safe plans                                         ││
 │  │  • Runs multi-agent debates for risky decisions                     ││
-│  │  • Handles session handoffs (30+ day old sessions)                  ││
+│  │  • Scheduled codebase indexing (RAG) and issue polling              ││
 │  │  • Emits events to WebSocket subscribers                            ││
 │  └─────────────────────────────────────────────────────────────────────┘│
 │  ┌─────────────────────────────────────────────────────────────────────┐│
-│  │ Persistence (SQLite via Prisma)                                     ││
-│  │  • KeeperSettings - daemon configuration                            ││
+│  │ Persistence (SQLite via GORM)                                       ││
+│  │  • KeeperSettings / ApiKey / Workspace                              ││
 │  │  • KeeperLog - action logs with timestamps                          ││
-│  │  • SupervisorState - per-session state tracking                     ││
-│  │  • Debate - multi-agent debate history                              ││
+│  │  • CodeChunk / MemoryChunk - RAG vector storage                     ││
+│  │  • QueueJob - background processing persistence                     ││
 │  └─────────────────────────────────────────────────────────────────────┘│
 └───────────────────────────────┬─────────────────────────────────────────┘
                                 │ HTTPS
@@ -67,69 +69,25 @@
 
 ---
 
-## Directory Structure (Target)
+## Directory Structure
 
 ```
 jules-autopilot/
-├── apps/
-│   ├── web/                    # Next.js Web UI (current app/)
-│   │   ├── app/               # Next.js App Router
-│   │   ├── components/        # React components
-│   │   └── package.json
-│   └── cli/                    # NEW: Ink TUI
-│       ├── src/
-│       │   ├── cli.tsx        # Entry point (#!/usr/bin/env node)
-│       │   ├── app.tsx        # Main app with routing
-│       │   ├── screens/       # Screen components
-│       │   │   ├── Dashboard.tsx
-│       │   │   ├── SessionList.tsx
-│       │   │   ├── SessionDetail.tsx
-│       │   │   ├── Logs.tsx
-│       │   │   └── Settings.tsx
-│       │   ├── components/    # Reusable TUI components
-│       │   │   ├── StatusBar.tsx
-│       │   │   ├── SessionRow.tsx
-│       │   │   └── LogEntry.tsx
-│       │   └── hooks/         # CLI-specific hooks
-│       │       ├── useApi.ts
-│       │       └── useWebSocket.ts
-│       └── package.json
+├── backend-go/                 # Go Primary Runtime
+│   ├── api/                    # Fiber REST/WS Routes
+│   ├── cmd/                    # Standalone CLI tools (indexer, create-key)
+│   ├── db/                     # GORM SQLite initialization
+│   ├── models/                 # Database schema models
+│   ├── services/               # Core business logic (Daemon, Queue, RAG, LLMs)
+│   └── main.go                 # Entrypoint
+├── components/                 # React UI Components
+├── lib/                        # Frontend Utilities & API Clients
+├── src/                        # React Application Entry
 ├── packages/
-│   ├── api-client/             # NEW: Shared API client
-│   │   ├── src/
-│   │   │   ├── client.ts      # Hono RPC client wrapper
-│   │   │   ├── types.ts       # Shared request/response types
-│   │   │   └── websocket.ts   # WebSocket subscription helpers
-│   │   └── package.json
-│   └── shared-types/           # NEW: Shared type definitions
-│       ├── src/
-│       │   ├── session.ts     # Session types
-│       │   ├── daemon.ts      # Daemon types
-│       │   └── events.ts      # WebSocket event types
-│       └── package.json
-├── server/                     # Hono Backend (existing)
-│   ├── index.ts               # HTTP server + WebSocket
-│   ├── daemon.ts              # Background monitoring loop
-│   ├── routes/                # NEW: Route modules
-│   │   ├── daemon.ts
-│   │   ├── sessions.ts
-│   │   ├── supervisor.ts
-│   │   └── websocket.ts
-│   └── package.json
-├── lib/                        # Shared utilities (existing)
-│   ├── jules/                 # Jules API client
-│   ├── orchestration/         # Multi-agent debate logic
-│   ├── stores/                # Zustand stores (web only)
-│   └── prisma.ts              # Database client
-├── prisma/
-│   ├── schema.prisma
-│   └── dev.db
-├── terminal-server/            # WebSocket terminal (existing)
-├── docs/
-│   ├── VISION.md
-│   ├── ARCHITECTURE.md        # This file
-│   └── ...
-└── package.json               # Root workspace config
+│   └── shared/                 # Shared TypeScript types for UI
+├── dev.db                      # SQLite Database
+├── dist/                       # Vite build output (served by Go)
+└── package.json                # Frontend/Workspace configuration
 ```
 
 ---

@@ -3,17 +3,16 @@
 import { useMemo } from "react";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { DiffViewer } from "@/components/ui/diff-viewer";
-import type { Activity, Session } from '@jules/shared';
+import type { Activity } from '@jules/shared';
 import { FileCode, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
 interface CodeDiffSidebarProps {
   activities: Activity[];
-  session: Session;
   onClose: () => void;
 }
 
-export function CodeDiffSidebar({ activities, session, onClose }: CodeDiffSidebarProps) {
+export function CodeDiffSidebar({ activities, onClose }: CodeDiffSidebarProps) {
   // Get only the final diff (last activity with a diff)
   const finalDiff = useMemo(() => {
     return activities.filter((activity) => activity.diff).slice(-1);

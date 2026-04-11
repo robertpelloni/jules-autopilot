@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import {
   Dialog,
   DialogContent,
@@ -52,13 +52,7 @@ export function SessionReplayDialog({ sessionId, open, onOpenChange }: SessionRe
   const [data, setData] = useState<ReplayData | null>(null);
   const [loading, setLoading] = useState(false);
 
-  useEffect(() => {
-    if (open && sessionId) {
-      loadReplay();
-    }
-  }, [open, sessionId]);
-
-  const loadReplay = async () => {
+  const loadReplay = useCallback(async () => {
     try {
       setLoading(true);
       const response = await fetch(`/api/sessions/${sessionId}/replay`);
@@ -70,7 +64,13 @@ export function SessionReplayDialog({ sessionId, open, onOpenChange }: SessionRe
     } finally {
       setLoading(false);
     }
-  };
+  }, [sessionId]);
+
+  useEffect(() => {
+    if (open && sessionId) {
+      loadReplay();
+    }
+  }, [loadReplay, open, sessionId]);
 
   const getEventIcon = (event: ReplayEvent) => {
     if (event.type === 'plan') return <Brain className="h-3 w-3 text-purple-400" />;
@@ -146,7 +146,7 @@ export function SessionReplayDialog({ sessionId, open, onOpenChange }: SessionRe
                 </div>
               ) : (
                 <div className="relative space-y-8 before:absolute before:inset-0 before:ml-5 before:-translate-x-px before:h-full before:w-0.5 before:bg-gradient-to-b before:from-transparent before:via-zinc-800 before:to-transparent">
-                  {data?.timeline.map((event, idx) => (
+                  {data?.timeline.map((event) => (
                     <div key={event.id} className="relative flex items-start gap-6 group">
                       <div className={cn(
                         "absolute left-0 mt-1 h-10 w-10 rounded-full flex items-center justify-center border transition-all shadow-xl z-10",

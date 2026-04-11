@@ -268,7 +268,118 @@ type RepoPath struct {
 	DeletedAt gorm.DeletedAt `gorm:"index" json:"-"`
 }
 
+// Notification represents a user-facing notification in the system
+type Notification struct {
+	ID          string         `gorm:"primaryKey" json:"id"`
+	Type        string         `gorm:"index" json:"type"` // 'info', 'success', 'warning', 'error', 'action'
+	Category    string         `gorm:"index" json:"category"` // 'session', 'debate', 'recovery', 'indexing', 'issues', 'circuit_breaker', 'scheduler', 'webhook', 'system'
+	Title       string         `json:"title"`
+	Message     string         `json:"message"`
+	SessionID   *string        `gorm:"index" json:"sessionId,omitempty"`
+	SourceID    *string        `json:"sourceId,omitempty"`
+	Metadata    *string        `json:"metadata,omitempty"`
+	IsRead      bool           `gorm:"default:false;index" json:"isRead"`
+	IsDismissed bool           `gorm:"default:false;index" json:"isDismissed"`
+	Priority    int            `gorm:"default:0" json:"priority"` // 0=normal, 1=high, 2=critical
+	CreatedAt   time.Time      `gorm:"index" json:"createdAt"`
+	ReadAt      *time.Time     `json:"readAt,omitempty"`
+	DismissedAt *time.Time     `json:"dismissedAt,omitempty"`
+	DeletedAt   gorm.DeletedAt `gorm:"index" json:"-"`
+}
+
+// AuditEntry represents an immutable audit trail entry
+// Every orchestrator action is recorded here for compliance and debugging
+ type AuditEntry struct {
+	ID           string         `gorm:"primaryKey" json:"id"`
+	Action       string         `gorm:"index" json:"action"` // e.g. 'session_nudged', 'plan_approved', 'recovery_sent'
+	Actor        string         `gorm:"index" json:"actor"` // 'daemon', 'scheduler', 'circuit_breaker', 'operator', 'system'
+	ResourceType string         `gorm:"index" json:"resourceType"` // 'session', 'debate', 'codebase', 'issue', 'job'
+	ResourceID   string         `gorm:"index" json:"resourceId"`
+	Status       string         `json:"status"` // 'success', 'failure', 'skipped'
+	Summary      string         `json:"summary"`
+	Details      *string        `json:"details,omitempty"`
+	Provider     *string        `json:"provider,omitempty"`
+	Model        *string        `json:"model,omitempty"`
+	TokenUsage   *int           `json:"tokenUsage,omitempty"`
+	DurationMs   *int64         `json:"durationMs,omitempty"`
+	CreatedAt    time.Time      `gorm:"index" json:"createdAt"`
+	DeletedAt    gorm.DeletedAt `gorm:"index" json:"-"`
+}
+
+// HealthSnapshot captures a point-in-time system health reading
+// Used for trend analysis and anomaly detection
+type HealthSnapshot struct {
+	ID                string         `gorm:"primaryKey" json:"id"`
+	Status            string         `json:"status"` // 'ok', 'degraded', 'down'
+	DatabaseUp        bool           `json:"databaseUp"`
+	DaemonRunning     bool           `json:"daemonRunning"`
+	WorkerRunning     bool           `json:"workerRunning"`
+	SchedulerRunning  bool           `json:"schedulerRunning"`
+	PendingJobs       int            `json:"pendingJobs"`
+	ProcessingJobs    int            `json:"processingJobs"`
+	WSClients         int            `json:"wsClients"`
+	Sessions          int            `json:"sessions"`
+	CodeChunks        int            `json:"codeChunks"`
+	MemoryChunks      int            `json:"memoryChunks"`
+	Notifications     int            `json:"notifications"`
+	AuditEntries      int            `json:"auditEntries"`
+	ResponseTimeMs    int            `json:"responseTimeMs"`
+	MemoryUsageMB     float64        `json:"memoryUsageMB"`
+	GoroutineCount    int            `json:"goroutineCount"`
+	CheckName         string         `json:"checkName,omitempty"` // Per-check dependency name
+	Message           string         `json:"message,omitempty"`   // Per-check message
+	Latency           int64          `json:"latency"`             // Per-check latency in ms
+	CreatedAt         time.Time      `gorm:"index" json:"createdAt"`
+	DeletedAt         gorm.DeletedAt `gorm:"index" json:"-"`
+}
+
+// TokenUsage tracks LLM token consumption per session and provider
+type TokenUsage struct {
+	ID               string         `gorm:"primaryKey" json:"id"`
+	SessionID        *string        `gorm:"index" json:"sessionId,omitempty"`
+	Provider         string         `gorm:"index" json:"provider"` // 'openai', 'anthropic', 'gemini'
+	Model            string         `json:"model"`
+	PromptTokens     int            `json:"promptTokens"`
+	CompletionTokens int            `json:"completionTokens"`
+	TotalTokens      int            `json:"totalTokens"`
+	RequestType      string         `gorm:"index" json:"requestType"` // 'nudge', 'review', 'debate', 'risk_score', 'recovery', 'issue_eval', 'embedding', 'other'
+	CostCents        float64        `json:"costCents"`
+	DurationMs       int64          `json:"durationMs"`
+	Success          bool           `json:"success"`
+	CreatedAt        time.Time      `gorm:"index" json:"createdAt"`
+	DeletedAt        gorm.DeletedAt `gorm:"index" json:"-"`
+}
+
+// AnomalyRecord represents a detected anomaly in the system
+type AnomalyRecord struct {
+	ID          string         `gorm:"primaryKey" json:"id"`
+	Type        string         `gorm:"index" json:"type"` // 'session_stuck', 'error_spike', 'token_overuse', 'queue_backlog', 'worker_down', 'circuit_breaker'
+	Severity    string         `json:"severity"` // 'low', 'medium', 'high', 'critical'
+	Title       string         `json:"title"`
+	Description string         `json:"description"`
+	SessionID   *string        `gorm:"index" json:"sessionId,omitempty"`
+	Metadata    *string        `json:"metadata,omitempty"`
+	IsResolved  bool           `gorm:"default:false;index" json:"isResolved"`
+	ResolvedAt  *time.Time     `json:"resolvedAt,omitempty"`
+	CreatedAt   time.Time      `gorm:"index" json:"createdAt"`
+	DeletedAt   gorm.DeletedAt `gorm:"index" json:"-"`
+}
+
 // QueueJob represents the QueueJob model from Prisma
+
+type ScheduledTask struct {
+	ID         string      `gorm:"primaryKey" json:"id"`
+	Name       string      `gorm:"uniqueIndex" json:"name"`
+	IntervalMs int64       `json:"intervalMs"`
+	JobType    string      `json:"jobType"`
+	Payload    interface{} `gorm:"type:text" json:"payload"`
+	IsEnabled  bool        `gorm:"default:true" json:"isEnabled"`
+	LastRunAt  *time.Time  `json:"lastRunAt,omitempty"`
+	NextRunAt  *time.Time  `json:"nextRunAt,omitempty"`
+	CreatedAt  time.Time   `json:"createdAt"`
+	UpdatedAt  time.Time   `json:"updatedAt"`
+}
+
 type QueueJob struct {
 	ID          string         `gorm:"primaryKey" json:"id"`
 	Type        string         `json:"type"`
@@ -281,6 +392,70 @@ type QueueJob struct {
 	StartedAt   *time.Time     `json:"startedAt"`
 	CompletedAt *time.Time     `json:"completedAt"`
 	CreatedAt   time.Time      `json:"createdAt"`
-	UpdatedAt   time.Time      `updatedAt" json:"updatedAt"`
+	UpdatedAt   time.Time      `json:"updatedAt"`
 	DeletedAt   gorm.DeletedAt `gorm:"index" json:"-"`
+}
+
+// Swarm represents a coordinated group of agents
+type Swarm struct {
+	ID            string     `gorm:"primaryKey" json:"id"`
+	Title         string     `json:"title"`
+	Description   string     `json:"description"`
+	SourceRepo    string     `json:"sourceRepo,omitempty"`
+	Strategy      string     `json:"strategy"`
+	Status        string     `gorm:"index" json:"status"`
+	ParentSwarmID *string    `json:"parentSwarmId,omitempty"`
+	RootTask      string     `json:"rootTask"`
+	Decomposition string     `json:"decomposition,omitempty"`
+	SharedContext string     `json:"sharedContext,omitempty"`
+	Metadata      string     `json:"metadata,omitempty"`
+	CreatedAt     time.Time  `gorm:"index" json:"createdAt"`
+	UpdatedAt     time.Time  `json:"updatedAt"`
+	CompletedAt   *time.Time `json:"completedAt,omitempty"`
+}
+
+// SwarmAgent represents a single agent in a swarm
+type SwarmAgent struct {
+	ID          string     `gorm:"primaryKey" json:"id"`
+	SwarmID     string     `gorm:"index" json:"swarmId"`
+	Role        string     `json:"role"`
+	SessionID   *string    `json:"sessionId,omitempty"`
+	Task        string     `json:"task"`
+	Status      string     `gorm:"index" json:"status"`
+	Output      string     `json:"output,omitempty"`
+	Provider    string     `json:"provider,omitempty"`
+	Model       string     `json:"model,omitempty"`
+	DependsOn   string     `json:"dependsOn,omitempty"`
+	CreatedAt   time.Time  `json:"createdAt"`
+	StartedAt   *time.Time `json:"startedAt,omitempty"`
+	CompletedAt *time.Time `json:"completedAt,omitempty"`
+}
+
+// SwarmEvent records state changes in a swarm
+type SwarmEvent struct {
+	ID        string    `gorm:"primaryKey" json:"id"`
+	SwarmID   string    `gorm:"index" json:"swarmId"`
+	AgentID   string    `json:"agentId,omitempty"`
+	EventType string    `json:"eventType"`
+	Message   string    `json:"message"`
+	Data      string    `json:"data,omitempty"`
+	CreatedAt time.Time `gorm:"index" json:"createdAt"`
+}
+
+// Plugin represents an installed plugin
+type Plugin struct {
+	ID           string         `gorm:"primaryKey" json:"id"`
+	Name         string         `gorm:"uniqueIndex:idx_plugin_name_version" json:"name"`
+	Version      string         `gorm:"uniqueIndex:idx_plugin_name_version" json:"version"`
+	Author       string         `json:"author,omitempty"`
+	Description  string         `json:"description,omitempty"`
+	SourceURL    string         `json:"sourceUrl"`
+	Signature    string         `json:"signature,omitempty"`
+	Status       string         `gorm:"index" json:"status"`
+	Capabilities string         `json:"capabilities,omitempty"` // JSON array
+	Config       string         `json:"config,omitempty"`
+	Size         int            `json:"size"`
+	InstalledAt  time.Time      `gorm:"index" json:"installedAt"`
+	UpdatedAt    time.Time      `json:"updatedAt"`
+	DeletedAt    gorm.DeletedAt `gorm:"index" json:"-"`
 }

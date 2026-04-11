@@ -1,25 +1,32 @@
+<<<<<<< HEAD
 # cloud-orchestrator (Lean Core)
+=======
+# Jules Autopilot (Go Primary Runtime)
+>>>>>>> 276c1337b9222c9e448fecc479724cb628a6bdc9
 
 > **The ultra-fast cloud command center for remote agents, including Jules and adjacent cloud workflows.**
 
+<<<<<<< HEAD
 cloud-orchestrator is a high-performance, minimalist orchestration platform for remote-agent workflows, including Google Jules and adjacent cloud operators. It replaces slower fragmented interfaces with a unified, real-time dashboard and a keyboard-driven TUI, all powered by a single zero-dependency Bun binary.
+=======
+Jules Autopilot is a high-performance, minimalist orchestration platform for the Google Jules AI agent. It replaces slow official interfaces with a unified, real-time dashboard, powered by a robust Go backend runtime.
+>>>>>>> 276c1337b9222c9e448fecc479724cb628a6bdc9
 
-## 🚀 The Holy Grail Stack (100% Lean)
+## 🚀 The Stack
 
-This project has been pivoted to a "Lean Core" architecture to ensure maximum performance and zero friction:
+This project has been pivoted to a Go-first architecture to ensure maximum performance, operational reliability, and zero friction:
 
-- **Runtime:** [Bun](https://bun.sh) (Single binary for everything)
-- **Backend:** [Hono](https://hono.dev) (High-performance API + WebSocket server)
+- **Backend/Runtime:** [Go](https://go.dev) (High-performance API, WebSocket server, Scheduler, and Static SPA host)
 - **Frontend:** [Vite](https://vitejs.dev) + [React 19](https://react.dev) (Pure SPA, no SSR overhead)
-- **Database:** [Prisma](https://prisma.io) + SQLite (Zero-config local persistence)
-- **Queue:** Native SQLite-backed task queue (No Redis required)
+- **Database:** [GORM](https://gorm.io) + SQLite (Zero-config local persistence)
+- **Queue & Automation:** Native Go task queue and RAG indexer
 - **Styling:** [TailwindCSS v4](https://tailwindcss.com)
 
 ## 🛠️ Getting Started
 
 ### Prerequisites
-- [Bun](https://bun.sh) installed globally.
-- [pnpm](https://pnpm.io) for workspace dependency management.
+- [Go 1.21+](https://go.dev) installed.
+- [Node.js](https://nodejs.org) and [pnpm](https://pnpm.io) for frontend development.
 
 ### Installation
 ```bash
@@ -27,46 +34,56 @@ This project has been pivoted to a "Lean Core" architecture to ensure maximum pe
 git clone https://github.com/your-repo/cloud-orchestrator.git
 cd cloud-orchestrator
 
-# Install dependencies
+# Install frontend dependencies
 pnpm install
 
-# Initialize the database
-npx prisma db push
+# Build the frontend and shared packages
+pnpm run build
 ```
 
 ### Running the Command Center
-You can run the entire stack with two commands:
+You can run the entire stack via the Go backend (which serves the built frontend):
 
-1. **Start the API Daemon:**
+1. **Start the Go Runtime:**
    ```bash
-   pnpm run daemon
+   cd backend-go
+   go run main.go
    ```
-2. **Start the Vite Dashboard (Dev Mode):**
+   *The dashboard will be available at `http://localhost:8080`.*
+
+2. **Frontend Dev Mode (Optional):**
    ```bash
    pnpm run dev
    ```
 
-## 🏗️ Architecture (Lean Core)
+## 🏗️ Architecture
 
 ```
 ┌──────────────────────────────────────────┐
 │          Browser (Vite SPA)              │
-│  http://localhost:3000 (Dev)             │
+│  http://localhost:3006 (Dev)             │
 │  http://localhost:8080 (Prod)            │
 └───────────────┬──────────────────────────┘
-                │ Proxy / WebSocket
+                │ API / WebSocket
                 ▼
 ┌──────────────────────────────────────────┐
+<<<<<<< HEAD
 │        Bun Daemon (Hono Server)          │
 │  • Centralized cloud-agent API Proxy     │
 │  • SQLite Task Queue (Background Nudges) │
+=======
+│          Go Runtime (Fiber)              │
+│  • Centralized Jules API Proxy           │
+│  • SQLite Task Queue & Scheduler         │
+>>>>>>> 276c1337b9222c9e448fecc479724cb628a6bdc9
 │  • Local Filesystem Access               │
 │  • Multi-Agent Debate Engine             │
+│  • Static Asset Delivery (SPA fallback)  │
 └───────────────┬──────────────────────────┘
                 │
                 ▼
 ┌──────────────────────────────────────────┐
-│        SQLite Database (Prisma)          │
+│          SQLite Database                 │
 │  • Session State & Activity Logs         │
 │  • Task Queue Persistence                │
 │  • User Settings & Templates             │
@@ -74,10 +91,10 @@ You can run the entire stack with two commands:
 ```
 
 ## 🧪 Operational Commands
-- `pnpm run build`: Build the shared package, prisma client, and Vite SPA.
-- `pnpm run daemon`: Start the backend API and background monitoring.
-- `pnpm run lint`: Run ESLint across the source tree.
-- `pnpm run typecheck`: Strict TypeScript validation.
+- `pnpm run build`: Build the shared package and Vite SPA.
+- `pnpm run daemon`: Start the Go backend API and background monitoring (`cd backend-go && go run main.go`).
+- `pnpm run lint`: Run ESLint across the frontend source tree.
+- `pnpm run index`: Run the standalone Go CLI indexer (`cd backend-go && go run cmd/index-repo/main.go`).
 
 ## 📜 License
 MIT

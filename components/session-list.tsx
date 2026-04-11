@@ -20,12 +20,6 @@ import { formatDistanceToNow, parseISO, isValid, isToday, differenceInDays } fro
 import { cn } from "@/lib/utils";
 import { SessionReplayDialog } from "./session-replay-dialog";
 
-function truncateText(text: string, maxLength: number) {
-  if (!text) return "";
-  if (text.length <= maxLength) return text;
-  return text.slice(0, maxLength) + "...";
-}
-
 interface SessionListProps {
   onSelectSession?: (sessionId: string | Session) => void;
   selectedSessionId?: string | null;

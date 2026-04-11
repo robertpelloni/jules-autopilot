@@ -1,4 +1,6 @@
 import { Button } from "@/components/ui/button";
+import { Box } from "lucide-react";
+
 import { 
   ChevronLeft, 
   ChevronRight, 
@@ -9,7 +11,9 @@ import {
   Terminal,
   Brain,
   Zap,
-  Activity
+  Activity,
+  HeartPulse,
+  Shield
 } from "lucide-react";
 import { SessionList } from "@/components/session-list";
 import { Session } from '@jules/shared';
@@ -21,8 +25,8 @@ interface AppSidebarProps {
   onToggleCollapse: () => void;
   onSessionSelect: (session: Session | string) => void;
   selectedSessionId?: string;
-  currentView: 'sessions' | 'templates' | 'kanban' | 'debates' | 'logs';
-  onViewChange: (view: 'sessions' | 'templates' | 'kanban' | 'debates' | 'logs') => void;
+  currentView: 'sessions' | 'templates' | 'kanban' | 'debates' | 'logs' | 'health' | 'audit' | 'swarms' | 'plugins';
+  onViewChange: (view: 'sessions' | 'templates' | 'kanban' | 'debates' | 'logs' | 'health' | 'audit' | 'swarms' | 'plugins') => void;
 }
 
 export function AppSidebar({
@@ -33,7 +37,10 @@ export function AppSidebar({
   currentView,
   onViewChange
 }: AppSidebarProps) {
-  const { queue, isEnabled } = useSessionKeeperStore();
+  const {
+    queue,
+    config: { isEnabled },
+  } = useSessionKeeperStore();
   const activeJobs = queue?.processing || 0;
 
   const navItems = [
@@ -42,6 +49,10 @@ export function AppSidebar({
     { id: 'kanban', label: 'Kanban', icon: Trello },
     { id: 'debates', label: 'Debates', icon: Users },
     { id: 'logs', label: 'System Logs', icon: Terminal },
+    { id: 'health', label: 'Health', icon: HeartPulse },
+    { id: 'audit', label: 'Audit Trail', icon: Shield },
+    { id: 'swarms', label: 'Agent Swarms', icon: Users },
+    { id: 'plugins', label: 'Plugins', icon: Box },
   ] as const;
 
   return (

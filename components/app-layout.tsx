@@ -1,7 +1,6 @@
 'use client';
 
-import { useState, useCallback } from "react";
-import { useSessionKeeperStore } from "@/lib/stores/session-keeper";
+import { useState } from "react";
 import { DebateDialog } from './debate-dialog';
 import { AppHeader } from "./layout/app-header";
 import { AppSidebar } from "./layout/app-sidebar";
@@ -10,8 +9,8 @@ import type { Session } from '@jules/shared';
 
 export interface AppLayoutProps {
   children: React.ReactNode;
-  currentView: 'sessions' | 'templates' | 'kanban' | 'debates' | 'logs';
-  onViewChange: (view: 'sessions' | 'templates' | 'kanban' | 'debates' | 'logs') => void;
+  currentView: 'sessions' | 'templates' | 'kanban' | 'debates' | 'logs' | 'health' | 'audit' | 'swarms' | 'plugins';
+  onViewChange: (view: 'sessions' | 'templates' | 'kanban' | 'debates' | 'logs' | 'health' | 'audit' | 'swarms' | 'plugins') => void;
   selectedSessionId?: string;
   onSessionSelect: (session: Session | string) => void;
 }
@@ -28,8 +27,8 @@ export function AppLayout({
   
   // Debate State (managed locally in layout for now)
   const [isDebateOpen, setIsDebateOpen] = useState(false);
-  const [debateTopic, setDebateTopic] = useState("");
-  const [debateContext, setDebateContext] = useState("");
+  const [debateTopic] = useState("");
+  const [debateContext] = useState("");
 
   return (
     <div className="flex h-screen flex-col bg-black max-w-full overflow-hidden">

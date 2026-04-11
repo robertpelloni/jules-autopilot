@@ -5,6 +5,7 @@ import type { DebateResult as OrchestrationDebateResult } from '@jules/shared';
 
 export interface Log {
   id?: string;
+  sessionId?: string;
   time: string;
   message: string;
   type: 'info' | 'action' | 'error' | 'skip';
@@ -53,7 +54,7 @@ export interface BorgSignal {
   type: string;
   timestamp: string;
   source: string;
-  data?: any;
+  data?: unknown;
 }
 
 interface SessionKeeperState {
@@ -68,6 +69,7 @@ interface SessionKeeperState {
   isLoading: boolean;
   isPausedAll: boolean;
   lastForcedCheckAt: number;
+  lastReadLogTime: number;
 
   // Actions
   loadConfig: () => Promise<void>;
@@ -75,7 +77,8 @@ interface SessionKeeperState {
   saveConfig: (config: SessionKeeperConfig) => Promise<void>;
 
   loadLogs: () => Promise<void>;
-  addLog: (message: string, type: Log['type'], details?: Record<string, unknown>) => void;
+  addLog: (message: string, type: Log['type'], details?: Record<string, unknown>, sessionId?: string) => void;
+  markLogsAsRead: () => void;
   addDebate: (debate: DebateResult) => void;
   addBorgSignal: (signal: BorgSignal) => void;
 
@@ -124,6 +127,7 @@ export const useSessionKeeperStore = create<SessionKeeperState>()(
       isLoading: false,
       isPausedAll: false,
       lastForcedCheckAt: 0,
+      lastReadLogTime: Date.now(),
 
       loadConfig: async () => {
         set({ isLoading: true });
@@ -139,8 +143,9 @@ export const useSessionKeeperStore = create<SessionKeeperState>()(
               set((state) => ({
                 config: { ...state.config, isEnabled: statusData.isEnabled },
                 queue: statusData.queue,
-                logs: statusData.logs.map((l: { id: string; createdAt: string | number | Date; message: string; type: string; metadata?: string }) => ({
+                logs: statusData.logs.map((l: { id: string; sessionId?: string; createdAt: string | number | Date; message: string; type: string; metadata?: string }) => ({
                   id: l.id,
+                  sessionId: l.sessionId,
                   time: new Date(l.createdAt).toLocaleTimeString(),
                   message: l.message,
                   type: l.type as Log['type'],
@@ -185,8 +190,9 @@ export const useSessionKeeperStore = create<SessionKeeperState>()(
           const res = await fetch('/api/daemon/status');
           if (res.ok) {
             const statusData = await res.json();
-            const mappedLogs: Log[] = statusData.logs.map((l: { id: string; createdAt: string | number | Date; message: string; type: string; metadata?: string }) => ({
+            const mappedLogs: Log[] = statusData.logs.map((l: { id: string; sessionId?: string; createdAt: string | number | Date; message: string; type: string; metadata?: string }) => ({
               id: l.id,
+              sessionId: l.sessionId,
               time: new Date(l.createdAt).toLocaleTimeString(),
               message: l.message,
               type: l.type as Log['type'],
@@ -202,8 +208,10 @@ export const useSessionKeeperStore = create<SessionKeeperState>()(
         }
       },
 
-      addLog: (message, type, details) => {
+      addLog: (message, type, details, sessionId = 'global') => {
         const newLog: Log = {
+          id: `log-${Date.now()}-${Math.random().toString(36).substring(7)}`,
+          sessionId,
           time: new Date().toLocaleTimeString(),
           message,
           type,
@@ -214,6 +222,8 @@ export const useSessionKeeperStore = create<SessionKeeperState>()(
           logs: [newLog, ...state.logs].slice(0, 100)
         }));
       },
+
+      markLogsAsRead: () => set({ lastReadLogTime: Date.now() }),
 
       addDebate: (debate) => set((state) => ({
         debates: [debate, ...state.debates].slice(0, 50)
@@ -254,13 +264,24 @@ export const useSessionKeeperStore = create<SessionKeeperState>()(
     {
       name: 'jules-session-keeper-store',
       storage: createJSONStorage(() => {
-        if (typeof window !== 'undefined') {
-          return localStorage;
+        try {
+          if (typeof window !== 'undefined' && window.localStorage) {
+            // Test if we can actually write to it
+            const testKey = '__storage_test__';
+            window.localStorage.setItem(testKey, testKey);
+            window.localStorage.removeItem(testKey);
+            return window.localStorage;
+          }
+        } catch (_e) {
+          console.warn('Session Keeper: localStorage access denied. State will not persist.');
         }
+        
+        // Fallback: In-memory mock storage
+        const mockStore = new Map<string, string>();
         return {
-          getItem: () => null,
-          setItem: () => { },
-          removeItem: () => { },
+          getItem: (key) => mockStore.get(key) || null,
+          setItem: (key, value) => mockStore.set(key, value),
+          removeItem: (key) => mockStore.delete(key),
         };
       }),
       partialize: (state) => ({

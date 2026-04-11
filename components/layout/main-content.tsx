@@ -2,18 +2,21 @@ import { TemplatesPage } from "@/components/templates-page";
 import { KanbanBoard } from "@/components/kanban-board";
 import { SessionBoard } from "@/components/session-board";
 import { ActivityFeed } from "@/components/activity-feed";
+import { PluginMarketplace } from "@/components/plugins/plugin-marketplace";
 import { CodeDiffSidebar } from "@/components/code-diff-sidebar";
 import { DebateHistoryList } from "@/components/debate-history-list";
 import { SystemLogs } from "@/components/system-logs";
+import { SystemHealthDashboard } from "@/components/system-health-dashboard";
+import { AuditTrail } from "@/components/audit-trail";
+import { SwarmDashboard } from "@/components/swarm-dashboard";
 import { Session, Activity, SessionTemplate } from '@jules/shared';
-import { Button } from "@/components/ui/button";
 
 interface MainContentProps {
-  view: 'sessions' | 'templates' | 'kanban' | 'debates' | 'logs';
+  view: 'sessions' | 'templates' | 'kanban' | 'debates' | 'logs' | 'health' | 'audit' | 'swarms' | 'plugins';
   selectedSession: Session | null;
   onSessionSelect: (session: Session | string) => void;
   onStartSessionFromTemplate: (template: SessionTemplate) => void;
-  onViewChange: (view: 'sessions' | 'templates' | 'kanban' | 'debates' | 'logs') => void;
+  onViewChange: (view: 'sessions' | 'templates' | 'kanban' | 'debates' | 'logs' | 'health' | 'audit' | 'swarms' | 'plugins') => void;
   showCodeDiffs: boolean;
   onToggleCodeDiffs: (show: boolean) => void;
   onActivitiesChange: (activities: Activity[]) => void;
@@ -43,7 +46,6 @@ export function MainContent({
         {view === "templates" ? (
           <TemplatesPage 
             onStartSession={onStartSessionFromTemplate}
-            onBack={() => onViewChange('sessions')}
           />
         ) : view === "kanban" ? (
           <KanbanBoard 
@@ -55,6 +57,14 @@ export function MainContent({
           />
         ) : view === "logs" ? (
           <SystemLogs />
+        ) : view === "health" ? (
+          <SystemHealthDashboard />
+        ) : view === "audit" ? (
+          <AuditTrail />
+        ) : view === "swarms" ? (
+          <SwarmDashboard />
+        ) : view === "plugins" ? (
+          <PluginMarketplace />
         ) : selectedSession ? (
           <ActivityFeed
             session={selectedSession}
@@ -74,7 +84,6 @@ export function MainContent({
 
       {showCodeDiffs && selectedSession && (
         <CodeDiffSidebar
-          session={selectedSession}
           activities={currentActivities}
           onClose={() => onToggleCodeDiffs(false)}
         />

@@ -247,7 +247,9 @@ export function DebateDialog({
         try {
             const errorJson = JSON.parse(errorText);
             errorMessage = errorJson.error || errorJson.message || errorText;
-        } catch (_) { }
+        } catch {
+            // Fall back to the raw text response when JSON parsing fails.
+        }
         
         if (response.status === 401) {
             errorMessage = `Authentication failed: ${errorMessage}`;
@@ -378,7 +380,7 @@ export function DebateDialog({
                                                         const config = PROVIDER_OPTIONS[val];
                                                         if (config) {
                                                             updateParticipant(idx, {
-                                                                provider: val as any,
+                                                                provider: val as Participant['provider'],
                                                                 model: config.models[0],
                                                                 apiKeyKey: config.apiKeyKey,
                                                                 envFallback: config.envFallback

@@ -1,6 +1,6 @@
 # GitHub Copilot Instructions
 
-> **MANDATORY INCLUSION:** Refer to the global project directives maintained in `UNIVERSAL_LLM_INSTRUCTIONS.md`. 
+> **MANDATORY INCLUSION:** Refer to the global project directives maintained in `LLM_INSTRUCTIONS.md`.
 
 ## Inline Assistance Strategies
 

@@ -10,7 +10,7 @@ interface ReviewScorecardProps {
 }
 
 export function ReviewScorecard({ result }: ReviewScorecardProps) {
-    const { score, summary, issues, rawOutput } = result;
+    const { score, summary, issues } = result;
 
     const getScoreColor = (score: number) => {
         if (score >= 90) return "bg-green-500";
