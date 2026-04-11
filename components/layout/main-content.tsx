@@ -2,6 +2,7 @@ import { TemplatesPage } from "@/components/templates-page";
 import { KanbanBoard } from "@/components/kanban-board";
 import { SessionBoard } from "@/components/session-board";
 import { ActivityFeed } from "@/components/activity-feed";
+import { PluginMarketplace } from "@/components/plugins/plugin-marketplace";
 import { CodeDiffSidebar } from "@/components/code-diff-sidebar";
 import { DebateHistoryList } from "@/components/debate-history-list";
 import { SystemLogs } from "@/components/system-logs";
@@ -11,11 +12,11 @@ import { SwarmDashboard } from "@/components/swarm-dashboard";
 import { Session, Activity, SessionTemplate } from '@jules/shared';
 
 interface MainContentProps {
-  view: 'sessions' | 'templates' | 'kanban' | 'debates' | 'logs' | 'health' | 'audit' | 'swarms';
+  view: 'sessions' | 'templates' | 'kanban' | 'debates' | 'logs' | 'health' | 'audit' | 'swarms' | 'plugins';
   selectedSession: Session | null;
   onSessionSelect: (session: Session | string) => void;
   onStartSessionFromTemplate: (template: SessionTemplate) => void;
-  onViewChange: (view: 'sessions' | 'templates' | 'kanban' | 'debates' | 'logs' | 'health' | 'audit' | 'swarms') => void;
+  onViewChange: (view: 'sessions' | 'templates' | 'kanban' | 'debates' | 'logs' | 'health' | 'audit' | 'swarms' | 'plugins') => void;
   showCodeDiffs: boolean;
   onToggleCodeDiffs: (show: boolean) => void;
   onActivitiesChange: (activities: Activity[]) => void;
@@ -62,6 +63,8 @@ export function MainContent({
           <AuditTrail />
         ) : view === "swarms" ? (
           <SwarmDashboard />
+        ) : view === "plugins" ? (
+          <PluginMarketplace />
         ) : selectedSession ? (
           <ActivityFeed
             session={selectedSession}

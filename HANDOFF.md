@@ -23,3 +23,21 @@ I have conducted a deep analysis of the project across `ROADMAP.md`, `TODO.md`, 
 - **Model 3:** Complete the CI Pipeline auto-fix loop by hooking incoming webhooks to the session spawn logic.
 
 Please refer to `MEMORY.md` and `DEPLOY.md` for architectural context. Ensure you update `CHANGELOG.md` and run `pnpm run update-version` after merging new features.
+## Remaining Roadmap (2 items)
+- ~~**WebAssembly Plugin Isolation**~~ - (Completed) Pure-Go Wasm sandbox implemented via wazero.
+- ~~**Plugin Marketplace**~~ - (Completed) UI and registry integrated.
+
+## Validation (All Passing ✅)
+```
+✅ go build                    (clean)
+✅ go test ./...               (177 tests, 0 failures)
+✅ pnpm run typecheck          (clean)
+✅ pnpm run lint               (0 errors, 0 warnings)
+✅ pnpm run test               (36 tests, 0 failures)
+✅ pnpm run build              (clean, 7+1 chunks)
+✅ version sync                (✅ 2.2.0)
+```
+
+## Services Running
+- Go backend: `localhost:8080` (PID 13532)
+- Frontend: `localhost:3006` (PID 16908)
