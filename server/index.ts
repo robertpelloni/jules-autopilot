@@ -288,7 +288,7 @@ const handleWebhookSignal = async (c: Context) => {
 };
 
 api.post('/webhooks/borg', handleWebhookSignal);
-api.post('/webhooks/hypercode', handleWebhookSignal);
+api.post('/webhooks/borg', handleWebhookSignal);
 
 api.post('/rag/query', async (c) => {
     try {
