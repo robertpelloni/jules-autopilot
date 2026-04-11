@@ -2512,7 +2512,7 @@ func completeStepAPI(c *fiber.Ctx) error {
 	c.BodyParser(&req)
 	var stepErr error
 	if req.Error != "" {
-		stepErr = fmt.Errorf(req.Error)
+		stepErr = fmt.Errorf("%s", req.Error)
 	}
 	if err := services.GetWorkflowTracer().CompleteStep(traceID, stepID, req.Output, stepErr); err != nil {
 		return c.Status(404).JSON(fiber.Map{"error": err.Error()})
@@ -2528,7 +2528,7 @@ func finishTraceAPI(c *fiber.Ctx) error {
 	c.BodyParser(&req)
 	var traceErr error
 	if req.Error != "" {
-		traceErr = fmt.Errorf(req.Error)
+		traceErr = fmt.Errorf("%s", req.Error)
 	}
 	if err := services.GetWorkflowTracer().FinishTrace(traceID, traceErr); err != nil {
 		return c.Status(404).JSON(fiber.Map{"error": err.Error()})

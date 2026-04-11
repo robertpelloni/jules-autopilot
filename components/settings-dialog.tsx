@@ -30,7 +30,7 @@ interface ApiKey {
 }
 
 export function SettingsDialog({ open: propOpen, onOpenChange: propOnOpenChange, trigger }: SettingsDialogProps) {
-  const { config, setConfig } = useSessionKeeperStore();
+  const { config, saveConfig } = useSessionKeeperStore();
   const [internalOpen, setInternalOpen] = useState(false);
   const [githubToken, setGithubToken] = useState('');
   const [openAIKey, setOpenAIKey] = useState('');
@@ -286,7 +286,7 @@ export function SettingsDialog({ open: propOpen, onOpenChange: propOnOpenChange,
           <TabsContent value="supervisor" className="flex-1 min-h-0 overflow-hidden">
             <SessionKeeperSettingsContent
               config={config}
-              onConfigChange={setConfig}
+              onConfigChange={saveConfig}
             />
           </TabsContent>
 

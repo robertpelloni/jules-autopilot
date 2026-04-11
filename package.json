@@ -1,7 +1,7 @@
 {
   "name": "jules-ui",
   "description": "The modern, developer-first interface for Google's Jules AI agent. Features live code diffs, interactive terminal outputs, and a streamlined pure React experience.",
-  "version": "3.5.0",
+  "version": "3.6.0",
   "private": true,
   "type": "module",
   "workspaces": [
@@ -88,6 +88,8 @@
     "@types/node": "^25.0.3",
     "@types/react": "^19.2.7",
     "@types/react-dom": "^19.2.3",
+    "@types/vscode": "^1.115.0",
+    "@types/ws": "^8.18.1",
     "@vitejs/plugin-react": "^4.3.4",
     "autoprefixer": "^10.4.20",
     "eslint": "^9.39.2",
@@ -97,6 +99,7 @@
     "jest": "^30.2.0",
     "jest-environment-jsdom": "^30.2.0",
     "jest-environment-node": "^30.2.0",
+    "jose": "^6.2.2",
     "postcss": "^8.5.3",
     "tailwindcss": "^4",
     "ts-jest": "^29.4.6",
@@ -105,6 +108,7 @@
     "typescript": "^5.9.3",
     "typescript-eslint": "^8.58.0",
     "vite": "^6.2.0",
-    "vitest": "^4.0.16"
+    "vitest": "^4.0.16",
+    "ws": "^8.20.0"
   }
 }

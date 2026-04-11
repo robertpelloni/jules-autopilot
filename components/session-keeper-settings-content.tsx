@@ -72,8 +72,7 @@ export function SessionKeeperSettingsContent({
       propOnChange(newConfig);
     } else {
       setLocalConfig(newConfig);
-      localStorage.setItem('jules-session-keeper-config', JSON.stringify(newConfig));
-      window.dispatchEvent(new Event('jules-config-updated'));
+
     }
   };
 

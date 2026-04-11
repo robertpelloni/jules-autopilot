@@ -165,8 +165,8 @@ func generateLLMText(primaryProvider, primaryApiKey, primaryModel, systemPrompt 
 
 	providers := []string{primaryProvider}
 	
-	// Intelligent Fallback Chain
-	fallbacks := []string{"lmstudio", "openrouter", "openai", "anthropic", "gemini"}
+	// Intelligent Fallback Chain requested by user
+	fallbacks := []string{"lmstudio", "openrouter", "kilocode", "cline", "openai", "anthropic", "gemini"}
 	for _, p := range fallbacks {
 		exists := false
 		for _, existing := range providers {
@@ -314,6 +314,10 @@ func generateOpenAIText(apiKey, model, systemPrompt string, messages []LLMMessag
 		provider = "lmstudio"
 	} else if strings.Contains(model, "openrouter") || strings.Contains(apiKey, "sk-or-") {
 		provider = "openrouter"
+	} else if strings.Contains(model, "kilocode") || strings.Contains(apiKey, "sk-kc-") {
+		provider = "kilocode"
+	} else if strings.Contains(model, "cline") || strings.Contains(apiKey, "sk-cl-") {
+		provider = "cline"
 	}
 
 	requestMessages := make([]map[string]string, 0, len(messages)+1)
@@ -336,6 +340,17 @@ func generateOpenAIText(apiKey, model, systemPrompt string, messages []LLMMessag
 		apiURL = "http://localhost:1234/v1/chat/completions"
 	case "openrouter":
 		apiURL = "https://openrouter.ai/api/v1/chat/completions"
+	case "kilocode":
+		// Example URL if they use a standard one, else fallback to standard openrouter structure if they are a proxy
+		apiURL = "https://kilocode.ai/api/v1/chat/completions"
+		if custom := os.Getenv("KILOCODE_API_BASE"); custom != "" {
+			apiURL = custom + "/chat/completions"
+		}
+	case "cline":
+		apiURL = "https://api.cline.bot/v1/chat/completions"
+		if custom := os.Getenv("CLINE_API_BASE"); custom != "" {
+			apiURL = custom + "/chat/completions"
+		}
 	}
 
 	req, err := http.NewRequest(http.MethodPost, apiURL, bytes.NewReader(requestBody))
