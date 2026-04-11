@@ -44,3 +44,8 @@
 
 **Learning:** While relative dates (e.g., "2 days ago") are cleaner for scanning, users often need the precision of exact timestamps. Tooltips provide the perfect mechanism for this "progressive disclosure"—keeping the interface clean while making detailed data available on demand.
 **Action:** Use relative time for display and exact timestamp in tooltips.
+
+## 2025-12-22 - Search Input Friction
+
+**Learning:** Decorative icons over inputs (like a magnifying glass) can intercept clicks if not styled correctly, causing frustration when users try to focus the input near the icon. Additionally, having to repeatedly backspace to clear a search filter creates unnecessary friction.
+**Action:** Always add `pointer-events-none` to decorative overlay icons. Provide a clearable search pattern (an 'X' button that appears when text is present) to allow users to quickly reset filters.
