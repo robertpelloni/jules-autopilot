@@ -1,6 +1,6 @@
 # GPT-4o / Codex Instructions
 
-> **MANDATORY:** Always read `UNIVERSAL_LLM_INSTRUCTIONS.md` first. This file contains only OpenAI-specific overrides and strategies.
+> **MANDATORY:** Always read `LLM_INSTRUCTIONS.md` first. This file contains only OpenAI-specific overrides and strategies.
 
 ## Agent-Specific Strategies: GPT
 
