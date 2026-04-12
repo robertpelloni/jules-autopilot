@@ -1,60 +1,25 @@
-# Project Handoff: Jules Autopilot (v2.2.0)
+# Handoff Documentation
 
-## Executive Summary
-Reached v2.2.0 by implementing the Predictive Cost Optimizer (VISION "Extreme Telemetry"), Swarm Dashboard UI, CI Pipeline Monitor, and Background Anomaly Detection. The project has shipped **8 major releases** across this extended session, growing from v1.2.0 to v2.2.0.
+## Date: 2026-04-09
+## Version: 3.5.1
 
-## Release History
-| Version | Theme | Key Features |
-|---------|-------|-------------|
-| v1.3.0 | Notification Center | Notifications, audit trail, 50+ Go tests |
-| v1.4.0 | Deep Observability | Health snapshots, anomaly detection, token budget |
-| v1.5.0 | Shadow Pilot | Git diff monitoring, regression detection |
-| v1.6.0 | Dependency Checks | 7 health checks, system info, webhook router |
-| v2.0.0 | Autonomous Fleet | Multi-agent swarms, task decomposition |
-| v2.1.0 | Cost Optimizer | Predictive cost, provider profiling, budget tracking, swarm UI |
-| v2.2.0 | CI Monitor | CI failure detection, LLM analysis, auto-fix enqueue |
+### Current State Analysis
+I have conducted a deep analysis of the project across `ROADMAP.md`, `TODO.md`, `README.md`, and the conversation history.
 
-## Final Metrics
-| Metric | Before Session | After Session | Delta |
-|--------|---------------|---------------|-------|
-| Go code lines | ~6,400 | 13,500+ | +7,100 |
-| Go test cases | 0 | 177 | +177 |
-| API routes | ~88 | ~100 | +12 |
-| Go services | 9 | 19 | +10 |
-| GORM models | 17 | 30 | +13 |
-| Frontend tests | 36 | 36 | 0 |
-| ESLint violations | 4 warnings | 0 errors | -4 |
-| Bundle size | 1054KB | 672KB + 7 chunks | -382KB |
-| Version | 1.2.0 | 2.2.0 | +5 releases |
+**Key Achievements:**
+- The transition to a pure Go backend is 100% complete (`server/` directory is deleted).
+- Go version downgraded to `1.26.0` to resolve the Render deployment blocker.
+- Versioning is strictly centralized using `VERSION` and `scripts/update-version.js`.
 
-## All Go Services (19)
-audit, ci_monitor, cost_optimizer, daemon, debate, dependency_check,
-jules_client, llm, notification, observability, queue, rag, realtime,
-review, scheduler, shadow_pilot, swarm, webhook_router
+**Missing Features Identified for Next Agents:**
+1. **Shadow Pilot Git Diff Monitoring:** The Go backend needs a scheduled job or filesystem watcher to parse `git diff` outputs, evaluate them via an LLM, and log anomalies.
+2. **CI Pipeline Auto-Fix:** Shadow Pilot detects CI failures but the auto-enqueue mechanism to fix them autonomously is missing.
+3. **Analytics Integration:** Code Churn Analytics (additions/deletions) added in v0.3.1 are currently static placeholders in the React frontend. Needs live data wiring from the SQLite database.
+4. **Submodule Git Status API:** The `/api/system/status` API needs Go parity to read live submodule status (dirty, uninitialized, out-of-sync) and broadcast to the frontend.
 
-## All GORM Models (30)
-Account, ApiKey, AuditEntry, AnomalyRecord, CodeChunk, Debate,
-HealthSnapshot, JulesActivity, JulesMedia, JulesSession, JulesSessionOutput,
-KeeperLog, KeeperSettings, MemoryChunk, Notification, PullRequestInfo,
-QueueJob, RepoPath, ScheduledTask, Session, SessionTemplate, Swarm,
-SwarmAgent, SwarmEvent, SupervisorState, TokenUsage, User,
-VerificationToken, Workspace, WorkspaceMember
+### Next Steps for Implementing Models (Gemini, Claude, GPT)
+- **Model 1:** Start by wiring up the `GET /api/system/status` endpoint in Go to read submodule git states natively and update the React `SystemDashboard` to consume this dynamic data instead of `app/submodules.json`.
+- **Model 2:** Implement the Git Diff anomaly detector in Go `cmd/index-repo` or as a background cron job in `main.go`.
+- **Model 3:** Complete the CI Pipeline auto-fix loop by hooking incoming webhooks to the session spawn logic.
 
-## Remaining Roadmap (2 items)
-- **WebAssembly Plugin Isolation** - Requires Wasm runtime dependency
-- **Plugin Marketplace** - UI + registry, depends on Wasm isolation
-
-## Validation (All Passing ✅)
-```
-✅ go build                    (clean)
-✅ go test ./...               (177 tests, 0 failures)
-✅ pnpm run typecheck          (clean)
-✅ pnpm run lint               (0 errors, 0 warnings)
-✅ pnpm run test               (36 tests, 0 failures)
-✅ pnpm run build              (clean, 7+1 chunks)
-✅ version sync                (✅ 2.2.0)
-```
-
-## Services Running
-- Go backend: `localhost:8080` (PID 13532)
-- Frontend: `localhost:3006` (PID 16908)
+Please refer to `MEMORY.md` and `DEPLOY.md` for architectural context. Ensure you update `CHANGELOG.md` and run `pnpm run update-version` after merging new features.

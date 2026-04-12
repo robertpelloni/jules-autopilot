@@ -1,31 +1,29 @@
-# Architectural Memory & Codebase Observations
+# Memory Document: Ongoing Observations & Context
 
-*This document is maintained autonomously by LLM agents to explicitly pass implicit codebase context to future sessions.*
+## Project State (v3.5.1)
 
-## 1. The Verified Portal Auth Strategy
-**Critical Discovery:** Jules Portal tokens (starting with `AQ.A...`) are rejected by the Google gateway if sent via standard `Authorization: Bearer` headers. 
-**Enforcement:** We must strictly use the `x-goog-api-key` header and **EXPLICITLY DELETE** the `Authorization` header from the request object. Failing to do so triggers an `API_KEY_SERVICE_BLOCKED` error.
+Jules Autopilot has successfully pivoted to a **Go-first architecture**.
+The `server/` directory and backend-only JS dependencies have been removed.
 
-## 2. Hono Custom Method Routing
-**Discovery:** Hono paths containing colons (e.g., `/sessions/123:sendMessage`) do not always match standard parameter handlers.
-**Solution:** We implement a catch-all `:idAndAction` parameter and manually split the string by the colon. This ensures custom gRPC-style actions are correctly routed to their handlers in `server/index.ts`.
+### Core Observations
+1.  **Architecture:**
+    -   Frontend: Vite SPA (React 19, Tailwind v4).
+    -   Backend: Go runtime (Fiber) serving APIs, WebSockets, and static assets.
+    -   Database: SQLite + GORM.
+    -   Workspaces: PNPM workspaces manage packages like `@jules/shared` and `@jules/cli`.
+2.  **Deployment Challenges:**
+    -   The Go version in `backend-go/go.mod` must match the build environment exactly (currently pinned to `1.26.0` for Render).
+3.  **Missing/Incomplete Features (Identified for Implementation):**
+    -   **Git Diff Monitoring:** Background Shadow Pilot anomaly detection is missing native git diff monitoring.
+    -   **CI Pipeline Auto-Fix:** Shadow Pilot has anomaly logging but the CI pipeline auto-fix is incomplete.
+    -   **Analytics Dashboard Polish:** Still missing robust frontend wiring for the new Code Churn metrics (currently placeholder/static data).
+    -   **Submodule Status Check:** Real-time submodule git status checks in the Go backend are not fully wired to the `/system/status` UI.
 
-## 3. Lean Core Persistence (SQLite)
-**Observation:** We have replaced Redis, BullMQ, and specialized Vector DBs with a single, high-performance SQLite database.
-**Context:**
-- **Queue**: Managed via the `QueueJob` table and a continuous polling loop in `server/queue.ts`.
-- **RAG**: Chunks and embeddings are stored in `CodeChunk` and `MemoryChunk` tables. 
-- **Performance**: In-memory cosine similarity search across ~5,000 chunks takes <50ms, making it faster and cheaper than cloud-only vector solutions for this node size.
+### Design Preferences
+-   **No SSR:** The frontend relies exclusively on Client-Side Rendering (SPA mode) to avoid Next.js overhead.
+-   **Single Source of Truth:** `VERSION.md` is the absolute source of truth for versions, updated via `scripts/update-version.js`.
+-   **Universal Instructions:** All AI interactions must refer back to `LLM_INSTRUCTIONS.md`.
 
-## 4. Frontend Resilience & Performance
-**Observation:** Vite aggressively caches JS bundles.
-**Fix:** We use a `Build: [Timestamp]` string in `src/main.tsx` to force hash refreshes.
-**Live Data:** We utilize **SWR** for high-frequency polling of system metadata (like submodule status), ensuring the UI reflects the Git state without manual refreshes.
-
-## 5. UI Readability Standards
-**Requirement:** The session chat history must remain high-contrast.
-**Rules:**
-- Use **solid backgrounds** (`bg-zinc-900`) for agent bubbles.
-- Forced text color: `zinc-100` for all chat content.
-- Base font size for chat: `16px` (`text-base`).
-- Use the **Sparkles badge** to indicate repository context in the header.
+## Agent Directives
+-   Always check this file before altering the project's macro structure.
+-   Prioritize Go runtime stability over Node.js fallback mechanisms.

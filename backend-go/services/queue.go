@@ -156,6 +156,13 @@ func (w *Worker) processJobs() {
 }
 
 func (w *Worker) executeJob(job models.QueueJob) {
+	log.Printf("[Queue] Starting execution of job %s (Type: %s)", job.ID, job.Type)
+	addKeeperLog(fmt.Sprintf("Executing queued background job: %s", job.Type), "action", "global", map[string]interface{}{
+		"event": "queue_job_start",
+		"jobId": job.ID,
+		"jobType": job.Type,
+	})
+
 	// Mark as processing
 	now := time.Now()
 	err := db.DB.Model(&job).Updates(map[string]interface{}{
