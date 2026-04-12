@@ -174,7 +174,6 @@ function getDefaultApiBaseUrl(): string {
     || processEnv?.VITE_JULES_API_BASE_URL
     || '/api';
 }
-
 export class JulesClient {
   private apiKey?: string;
   private authToken?: string;

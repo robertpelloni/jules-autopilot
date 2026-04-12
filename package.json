@@ -10,7 +10,11 @@
   ],
   "scripts": {
     "dev": "vite",
+<<<<<<< HEAD
+    "build": "pnpm run build:shared && pnpm exec prisma generate --schema=prisma/schema.prisma && vite build",
+=======
     "build": "pnpm run build:shared && vite build",
+>>>>>>> 276c1337b9222c9e448fecc479724cb628a6bdc9
     "build:shared": "pnpm --filter @jules/shared build",
     "build:cli": "pnpm --filter @jules/cli build",
     "build:all": "pnpm run build:shared && pnpm run build && pnpm run build:cli",
@@ -22,9 +26,13 @@
     "test": "jest",
     "test:e2e": "playwright test",
     "typecheck": "tsc --noEmit && pnpm --filter @jules/shared typecheck",
+<<<<<<< HEAD
+    "postinstall": "pnpm run build:shared && pnpm exec prisma generate --schema=prisma/schema.prisma"
+=======
     "update-version": "node scripts/update-version.js",
     "check-version-sync": "node scripts/check-version-sync.js",
     "postinstall": "pnpm run build:shared"
+>>>>>>> 276c1337b9222c9e448fecc479724cb628a6bdc9
   },
   "dependencies": {
     "@dnd-kit/core": "^6.3.1",
@@ -70,12 +78,6 @@
     "tunnel-rat": "^0.1.2",
     "zod": "^4.3.5",
     "zustand": "^5.0.9"
-  },
-  "pnpm": {
-    "overrides": {
-      "react": "^19.2.3",
-      "react-dom": "^19.2.3"
-    }
   },
   "devDependencies": {
     "@eslint/js": "^9.39.2",
