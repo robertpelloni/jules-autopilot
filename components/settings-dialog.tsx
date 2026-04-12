@@ -81,6 +81,8 @@ export function SettingsDialog({ open: propOpen, onOpenChange: propOnOpenChange,
   useEffect(() => {
     if (open) {
       void fetchApiKeys();
+      // Also trigger a load of the keeper config to sync with backend
+      void useSessionKeeperStore.getState().loadConfig();
     }
   }, [open, fetchApiKeys]);
 
@@ -169,33 +171,33 @@ export function SettingsDialog({ open: propOpen, onOpenChange: propOnOpenChange,
         </DialogHeader>
         <Tabs defaultValue="integrations" className="flex-1 flex flex-col min-h-0">
           <div className="px-6 pt-4">
-            <TabsList className="bg-zinc-900 border border-white/10">
-              <TabsTrigger value="integrations" className="text-xs flex items-center gap-2">
-                <Github className="h-3.5 w-3.5" />
+            <TabsList className="bg-zinc-900 border border-white/10 flex-wrap h-auto gap-1 p-1">
+              <TabsTrigger value="integrations" className="text-[10px] flex items-center gap-1.5 px-2 py-1">
+                <Github className="h-3 w-3" />
                 Integrations
               </TabsTrigger>
-              <TabsTrigger value="fleet" className="text-xs flex items-center gap-2">
-                <Zap className="h-3.5 w-3.5 text-purple-400" />
-                Fleet
-              </TabsTrigger>
-              <TabsTrigger value="submodules" className="text-xs flex items-center gap-2">
-                <Github className="h-3.5 w-3.5 text-blue-400" />
-                Submodules
-              </TabsTrigger>
-              <TabsTrigger value="supervisor" className="text-xs flex items-center gap-2">
-                <Brain className="h-3.5 w-3.5" />
+              <TabsTrigger value="supervisor" className="text-[10px] flex items-center gap-1.5 px-2 py-1 bg-purple-600/20 text-purple-300 border border-purple-500/30 data-[state=active]:bg-purple-600 data-[state=active]:text-white">
+                <Brain className="h-3 w-3" />
                 Supervisor
               </TabsTrigger>
-              <TabsTrigger value="appearance" className="text-xs flex items-center gap-2">
-                <Palette className="h-3.5 w-3.5" />
+              <TabsTrigger value="fleet" className="text-[10px] flex items-center gap-1.5 px-2 py-1">
+                <Zap className="h-3 w-3 text-purple-400" />
+                Fleet
+              </TabsTrigger>
+              <TabsTrigger value="submodules" className="text-[10px] flex items-center gap-1.5 px-2 py-1">
+                <Github className="h-3 w-3 text-blue-400" />
+                Submodules
+              </TabsTrigger>
+              <TabsTrigger value="appearance" className="text-[10px] flex items-center gap-1.5 px-2 py-1">
+                <Palette className="h-3 w-3" />
                 Appearance
               </TabsTrigger>
-              <TabsTrigger value="keys" className="text-xs flex items-center gap-2">
-                <Key className="h-3.5 w-3.5" />
+              <TabsTrigger value="keys" className="text-[10px] flex items-center gap-1.5 px-2 py-1">
+                <Key className="h-3 w-3" />
                 API Keys
               </TabsTrigger>
-              <TabsTrigger value="system" className="text-xs flex items-center gap-2">
-                <Database className="h-3.5 w-3.5" />
+              <TabsTrigger value="system" className="text-[10px] flex items-center gap-1.5 px-2 py-1">
+                <Database className="h-3 w-3" />
                 System
               </TabsTrigger>
             </TabsList>
@@ -283,11 +285,16 @@ export function SettingsDialog({ open: propOpen, onOpenChange: propOnOpenChange,
             <SubmoduleList />
           </TabsContent>
 
-          <TabsContent value="supervisor" className="flex-1 min-h-0 overflow-hidden">
-            <SessionKeeperSettingsContent
-              config={config}
-              onConfigChange={saveConfig}
-            />
+          <TabsContent value="supervisor" className="flex-1 overflow-y-auto min-h-0 focus-visible:outline-none data-[state=inactive]:hidden">
+            <div className="p-6">
+              <div className="mb-4 p-3 bg-purple-900/30 border border-purple-500/30 rounded text-[10px] text-purple-200 uppercase tracking-widest font-bold">
+                Supervisor Configuration
+              </div>
+              <SessionKeeperSettingsContent
+                config={config}
+                onConfigChange={saveConfig}
+              />
+            </div>
           </TabsContent>
 
           <TabsContent value="keys" className="flex-1 p-6 overflow-y-auto">

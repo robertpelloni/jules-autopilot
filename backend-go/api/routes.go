@@ -31,6 +31,10 @@ func Broadcast(message interface{}) {
 	ClientsMutex.Lock()
 	defer ClientsMutex.Unlock()
 
+	// Add a small artificial delay to avoid hammering the browser/socket 
+	// during high-volume events (like startup sync)
+	time.Sleep(50 * time.Millisecond)
+
 	for client := range ActiveClients {
 		if err := client.WriteJSON(message); err != nil {
 			log.Printf("WebSocket broadcast error: %v", err)

@@ -105,7 +105,12 @@ func (d *Daemon) tick() time.Duration {
 		payload := map[string]interface{}{
 			"session": session,
 		}
-		if _, err := AddJob("check_session", payload); err != nil {
+		// Calculate a staggered delay to avoid 429 errors from Google API
+		// Each session check is offset by 2 seconds
+		delay := time.Duration(queuedSessions*2) * time.Second
+		runAt := time.Now().Add(delay)
+
+		if _, err := AddJob("check_session", payload, runAt); err != nil {
 			log.Printf("[Daemon] Failed to enqueue check_session for %s: %v", session.ID, err)
 			continue
 		}

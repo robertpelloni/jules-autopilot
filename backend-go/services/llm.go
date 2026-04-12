@@ -128,9 +128,17 @@ func getSupervisorAPIKey(provider string, explicit *string) string {
 
 	switch strings.ToLower(strings.TrimSpace(provider)) {
 	case "lmstudio":
-		return "placeholder" // LM Studio usually doesn't need a key
+		return "lm-studio" // LM Studio usually doesn't need a key, but we need a non-empty string to avoid skipping
 	case "openrouter":
 		if key := strings.TrimSpace(os.Getenv("OPENROUTER_API_KEY")); key != "" {
+			return key
+		}
+	case "kilocode":
+		if key := strings.TrimSpace(os.Getenv("KILOCODE_API_KEY")); key != "" {
+			return key
+		}
+	case "cline":
+		if key := strings.TrimSpace(os.Getenv("CLINE_API_KEY")); key != "" {
 			return key
 		}
 	case "anthropic":
@@ -150,7 +158,7 @@ func getSupervisorAPIKey(provider string, explicit *string) string {
 		}
 	}
 
-	fallbacks := []string{"OPENAI_API_KEY", "GOOGLE_API_KEY", "GEMINI_API_KEY", "ANTHROPIC_API_KEY"}
+	fallbacks := []string{"OPENAI_API_KEY", "OPENROUTER_API_KEY", "GOOGLE_API_KEY", "GEMINI_API_KEY", "ANTHROPIC_API_KEY"}
 	for _, envKey := range fallbacks {
 		if value := strings.TrimSpace(os.Getenv(envKey)); value != "" {
 			return value
@@ -163,11 +171,11 @@ func generateLLMText(primaryProvider, primaryApiKey, primaryModel, systemPrompt 
 	primaryProvider = normalizeProvider(primaryProvider)
 	primaryModel = resolveModel(primaryProvider, primaryModel)
 
+	// User requested fallback chain: LMStudio -> OpenRouter -> Fallback to others
 	providers := []string{primaryProvider}
 	
-	// Intelligent Fallback Chain requested by user
-	fallbacks := []string{"lmstudio", "openrouter", "kilocode", "cline", "openai", "anthropic", "gemini"}
-	for _, p := range fallbacks {
+	fallbackChain := []string{"lmstudio", "openrouter", "openai", "anthropic", "gemini"}
+	for _, p := range fallbackChain {
 		exists := false
 		for _, existing := range providers {
 			if existing == p {
@@ -310,7 +318,7 @@ func generateOpenAIText(apiKey, model, systemPrompt string, messages []LLMMessag
 	start := time.Now()
 
 	provider := "openai"
-	if strings.HasPrefix(model, "gemma") || strings.Contains(model, "lmstudio") {
+	if strings.HasPrefix(model, "gemma") || strings.Contains(model, "lmstudio") || (apiKey == "lm-studio") {
 		provider = "lmstudio"
 	} else if strings.Contains(model, "openrouter") || strings.Contains(apiKey, "sk-or-") {
 		provider = "openrouter"

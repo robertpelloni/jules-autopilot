@@ -224,35 +224,49 @@ func (c *JulesClient) ListSessions() ([]models.JulesSession, error) {
 		return nil, fmt.Errorf("Jules credentials not found")
 	}
 
-	url := fmt.Sprintf("%s/sessions", JulesApiBaseUrl)
-	req, err := http.NewRequest("GET", url, nil)
-	if err != nil {
-		return nil, err
-	}
-
-	c.setAuthHeaders(req)
-
-	resp, err := http.DefaultClient.Do(req)
-	if err != nil {
-		return nil, err
-	}
-	defer resp.Body.Close()
-
-	if resp.StatusCode != http.StatusOK {
-		body, _ := io.ReadAll(resp.Body)
-		return nil, fmt.Errorf("Jules API request failed with status %d: %s", resp.StatusCode, string(body))
-	}
-
-	var data struct {
-		Sessions []ApiSession `json:"sessions"`
-	}
-	if err := json.NewDecoder(resp.Body).Decode(&data); err != nil {
-		return nil, err
-	}
-
 	var results []models.JulesSession
-	for _, s := range data.Sessions {
-		results = append(results, transformSession(s))
+	pageToken := ""
+
+	for {
+		url := fmt.Sprintf("%s/sessions?pageSize=100", JulesApiBaseUrl)
+		if pageToken != "" {
+			url += "&pageToken=" + pageToken
+		}
+
+		req, err := http.NewRequest("GET", url, nil)
+		if err != nil {
+			return nil, err
+		}
+
+		c.setAuthHeaders(req)
+
+		resp, err := http.DefaultClient.Do(req)
+		if err != nil {
+			return nil, err
+		}
+		defer resp.Body.Close()
+
+		if resp.StatusCode != http.StatusOK {
+			body, _ := io.ReadAll(resp.Body)
+			return nil, fmt.Errorf("Jules API request failed with status %d: %s", resp.StatusCode, string(body))
+		}
+
+		var data struct {
+			Sessions      []ApiSession `json:"sessions"`
+			NextPageToken string       `json:"nextPageToken"`
+		}
+		if err := json.NewDecoder(resp.Body).Decode(&data); err != nil {
+			return nil, err
+		}
+
+		for _, s := range data.Sessions {
+			results = append(results, transformSession(s))
+		}
+
+		pageToken = data.NextPageToken
+		if pageToken == "" {
+			break
+		}
 	}
 
 	return results, nil
@@ -457,38 +471,48 @@ func (c *JulesClient) CreateActivity(sessionId string, params CreateActivityRequ
 
 	// Default to sendMessage if type is message or empty
 	url := fmt.Sprintf("%s/sessions/%s:sendMessage", JulesApiBaseUrl, sessionId)
-	payload := map[string]string{"prompt": params.Content}
-
+	
 	// If it's a result or has a specific role, we might need the activities endpoint
-	// But the primary way to "message" is :sendMessage
 	if params.Type == "result" {
 		url = fmt.Sprintf("%s/sessions/%s/activities", JulesApiBaseUrl, sessionId)
-		// For /activities, the structure might be different depending on the API
-		// This is a simplified fallback
 	}
 
+	payload := map[string]string{"prompt": params.Content}
 	jsonPayload, _ := json.Marshal(payload)
-	req, err := http.NewRequest("POST", url, strings.NewReader(string(jsonPayload)))
-	if err != nil {
-		return nil, err
+
+	var lastErr error
+	for i := 0; i < 3; i++ {
+		req, err := http.NewRequest("POST", url, strings.NewReader(string(jsonPayload)))
+		if err != nil {
+			return nil, err
+		}
+
+		c.setAuthHeaders(req)
+
+		resp, err := http.DefaultClient.Do(req)
+		if err != nil {
+			return nil, err
+		}
+		defer resp.Body.Close()
+
+		body, _ := io.ReadAll(resp.Body)
+		if resp.StatusCode == 429 {
+			lastErr = fmt.Errorf("Jules API error (429): %s", string(body))
+			// Backoff: 2s, 4s, 8s
+			time.Sleep(time.Duration(2*(i+1)) * time.Second)
+			continue
+		}
+
+		if resp.StatusCode >= 400 {
+			return nil, fmt.Errorf("Jules API error (%d): %s", resp.StatusCode, string(body))
+		}
+
+		var result interface{}
+		json.Unmarshal(body, &result)
+		return result, nil
 	}
 
-	c.setAuthHeaders(req)
-
-	resp, err := http.DefaultClient.Do(req)
-	if err != nil {
-		return nil, err
-	}
-	defer resp.Body.Close()
-
-	body, _ := io.ReadAll(resp.Body)
-	if resp.StatusCode >= 400 {
-		return nil, fmt.Errorf("Jules API error (%d): %s", resp.StatusCode, string(body))
-	}
-
-	var result interface{}
-	json.Unmarshal(body, &result)
-	return result, nil
+	return nil, lastErr
 }
 
 func (c *JulesClient) ListIssues(sourceID string) ([]GitHubIssue, error) {

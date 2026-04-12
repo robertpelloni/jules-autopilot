@@ -107,7 +107,7 @@ export interface SessionKeeperConfig {
 
     // Smart Auto-Pilot Settings
     smartPilotEnabled: boolean;
-    supervisorProvider: 'openai' | 'anthropic' | 'gemini';
+    supervisorProvider: 'openai' | 'anthropic' | 'gemini' | 'lmstudio' | 'openrouter';
     supervisorApiKey: string;
     supervisorModel: string;
     contextMessageCount: number;

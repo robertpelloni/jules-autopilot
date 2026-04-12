@@ -1,0 +1,16 @@
+{
+  "nextId": 2,
+  "tasks": [
+    {
+      "id": "1",
+      "subject": "Validate and refine Supervisor autonomous behavior",
+      "description": "The \"Enable Auto-Pilot\" and \"Smart Supervisor\" toggles are now visible. The next phase is to ensure they correctly control the backend daemon and that AI-guided autonomous behavior is functional.",
+      "status": "in_progress",
+      "metadata": {},
+      "blocks": [],
+      "blockedBy": [],
+      "createdAt": 1775951987157,
+      "updatedAt": 1775951988457
+    }
+  ]
+}
