@@ -24,7 +24,7 @@
     "typecheck": "tsc --noEmit && pnpm --filter @jules/shared typecheck",
     "update-version": "node scripts/update-version.js",
     "check-version-sync": "node scripts/check-version-sync.js",
-    "postinstall": "pnpm run build:shared && pnpm exec prisma generate --schema=prisma/schema.prisma"
+    "postinstall": "pnpm run build:shared"
   },
   "dependencies": {
     "@dnd-kit/core": "^6.3.1",
