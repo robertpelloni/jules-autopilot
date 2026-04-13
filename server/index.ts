@@ -1,4 +1,4 @@
-import { JulesClient, JulesAPIError } from '../lib/jules/client';
+import { JulesClient } from '../lib/jules/client';
 import { prisma } from '../lib/prisma';
 import { Hono, type Context } from 'hono';
 import { cors } from 'hono/cors';
@@ -14,7 +14,7 @@ import path from 'path';
 import type { DaemonEventType } from '@jules/shared';
 import { createDaemonEvent } from '@jules/shared';
 
-console.log(`[Server] Initializing Lean Core (Routing Fix Mode)...`);
+console.log(`[Server] Initializing Lean Core (TypeScript Port Mode)...`);
 
 // Force load .env into process.env
 try {
@@ -93,8 +93,6 @@ async function getJulesClient(c?: any) {
         else if (settings?.julesApiKey && !isInvalid(settings.julesApiKey)) apiKey = settings.julesApiKey;
 
         if (apiKey) {
-            // CRITICAL: Jules Portal tokens (AQ.A) MUST use x-goog-api-key and 
-            // MUST NOT use Bearer Authorization. JulesClient handles this internally.
             return new JulesClient(apiKey, 'https://jules.googleapis.com/v1alpha');
         }
     } catch (e) {
@@ -124,12 +122,11 @@ api.get('/manifest', (c) => {
     return c.json({
         id: 'jules-autopilot-node-1',
         name: 'Jules Autopilot Orchestrator',
-        version: '0.9.7',
+        version: '1.0.0',
         capabilities: [
             'cloud_session_management',
             'autonomous_plan_approval',
             'semantic_rag_indexing',
-            'council_supervisor_debate',
             'automatic_self_healing',
             'github_issue_conversion'
         ],
@@ -143,40 +140,6 @@ api.get('/manifest', (c) => {
     });
 });
 
-api.get('/sessions/:id/replay', async (c) => {
-    try {
-        const id = c.req.param('id');
-        const client = await getJulesClient(c);
-        if (!client) return c.json({ error: 'Auth required' }, 401);
-
-        const [session, activities] = await Promise.all([
-            client.getSession(id),
-            client.listActivities(id)
-        ]);
-
-        // Transform activities into a structured replay timeline
-        const timeline = activities.map(a => ({
-            id: activity.id,
-            timestamp: a.createdAt,
-            role: a.role,
-            type: a.type,
-            content: a.content,
-            hasDiff: !!a.diff,
-            hasCommand: !!a.bashOutput
-        }));
-
-        return c.json({
-            sessionId: id,
-            title: session.title,
-            status: session.status,
-            createdAt: session.createdAt,
-            timeline
-        });
-    } catch (e) {
-        return c.json({ error: String(e) }, 500);
-    }
-});
-
 api.get('/sessions', async (c) => {
     try {
         const client = await getJulesClient(c);
@@ -187,23 +150,7 @@ api.get('/sessions', async (c) => {
     } catch (e: any) {
         const errorMessage = e?.message || String(e);
         console.error(`[API] listSessions failed: ${errorMessage}`);
-
-        return c.json({ 
-            sessions: [
-                {
-                    id: 'critical-err',
-                    title: `API Error: ${errorMessage}`,
-                    status: 'failed',
-                    rawState: 'FAILED',
-                    createdAt: new Date().toISOString(),
-                    updatedAt: new Date().toISOString(),
-                    sourceId: 'system',
-                    branch: 'none',
-                    metadata: { error: e?.response || errorMessage }
-                },
-                ...getMockSessions()
-            ]
-        });
+        return c.json({ sessions: getMockSessions() });
     }
 });
 
@@ -268,28 +215,6 @@ api.post('/sessions/:id/activities', async (c) => {
     } catch (e) { return c.json({ error: String(e) }, 500); }
 });
 
-const handleWebhookSignal = async (c: Context) => {
-    try {
-        const body = await c.req.json();
-        const result = await handleBorgWebhook(body);
-        
-        // Broadcast the signal to all connected UI clients
-        emitDaemonEvent('borg_signal_received', {
-            type: body.type,
-            source: body.source || 'collective',
-            data: body.data,
-            timestamp: new Date().toISOString()
-        });
-
-        return c.json(result);
-    } catch (e) {
-        return c.json({ error: String(e) }, 500);
-    }
-};
-
-api.post('/webhooks/borg', handleWebhookSignal);
-api.post('/webhooks/borg', handleWebhookSignal);
-
 api.post('/rag/query', async (c) => {
     try {
         const body = await c.req.json();
@@ -333,13 +258,11 @@ api.post('/rag/reindex', async (c) => {
 api.get('/fleet/summary', async (c) => {
     try {
         const [
-            sessions,
             pendingJobs,
             processingJobs,
             recentActions,
             chunkCount
         ] = await Promise.all([
-            prisma.session.findMany({ select: { status: true } }),
             prisma.queueJob.count({ where: { status: 'pending' } }),
             prisma.queueJob.count({ where: { status: 'processing' } }),
             prisma.keeperLog.findMany({ 
@@ -350,17 +273,8 @@ api.get('/fleet/summary', async (c) => {
             prisma.codeChunk.count()
         ]);
 
-        const statusCounts = sessions.reduce((acc: Record<string, number>, s) => {
-            acc[s.status] = (acc[s.status] || 0) + 1;
-            return acc;
-        }, {});
-
         return c.json({
             timestamp: new Date().toISOString(),
-            fleet: {
-                total: sessions.length,
-                byStatus: statusCounts
-            },
             orchestrator: {
                 queueDepth: pendingJobs + processingJobs,
                 isActive: processingJobs > 0,
@@ -377,37 +291,6 @@ api.get('/fleet/summary', async (c) => {
         });
     } catch (e) {
         return c.json({ error: String(e) }, 500);
-    }
-});
-
-api.get('/system/submodules', async (c) => {
-    try {
-        const { execSync } = await import('child_process');
-        const output = execSync('git submodule status', { encoding: 'utf8' });
-        
-        const submodules = output.split('\n')
-            .filter(line => line.trim())
-            .map(line => {
-                // git submodule status output format: [status_char][hash] [path] ([tag/branch])
-                const match = line.match(/^([\s+-])([a-f0-9]+)\s+([^\s]+)(?:\s+\((.+)\))?$/);
-                if (!match) return null;
-                
-                const [_, statusChar, hash, path, ref] = match;
-                return {
-                    name: path.split('/').pop(),
-                    path,
-                    hash: hash.substring(0, 7),
-                    fullHash: hash,
-                    ref: ref || 'unknown',
-                    status: statusChar === ' ' ? 'synced' : statusChar === '+' ? 'modified' : 'uninitialized'
-                };
-            })
-            .filter(Boolean);
-
-        return c.json({ submodules });
-    } catch (e) {
-        console.error('[API] Failed to fetch submodules:', e);
-        return c.json({ submodules: [] }); // Fallback to empty list
     }
 });
 
@@ -430,6 +313,36 @@ api.get('/daemon/status', async (c) => {
             processing: processingJobs
         }
     });
+});
+
+api.get('/settings/keeper', async (c) => {
+    const settings = await prisma.keeperSettings.findUnique({ where: { id: 'default' } });
+    return c.json(settings || {});
+});
+
+api.post('/settings/keeper', async (c) => {
+    const body = await c.req.json();
+    const settings = await prisma.keeperSettings.upsert({
+        where: { id: 'default' },
+        update: body,
+        create: { id: 'default', ...body }
+    });
+    
+    if (settings.isEnabled) startDaemon();
+    else stopDaemon();
+
+    return c.json(settings);
+});
+
+api.get('/apikeys', async (c) => {
+    const keys = await prisma.apiKey.findMany();
+    return c.json(keys);
+});
+
+api.post('/apikeys', async (c) => {
+    const body = await c.req.json();
+    const key = await prisma.apiKey.create({ data: body });
+    return c.json(key);
 });
 
 // FILE SYSTEM ENDPOINTS
@@ -518,3 +431,4 @@ if (typeof Bun !== 'undefined') {
         } catch (e) { console.error("[Server] Auto-start failed:", e); }
     }, 1000);
 }
+

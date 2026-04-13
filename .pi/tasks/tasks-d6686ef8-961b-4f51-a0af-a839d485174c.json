@@ -1,5 +1,5 @@
 {
-  "nextId": 6,
+  "nextId": 12,
   "tasks": [
     {
       "id": "1",
@@ -59,6 +59,88 @@
       "blockedBy": [],
       "createdAt": 1776040215780,
       "updatedAt": 1776040215780
+    },
+    {
+      "id": "6",
+      "subject": "Port Go backend to TypeScript",
+      "description": "Port the Go backend to TypeScript with a clean rewrite, focusing on core features and removing unnecessary modules as specified by the user.",
+      "status": "completed",
+      "metadata": {},
+      "blocks": [
+        "7"
+      ],
+      "blockedBy": [],
+      "createdAt": 1776113888676,
+      "updatedAt": 1776114004738
+    },
+    {
+      "id": "7",
+      "subject": "Implement core TypeScript server",
+      "description": "Implement a clean TypeScript server using Hono and Bun, including routes for sessions, logs, and settings.",
+      "status": "completed",
+      "metadata": {},
+      "blocks": [],
+      "blockedBy": [
+        "10",
+        "8",
+        "9",
+        "11",
+        "6"
+      ],
+      "createdAt": 1776113891928,
+      "updatedAt": 1776114003330
+    },
+    {
+      "id": "8",
+      "subject": "Implement JulesClient in TypeScript",
+      "description": "Implement a TypeScript version of the JulesClient for interaction with the Google Jules API.",
+      "status": "completed",
+      "metadata": {},
+      "blocks": [
+        "7"
+      ],
+      "blockedBy": [],
+      "createdAt": 1776113893357,
+      "updatedAt": 1776113998873
+    },
+    {
+      "id": "9",
+      "subject": "Implement background daemon and worker",
+      "description": "Implement the background daemon and task worker in TypeScript for automated session monitoring.",
+      "status": "completed",
+      "metadata": {},
+      "blocks": [
+        "7"
+      ],
+      "blockedBy": [],
+      "createdAt": 1776113894970,
+      "updatedAt": 1776114000445
+    },
+    {
+      "id": "10",
+      "subject": "Configure Prisma and database",
+      "description": "Set up the Prisma schema and database configuration for the TypeScript backend.",
+      "status": "completed",
+      "metadata": {},
+      "blocks": [
+        "7"
+      ],
+      "blockedBy": [],
+      "createdAt": 1776113896530,
+      "updatedAt": 1776113997260
+    },
+    {
+      "id": "11",
+      "subject": "Implement RAG and semantic search",
+      "description": "Implement RAG indexing and querying logic in TypeScript for semantic codebase search.",
+      "status": "completed",
+      "metadata": {},
+      "blocks": [
+        "7"
+      ],
+      "blockedBy": [],
+      "createdAt": 1776113898134,
+      "updatedAt": 1776114001864
     }
   ]
 }
