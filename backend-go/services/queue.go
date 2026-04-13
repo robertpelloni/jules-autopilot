@@ -1366,22 +1366,36 @@ func (w *Worker) handleCIAutoFix(payload string) (string, error) {
 		FixStrategy string `json:"fixStrategy"`
 	}
 	if err := json.Unmarshal([]byte(payload), &p); err != nil {
-		return "", fmt.Errorf("invalid payload: %w", err)
+		return "fail", fmt.Errorf("invalid payload: %w", err)
 	}
 
-	// For now, log the auto-fix attempt and record the analysis
+	// Log the auto-fix attempt
 	addKeeperLog(fmt.Sprintf("CI auto-fix attempted for %s (%s)", p.SourceID, p.Stage), "action", "global", map[string]interface{}{
-		"event":       "ci_auto_fix",
+		"event":       "ci_auto_fix_start",
 		"sourceId":    p.SourceID,
 		"stage":       p.Stage,
 		"fixStrategy": p.FixStrategy,
 	})
 
-	// In a full implementation, this would:
-	// 1. Check out the branch
-	// 2. Apply the suggested fix
-	// 3. Run tests
-	// 4. Commit and push if tests pass
+	// 1. Automatically spawn a Jules session for the failed CI
+	client := NewJulesClient()
+	title := fmt.Sprintf("Auto-Fix CI Failure: %s in %s", p.Stage, p.SourceID)
+	prompt := fmt.Sprintf("The CI pipeline failed during the '%s' stage.\n\nAnalysis Strategy:\n%s\n\nPlease apply the recommended fixes, run the tests to verify, and commit the changes.", p.Stage, p.FixStrategy)
 
-	return fmt.Sprintf("ci_auto_fix_analyzed:%s", p.Stage), nil
+	session, err := client.CreateSession(title, prompt, p.SourceID)
+	if err != nil {
+		addKeeperLog(fmt.Sprintf("Failed to spawn auto-fix session: %v", err), "error", "global", map[string]interface{}{
+			"event": "ci_auto_fix_failed",
+			"error": err.Error(),
+		})
+		return "fail", fmt.Errorf("failed to create auto-fix session: %w", err)
+	}
+
+	addKeeperLog(fmt.Sprintf("Spawned auto-fix session %s for CI failure.", session.ID[:8]), "action", session.ID, map[string]interface{}{
+		"event": "ci_auto_fix_session_spawned",
+		"sessionId": session.ID,
+		"sourceId": p.SourceID,
+	})
+
+	return fmt.Sprintf("ci_auto_fix_spawned:%s", session.ID), nil
 }
