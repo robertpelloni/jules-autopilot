@@ -28,6 +28,7 @@ export function SettingsDialog({ open: propOpen, onOpenChange: propOnOpenChange,
   const [clineKey, setClineKey] = useState('');
   const [geminiKey, setGeminiKey] = useState('');
   const [anthropicKey, setAnthropicKey] = useState('');
+  const [envKeys, setEnvKeys] = useState<Record<string, boolean>>({});
 
   const open = propOpen !== undefined ? propOpen : internalOpen;
   const onOpenChange = propOnOpenChange || setInternalOpen;
@@ -36,6 +37,12 @@ export function SettingsDialog({ open: propOpen, onOpenChange: propOnOpenChange,
     if (open) {
       // Also trigger a load of the keeper config to sync with backend
       void useSessionKeeperStore.getState().loadConfig();
+      
+      // Check for environment keys
+      fetch('/api/settings/env-keys')
+        .then(res => res.json())
+        .then(data => setEnvKeys(data))
+        .catch(err => console.error('Failed to fetch env keys:', err));
     }
   }, [open]);
 
@@ -167,9 +174,10 @@ export function SettingsDialog({ open: propOpen, onOpenChange: propOnOpenChange,
                     </div>
                     <Input
                       type="password"
-                      value={julesKey}
+                      value={julesKey || (envKeys.JULES_API_KEY ? '••••••••••••••••' : '')}
                       onChange={e => setJulesKey(e.target.value)}
-                      placeholder="AQ.A..."
+                      placeholder={envKeys.JULES_API_KEY ? "Detected from Environment" : "AQ.A..."}
+                      disabled={envKeys.JULES_API_KEY}
                       className="bg-black/50 border-white/10 text-xs font-mono"
                     />
                   </div>
@@ -187,9 +195,10 @@ export function SettingsDialog({ open: propOpen, onOpenChange: propOnOpenChange,
                     <Label className="text-xs text-white/60">OpenAI API Key</Label>
                     <Input
                       type="password"
-                      value={openAIKey}
+                      value={openAIKey || (envKeys.OPENAI_API_KEY ? '••••••••••••••••' : '')}
                       onChange={e => setOpenAIKey(e.target.value)}
-                      placeholder="sk-..."
+                      placeholder={envKeys.OPENAI_API_KEY ? "Detected from Environment" : "sk-..."}
+                      disabled={envKeys.OPENAI_API_KEY}
                       className="bg-black/50 border-white/10 text-xs font-mono"
                     />
                   </div>
@@ -198,9 +207,10 @@ export function SettingsDialog({ open: propOpen, onOpenChange: propOnOpenChange,
                     <Label className="text-xs text-white/60">Anthropic API Key</Label>
                     <Input
                       type="password"
-                      value={anthropicKey}
+                      value={anthropicKey || (envKeys.ANTHROPIC_API_KEY ? '••••••••••••••••' : '')}
                       onChange={e => setAnthropicKey(e.target.value)}
-                      placeholder="sk-ant-..."
+                      placeholder={envKeys.ANTHROPIC_API_KEY ? "Detected from Environment" : "sk-ant-..."}
+                      disabled={envKeys.ANTHROPIC_API_KEY}
                       className="bg-black/50 border-white/10 text-xs font-mono"
                     />
                   </div>
@@ -209,9 +219,10 @@ export function SettingsDialog({ open: propOpen, onOpenChange: propOnOpenChange,
                     <Label className="text-xs text-white/60">Google Gemini API Key</Label>
                     <Input
                       type="password"
-                      value={geminiKey}
+                      value={geminiKey || (envKeys.GEMINI_API_KEY ? '••••••••••••••••' : '')}
                       onChange={e => setGeminiKey(e.target.value)}
-                      placeholder="AIza..."
+                      placeholder={envKeys.GEMINI_API_KEY ? "Detected from Environment" : "AIza..."}
+                      disabled={envKeys.GEMINI_API_KEY}
                       className="bg-black/50 border-white/10 text-xs font-mono"
                     />
                   </div>
@@ -220,9 +231,10 @@ export function SettingsDialog({ open: propOpen, onOpenChange: propOnOpenChange,
                     <Label className="text-xs text-white/60">OpenRouter API Key</Label>
                     <Input
                       type="password"
-                      value={openRouterKey}
+                      value={openRouterKey || (envKeys.OPENROUTER_API_KEY ? '••••••••••••••••' : '')}
                       onChange={e => setOpenRouterKey(e.target.value)}
-                      placeholder="sk-or-..."
+                      placeholder={envKeys.OPENROUTER_API_KEY ? "Detected from Environment" : "sk-or-..."}
+                      disabled={envKeys.OPENROUTER_API_KEY}
                       className="bg-black/50 border-white/10 text-xs font-mono"
                     />
                   </div>
@@ -231,9 +243,10 @@ export function SettingsDialog({ open: propOpen, onOpenChange: propOnOpenChange,
                     <Label className="text-xs text-white/60">Kilocode API Key</Label>
                     <Input
                       type="password"
-                      value={kilocodeKey}
+                      value={kilocodeKey || (envKeys.KILOCODE_API_KEY ? '••••••••••••••••' : '')}
                       onChange={e => setKilocodeKey(e.target.value)}
-                      placeholder="kc-..."
+                      placeholder={envKeys.KILOCODE_API_KEY ? "Detected from Environment" : "kc-..."}
+                      disabled={envKeys.KILOCODE_API_KEY}
                       className="bg-black/50 border-white/10 text-xs font-mono"
                     />
                   </div>
@@ -242,9 +255,10 @@ export function SettingsDialog({ open: propOpen, onOpenChange: propOnOpenChange,
                     <Label className="text-xs text-white/60">Cline API Key</Label>
                     <Input
                       type="password"
-                      value={clineKey}
+                      value={clineKey || (envKeys.CLINE_API_KEY ? '••••••••••••••••' : '')}
                       onChange={e => setClineKey(e.target.value)}
-                      placeholder="cl-..."
+                      placeholder={envKeys.CLINE_API_KEY ? "Detected from Environment" : "cl-..."}
+                      disabled={envKeys.CLINE_API_KEY}
                       className="bg-black/50 border-white/10 text-xs font-mono"
                     />
                   </div>
@@ -262,9 +276,10 @@ export function SettingsDialog({ open: propOpen, onOpenChange: propOnOpenChange,
                   <Label className="text-xs text-white/60">Personal Access Token</Label>
                   <Input
                     type="password"
-                    value={githubToken}
+                    value={githubToken || (envKeys.GITHUB_PAT ? '••••••••••••••••' : '')}
                     onChange={e => setGithubToken(e.target.value)}
-                    placeholder="ghp_..."
+                    placeholder={envKeys.GITHUB_PAT ? "Detected from Environment" : "ghp_..."}
+                    disabled={envKeys.GITHUB_PAT}
                     className="bg-black/50 border-white/10 text-xs font-mono"
                   />
                   <p className="text-[10px] text-white/40">

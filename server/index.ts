@@ -355,6 +355,19 @@ api.post('/apikeys', async (c) => {
     return c.json(key);
 });
 
+api.get('/settings/env-keys', (c) => {
+    return c.json({
+        JULES_API_KEY: !!process.env.JULES_API_KEY,
+        OPENAI_API_KEY: !!process.env.OPENAI_API_KEY,
+        ANTHROPIC_API_KEY: !!process.env.ANTHROPIC_API_KEY,
+        GEMINI_API_KEY: !!process.env.GEMINI_API_KEY,
+        OPENROUTER_API_KEY: !!process.env.OPENROUTER_API_KEY,
+        GITHUB_PAT: !!process.env.GITHUB_PAT || !!process.env.GITHUB_TOKEN,
+        KILOCODE_API_KEY: !!process.env.KILOCODE_API_KEY,
+        CLINE_API_KEY: !!process.env.CLINE_API_KEY,
+    });
+});
+
 // FILE SYSTEM ENDPOINTS
 api.get('/fs/list', async (c) => {
     try {
