@@ -1,4 +1,4 @@
-import { prisma } from './lib/prisma';
+import { prisma } from './lib/prisma/index';
 import { startDaemon } from './server/daemon';
 import { setupWorker } from './server/queue';
 import { serve } from '@hono/node-server';
