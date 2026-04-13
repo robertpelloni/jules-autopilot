@@ -10,7 +10,6 @@ import {
 } from "lucide-react";
 import { useState } from "react";
 import { SettingsDialog } from "@/components/settings-dialog";
-import { NotificationCenter } from "@/components/notification-center";
 import { useJules } from "@/lib/jules/provider";
 import { Badge } from "@/components/ui/badge";
 import { toast } from "sonner";
@@ -97,8 +96,6 @@ export function AppHeader({ onSearchClick, onNewSession }: AppHeaderProps) {
           {isSyncing ? <RefreshCw className="w-3.5 h-3.5 animate-spin" /> : <Brain className="w-3.5 h-3.5" />}
           <span className="text-[10px] font-medium uppercase tracking-wider hidden lg:inline">Sync All</span>
         </Button>
-
-        <NotificationCenter />
 
         <Button
           size="sm"
