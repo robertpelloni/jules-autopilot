@@ -1,4 +1,4 @@
-import { prisma } from '../lib/prisma';
+import { prisma } from '../lib/prisma/index.ts';
 import { JulesClient } from '../lib/jules/client';
 import { broadcastToClients, emitDaemonEvent } from './index';
 import { orchestratorQueue } from './queue';

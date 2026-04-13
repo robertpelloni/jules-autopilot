@@ -1,4 +1,4 @@
-import { prisma } from '../lib/prisma';
+import { prisma } from '../lib/prisma/index.ts';
 import axios from 'axios';
 import crypto from 'crypto';
 

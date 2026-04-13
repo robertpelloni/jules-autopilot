@@ -1,5 +1,5 @@
 import axios from 'axios';
-import { prisma } from '../lib/prisma';
+import { prisma } from '../lib/prisma/index.ts';
 import { broadcastToClients } from './index';
 
 export interface LLMMessage {

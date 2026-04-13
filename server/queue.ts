@@ -1,4 +1,4 @@
-import { prisma } from '../lib/prisma';
+import { prisma } from '../lib/prisma/index.ts';
 import { JulesClient } from '../lib/jules/client';
 import { generateLLMText, normalizeProvider, getSupervisorAPIKey, resolveModel } from './llm';
 import { queryCodebase } from './rag';

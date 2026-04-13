@@ -1,4 +1,4 @@
-import { prisma } from '../lib/prisma';
+import { prisma } from '../lib/prisma/index.ts';
 import { orchestratorQueue } from './queue';
 import { emitDaemonEvent } from './index';
 import { addLog } from './daemon';

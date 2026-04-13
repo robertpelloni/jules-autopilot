@@ -1,5 +1,5 @@
 import { JulesClient } from '../lib/jules/client';
-import { prisma } from '../lib/prisma';
+import { prisma } from '../lib/prisma/index.ts';
 import { Hono, type Context } from 'hono';
 import { cors } from 'hono/cors';
 import { EventEmitter } from 'events';
