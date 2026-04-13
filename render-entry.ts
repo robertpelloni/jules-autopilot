@@ -1,11 +1,11 @@
-import { prisma } from './lib/prisma/index';
-import { startDaemon } from './server/daemon';
-import { setupWorker } from './server/queue';
+import { prisma } from './lib/prisma/index.ts';
+import { startDaemon } from './server/daemon.ts';
+import { setupWorker } from './server/queue.ts';
 import { serve } from '@hono/node-server';
 import { Hono } from 'hono';
 import { cors } from 'hono/cors';
 import { serveStatic } from '@hono/node-server/serve-static';
-import { api } from './server/index';
+import { api } from './server/index.ts';
 
 const app = new Hono();
 const port = process.env.PORT ? parseInt(process.env.PORT) : 8080;
