@@ -39,10 +39,21 @@ try {
 
 const app = new Hono();
 export const api = new Hono();
-const port = 8080;
 
+// WebSocket initialization moved inside check to avoid ReferenceError in Node.js
+let upgradeWebSocket: any = null;
+if (typeof Bun !== 'undefined') {
+    try {
+        const bunWs = await import('hono/bun');
+        upgradeWebSocket = bunWs.createBunWebSocket().upgradeWebSocket;
+    } catch (e) {
+        console.warn('[Server] Failed to load Bun WebSocket:', e);
+    }
+}
+
+const port = 8080;
 const eventBus = new EventEmitter();
-const wsClients = new Set<ServerWebSocket<any>>();
+const wsClients = new Set<any>();
 let workerInstance: ReturnType<typeof setupWorker> | null = null;
 
 export function broadcastToClients(message: object) {
@@ -381,15 +392,19 @@ api.get('/fs/read', async (c) => {
 app.route('/api', api);
 
 // WEBSOCKET HANDLER
-app.get('/ws', upgradeWebSocket(() => ({
-    onOpen(event, ws) {
-        wsClients.add(ws as unknown as ServerWebSocket<any>);
-        ws.send(JSON.stringify({ type: 'connected' }));
-    },
-    onClose(event, ws) {
-        wsClients.delete(ws as unknown as ServerWebSocket<any>);
-    }
-})));
+if (upgradeWebSocket) {
+    app.get('/ws', upgradeWebSocket(() => ({
+        onOpen(event: any, ws: any) {
+            wsClients.add(ws);
+            ws.send(JSON.stringify({ type: 'connected' }));
+        },
+        onClose(event: any, ws: any) {
+            wsClients.delete(ws);
+        }
+    })));
+} else {
+    app.get('/ws', (c) => c.text('WebSockets only supported in Bun/Node-Server (Custom)', 501));
+}
 
 // STATIC FILE SERVING
 app.get('*', async (c) => {
