@@ -141,6 +141,8 @@ export function FleetIntelligence() {
             </div>
           </div>
         </div>
+      </div>
+
       {/* 2. Runtime Health Monitoring */}
       <div className="bg-zinc-900 border border-white/5 rounded-xl overflow-hidden shadow-2xl">
         <div className="px-4 py-3 border-b border-white/5 bg-white/[0.02] flex items-center justify-between">
@@ -293,7 +295,7 @@ export function FleetIntelligence() {
         <div className="space-y-2">
           <div className="flex justify-between text-[9px] font-mono uppercase tracking-widest text-zinc-500">
             <div className="flex items-center gap-2">
-              <div className="h-1 w-1 rounded-full bg-purple-500" />
+              <div className="h-1 w-1 rounded-full bg-purple-500"></div>
               <span>Intelligence Freshness</span>
             </div>
             <span>100%</span>
@@ -325,7 +327,7 @@ export function FleetIntelligence() {
                   log.message.toLowerCase().includes('approved') ? "bg-green-500" : 
                   log.message.toLowerCase().includes('risk') ? "bg-purple-500" : 
                   log.message.toLowerCase().includes('memory') ? "bg-blue-500" : "bg-zinc-600"
-                )} />
+                )}></div>
                 <div className="flex-1 space-y-1">
                   <div className="flex justify-between">
                     <span className="text-zinc-300 leading-relaxed">{log.message}</span>
