@@ -23,6 +23,11 @@ export function SettingsDialog({ open: propOpen, onOpenChange: propOnOpenChange,
   const [githubToken, setGithubToken] = useState('');
   const [openAIKey, setOpenAIKey] = useState('');
   const [julesKey, setJulesKey] = useState('');
+  const [openRouterKey, setOpenRouterKey] = useState('');
+  const [kilocodeKey, setKilocodeKey] = useState('');
+  const [clineKey, setClineKey] = useState('');
+  const [geminiKey, setGeminiKey] = useState('');
+  const [anthropicKey, setAnthropicKey] = useState('');
 
   const open = propOpen !== undefined ? propOpen : internalOpen;
   const onOpenChange = propOnOpenChange || setInternalOpen;
@@ -40,12 +45,22 @@ export function SettingsDialog({ open: propOpen, onOpenChange: propOnOpenChange,
       setGithubToken(localStorage.getItem('github_pat') || '');
       setOpenAIKey(localStorage.getItem('openai_api_key') || '');
       setJulesKey(localStorage.getItem('jules_api_key') || '');
+      setOpenRouterKey(localStorage.getItem('openrouter_api_key') || '');
+      setKilocodeKey(localStorage.getItem('kilocode_api_key') || '');
+      setClineKey(localStorage.getItem('cline_api_key') || '');
+      setGeminiKey(localStorage.getItem('gemini_api_key') || '');
+      setAnthropicKey(localStorage.getItem('anthropic_api_key') || '');
     }
   }, [open]);
 
   const handleSaveIntegrations = () => {
     localStorage.setItem('github_pat', githubToken);
     localStorage.setItem('openai_api_key', openAIKey);
+    localStorage.setItem('openrouter_api_key', openRouterKey);
+    localStorage.setItem('kilocode_api_key', kilocodeKey);
+    localStorage.setItem('cline_api_key', clineKey);
+    localStorage.setItem('gemini_api_key', geminiKey);
+    localStorage.setItem('anthropic_api_key', anthropicKey);
     
     const oldJulesKey = localStorage.getItem('jules_api_key');
     localStorage.setItem('jules_api_key', julesKey);
@@ -164,19 +179,78 @@ export function SettingsDialog({ open: propOpen, onOpenChange: propOnOpenChange,
               <div className="space-y-4 border border-white/10 p-4 rounded-lg bg-white/5">
                 <div className="flex items-center gap-2 mb-2">
                   <ShieldCheck className="h-5 w-5 text-blue-400" />
-                  <h3 className="text-sm font-bold">Supervisor Access</h3>
+                  <h3 className="text-sm font-bold">LLM Providers</h3>
                 </div>
-                <div className="space-y-2">
-                  <Label className="text-xs text-white/60">OpenAI API Key</Label>
-                  <Input
-                    type="password"
-                    value={openAIKey}
-                    onChange={e => setOpenAIKey(e.target.value)}
-                    placeholder="sk-..."
-                    className="bg-black/50 border-white/10 text-xs font-mono"
-                  />
-                  <p className="text-[10px] text-zinc-500 italic">Powering RAG indexing.</p>
+                
+                <div className="grid grid-cols-1 gap-4">
+                  <div className="space-y-2">
+                    <Label className="text-xs text-white/60">OpenAI API Key</Label>
+                    <Input
+                      type="password"
+                      value={openAIKey}
+                      onChange={e => setOpenAIKey(e.target.value)}
+                      placeholder="sk-..."
+                      className="bg-black/50 border-white/10 text-xs font-mono"
+                    />
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label className="text-xs text-white/60">Anthropic API Key</Label>
+                    <Input
+                      type="password"
+                      value={anthropicKey}
+                      onChange={e => setAnthropicKey(e.target.value)}
+                      placeholder="sk-ant-..."
+                      className="bg-black/50 border-white/10 text-xs font-mono"
+                    />
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label className="text-xs text-white/60">Google Gemini API Key</Label>
+                    <Input
+                      type="password"
+                      value={geminiKey}
+                      onChange={e => setGeminiKey(e.target.value)}
+                      placeholder="AIza..."
+                      className="bg-black/50 border-white/10 text-xs font-mono"
+                    />
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label className="text-xs text-white/60">OpenRouter API Key</Label>
+                    <Input
+                      type="password"
+                      value={openRouterKey}
+                      onChange={e => setOpenRouterKey(e.target.value)}
+                      placeholder="sk-or-..."
+                      className="bg-black/50 border-white/10 text-xs font-mono"
+                    />
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label className="text-xs text-white/60">Kilocode API Key</Label>
+                    <Input
+                      type="password"
+                      value={kilocodeKey}
+                      onChange={e => setKilocodeKey(e.target.value)}
+                      placeholder="kc-..."
+                      className="bg-black/50 border-white/10 text-xs font-mono"
+                    />
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label className="text-xs text-white/60">Cline API Key</Label>
+                    <Input
+                      type="password"
+                      value={clineKey}
+                      onChange={e => setClineKey(e.target.value)}
+                      placeholder="cl-..."
+                      className="bg-black/50 border-white/10 text-xs font-mono"
+                    />
+                  </div>
                 </div>
+                
+                <p className="text-[10px] text-zinc-500 italic">Powering RAG indexing and multi-provider fallbacks.</p>
               </div>
 
               <div className="space-y-4 border border-white/10 p-4 rounded-lg bg-white/5">
