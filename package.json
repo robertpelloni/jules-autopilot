@@ -10,7 +10,7 @@
   ],
   "scripts": {
     "dev": "vite",
-    "build": "pnpm run build:shared && pnpm exec prisma generate --schema=prisma/schema.prisma && vite build",
+    "build": "pnpm run build:shared && vite build",
     "build:shared": "pnpm --filter @jules/shared build",
     "build:cli": "pnpm --filter @jules/cli build",
     "build:all": "pnpm run build:shared && pnpm run build && pnpm run build:cli",

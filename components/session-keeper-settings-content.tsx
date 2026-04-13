@@ -32,7 +32,7 @@ const DEFAULT_CONFIG: SessionKeeperConfig = {
     "Looks good to me. Continue.",
   ],
   smartPilotEnabled: false,
-  supervisorProvider: 'openai',
+  supervisorProvider: 'lmstudio',
   supervisorApiKey: '',
   supervisorModel: '',
   contextMessageCount: 20,

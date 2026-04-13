@@ -498,8 +498,9 @@ func (c *JulesClient) CreateActivity(sessionId string, params CreateActivityRequ
 		body, _ := io.ReadAll(resp.Body)
 		if resp.StatusCode == 429 {
 			lastErr = fmt.Errorf("Jules API error (429): %s", string(body))
-			// Backoff: 2s, 4s, 8s
-			time.Sleep(time.Duration(2*(i+1)) * time.Second)
+			// Exponential Backoff: 5s, 15s, 30s
+			backoff := time.Duration((i*i+1)*5) * time.Second
+			time.Sleep(backoff)
 			continue
 		}
 

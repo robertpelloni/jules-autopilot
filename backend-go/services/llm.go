@@ -109,11 +109,11 @@ func resolveModel(provider, model string) string {
 
 func getSupervisorProvider() string {
 	if db.DB == nil {
-		return "openai"
+		return "lmstudio"
 	}
 	var settings models.KeeperSettings
 	if err := db.DB.First(&settings, "id = ?", "default").Error; err != nil {
-		return "openai"
+		return "lmstudio"
 	}
 	return normalizeProvider(settings.SupervisorProvider)
 }
@@ -187,6 +187,12 @@ func generateLLMText(primaryProvider, primaryApiKey, primaryModel, systemPrompt 
 			providers = append(providers, p)
 		}
 	}
+
+	// Throttle requests to avoid 429s from remote APIs
+	time.Sleep(1 * time.Second)
+
+	// Throttle requests to avoid 429s from remote APIs
+	time.Sleep(1 * time.Second)
 
 	var lastErr error
 	for i, provider := range providers {

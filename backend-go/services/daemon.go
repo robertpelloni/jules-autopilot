@@ -105,9 +105,9 @@ func (d *Daemon) tick() time.Duration {
 		payload := map[string]interface{}{
 			"session": session,
 		}
-		// Calculate a staggered delay to avoid 429 errors from Google API
-		// Each session check is offset by 2 seconds
-		delay := time.Duration(queuedSessions*2) * time.Second
+		// Staggered delay to avoid 429 errors from Google API
+		// Increased from 2s to 5s per session to be more conservative
+		delay := time.Duration(queuedSessions*5) * time.Second
 		runAt := time.Now().Add(delay)
 
 		if _, err := AddJob("check_session", payload, runAt); err != nil {

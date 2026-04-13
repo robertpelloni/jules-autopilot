@@ -19,6 +19,12 @@ if %errorlevel% neq 0 (
     exit /b 1
 )
 
+:: Always rebuild shared package if needed
+if not exist "packages\shared\dist" (
+    echo [INFO] Building shared types...
+    call pnpm --filter @jules/shared build
+)
+
 :: Check if frontend is built
 if not exist "dist" (
     echo [INFO] Frontend build not found. Building now...
