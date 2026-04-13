@@ -37,9 +37,8 @@ try {
     }
 } catch (e) { console.error('[Server] Failed to manually load .env:', e); }
 
-const { upgradeWebSocket, websocket } = createBunWebSocket();
 const app = new Hono();
-const api = new Hono();
+export const api = new Hono();
 const port = 8080;
 
 const eventBus = new EventEmitter();
