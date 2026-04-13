@@ -10,21 +10,13 @@
   ],
   "scripts": {
     "dev": "vite",
-    "build": "pnpm run build:shared && vite build",
-    "build:shared": "pnpm --filter @jules/shared build",
-    "build:cli": "pnpm --filter @jules/cli build",
-    "build:all": "pnpm run build:shared && pnpm run build && pnpm run build:cli",
-    "build:vercel": "pnpm run build:shared && vite build",
+    "build": "vite build",
     "preview": "vite preview",
-    "daemon": "cd backend-go && go run main.go",
-    "index": "cd backend-go && go run cmd/index-repo/main.go",
     "lint": "eslint src components lib",
     "test": "jest",
-    "test:e2e": "playwright test",
-    "typecheck": "tsc --noEmit && pnpm --filter @jules/shared typecheck",
-    "update-version": "node scripts/update-version.js",
-    "check-version-sync": "node scripts/check-version-sync.js",
-    "postinstall": "pnpm run build:shared"
+    "typecheck": "tsc --noEmit",
+    "postinstall": "prisma generate",
+    "start": "tsx render-entry.ts"
   },
   "dependencies": {
     "@dnd-kit/core": "^6.3.1",
@@ -70,7 +62,11 @@
     "tunnel-rat": "^0.1.2",
     "zod": "^4.3.5",
     "zustand": "^5.0.9",
-    "@prisma/client": "^5.19.1"
+    "@prisma/client": "^5.19.1",
+    "@hono/node-server": "^1.13.8",
+    "tsx": "^4.19.3",
+    "hono": "^4.7.2",
+    "axios": "^1.7.9"
   },
   "devDependencies": {
     "prisma": "^5.19.1",
