@@ -1,6 +1,7 @@
 import { ActivityFeed } from "@/components/activity-feed";
 import { CodeDiffSidebar } from "@/components/code-diff-sidebar";
 import { SystemLogs } from "@/components/system-logs";
+import { useSessionKeeperStore } from "@/lib/stores/session-keeper";
 import { Session, Activity, SessionTemplate } from '@jules/shared';
 
 interface MainContentProps {
@@ -30,6 +31,8 @@ export function MainContent({
   onStartDebate,
   onSaveTemplate,
 }: MainContentProps) {
+  const isAutopilotEnabled = useSessionKeeperStore((state) => state.config.isEnabled);
+
   return (
     <div className="flex h-full w-full flex-row min-w-0">
       <main className="flex-1 overflow-hidden bg-black flex flex-col min-w-0">
@@ -50,8 +53,13 @@ export function MainContent({
               <div className="w-12 h-12 border border-zinc-800 rounded-full flex items-center justify-center mx-auto mb-6">
                 <div className="w-2 h-2 bg-zinc-800 rounded-full animate-pulse" />
               </div>
-              <p>Autopilot Core Active</p>
-              <p className="text-[10px] text-zinc-800 lowercase italic">Autonomous orchestration is running for all active sessions in the background.</p>
+              <p>Autopilot Core {isAutopilotEnabled ? 'Active' : 'Offline'}</p>
+              <p className="text-[10px] text-zinc-800 lowercase italic">
+                {isAutopilotEnabled 
+                  ? "Autonomous orchestration is running for all active sessions in the background."
+                  : "Enable the Smart Supervisor in Settings to start autonomous background orchestration."
+                }
+              </p>
               <p className="text-[10px] text-zinc-500 lowercase mt-4">Select a session from the sidebar to view its history and logs.</p>
             </div>
           </div>
