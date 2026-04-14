@@ -237,10 +237,12 @@ export class JulesClient {
     let isLocalApi = false;
     try {
       if (typeof window !== 'undefined') {
-        isLocalApi = url.startsWith('/api') || url.includes(window.location.hostname);
+        const urlObj = new URL(url, window.location.origin);
+        isLocalApi = urlObj.pathname.startsWith('/api') || urlObj.hostname === window.location.hostname;
+      } else {
+        isLocalApi = url.startsWith('/api');
       }
     } catch (e) {
-      // Fallback if window is being tricky
       isLocalApi = url.startsWith('/api');
     }
     
