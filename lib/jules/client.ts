@@ -232,13 +232,17 @@ export class JulesClient {
   }
 
   private async performRequest<T>(url: string, options: RequestInit, headers: Record<string, string>): Promise<T> {
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 30000); // 30s timeout
+
     try {
-      // USE MANUAL FETCH WITHOUT MIDDLEWARE SPREADING
       const response = await fetch(url, {
         method: options.method || 'GET',
         body: options.body,
         headers,
+        signal: controller.signal
       });
+      clearTimeout(timeoutId);
 
       if (!response.ok) {
         const errorText = await response.text().catch(() => 'No error body');
