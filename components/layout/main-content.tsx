@@ -50,8 +50,9 @@ export function MainContent({
               <div className="w-12 h-12 border border-zinc-800 rounded-full flex items-center justify-center mx-auto mb-6">
                 <div className="w-2 h-2 bg-zinc-800 rounded-full animate-pulse" />
               </div>
-              <p>Autopilot Ready</p>
-              <p className="text-[10px] text-zinc-800 lowercase italic">Select a session from the sidebar to begin orchestration</p>
+              <p>Autopilot Core Active</p>
+              <p className="text-[10px] text-zinc-800 lowercase italic">Autonomous orchestration is running for all active sessions in the background.</p>
+              <p className="text-[10px] text-zinc-500 lowercase mt-4">Select a session from the sidebar to view its history and logs.</p>
             </div>
           </div>
         )}
