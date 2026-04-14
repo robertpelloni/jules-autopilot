@@ -1043,9 +1043,33 @@ func (w *Worker) handleSyncSessionMemory(payload string) (string, error) {
 
 	client := NewJulesClient()
 
-	// 1. Send memory request prompt
+	// 1. Check if we've already requested memory or if it's already present
+	activities, err := client.ListActivities(data.SessionID)
+	if err == nil {
+		for _, a := range activities {
+			// If we see the prompt or the marker in recent history, skip re-prompting
+			if (a.Role == "user" && strings.Contains(a.Content, "[PROJECT_MEMORY]")) ||
+				(a.Role == "agent" && strings.Contains(a.Content, "[PROJECT_MEMORY]")) {
+				
+				// If the agent already responded, we can try to save it and finish
+				if a.Role == "agent" && strings.Contains(a.Content, "[PROJECT_MEMORY]") {
+					memoryContent := strings.Replace(a.Content, "[PROJECT_MEMORY]", "", 1)
+					memoryContent = strings.TrimSpace(memoryContent)
+					if memoryContent != "" {
+						w.saveMemoryToDisk(data.SessionID, memoryContent, client)
+						return "done_already_present", nil
+					}
+				}
+				
+				// If we just prompted but no response yet, return "none" to let it retry or wait
+				return "waiting_for_response", nil
+			}
+		}
+	}
+
+	// 2. Send memory request prompt
 	prompt := "Please provide a comprehensive summary of everything you've learned about this project's architecture, patterns, and decisions in Markdown format. Start your response with [PROJECT_MEMORY]."
-	_, err := client.CreateActivity(data.SessionID, CreateActivityRequest{
+	_, err = client.CreateActivity(data.SessionID, CreateActivityRequest{
 		Content: prompt,
 		Role:    "user",
 		Type:    "message",
@@ -1054,40 +1078,20 @@ func (w *Worker) handleSyncSessionMemory(payload string) (string, error) {
 		return "fail", fmt.Errorf("failed to send sync prompt: %v", err)
 	}
 
-	// 2. Poll for agent response (max 30 seconds)
-	var memoryContent string
-	for i := 0; i < 6; i++ {
-		time.Sleep(5 * time.Second)
-		activities, err := client.ListActivities(data.SessionID)
-		if err != nil {
-			continue
-		}
+	return "prompt_sent", nil
+}
 
-		// Find the response to our prompt
-		if len(activities) > 0 {
-			last := activities[len(activities)-1]
-			if last.Role == "agent" && strings.Contains(last.Content, "[PROJECT_MEMORY]") {
-				memoryContent = strings.Replace(last.Content, "[PROJECT_MEMORY]", "", 1)
-				memoryContent = strings.TrimSpace(memoryContent)
-				break
-			}
-		}
-	}
-
-	if memoryContent == "" {
-		return "fail", fmt.Errorf("agent did not provide [PROJECT_MEMORY] response in time")
-	}
-
-	// 3. Resolve path and save memory
-	session, _ := client.GetSession(data.SessionID)
+func (w *Worker) saveMemoryToDisk(sessionID string, memoryContent string, client *JulesClient) {
+	// Resolve path and save memory
+	session, _ := client.GetSession(sessionID)
 	basePath := resolveRepoPath(session.SourceID)
 
 	memDir := fmt.Sprintf("%s/.jules/memory", basePath)
 	os.MkdirAll(memDir, 0755)
 	os.WriteFile(fmt.Sprintf("%s/architecture.md", memDir), []byte(memoryContent), 0644)
 
-	// 4. Also perform full chat export
-	activities, _ := client.ListActivities(data.SessionID)
+	// Also perform full chat export
+	activities, _ := client.ListActivities(sessionID)
 	var md strings.Builder
 	md.WriteString(fmt.Sprintf("# %s\n\n", session.Title))
 	md.WriteString(fmt.Sprintf("**Session ID:** %s\n", session.ID))
@@ -1105,10 +1109,9 @@ func (w *Worker) handleSyncSessionMemory(payload string) (string, error) {
 
 	sessDir := fmt.Sprintf("%s/.jules/sessions", basePath)
 	os.MkdirAll(sessDir, 0755)
-	os.WriteFile(fmt.Sprintf("%s/%s.md", sessDir, data.SessionID), []byte(md.String()), 0644)
-
-	return "done", nil
+	os.WriteFile(fmt.Sprintf("%s/%s.md", sessDir, sessionID), []byte(md.String()), 0644)
 }
+
 
 func resolveRepoPath(sourceId string) string {
 	var mapping models.RepoPath

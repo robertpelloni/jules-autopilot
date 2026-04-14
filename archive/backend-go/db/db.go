@@ -2,6 +2,7 @@ package db
 
 import (
 	"log"
+	"os"
 	"time"
 
 	"github.com/glebarez/sqlite"
@@ -15,8 +16,14 @@ var DB *gorm.DB
 func InitDB() {
 	var err error
 
+	// Portability: check for environment variable to override database path (e.g. for Render persistent disk)
+	dbPath := os.Getenv("DATABASE_PATH")
+	if dbPath == "" {
+		dbPath = "dev.db"
+	}
+
 	// Open SQLite with WAL mode for concurrent read/write performance
-	dsn := "dev.db?_journal_mode=WAL&_busy_timeout=5000&_synchronous=NORMAL&_cache_size=-64000&_foreign_keys=1"
+	dsn := dbPath + "?_journal_mode=WAL&_busy_timeout=5000&_synchronous=NORMAL&_cache_size=-64000&_foreign_keys=1"
 	DB, err = gorm.Open(sqlite.Open(dsn), &gorm.Config{
 		Logger: logger.Default.LogMode(logger.Silent),
 	})

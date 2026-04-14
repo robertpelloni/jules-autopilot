@@ -8,10 +8,8 @@ import {
   Brain,
   RefreshCw
 } from "lucide-react";
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { SettingsDialog } from "@/components/settings-dialog";
-import { BroadcastDialog } from "@/components/broadcast-dialog";
-import { NotificationCenter } from "@/components/notification-center";
 import { useJules } from "@/lib/jules/provider";
 import { Badge } from "@/components/ui/badge";
 import { toast } from "sonner";
@@ -35,21 +33,7 @@ interface AppHeaderProps {
 export function AppHeader({ onSearchClick, onNewSession }: AppHeaderProps) {
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
   const [isSyncing, setIsSyncing] = useState(false);
-  const { client, refreshTrigger } = useJules();
-  const [sessions, setSessions] = useState<Session[]>([]);
-
-  useEffect(() => {
-    const fetchSessions = async () => {
-      if (!client) return;
-      try {
-        const data = await client.listSessions();
-        setSessions(data);
-      } catch (err) {
-        console.error("[AppHeader] Failed to fetch sessions for broadcast:", err);
-      }
-    };
-    fetchSessions();
-  }, [client, refreshTrigger]);
+  const { client } = useJules();
 
   const handleFleetSync = async () => {
     try {
@@ -112,10 +96,6 @@ export function AppHeader({ onSearchClick, onNewSession }: AppHeaderProps) {
           {isSyncing ? <RefreshCw className="w-3.5 h-3.5 animate-spin" /> : <Brain className="w-3.5 h-3.5" />}
           <span className="text-[10px] font-medium uppercase tracking-wider hidden lg:inline">Sync All</span>
         </Button>
-
-        <BroadcastDialog sessions={sessions} />
-
-        <NotificationCenter />
 
         <Button
           size="sm"

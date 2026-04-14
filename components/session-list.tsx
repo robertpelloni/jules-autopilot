@@ -18,7 +18,6 @@ import {
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { formatDistanceToNow, parseISO, isValid, isToday, differenceInDays } from "date-fns";
 import { cn } from "@/lib/utils";
-import { SessionReplayDialog } from "./session-replay-dialog";
 
 interface SessionListProps {
   onSelectSession?: (sessionId: string | Session) => void;
@@ -37,7 +36,6 @@ export function SessionList({
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState("");
-  const [replaySessionId, setReplaySessionId] = useState<string | null>(null);
 
   const formatDate = (dateString: string) => {
     if (!dateString) return "Unknown date";
@@ -187,12 +185,6 @@ export function SessionList({
   return (
     <TooltipProvider>
       <div className={cn("h-full flex flex-col bg-zinc-950 overflow-hidden border-r border-white/[0.08]", className)}>
-        <SessionReplayDialog 
-          sessionId={replaySessionId} 
-          open={!!replaySessionId} 
-          onOpenChange={(open) => !open && setReplaySessionId(null)} 
-        />
-        
         <div className="px-3 py-2 border-b border-white/[0.08] shrink-0 space-y-2">
           <div className="flex items-center justify-between mb-1">
              <span className="text-[10px] font-bold text-white/40 uppercase tracking-widest">Navigation</span>
@@ -201,16 +193,6 @@ export function SessionList({
                     <RefreshCw className="h-3 w-3" />
                 </Button>
              </div>
-          </div>
-          <div className="relative">
-            <Search className="absolute left-2 top-1/2 h-3 w-3 -translate-y-1/2 text-muted-foreground" />
-            <Input
-              placeholder="Filter sessions..."
-              aria-label="Filter sessions"
-              className="h-7 w-full bg-black/50 pl-7 text-[10px] border-white/10 focus-visible:ring-purple-500/50 placeholder:text-muted-foreground/50"
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-            />
           </div>
         </div>
         <ScrollArea className="flex-1 min-h-0">
@@ -249,17 +231,6 @@ export function SessionList({
                       </div>
                     </div>
                     <div className="flex items-center gap-1">
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        className="h-4 w-4 text-white/20 hover:text-purple-400 hover:bg-purple-500/10 opacity-0 group-hover:opacity-100 transition-all"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          setReplaySessionId(session.id);
-                        }}
-                      >
-                        <History className="h-2.5 w-2.5" />
-                      </Button>
                       <Badge className="shrink-0 text-[8px] px-1 py-0 h-3.5 font-mono border-0 rounded-sm bg-white/5 text-white/50 group-hover:bg-white/10">
                         {getStatusLabel(session.status)}
                       </Badge>

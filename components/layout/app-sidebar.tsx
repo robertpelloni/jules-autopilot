@@ -1,19 +1,13 @@
 import { Button } from "@/components/ui/button";
-import { Box } from "lucide-react";
 
 import { 
   ChevronLeft, 
   ChevronRight, 
   MessageSquare, 
-  LayoutTemplate, 
-  Trello, 
-  Users,
   Terminal,
   Brain,
   Zap,
-  Activity,
-  HeartPulse,
-  Shield
+  Activity
 } from "lucide-react";
 import { SessionList } from "@/components/session-list";
 import { Session } from '@jules/shared';
@@ -25,8 +19,8 @@ interface AppSidebarProps {
   onToggleCollapse: () => void;
   onSessionSelect: (session: Session | string) => void;
   selectedSessionId?: string;
-  currentView: 'sessions' | 'templates' | 'kanban' | 'debates' | 'logs' | 'health' | 'audit' | 'swarms' | 'plugins';
-  onViewChange: (view: 'sessions' | 'templates' | 'kanban' | 'debates' | 'logs' | 'health' | 'audit' | 'swarms' | 'plugins') => void;
+  currentView: 'sessions' | 'logs';
+  onViewChange: (view: 'sessions' | 'logs') => void;
 }
 
 export function AppSidebar({
@@ -45,14 +39,7 @@ export function AppSidebar({
 
   const navItems = [
     { id: 'sessions', label: 'Sessions', icon: MessageSquare },
-    { id: 'templates', label: 'Templates', icon: LayoutTemplate },
-    { id: 'kanban', label: 'Kanban', icon: Trello },
-    { id: 'debates', label: 'Debates', icon: Users },
     { id: 'logs', label: 'System Logs', icon: Terminal },
-    { id: 'health', label: 'Health', icon: HeartPulse },
-    { id: 'audit', label: 'Audit Trail', icon: Shield },
-    { id: 'swarms', label: 'Agent Swarms', icon: Users },
-    { id: 'plugins', label: 'Plugins', icon: Box },
   ] as const;
 
   return (
@@ -146,14 +133,14 @@ export function AppSidebar({
                     <span className="absolute -top-0.5 -right-0.5 w-1.5 h-1.5 bg-purple-500 rounded-full" />
                   )}
                 </div>
-                <span className="text-[9px] font-bold text-white/40 uppercase tracking-widest">Fleet Pulse</span>
+                <span className="text-[9px] font-bold text-white/40 uppercase tracking-widest">Supervisor Status</span>
               </div>
               <div className="flex items-center gap-1.5">
                 <span className={cn(
                   "w-1 h-1 rounded-full",
                   isEnabled ? "bg-green-500" : "bg-zinc-700"
                 )} />
-                <span className="text-[8px] font-mono text-zinc-500 uppercase tracking-tighter">HyperCode Node</span>
+                <span className="text-[8px] font-mono text-zinc-500 uppercase tracking-tighter">{isEnabled ? 'ONLINE' : 'OFFLINE'}</span>
               </div>
             </div>
             
