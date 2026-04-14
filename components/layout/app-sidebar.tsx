@@ -51,7 +51,7 @@ export function AppSidebar({
       <div className="px-3 py-2 border-b border-white/[0.08] flex items-center justify-between">
         {!collapsed && (
           <h2 className="text-[10px] font-bold text-white/40 uppercase tracking-widest">
-            Command Center
+            COMMAND CENTER
           </h2>
         )}
         <Button
@@ -70,14 +70,38 @@ export function AppSidebar({
         </Button>
       </div>
 
-      <div className="flex-1 overflow-hidden flex flex-col min-h-0">
+      <div className="p-2 space-y-1">
+        {navItems.map((item) => (
+          <Button
+            key={item.id}
+            variant="ghost"
+            size={collapsed ? "icon" : "sm"}
+            className={`w-full ${collapsed ? "justify-center" : "justify-start"} gap-2 text-xs h-8 ${
+              currentView === item.id ? "bg-white/10 text-white" : "text-white/40 hover:text-white/80"
+            }`}
+            onClick={() => onViewChange(item.id)}
+          >
+            <item.icon className="h-3.5 w-3.5" />
+            {!collapsed && <span>{item.label}</span>}
+          </Button>
+        ))}
+      </div>
+
+      <div className="mt-4 flex-1 overflow-hidden border-t border-white/[0.08] flex flex-col">
         {!collapsed && (
-          <div className="flex-1 overflow-hidden flex flex-col">
-            <SessionList
-              onSelectSession={onSessionSelect}
-              selectedSessionId={selectedSessionId}
-            />
-          </div>
+          <>
+            <div className="px-4 py-2">
+              <h2 className="text-[10px] font-bold text-white/20 uppercase tracking-widest">
+                SESSIONS
+              </h2>
+            </div>
+            <div className="flex-1 overflow-hidden">
+              <SessionList
+                onSelectSession={onSessionSelect}
+                selectedSessionId={selectedSessionId}
+              />
+            </div>
+          </>
         )}
       </div>
 
@@ -109,14 +133,14 @@ export function AppSidebar({
                     <span className="absolute -top-0.5 -right-0.5 w-1.5 h-1.5 bg-purple-500 rounded-full" />
                   )}
                 </div>
-                <span className="text-[9px] font-bold text-white/40 uppercase tracking-widest">Supervisor Status</span>
+                <span className="text-[9px] font-bold text-white/40 uppercase tracking-widest">Fleet Pulse</span>
               </div>
               <div className="flex items-center gap-1.5">
                 <span className={cn(
                   "w-1 h-1 rounded-full",
                   isEnabled ? "bg-green-500" : "bg-zinc-700"
                 )} />
-                <span className="text-[8px] font-mono text-zinc-500 uppercase tracking-tighter">{isEnabled ? 'ONLINE' : 'OFFLINE'}</span>
+                <span className="text-[8px] font-mono text-zinc-500 uppercase tracking-tighter">HyperCode Node</span>
               </div>
             </div>
             
