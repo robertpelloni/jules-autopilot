@@ -233,9 +233,18 @@ export class JulesClient {
 
   private async performRequest<T>(url: string, options: RequestInit, headers: Record<string, string>): Promise<T> {
     const isGoogleApi = url.includes('googleapis.com');
-    const isLocalApi = url.startsWith('/api') || url.includes(window?.location?.hostname || '');
     
-    // 60s for Google, 120s for local proxy (to account for Google delay + overhead), 30s for others
+    let isLocalApi = false;
+    try {
+      if (typeof window !== 'undefined') {
+        isLocalApi = url.startsWith('/api') || url.includes(window.location.hostname);
+      }
+    } catch (e) {
+      // Fallback if window is being tricky
+      isLocalApi = url.startsWith('/api');
+    }
+    
+    // 60s for Google, 120s for local proxy, 30s for others
     const timeoutDuration = isGoogleApi ? 60000 : (isLocalApi ? 120000 : 30000);
     
     const controller = new AbortController();
