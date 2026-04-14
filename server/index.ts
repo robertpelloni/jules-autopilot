@@ -326,8 +326,12 @@ api.get('/daemon/status', async (c) => {
 });
 
 api.get('/settings/keeper', async (c) => {
-    const settings = await prisma.keeperSettings.findUnique({ where: { id: 'default' } });
-    return c.json(settings || {});
+    try {
+        const settings = await prisma.keeperSettings.findUnique({ where: { id: 'default' } });
+        return c.json(settings || {});
+    } catch (e) {
+        return c.json({ error: String(e) }, 500);
+    }
 });
 
 api.post('/settings/keeper', async (c) => {
