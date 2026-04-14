@@ -8,7 +8,8 @@ import type { Session } from '@jules/shared';
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Search, Loader2, Sparkles, RefreshCw, History } from "lucide-react";
+import { Search, Loader2, Sparkles, RefreshCw, History, Megaphone } from "lucide-react";
+import { BroadcastDialog } from "@/components/broadcast-dialog";
 import {
   Tooltip,
   TooltipContent,
@@ -59,24 +60,33 @@ export function SessionList({
       setLoading(true);
       setError(null);
       console.log("[SessionList] Fetching sessions from API...");
-      const data = await client.listSessions();
-      console.log(`[SessionList] Received ${data.length} sessions:`, JSON.stringify(data));
+      // REDUCED PAGE SIZE AND ADDED TIMEOUT HANDLING
+      const data = await Promise.race([
+        client.listSessions(), // Changed from { pageSize: 50 } to rely on default backend behavior which is safer
+        new Promise((_, reject) => setTimeout(() => reject(new Error("Timeout after 60s")), 60000))
+      ]) as any;
       
-      const sorted = [...data].sort((a, b) => {
+      const sessionArray = Array.isArray(data) ? data : (data.sessions || []);
+      console.log(`[SessionList] SUCCESS: Received ${sessionArray.length} sessions`);
+      
+      const sorted = [...sessionArray].sort((a, b) => {
         const timeA = new Date(a.updatedAt || a.createdAt || 0).getTime();
         const timeB = new Date(b.updatedAt || b.createdAt || 0).getTime();
         return timeB - timeA;
       });
       
       setSessions(sorted);
-    } catch (err) {
+    } catch (err: any) {
       console.error("Failed to load sessions:", err);
-      setError(err instanceof Error ? err.message : "Failed to load sessions");
-      setSessions([]); 
+      // Ensure we don't crash the UI on timeout or 500
+      setError(err.message || "Failed to load sessions");
+      if (sessions.length === 0) {
+        setSessions([]); 
+      }
     } finally {
       setLoading(false);
     }
-  }, [client]);
+  }, [client, sessions.length]);
 
   useEffect(() => {
     loadSessions();
@@ -189,6 +199,7 @@ export function SessionList({
           <div className="flex items-center justify-between mb-1">
              <span className="text-[10px] font-bold text-white/40 uppercase tracking-widest">Navigation</span>
              <div className="flex items-center gap-1">
+                <BroadcastDialog sessions={sessions} />
                 <Button variant="ghost" size="icon" onClick={loadSessions} className="h-5 w-5 text-white/20 hover:text-white hover:bg-white/5">
                     <RefreshCw className="h-3 w-3" />
                 </Button>

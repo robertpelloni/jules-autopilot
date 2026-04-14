@@ -50,6 +50,9 @@ export class Daemon {
 
                 await orchestratorQueue.add('check_session', { session }, { runAt });
                 queuedSessions++;
+                
+                // BROADCAST THE SESSION MONITORING STATUS
+                emitDaemonEvent('session_monitor_scheduled', { sessionId: session.id, title: session.title, runAt });
             }
 
             if (queuedSessions > 0) {

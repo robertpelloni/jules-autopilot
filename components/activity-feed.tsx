@@ -113,34 +113,49 @@ export function ActivityFeed({
     try {
       if (isInitialLoad) {
         setLoading(true);
+        // FORCE the activities state to clear so we don't show old conversation data
+        setActivities([]);
+      
         const sessionDetails = await client.getSession(session.id);
-        const data = await client.listActivities(session.id);
+        const data = await Promise.race([
+          client.listActivities(session.id, 100), // Explicit limit of 100 messages total otherwise Google times out on older huge chats
+          new Promise((_, reject) => setTimeout(() => reject(new Error("Timeout after 60s")), 60000))
+        ]) as any;
+
+        // Force a sort by creation time to ensure chronological order
+        const sortedData = [...data].sort((a: any, b: any) => 
+          new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime()
+        );
 
         if (sessionDetails.prompt) {
-           const hasPrompt = data.some(a => a.content === sessionDetails.prompt);
+           const hasPrompt = sortedData.some((a: any) => a.content === sessionDetails.prompt || a.content?.includes(sessionDetails.prompt));
            if (!hasPrompt) {
-              data.unshift({
+              sortedData.unshift({
                 id: 'initial-prompt',
                 sessionId: session.id,
                 type: 'message',
                 role: 'user',
                 content: sessionDetails.prompt,
                 createdAt: session.createdAt
-              });
+              } as Activity);
            }
         }
-        setActivities(data);
+
+        setActivities(sortedData);
       } else {
         // Optimized: Just get the last few to find new ones
-        const latestData = await client.listActivities(session.id, 10);
+        const latestData = await Promise.race([
+          client.listActivities(session.id, 10),
+          new Promise((_, reject) => setTimeout(() => reject(new Error("Timeout after 60s")), 60000))
+        ]) as any;
         
-        setActivities(prevActivities => {
-          const prevIds = new Set(prevActivities.map(a => a.id));
-          const newActivities = latestData.filter(newAct => !prevIds.has(newAct.id));
+        setActivities((prevActivities: any) => {
+          const prevIds = new Set(prevActivities.map((a: any) => a.id));
+          const newActivities = latestData.filter((newAct: any) => !prevIds.has(newAct.id));
           
           if (newActivities.length > 0) {
             // Check for notifications
-            const newAgentMessage = newActivities.find(a => a.role === 'agent' && (a.type === 'message' || a.type === 'plan' || a.type === 'error'));
+            const newAgentMessage = newActivities.find((a: any) => a.role === 'agent' && (a.type === 'message' || a.type === 'plan' || a.type === 'error'));
             if (newAgentMessage && document.hidden && permission === 'granted') {
                const title = newAgentMessage.type === 'error' ? 'Jules Error' : 'Jules Update';
                sendNotification(title, {
@@ -159,6 +174,7 @@ export function ActivityFeed({
         setActivities([]);
       } else {
         if (isInitialLoad) setActivities([]);
+        toast.error("Google Rate Limit exceeded while loading messages, please wait...", { id: 'rate-limit-toast' });
       }
     } finally {
       if (isInitialLoad) setLoading(false);
