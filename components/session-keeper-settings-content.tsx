@@ -71,6 +71,10 @@ export function SessionKeeperSettingsContent({
       propOnChange(newConfig);
     } else {
       setLocalConfig(newConfig);
+<<<<<<< HEAD
+=======
+
+>>>>>>> origin/jules-17764958747146694232-3d7c3856
     }
   };
 

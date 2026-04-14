@@ -174,8 +174,14 @@ func generateLLMText(primaryProvider, primaryApiKey, primaryModel, systemPrompt 
 	// User requested fallback chain: LMStudio -> OpenRouter -> Fallback to others
 	providers := []string{primaryProvider}
 	
+<<<<<<< HEAD
 	fallbackChain := []string{"lmstudio", "openrouter", "openai", "anthropic", "gemini"}
 	for _, p := range fallbackChain {
+=======
+	// Intelligent Fallback Chain requested by user
+	fallbacks := []string{"lmstudio", "openrouter", "kilocode", "cline", "openai", "anthropic", "gemini"}
+	for _, p := range fallbacks {
+>>>>>>> origin/jules-17764958747146694232-3d7c3856
 		exists := false
 		for _, existing := range providers {
 			if existing == p {

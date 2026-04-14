@@ -1,6 +1,7 @@
 package services
 
 import (
+	"fmt"
 	"log"
 	"strings"
 	"sync"
@@ -116,6 +117,11 @@ func (d *Daemon) tick() time.Duration {
 		}
 		queuedSessions++
 	}
+
+	addKeeperLog(fmt.Sprintf("Daemon loop ran. Enqueued %d live sessions.", queuedSessions), "info", "global", map[string]interface{}{
+		"event": "daemon_loop",
+		"queuedSessions": queuedSessions,
+	})
 
 	queuedIssueChecks := 0
 	if settings.SmartPilotEnabled {
