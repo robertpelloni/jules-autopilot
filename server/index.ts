@@ -161,12 +161,15 @@ api.get('/sessions', async (c) => {
         let endpoint = `/sessions?pageSize=${pageSize}`;
         if (pageToken) endpoint += `&pageToken=${pageToken}`;
 
+        console.log(`[API] Fetching sessions from Google: ${endpoint}`);
         const response = await client.listSessionsRaw(endpoint);
+        console.log(`[API] Received ${response.sessions?.length || 0} sessions from Google`);
         return c.json(response);
     } catch (e: any) {
         const errorMessage = e?.message || String(e);
-        console.error(`[API] listSessions failed: ${errorMessage}`);
-        return c.json({ sessions: getMockSessions() });
+        const errorStack = e?.stack || '';
+        console.error(`[API] listSessions failed: ${errorMessage}\n${errorStack}`);
+        return c.json({ sessions: getMockSessions(), error: errorMessage }, 500);
     }
 });
 
