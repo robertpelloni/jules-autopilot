@@ -232,8 +232,15 @@ export class JulesClient {
   }
 
   private async performRequest<T>(url: string, options: RequestInit, headers: Record<string, string>): Promise<T> {
+    const isGoogleApi = url.includes('googleapis.com');
+    // 60s timeout for Google, 30s for others
+    const timeoutDuration = isGoogleApi ? 60000 : 30000;
+    
     const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), 30000); // 30s timeout
+    const timeoutId = setTimeout(() => {
+      console.warn(`[JulesClient] Request timed out after ${timeoutDuration}ms: ${url}`);
+      controller.abort();
+    }, timeoutDuration);
 
     try {
       const response = await fetch(url, {
