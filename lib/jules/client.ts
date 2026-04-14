@@ -233,8 +233,10 @@ export class JulesClient {
 
   private async performRequest<T>(url: string, options: RequestInit, headers: Record<string, string>): Promise<T> {
     const isGoogleApi = url.includes('googleapis.com');
-    // 60s timeout for Google, 30s for others
-    const timeoutDuration = isGoogleApi ? 60000 : 30000;
+    const isLocalApi = url.startsWith('/api') || url.includes(window?.location?.hostname || '');
+    
+    // 60s for Google, 120s for local proxy (to account for Google delay + overhead), 30s for others
+    const timeoutDuration = isGoogleApi ? 60000 : (isLocalApi ? 120000 : 30000);
     
     const controller = new AbortController();
     const timeoutId = setTimeout(() => {
