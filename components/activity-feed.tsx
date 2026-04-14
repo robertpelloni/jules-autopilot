@@ -391,19 +391,13 @@ export function ActivityFeed({
 
   const handleJumpToTop = () => {
     if (parentRef.current) {
-      const scrollElement = parentRef.current.querySelector('[data-radix-scroll-area-viewport]');
-      if (scrollElement) {
-        scrollElement.scrollTop = 0;
-      }
+      parentRef.current.scrollTop = 0;
     }
   };
 
   const handleJumpToBottom = () => {
     if (parentRef.current) {
-      const scrollElement = parentRef.current.querySelector('[data-radix-scroll-area-viewport]');
-      if (scrollElement) {
-        scrollElement.scrollTop = scrollElement.scrollHeight;
-      }
+      parentRef.current.scrollTop = parentRef.current.scrollHeight;
     }
   };
 
@@ -449,13 +443,11 @@ export function ActivityFeed({
   // Auto-scroll to bottom on new activities
   useEffect(() => {
     if (parentRef.current && activities.length > 0) {
-      const scrollElement = parentRef.current.querySelector('[data-radix-scroll-area-viewport]');
-      if (scrollElement) {
-        // Use requestAnimationFrame to ensure the virtualizer has finished rendering
-        requestAnimationFrame(() => {
-          scrollElement.scrollTop = scrollElement.scrollHeight;
-        });
-      }
+      const scrollElement = parentRef.current;
+      // Use requestAnimationFrame to ensure the virtualizer has finished rendering
+      requestAnimationFrame(() => {
+        scrollElement.scrollTop = scrollElement.scrollHeight;
+      });
     }
   }, [activities.length]);
 
@@ -529,21 +521,21 @@ export function ActivityFeed({
 
   return (
     <div className="flex flex-col h-full bg-background relative">
-      <div className="border-b border-white/10 bg-zinc-900 px-4 py-3">
+      <div className="border-b border-border bg-card/95 px-4 py-3">
         <div className="flex items-start justify-between gap-4">
           <div className="flex-1 min-w-0">
             <div className="flex items-center gap-2 mb-1.5">
-              <h2 className="text-sm font-bold uppercase tracking-wide truncate text-white">{session.title}</h2>
+              <h2 className="text-sm font-bold uppercase tracking-wide truncate text-foreground">{session.title}</h2>
               <div className="flex items-center gap-1 px-1.5 py-0.5 text-[9px] font-mono font-bold uppercase tracking-wider rounded bg-blue-500/10 text-blue-500">
                 <Sparkles className="h-3 w-3" />
                 <span>Jules</span>
               </div>
             </div>
-            <div className="flex items-center gap-3 text-[9px] font-mono text-white/50 uppercase tracking-wide">
+            <div className="flex items-center gap-3 text-[9px] font-mono text-muted-foreground uppercase tracking-wide">
               <span>Started {formatDate(session.createdAt)}</span>
               <span>•</span>
               {session.sourceId && (
-                <div className="flex items-center gap-1 px-1.5 py-0.5 bg-white/5 rounded text-[8px] text-purple-300 font-bold tracking-tighter border border-white/5 uppercase">
+                <div className="flex items-center gap-1 px-1.5 py-0.5 bg-white/5 rounded text-[8px] text-purple-400 font-bold tracking-tighter border border-white/5 uppercase">
                   <Sparkles className="h-2 w-2" />
                   <span>{getRepoShortName(session.sourceId)}</span>
                 </div>
@@ -699,13 +691,13 @@ export function ActivityFeed({
         </div>
       )}
 
-      <div className="flex-1 overflow-hidden relative group bg-black">
-        <div className="absolute bottom-6 right-8 flex flex-col gap-2 z-30 opacity-0 group-hover:opacity-100 transition-opacity duration-200">
+      <div className="flex-1 overflow-hidden relative group">
+        <div className="absolute bottom-6 right-6 flex flex-col gap-2 z-20 opacity-0 group-hover:opacity-100 transition-opacity duration-200">
           <Button
             variant="secondary"
             size="icon"
             onClick={handleJumpToTop}
-            className="h-8 w-8 rounded-full bg-white/10 backdrop-blur-md border border-white/20 shadow-2xl hover:bg-purple-600 hover:text-white transition-all text-white"
+            className="h-8 w-8 rounded-full bg-zinc-900/80 backdrop-blur-md border border-white/10 shadow-2xl hover:bg-primary hover:text-white transition-all"
             title="Jump to Top"
           >
             <ArrowUp className="h-4 w-4" />
@@ -714,14 +706,14 @@ export function ActivityFeed({
             variant="secondary"
             size="icon"
             onClick={handleJumpToBottom}
-            className="h-8 w-8 rounded-full bg-white/10 backdrop-blur-md border border-white/20 shadow-2xl hover:bg-purple-600 hover:text-white transition-all text-white"
+            className="h-8 w-8 rounded-full bg-zinc-900/80 backdrop-blur-md border border-white/10 shadow-2xl hover:bg-primary hover:text-white transition-all"
             title="Jump to Bottom"
           >
             <ArrowDown className="h-4 w-4" />
           </Button>
         </div>
         <ScrollArea className="h-full" ref={parentRef} id="activity-feed-scroll-area">
-          <div className="p-3 pb-20 relative" style={{ height: `${virtualizer.getTotalSize()}px`, width: '100%' }}>
+          <div className="p-3 pb-40 relative" style={{ height: `${virtualizer.getTotalSize()}px`, width: '100%' }}>
             {virtualizer.getVirtualItems().map((virtualItem) => {
               const item = groupedActivities[virtualItem.index];
               if (!item) return null;
@@ -730,17 +722,17 @@ export function ActivityFeed({
                 <div key={virtualItem.key} data-index={virtualItem.index} ref={virtualizer.measureElement} className="absolute top-0 left-0 w-full" style={{ transform: `translateY(${virtualItem.start}px)`, paddingBottom: '10px' }}>
                   {Array.isArray(item) ? (
                     <div className="flex gap-2.5 px-3">
-                      <Avatar className="h-5 w-5 shrink-0 mt-0.5 bg-zinc-800 border border-white/10">{getActivityIcon(item[0])}</Avatar>
+                      <Avatar className="h-6 w-6 shrink-0 mt-0.5 bg-zinc-800 border border-white/10">{getActivityIcon(item[0])}</Avatar>
                       <Card className="flex-1 border-white/5 bg-zinc-900/90 shadow-xl">
-                        <CardContent className="p-2">
+                        <CardContent className="p-3">
                           <div className="flex items-center gap-2 mb-2">
-                            <Badge variant="outline" className="text-[8px] h-3.5 px-1 font-mono uppercase tracking-wider bg-yellow-500/90 border-transparent text-black font-bold">progress</Badge>
-                            <span className="text-[8px] font-mono text-white/40 tracking-wide">{item.length} updates</span>
+                            <Badge variant="outline" className="text-[9px] h-4 px-1.5 font-mono uppercase tracking-wider bg-yellow-500/90 border-transparent text-black font-bold">progress</Badge>
+                            <span className="text-[9px] font-mono text-white/40 tracking-wide">{item.length} updates</span>
                           </div>
-                          <div className="space-y-1.5">
+                          <div className="space-y-2">
                             {item.map((activity, idx) => (
-                              <div key={activity.id} className={idx > 0 ? 'pt-1.5 border-t border-white/5' : ''}>
-                                <div className="text-[12px] leading-relaxed text-zinc-100 break-words">
+                              <div key={activity.id} className={idx > 0 ? 'pt-2 border-t border-white/5' : ''}>
+                                <div className="text-sm leading-relaxed text-zinc-100 break-words">
                                   <ActivityContent content={activity.content} metadata={activity.metadata} />
                                 </div>
                               </div>
@@ -751,17 +743,17 @@ export function ActivityFeed({
                     </div>
                   ) : (
                     <div className={`flex gap-2.5 px-3 ${item.role === 'user' ? 'flex-row-reverse' : ''}`}>
-                      <Avatar className="h-5 w-5 shrink-0 mt-0.5 bg-zinc-800 border border-white/10">{getActivityIcon(item)}</Avatar>
-                      <Card className={`flex-1 border-white/5 shadow-xl ${item.role === 'user' ? 'bg-purple-950/40 border-purple-500/30' : 'bg-zinc-900/90'}`}>
-                        <CardContent className="p-2 group/card relative">
+                      <Avatar className="h-6 w-6 shrink-0 mt-0.5 bg-zinc-800 border border-white/10">{getActivityIcon(item)}</Avatar>
+                      <Card className={`flex-1 border-white/5 shadow-xl ${item.role === 'user' ? 'bg-purple-500/20 border-purple-500/30' : 'bg-zinc-900/90'}`}>
+                        <CardContent className="p-3 group/card relative">
                           <div className="flex items-center gap-2 mb-2">
-                            <Badge variant="outline" className={`text-[8px] h-3.5 px-1 font-mono uppercase tracking-wider ${getActivityTypeColor(item.type)} border-transparent text-white font-bold`}>{item.type}</Badge>
-                            <span className="text-[8px] font-mono text-white/40 tracking-wide">{formatDate(item.createdAt)}</span>
-                            <Button variant="ghost" size="icon" className="h-3 w-3 ml-auto opacity-0 group-hover/card:opacity-100 transition-opacity text-white/40 hover:text-white" onClick={() => handleCopy(item.content, item.id)}>
-                              {copiedId === item.id ? <Check className="h-2.5 w-2.5 text-green-500" /> : <Copy className="h-2.5 w-2.5" />}
+                            <Badge variant="outline" className={`text-[9px] h-4 px-1.5 font-mono uppercase tracking-wider ${getActivityTypeColor(item.type)} border-transparent text-white font-bold`}>{item.type}</Badge>
+                            <span className="text-[9px] font-mono text-white/40 tracking-wide">{formatDate(item.createdAt)}</span>
+                            <Button variant="ghost" size="icon" className="h-4 w-4 ml-auto opacity-0 group-hover/card:opacity-100 transition-opacity text-white/40 hover:text-white" onClick={() => handleCopy(item.content, item.id)}>
+                              {copiedId === item.id ? <Check className="h-3 w-3 text-green-500" /> : <Copy className="h-3 w-3" />}
                             </Button>
                           </div>
-                          <div className="text-[12px] leading-relaxed text-zinc-100 break-words">
+                          <div className="text-sm leading-relaxed text-zinc-100 break-words">
                             <ActivityContent content={item.content} metadata={item.metadata} />
                           </div>
                           {item.diff && (

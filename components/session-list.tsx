@@ -194,6 +194,16 @@ export function SessionList({
                 </Button>
              </div>
           </div>
+          <div className="relative">
+            <Search className="absolute left-2 top-1/2 h-3 w-3 -translate-y-1/2 text-muted-foreground" />
+            <Input
+              placeholder="Filter sessions..."
+              aria-label="Filter sessions"
+              className="h-7 w-full bg-black/50 pl-7 text-[10px] border-white/10 focus-visible:ring-purple-500/50 placeholder:text-muted-foreground/50"
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+            />
+          </div>
         </div>
         <ScrollArea className="flex-1 min-h-0">
           <div className="p-2 space-y-1">
