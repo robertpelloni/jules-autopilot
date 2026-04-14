@@ -155,22 +155,12 @@ api.get('/sessions', async (c) => {
         const client = await getJulesClient(c);
         if (!client) return c.json({ sessions: getMockSessions() });
 
-        const pageToken = c.req.query('pageToken');
-        // Reduce page size to improve response speed and avoid 502s
-        const pageSize = c.req.query('pageSize') || '25';
-
-        let endpoint = `/sessions?pageSize=${pageSize}`;
-        if (pageToken) endpoint += `&pageToken=${pageToken}`;
-
-        console.log(`[API] Fetching sessions from Google: ${endpoint}`);
-        const response = await client.listSessionsRaw(endpoint);
-        console.log(`[API] Received ${response.sessions?.length || 0} sessions from Google`);
-        return c.json(response);
+        const sessions = await client.listSessions();
+        return c.json({ sessions });
     } catch (e: any) {
         const errorMessage = e?.message || String(e);
-        const errorStack = e?.stack || '';
-        console.error(`[API] listSessions failed: ${errorMessage}\n${errorStack}`);
-        return c.json({ sessions: getMockSessions(), error: errorMessage }, 500);
+        console.error(`[API] listSessions failed: ${errorMessage}`);
+        return c.json({ sessions: getMockSessions() });
     }
 });
 
@@ -336,12 +326,8 @@ api.get('/daemon/status', async (c) => {
 });
 
 api.get('/settings/keeper', async (c) => {
-    try {
-        const settings = await prisma.keeperSettings.findUnique({ where: { id: 'default' } });
-        return c.json(settings || {});
-    } catch (e) {
-        return c.json({ error: String(e) }, 500);
-    }
+    const settings = await prisma.keeperSettings.findUnique({ where: { id: 'default' } });
+    return c.json(settings || {});
 });
 
 api.post('/settings/keeper', async (c) => {

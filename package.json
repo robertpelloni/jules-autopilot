@@ -12,7 +12,6 @@
     "test": "jest",
     "typecheck": "tsc --noEmit",
     "postinstall": "prisma generate",
-    "db:push": "prisma db push",
     "start": "tsx render-entry.ts"
   },
   "dependencies": {

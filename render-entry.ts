@@ -6,15 +6,6 @@ import { Hono } from 'hono';
 import { cors } from 'hono/cors';
 import { serveStatic } from '@hono/node-server/serve-static';
 import { api } from './server/index.ts';
-import { execSync } from 'child_process';
-
-// Ensure DB is initialized on Render
-try {
-  console.log("[Render] Running prisma db push...");
-  execSync('npx prisma db push --accept-data-loss', { stdio: 'inherit' });
-} catch (e) {
-  console.error("[Render] Failed to push DB schema:", e);
-}
 
 const app = new Hono();
 const port = process.env.PORT ? parseInt(process.env.PORT) : 8080;

@@ -164,16 +164,24 @@ export function SessionKeeperSettingsContent({
               </Select>
             </div>
             <div className="space-y-2">
-              <Label className="text-xs text-white/60">Model Override (Optional)</Label>
+              <Label className="text-xs text-white/60">API Key</Label>
               <Input
-                className="h-8 text-xs bg-black/50 border-white/10 flex-1 font-mono"
-                placeholder="e.g. gpt-4o"
-                value={config.supervisorModel}
-                onChange={(e) => handleConfigChange({ ...config, supervisorModel: e.target.value })}
+                className="h-8 text-xs bg-black/50 border-white/10 font-mono"
+                type="password"
+                value={config.supervisorApiKey}
+                onChange={(e) => handleConfigChange({ ...config, supervisorApiKey: e.target.value })}
               />
             </div>
           </div>
-          <p className="text-[10px] text-zinc-500 italic">Uses the global API keys configured in the Integrations tab.</p>
+          <div className="space-y-2">
+            <Label className="text-xs text-white/60">Model</Label>
+            <Input
+              className="h-8 text-xs bg-black/50 border-white/10 flex-1"
+              placeholder="e.g. gpt-4o"
+              value={config.supervisorModel}
+              onChange={(e) => handleConfigChange({ ...config, supervisorModel: e.target.value })}
+            />
+          </div>
         </div>
       )}
 

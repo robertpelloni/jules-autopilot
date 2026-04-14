@@ -8,8 +8,6 @@ import { cn } from '@/lib/utils';
 
 export function SystemLogs() {
   const logs = useSessionKeeperStore((state) => state.logs);
-  const isEnabled = useSessionKeeperStore((state) => state.config.isEnabled);
-  const isSmart = useSessionKeeperStore((state) => state.config.smartPilotEnabled);
   const scrollRef = useRef<HTMLDivElement>(null);
 
   // Auto-scroll to bottom on new logs
@@ -25,23 +23,12 @@ export function SystemLogs() {
   return (
     <div className="flex flex-col h-full bg-black border-l border-white/5">
       <div className="flex items-center justify-between px-4 py-3 border-b border-white/5 bg-zinc-950/50">
-        <div className="flex flex-col gap-0.5">
-          <div className="flex items-center gap-2">
-            <Terminal className="h-4 w-4 text-purple-400" />
-            <h2 className="text-xs font-mono uppercase tracking-widest text-zinc-400">System Activity</h2>
-          </div>
-          <div className="flex items-center gap-2 text-[9px] font-mono uppercase tracking-widest">
-            <span className={isEnabled ? "text-green-500" : "text-red-500"}>
-              {isEnabled ? "Autopilot ON" : "Autopilot OFF"}
-            </span>
-            <span className="text-zinc-700">•</span>
-            <span className={isSmart ? "text-purple-400" : "text-zinc-600"}>
-              {isSmart ? "Smart Supervisor" : "Dumb Echo"}
-            </span>
-          </div>
+        <div className="flex items-center gap-2">
+          <Terminal className="h-4 w-4 text-purple-400" />
+          <h2 className="text-xs font-mono uppercase tracking-widest text-zinc-400">System Activity</h2>
         </div>
         <div className="flex items-center gap-2">
-          <div className={cn("h-1.5 w-1.5 rounded-full animate-pulse", isEnabled ? "bg-green-500" : "bg-zinc-800")} />
+          <div className="h-1.5 w-1.5 rounded-full bg-green-500 animate-pulse" />
           <span className="text-[10px] font-mono text-zinc-500 uppercase">Live</span>
         </div>
       </div>

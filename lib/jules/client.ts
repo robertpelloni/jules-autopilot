@@ -216,8 +216,7 @@ export class JulesClient {
       
       // LOG THE CLEAN HEADERS
       if (typeof window === 'undefined') {
-        const maskedKey = this.apiKey ? `${this.apiKey.substring(0, 4)}...${this.apiKey.substring(this.apiKey.length - 4)}` : 'none';
-        console.log(`[JulesClient] Outgoing to Google: auth=${!!this.authToken} key=${maskedKey}`);
+        console.log(`[JulesClient] Outgoing to Google: auth=${!!this.authToken} key=${!!this.apiKey}`);
       }
 
       // THROTTLE GOOGLE API REQUESTS
@@ -232,37 +231,13 @@ export class JulesClient {
   }
 
   private async performRequest<T>(url: string, options: RequestInit, headers: Record<string, string>): Promise<T> {
-    const isGoogleApi = url.includes('googleapis.com');
-    
-    let isLocalApi = false;
     try {
-      if (typeof window !== 'undefined') {
-        const urlObj = new URL(url, window.location.origin);
-        isLocalApi = urlObj.pathname.startsWith('/api') || urlObj.hostname === window.location.hostname;
-      } else {
-        isLocalApi = url.startsWith('/api');
-      }
-    } catch (e) {
-      isLocalApi = url.startsWith('/api');
-    }
-    
-    // 60s for Google, 120s for local proxy, 30s for others
-    const timeoutDuration = isGoogleApi ? 60000 : (isLocalApi ? 120000 : 30000);
-    
-    const controller = new AbortController();
-    const timeoutId = setTimeout(() => {
-      console.warn(`[JulesClient] Request timed out after ${timeoutDuration}ms: ${url}`);
-      controller.abort();
-    }, timeoutDuration);
-
-    try {
+      // USE MANUAL FETCH WITHOUT MIDDLEWARE SPREADING
       const response = await fetch(url, {
         method: options.method || 'GET',
         body: options.body,
         headers,
-        signal: controller.signal
       });
-      clearTimeout(timeoutId);
 
       if (!response.ok) {
         const errorText = await response.text().catch(() => 'No error body');
@@ -376,38 +351,8 @@ export class JulesClient {
 
   // Session Management
   async listSessions(): Promise<Session[]> {
-    let allSessions: ApiSession[] = [];
-    let pageToken: string | undefined;
-
-    try {
-      do {
-        const params = new URLSearchParams();
-        params.set("pageSize", "100");
-        if (pageToken) params.set("pageToken", pageToken);
-
-        const response = await this.request<{ sessions?: ApiSession[]; nextPageToken?: string }>('/sessions?' + params.toString());
-        
-        if (response.sessions) {
-          allSessions = allSessions.concat(response.sessions);
-        }
-        pageToken = response.nextPageToken;
-      } while (pageToken);
-      
-      return allSessions.map(s => this.transformSession(s));
-    } catch (e) {
-      console.error('[JulesClient] Failed to list sessions:', e);
-      // Fallback to single page if pagination fails or isn't supported by the backend yet
-      const response = await this.request<{ sessions: ApiSession[] }>('/sessions');
-      return (response.sessions || []).map(s => this.transformSession(s));
-    }
-  }
-
-  async listSessionsRaw(endpoint: string): Promise<any> {
-    const response = await this.request<any>(endpoint);
-    if (response.sessions) {
-        response.sessions = response.sessions.map((s: ApiSession) => this.transformSession(s));
-    }
-    return response;
+    const response = await this.request<{ sessions: ApiSession[] }>('/sessions');
+    return (response.sessions || []).map(s => this.transformSession(s));
   }
 
   private mapState(state: string): Session['status'] {
