@@ -156,7 +156,8 @@ api.get('/sessions', async (c) => {
         if (!client) return c.json({ sessions: getMockSessions() });
 
         const pageToken = c.req.query('pageToken');
-        const pageSize = c.req.query('pageSize') || '100';
+        // Reduce page size to improve response speed and avoid 502s
+        const pageSize = c.req.query('pageSize') || '25';
 
         let endpoint = `/sessions?pageSize=${pageSize}`;
         if (pageToken) endpoint += `&pageToken=${pageToken}`;
