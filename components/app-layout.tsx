@@ -25,6 +25,7 @@ export function AppLayout({
   return (
     <div className="flex h-screen flex-col bg-black max-w-full overflow-hidden">
       <AppHeader 
+        onSearchClick={() => {}}
         onNewSession={() => {}}
       />
 
