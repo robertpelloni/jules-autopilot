@@ -216,7 +216,8 @@ export class JulesClient {
       
       // LOG THE CLEAN HEADERS
       if (typeof window === 'undefined') {
-        console.log(`[JulesClient] Outgoing to Google: auth=${!!this.authToken} key=${!!this.apiKey}`);
+        const maskedKey = this.apiKey ? `${this.apiKey.substring(0, 4)}...${this.apiKey.substring(this.apiKey.length - 4)}` : 'none';
+        console.log(`[JulesClient] Outgoing to Google: auth=${!!this.authToken} key=${maskedKey}`);
       }
 
       // THROTTLE GOOGLE API REQUESTS
