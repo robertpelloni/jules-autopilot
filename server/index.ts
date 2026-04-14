@@ -155,8 +155,14 @@ api.get('/sessions', async (c) => {
         const client = await getJulesClient(c);
         if (!client) return c.json({ sessions: getMockSessions() });
 
-        const sessions = await client.listSessions();
-        return c.json({ sessions });
+        const pageToken = c.req.query('pageToken');
+        const pageSize = c.req.query('pageSize') || '100';
+
+        let endpoint = `/sessions?pageSize=${pageSize}`;
+        if (pageToken) endpoint += `&pageToken=${pageToken}`;
+
+        const response = await client.listSessionsRaw(endpoint);
+        return c.json(response);
     } catch (e: any) {
         const errorMessage = e?.message || String(e);
         console.error(`[API] listSessions failed: ${errorMessage}`);

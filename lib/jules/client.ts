@@ -351,8 +351,38 @@ export class JulesClient {
 
   // Session Management
   async listSessions(): Promise<Session[]> {
-    const response = await this.request<{ sessions: ApiSession[] }>('/sessions');
-    return (response.sessions || []).map(s => this.transformSession(s));
+    let allSessions: ApiSession[] = [];
+    let pageToken: string | undefined;
+
+    try {
+      do {
+        const params = new URLSearchParams();
+        params.set("pageSize", "100");
+        if (pageToken) params.set("pageToken", pageToken);
+
+        const response = await this.request<{ sessions?: ApiSession[]; nextPageToken?: string }>('/sessions?' + params.toString());
+        
+        if (response.sessions) {
+          allSessions = allSessions.concat(response.sessions);
+        }
+        pageToken = response.nextPageToken;
+      } while (pageToken);
+      
+      return allSessions.map(s => this.transformSession(s));
+    } catch (e) {
+      console.error('[JulesClient] Failed to list sessions:', e);
+      // Fallback to single page if pagination fails or isn't supported by the backend yet
+      const response = await this.request<{ sessions: ApiSession[] }>('/sessions');
+      return (response.sessions || []).map(s => this.transformSession(s));
+    }
+  }
+
+  async listSessionsRaw(endpoint: string): Promise<any> {
+    const response = await this.request<any>(endpoint);
+    if (response.sessions) {
+        response.sessions = response.sessions.map((s: ApiSession) => this.transformSession(s));
+    }
+    return response;
   }
 
   private mapState(state: string): Session['status'] {
