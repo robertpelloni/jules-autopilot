@@ -27,12 +27,7 @@ export function ActivityInput({ onSendMessage, disabled, placeholder = "Send a m
         textareaRef.current.style.height = 'auto';
     }
 
-    try {
-      await onSendMessage(msgToSend);
-    } catch (error) {
-      // Revert input on error
-      setMessage(msgToSend);
-    }
+    await onSendMessage(msgToSend);
   };
 
   const handleKeyDown = (e: React.KeyboardEvent) => {

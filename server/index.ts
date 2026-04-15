@@ -325,18 +325,6 @@ api.get('/daemon/status', async (c) => {
     });
 });
 
-api.post('/daemon/status', async (c) => {
-    try {
-        const { action } = await c.req.json();
-        if (action === 'start') startDaemon();
-        else if (action === 'stop') stopDaemon();
-        return c.json({ status: 'ok' });
-    } catch (e) {
-        // Fallback for non-JSON bodies or missing action
-        return c.json({ status: 'error', message: String(e) }, 400);
-    }
-});
-
 api.get('/settings/keeper', async (c) => {
     const settings = await prisma.keeperSettings.findUnique({ where: { id: 'default' } });
     return c.json(settings || {});

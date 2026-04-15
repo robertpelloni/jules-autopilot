@@ -18,13 +18,9 @@ function AppContent() {
   const [showCodeDiffs, setShowCodeDiffs] = useState(false);
   const [currentActivities, setCurrentActivities] = useState<Activity[]>([]);
 
-  const handleSessionSelect = useCallback(async (session: Session | string) => {
+  const handleSessionSelect = useCallback((session: Session | string) => {
     if (typeof session === 'string') {
       console.log("Selected session ID:", session);
-      // Since we only got a string ID, we should find the full session in the state
-      // or at least construct a mock session object so we can view it
-      setSelectedSession({ id: session } as Session);
-      setView('sessions');
     } else {
       setSelectedSession(session);
       setView('sessions');

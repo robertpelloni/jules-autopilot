@@ -121,9 +121,8 @@ export function SessionKeeperSettingsContent({
   };
 
   return (
-    <div className="flex flex-col flex-1 min-h-0 bg-zinc-900/50 rounded-xl border border-white/10 overflow-hidden">
-      <div className="flex-1 overflow-y-auto p-4 md:p-6 space-y-6">
-        <div className="flex flex-col gap-6">
+    <div className="flex-1 p-6 space-y-8 bg-zinc-900/50 rounded-xl border border-white/10 overflow-y-auto max-h-[60vh]">
+      <div className="flex flex-col gap-6">
         <div className="flex items-center justify-between p-4 bg-black/40 rounded-lg border border-white/5 hover:border-purple-500/30 transition-colors">
           <div className="space-y-1">
             <h3 className="text-sm font-bold text-white uppercase tracking-wider">Enable Auto-Pilot</h3>
@@ -218,18 +217,17 @@ export function SessionKeeperSettingsContent({
         </div>
       </div>
 
-      <div className="space-y-3 pb-6 flex-none">
+      <div className="space-y-3">
         <Label className="text-[10px] text-zinc-500 uppercase font-bold flex items-center gap-2">
           Encouragement Messages
         </Label>
         <Textarea
           className="min-h-[120px] font-mono text-[10px] bg-black/60 border-white/10 text-zinc-300 focus:border-purple-500/50 transition-colors"
-          value={Array.isArray(config.messages) ? config.messages.join('\n') : ''}
+          value={config.messages.join('\n')}
           onChange={(e) => handleConfigChange({ ...config, messages: e.target.value.split('\n').filter(l => l.trim() !== '') })}
           placeholder="Enter one guidance directive per line..."
         />
       </div>
     </div>
-  </div>
   );
 }
