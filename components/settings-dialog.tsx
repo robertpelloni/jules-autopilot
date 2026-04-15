@@ -294,18 +294,6 @@ export function SettingsDialog({ open: propOpen, onOpenChange: propOnOpenChange,
             </div>
           </TabsContent>
 
-<<<<<<< HEAD
-          <TabsContent value="fleet" className="flex-1 p-6 overflow-y-auto">
-            <FleetIntelligence />
-          </TabsContent>
-
-          <TabsContent value="submodules" className="flex-1 p-6 overflow-y-auto">
-            <SubmoduleList />
-          </TabsContent>
-
-<<<<<<< HEAD
-=======
->>>>>>> 45ca78387ac3da9169ccd2e36a717fdc76ce31cf
           <TabsContent value="supervisor" className="flex-1 overflow-y-auto min-h-0 focus-visible:outline-none data-[state=inactive]:hidden">
             <div className="p-6">
               <div className="mb-4 p-3 bg-purple-900/30 border border-purple-500/30 rounded text-[10px] text-purple-200 uppercase tracking-widest font-bold">
@@ -316,13 +304,6 @@ export function SettingsDialog({ open: propOpen, onOpenChange: propOnOpenChange,
                 onConfigChange={saveConfig}
               />
             </div>
-=======
-          <TabsContent value="supervisor" className="flex-1 min-h-0 overflow-hidden">
-            <SessionKeeperSettingsContent
-              config={config}
-              onConfigChange={saveConfig}
-            />
->>>>>>> origin/jules-17764958747146694232-3d7c3856
           </TabsContent>
         </Tabs>
       </DialogContent>

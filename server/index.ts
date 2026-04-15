@@ -53,7 +53,7 @@ if (typeof Bun !== 'undefined') {
 
 const port = 8080;
 const eventBus = new EventEmitter();
-const wsClients = new Set<any>();
+export const wsClients = new Set<any>();
 let workerInstance: ReturnType<typeof setupWorker> | null = null;
 
 export function broadcastToClients(message: object) {
@@ -325,6 +325,29 @@ api.get('/daemon/status', async (c) => {
     });
 });
 
+api.post('/daemon/status', async (c) => {
+    try {
+        const body = await c.req.json().catch(() => ({}));
+        const action = body.action;
+        
+        if (action === 'start') {
+            const settings = await prisma.keeperSettings.findUnique({ where: { id: 'default' } }).catch(() => null);
+            if (settings?.isEnabled) {
+                startDaemon();
+                if (!workerInstance) workerInstance = setupWorker();
+            }
+            return c.json({ status: 'started', isEnabled: true });
+        } else if (action === 'stop') {
+            stopDaemon();
+            workerInstance = null;
+            return c.json({ status: 'stopped', isEnabled: false });
+        }
+        return c.json({ status: 'unknown action' });
+    } catch (e) {
+        return c.json({ error: String(e) }, 500);
+    }
+});
+
 api.get('/settings/keeper', async (c) => {
     const settings = await prisma.keeperSettings.findUnique({ where: { id: 'default' } });
     return c.json(settings || {});
@@ -416,7 +439,12 @@ if (upgradeWebSocket) {
         }
     })));
 } else {
-    app.get('/ws', (c) => c.text('WebSockets only supported in Bun/Node-Server (Custom)', 501));
+    // Node.js WebSocket via ws package or fallback
+    try {
+        const { WebSocketServer } = await import('ws');
+        // Will be wired up in render-entry.ts via the HTTP server upgrade event
+    } catch {}
+    app.get('/ws', (c) => c.json({ type: 'connected', note: 'WebSocket upgrade required', wsClients: wsClients.size }));
 }
 
 // STATIC FILE SERVING

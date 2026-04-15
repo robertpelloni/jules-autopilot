@@ -1,6 +1,5 @@
 import { Button } from "@/components/ui/button";
 import { 
-  Search, 
   Plus, 
   Settings as SettingsIcon, 
   Terminal,
@@ -26,11 +25,10 @@ import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { APP_VERSION } from "@/lib/version";
 
 interface AppHeaderProps {
-  onSearchClick: () => void;
   onNewSession: () => void;
 }
 
-export function AppHeader({ onSearchClick, onNewSession }: AppHeaderProps) {
+export function AppHeader({ onNewSession }: AppHeaderProps) {
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
   const [isSyncing, setIsSyncing] = useState(false);
   const { client } = useJules();
@@ -70,21 +68,6 @@ export function AppHeader({ onSearchClick, onNewSession }: AppHeaderProps) {
       </div>
 
       <div className="flex items-center gap-2">
-        <Button
-          variant="ghost"
-          size="sm"
-          className="h-8 text-white/40 hover:text-white hover:bg-white/5 gap-2 px-3"
-          onClick={onSearchClick}
-        >
-          <Search className="w-3.5 h-3.5" />
-          <span className="text-[10px] font-medium uppercase tracking-wider hidden sm:inline">Search</span>
-          <kbd className="hidden md:inline-flex h-4 items-center gap-1 rounded border border-white/10 bg-white/5 px-1.5 font-mono text-[8px] font-medium text-white/20">
-            <span>⌘</span>K
-          </kbd>
-        </Button>
-
-        <div className="h-4 w-[1px] bg-white/10 mx-1" />
-
         <Button
           variant="ghost"
           size="sm"

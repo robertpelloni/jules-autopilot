@@ -1,11 +1,7 @@
 {
   "name": "jules-ui",
   "description": "The modern, developer-first interface for Google's Jules AI agent. Features live code diffs, interactive terminal outputs, and a streamlined pure React experience.",
-<<<<<<< HEAD
   "version": "3.6.0",
-=======
-  "version": "3.5.4",
->>>>>>> origin/jules-17764958747146694232-3d7c3856
   "private": true,
   "type": "module",
   "scripts": {

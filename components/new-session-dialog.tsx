@@ -2,6 +2,7 @@
 
 import { useState } from 'react';
 import { useJules } from '@/lib/jules/provider';
+import type { Session } from '@jules/shared';
 import { Button } from '@/components/ui/button';
 import {
   Dialog,
@@ -30,7 +31,7 @@ interface NewSessionDialogProps {
     trigger?: React.ReactNode;
     open?: boolean;
     onOpenChange?: (open: boolean) => void;
-    onSessionCreated?: (sessionId: string) => void;
+    onSessionCreated?: (session: Session) => void;
     initialValues?: {
         sourceId?: string;
         title?: string;
@@ -71,7 +72,7 @@ export function NewSessionDialog({ trigger, open: controlledOpen, onOpenChange: 
             const effectiveSourceId = sourceId || (sources && sources.length > 0 ? sources[0].id : 'global');
             const session = await client.createSession(effectiveSourceId, prompt, title);
             setOpen?.(false);
-            onSessionCreated?.(session.id);
+            onSessionCreated?.(session);
             toast.success('Session created successfully');
             
             setTitle('');

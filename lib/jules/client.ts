@@ -379,6 +379,7 @@ export class JulesClient {
         id: session.id,
         sourceId: session.sourceContext?.source?.replace('sources/github/', '') || (session.sourceId as string) || '',
         title: session.title || '',
+        prompt: (session.prompt as string) || undefined,
         status: this.mapState(session.state || (session.status as string) || ''),
         rawState: session.state || (session.rawState as string),
         createdAt: session.createTime || (session.createdAt as string),

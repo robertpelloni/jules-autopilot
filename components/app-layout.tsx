@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { AppHeader } from "./layout/app-header";
 import { AppSidebar } from "./layout/app-sidebar";
+import { NewSessionDialog } from "./new-session-dialog";
 import type { Session } from '@jules/shared';
 
 export interface AppLayoutProps {
@@ -21,12 +22,12 @@ export function AppLayout({
   onSessionSelect 
 }: AppLayoutProps) {
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
+  const [isNewSessionOpen, setIsNewSessionOpen] = useState(false);
   
   return (
     <div className="flex h-screen flex-col bg-black max-w-full overflow-hidden">
       <AppHeader 
-        onSearchClick={() => {}}
-        onNewSession={() => {}}
+        onNewSession={() => setIsNewSessionOpen(true)}
       />
 
       <div className="flex flex-1 overflow-hidden">
@@ -43,6 +44,15 @@ export function AppLayout({
           {children}
         </main>
       </div>
+
+      <NewSessionDialog
+        open={isNewSessionOpen}
+        onOpenChange={setIsNewSessionOpen}
+        onSessionCreated={(session) => {
+          setIsNewSessionOpen(false);
+          onSessionSelect(session);
+        }}
+      />
     </div>
   );
 }

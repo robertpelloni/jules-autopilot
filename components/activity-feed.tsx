@@ -236,7 +236,7 @@ export function ActivityFeed({
   };
 
   const handleSendMessage = async (content: string) => {
-    if (!client || sending || isArchived) return;
+    if (!client || sending) return;
     try {
       setSending(true);
       const userMessage = await client.createActivity({
@@ -780,9 +780,7 @@ export function ActivityFeed({
         </ScrollArea>
       </div>
 
-      {!isArchived && (
-        <ActivityInput onSendMessage={handleSendMessage} disabled={sending} placeholder="Send a message to Jules..." />
-      )}
+      <ActivityInput onSendMessage={handleSendMessage} disabled={sending} placeholder="Send a message to Jules..." />
     </div>
   );
 }
