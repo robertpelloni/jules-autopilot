@@ -3,7 +3,7 @@ import { prisma } from '../lib/prisma/index.ts';
 import { Hono, type Context } from 'hono';
 import { cors } from 'hono/cors';
 import { EventEmitter } from 'events';
-import { startDaemon, stopDaemon } from './daemon';
+import { startDaemon, stopDaemon, forceBump } from './daemon';
 import { queryCodebase } from './rag';
 import { handleBorgWebhook } from './webhooks';
 import { createBunWebSocket } from 'hono/bun';
@@ -350,21 +350,99 @@ api.post('/daemon/status', async (c) => {
 
 api.get('/settings/keeper', async (c) => {
     const settings = await prisma.keeperSettings.findUnique({ where: { id: 'default' } });
-    return c.json(settings || {});
+    if (!settings) return c.json({});
+
+    // Parse JSON string fields back to arrays for the frontend
+    let messages: string[] = [];
+    try { messages = JSON.parse(settings.messages); } catch { messages = []; }
+
+    let customMessages: string[] = [];
+    try { customMessages = JSON.parse(settings.customMessages); } catch { customMessages = []; }
+
+    return c.json({
+        ...settings,
+        messages: Array.isArray(messages) ? messages : [],
+        customMessages: Array.isArray(customMessages) ? customMessages : [],
+    });
 });
 
 api.post('/settings/keeper', async (c) => {
-    const body = await c.req.json();
-    const settings = await prisma.keeperSettings.upsert({
-        where: { id: 'default' },
-        update: body,
-        create: { id: 'default', ...body }
-    });
-    
-    if (settings.isEnabled) startDaemon();
-    else stopDaemon();
+    try {
+        const body = await c.req.json();
 
-    return c.json(settings);
+        // Transform arrays to JSON strings for Prisma string fields
+        const messages = Array.isArray(body.messages) ? JSON.stringify(body.messages) : body.messages;
+        const customMessages = Array.isArray(body.customMessages) ? JSON.stringify(body.customMessages) : body.customMessages;
+
+        // Only include fields that exist in the KeeperSettings schema
+        const data = {
+            isEnabled: Boolean(body.isEnabled),
+            autoSwitch: Boolean(body.autoSwitch),
+            checkIntervalSeconds: Number(body.checkIntervalSeconds) || 60,
+            inactivityThresholdMinutes: Number(body.inactivityThresholdMinutes) || 10,
+            activeWorkThresholdMinutes: Number(body.activeWorkThresholdMinutes) || 5,
+            messages: typeof messages === 'string' ? messages : JSON.stringify(["Please continue."]),
+            customMessages: typeof customMessages === 'string' ? customMessages : JSON.stringify(["Please continue."]),
+            smartPilotEnabled: Boolean(body.smartPilotEnabled),
+            supervisorProvider: String(body.supervisorProvider || 'openai'),
+            supervisorApiKey: body.supervisorApiKey || null,
+            supervisorModel: String(body.supervisorModel || 'gpt-4o'),
+            contextMessageCount: Number(body.contextMessageCount) || 10,
+            resumePaused: Boolean(body.resumePaused),
+        };
+
+        const settings = await prisma.keeperSettings.upsert({
+            where: { id: 'default' },
+            update: data,
+            create: { id: 'default', ...data }
+        });
+
+        if (settings.isEnabled) startDaemon();
+        else stopDaemon();
+
+        // If supervisor just got toggled on, trigger an immediate bump cycle
+        if (settings.isEnabled && data.smartPilotEnabled) {
+            forceBump();
+        }
+
+        return c.json(settings);
+    } catch (err) {
+        console.error('[Settings] Failed to save keeper settings:', err);
+        return c.json({ error: 'Failed to save settings', details: err instanceof Error ? err.message : String(err) }, 500);
+    }
+});
+
+api.get('/openrouter/free-models', async (c) => {
+    try {
+        const apiKey = process.env.OPENROUTER_API_KEY;
+        if (!apiKey) return c.json({ error: 'No OPENROUTER_API_KEY configured' }, 400);
+
+        const resp = await fetch('https://openrouter.ai/api/v1/models', {
+            headers: { 'Authorization': `Bearer ${apiKey}` },
+        });
+
+        if (!resp.ok) return c.json({ error: `OpenRouter returned ${resp.status}` }, resp.status);
+
+        const data = await resp.json();
+        const freeModels = (data.data || [])
+            .filter((m: any) => {
+                // Free models have pricing where prompt and completion are "0"
+                const prompt = parseFloat(m.pricing?.prompt || '1');
+                const completion = parseFloat(m.pricing?.completion || '1');
+                return prompt === 0 && completion === 0;
+            })
+            .map((m: any) => ({
+                id: m.id,
+                name: m.name || m.id,
+                context: m.context_length,
+                provider: m.id.split('/')[0],
+            }))
+            .sort((a: any, b: any) => a.name.localeCompare(b.name));
+
+        return c.json(freeModels);
+    } catch (err: any) {
+        return c.json({ error: err.message }, 500);
+    }
 });
 
 api.get('/apikeys', async (c) => {

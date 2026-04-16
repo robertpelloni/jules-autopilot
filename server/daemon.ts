@@ -1,17 +1,18 @@
 import { prisma } from '../lib/prisma/index.ts';
 import { JulesClient } from '../lib/jules/client';
 import { broadcastToClients, emitDaemonEvent } from './index';
-import { orchestratorQueue } from './queue';
-import { generateLLMText, normalizeProvider, getSupervisorAPIKey, resolveModel } from './llm';
 
 export class Daemon {
     private isRunning = false;
     private timer: NodeJS.Timeout | null = null;
+    private tickCount = 0;
 
     async start() {
         if (this.isRunning) return;
         this.isRunning = true;
+        this.tickCount = 0;
         console.log('[Daemon] Starting background monitoring loop...');
+        // Immediately run the first tick
         this.tick();
     }
 
@@ -24,13 +25,33 @@ export class Daemon {
         console.log('[Daemon] Stopped.');
     }
 
+    /**
+     * Force an immediate bump cycle regardless of the timer.
+     * Called when supervisor is toggled on or sessions load.
+     */
+    async forceBump() {
+        console.log('[Daemon] Force bump triggered');
+        // Cancel any pending timer
+        if (this.timer) {
+            clearTimeout(this.timer);
+            this.timer = null;
+        }
+        // Only tick if not already running
+        if (!this.isRunning) {
+            this.isRunning = true;
+            this.tickCount = 0;
+        }
+        await this.tick();
+    }
+
     private async tick() {
         if (!this.isRunning) return;
+        this.tickCount++;
 
         try {
             const settings = await prisma.keeperSettings.findUnique({ where: { id: 'default' } });
             if (!settings || !settings.isEnabled) {
-                this.scheduleNext(settings?.checkIntervalSeconds || 60);
+                this.scheduleNext(settings?.checkIntervalSeconds || 900);
                 return;
             }
 
@@ -41,33 +62,76 @@ export class Daemon {
                 return;
             }
 
+            // Clean up old completed/failed jobs
+            try {
+                const deleted = await prisma.queueJob.deleteMany({
+                    where: { status: { in: ['completed', 'failed'] } }
+                });
+                if (deleted.count > 0) {
+                    console.log(`[Daemon] Cleaned up ${deleted.count} old queue jobs.`);
+                }
+            } catch {}
+
             const sessions = await client.listSessions();
-            let queuedSessions = 0;
 
-            for (const session of sessions) {
-                const delay = queuedSessions * 5000; // 5s stagger
-                const runAt = new Date(Date.now() + delay);
+            // Don't pile up jobs — check how many are still pending
+            const pendingCount = await prisma.queueJob.count({
+                where: { status: { in: ['pending', 'processing'] } }
+            });
 
-                await orchestratorQueue.add('check_session', { session }, { runAt });
-                queuedSessions++;
-                
-                // BROADCAST THE SESSION MONITORING STATUS
-                emitDaemonEvent('session_monitor_scheduled', { sessionId: session.id, title: session.title, runAt });
-            }
-
-            if (queuedSessions > 0) {
+            if (pendingCount > 5) {
+                console.log(`[Daemon] ${pendingCount} jobs still in queue, skipping this tick.`);
                 await prisma.keeperLog.create({
                     data: {
-                        type: 'info',
-                        message: `Daemon scheduled monitoring for ${queuedSessions} sessions.`,
-                        metadata: JSON.stringify({ event: 'daemon_tick_enqueued', queuedSessions })
+                        type: 'heartbeat',
+                        message: `Tick #${this.tickCount}: Skipped — ${pendingCount} jobs still queued.`,
+                        metadata: JSON.stringify({ event: 'daemon_tick_skipped', tick: this.tickCount, pendingCount })
                     }
                 });
+                this.scheduleNext(settings.checkIntervalSeconds);
+                return;
             }
 
+            // Queue ALL sessions — no status filtering
+            let queuedSessions = 0;
+            const now = new Date();
+
+            for (const session of sessions) {
+                await prisma.queueJob.create({
+                    data: {
+                        type: 'check_session',
+                        payload: JSON.stringify({ session }),
+                        runAt: now,
+                    }
+                });
+                queuedSessions++;
+            }
+
+            const logMessage = queuedSessions > 0
+                ? `Tick #${this.tickCount}: Queued ${queuedSessions} sessions for supervisor.`
+                : `Tick #${this.tickCount}: No sessions found.`;
+
+            await prisma.keeperLog.create({
+                data: {
+                    type: queuedSessions > 0 ? 'info' : 'heartbeat',
+                    message: logMessage,
+                    metadata: JSON.stringify({ event: 'daemon_tick', tick: this.tickCount, total: sessions.length, queued: queuedSessions })
+                }
+            });
+
+            broadcastToClients({ type: 'daemon_tick', tick: this.tickCount, total: sessions.length, queued: queuedSessions });
             this.scheduleNext(settings.checkIntervalSeconds);
         } catch (error) {
             console.error('[Daemon] Tick error:', error);
+            try {
+                await prisma.keeperLog.create({
+                    data: {
+                        type: 'error',
+                        message: `Tick #${this.tickCount} error: ${error instanceof Error ? error.message : String(error)}`,
+                        metadata: JSON.stringify({ event: 'daemon_error', tick: this.tickCount })
+                    }
+                });
+            } catch {}
             this.scheduleNext(60);
         }
     }
@@ -92,4 +156,8 @@ export function startDaemon() {
 
 export function stopDaemon() {
     globalDaemon.stop();
+}
+
+export function forceBump() {
+    return globalDaemon.forceBump();
 }

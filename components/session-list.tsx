@@ -9,6 +9,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Search, Loader2, Sparkles, RefreshCw, History } from "lucide-react";
+import { BroadcastDialog } from "./broadcast-dialog";
 import {
   Tooltip,
   TooltipContent,
@@ -189,6 +190,7 @@ export function SessionList({
           <div className="flex items-center justify-between mb-1">
              <span className="text-[10px] font-bold text-white/40 uppercase tracking-widest">Navigation</span>
              <div className="flex items-center gap-1">
+                <BroadcastDialog sessions={sessions} />
                 <Button variant="ghost" size="icon" onClick={loadSessions} className="h-5 w-5 text-white/20 hover:text-white hover:bg-white/5">
                     <RefreshCw className="h-3 w-3" />
                 </Button>

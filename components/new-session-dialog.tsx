@@ -53,10 +53,19 @@ export function NewSessionDialog({ trigger, open: controlledOpen, onOpenChange: 
     const [prompt, setPrompt] = useState(initialValues?.prompt || '');
     const [loading, setLoading] = useState(false);
 
-    // Fetch available sources (repos)
+    // Derive available repos from existing sessions instead of calling the unreliable /sources endpoint
     const { data: sources, isLoading: sourcesLoading } = useSWR(
-        client && open ? 'sources' : null,
-        () => client!.listSources()
+        client && open ? 'session-sources' : null,
+        async () => {
+            const sessions = await client!.listSessions();
+            const repoMap = new Map<string, { id: string; name: string }>();
+            for (const s of sessions) {
+                if (s.sourceId && !repoMap.has(s.sourceId)) {
+                    repoMap.set(s.sourceId, { id: s.sourceId, name: s.sourceId });
+                }
+            }
+            return Array.from(repoMap.values()).sort((a, b) => a.name.localeCompare(b.name));
+        }
     );
 
     const handleSubmit = async (e: React.FormEvent) => {

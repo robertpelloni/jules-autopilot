@@ -2,7 +2,6 @@
 
 import { useState, useEffect } from 'react';
 import { SessionKeeperConfig, Participant } from '@jules/shared';
-import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
 import { Input } from '@/components/ui/input';
 import { Switch } from '@/components/ui/switch';
@@ -14,15 +13,13 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import { Separator } from '@/components/ui/separator';
-import { Sparkles, Trash2, Users, Plus } from 'lucide-react';
-import { Badge } from '@/components/ui/badge';
+import { Sparkles } from 'lucide-react';
 
 const DEFAULT_CONFIG: SessionKeeperConfig = {
   isEnabled: false,
   autoSwitch: true,
-  checkIntervalSeconds: 30,
-  inactivityThresholdMinutes: 1,
+  checkIntervalSeconds: 900,
+  inactivityThresholdMinutes: 10,
   activeWorkThresholdMinutes: 30,
   messages: [
     "Great! Please keep going as you advise!",
@@ -32,9 +29,9 @@ const DEFAULT_CONFIG: SessionKeeperConfig = {
     "Looks good to me. Continue.",
   ],
   smartPilotEnabled: false,
-  supervisorProvider: 'lmstudio',
+  supervisorProvider: 'openrouter',
   supervisorApiKey: '',
-  supervisorModel: '',
+  supervisorModel: 'google/gemma-3-27b-it:free',
   contextMessageCount: 20,
   debateEnabled: false,
   debateParticipants: [],
@@ -50,16 +47,15 @@ export function SessionKeeperSettingsContent({
   onConfigChange: propOnChange,
 }: SessionKeeperSettingsContentProps) {
   const [localConfig, setLocalConfig] = useState<SessionKeeperConfig>(DEFAULT_CONFIG);
-
   const config = propConfig || localConfig;
 
   useEffect(() => {
     if (!propConfig) {
       const stored = localStorage.getItem('jules-session-keeper-config');
       if (stored) {
-        try { 
+        try {
           const parsed = JSON.parse(stored);
-          setTimeout(() => setLocalConfig({ ...DEFAULT_CONFIG, ...parsed }), 0); 
+          setTimeout(() => setLocalConfig({ ...DEFAULT_CONFIG, ...parsed }), 0);
         }
         catch (e) { console.error(e); }
       }
@@ -74,47 +70,17 @@ export function SessionKeeperSettingsContent({
     }
   };
 
-  const [newPart, setNewPart] = useState({
-    name: 'Agent',
-    provider: 'openai' as const,
-    model: '',
-    apiKey: '',
-    role: 'Advisor',
-    systemPrompt: 'You are an expert advisor helping to guide the Jules AI agent.'
-  });
+  const [freeModels, setFreeModels] = useState<{id: string; name: string; context?: number}[]>([]);
+  const [modelsLoading, setModelsLoading] = useState(false);
 
-  const addParticipant = () => {
-    const participants = config.debateParticipants || [];
-    const participant: Participant = {
-        ...newPart,
-        id: crypto.randomUUID(),
-        provider: newPart.provider as 'openai' | 'anthropic' | 'gemini'
-    };
-
-    handleConfigChange({
-      ...config,
-      debateParticipants: [
-        ...participants,
-        participant
-      ]
-    });
-    setNewPart({
-      name: 'Agent',
-      provider: 'openai' as const,
-      model: '',
-      apiKey: '',
-      role: 'Advisor',
-      systemPrompt: 'You are an expert advisor helping to guide the Jules AI agent.'
-    });
-  };
-
-  const removeParticipant = (index: number) => {
-    const participants = config.debateParticipants || [];
-    handleConfigChange({
-      ...config,
-      debateParticipants: participants.filter((_, i) => i !== index)
-    });
-  };
+  useEffect(() => {
+    setModelsLoading(true);
+    fetch('/api/openrouter/free-models')
+      .then(r => r.ok ? r.json() : [])
+      .then(data => Array.isArray(data) ? setFreeModels(data) : setFreeModels([]))
+      .catch(() => setFreeModels([]))
+      .finally(() => setModelsLoading(false));
+  }, []);
 
   return (
     <div className="flex-1 p-6 space-y-8 bg-zinc-900/50 rounded-xl border border-white/10 overflow-y-auto max-h-[60vh]">
@@ -148,78 +114,53 @@ export function SessionKeeperSettingsContent({
         <div className="grid gap-4 p-4 bg-purple-500/5 border border-purple-500/20 rounded-lg">
           <div className="grid grid-cols-2 gap-4">
             <div className="space-y-2">
-              <Label className="text-xs text-white/60">Provider</Label>
-              <Select
-                value={config.supervisorProvider}
-                onValueChange={(v: SessionKeeperConfig['supervisorProvider']) => handleConfigChange({ ...config, supervisorProvider: v, supervisorModel: '' })}
-              >
-                <SelectTrigger className="h-8 text-xs bg-black/50 border-white/10"><SelectValue /></SelectTrigger>
-                <SelectContent className="bg-zinc-900 border-white/10 text-white">
-                  <SelectItem value="lmstudio">LM Studio (Local)</SelectItem>
-                  <SelectItem value="openrouter">OpenRouter</SelectItem>
-                  <SelectItem value="openai">OpenAI</SelectItem>
-                  <SelectItem value="anthropic">Anthropic</SelectItem>
-                  <SelectItem value="gemini">Google (Gemini)</SelectItem>
-                </SelectContent>
-              </Select>
+              <Label className="text-xs text-white/60">Supervisor Model</Label>
+              {freeModels.length > 0 ? (
+                <Select
+                  value={config.supervisorModel || 'google/gemma-3-27b-it:free'}
+                  onValueChange={(v) => handleConfigChange({ ...config, supervisorModel: v })}
+                >
+                  <SelectTrigger className="h-8 text-xs bg-black/50 border-white/10">
+                    <SelectValue placeholder="Select a free model..." />
+                  </SelectTrigger>
+                  <SelectContent className="bg-zinc-900 border-white/10 text-white max-h-[300px]">
+                    {freeModels.map((m) => (
+                      <SelectItem key={m.id} value={m.id} className="text-xs">
+                        <span className="font-medium">{m.name}</span>
+                        <span className="text-zinc-500 ml-2">{m.context ? `${(m.context/1000).toFixed(0)}k ctx` : ''}</span>
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              ) : (
+                <div className="text-xs text-zinc-500 bg-black/30 rounded p-2">
+                  {modelsLoading ? 'Loading free models...' : 'No free models found. Check OPENROUTER_API_KEY.'}
+                </div>
+              )}
             </div>
             <div className="space-y-2">
-              <Label className="text-xs text-white/60">API Key</Label>
-              <Input
-                className="h-8 text-xs bg-black/50 border-white/10 font-mono"
-                type="password"
-                value={config.supervisorApiKey}
-                onChange={(e) => handleConfigChange({ ...config, supervisorApiKey: e.target.value })}
-              />
+              <Label className="text-xs text-white/60">Auto-Bump Interval</Label>
+              <div className="flex items-center gap-2">
+                <Input
+                  type="number"
+                  value={config.checkIntervalSeconds}
+                  onChange={(e) => handleConfigChange({ ...config, checkIntervalSeconds: parseInt(e.target.value) || 900 })}
+                  className="h-8 bg-black/50 border-white/10 text-xs font-mono w-20"
+                />
+                <span className="text-[10px] text-zinc-600 font-mono uppercase">Seconds</span>
+              </div>
             </div>
-          </div>
-          <div className="space-y-2">
-            <Label className="text-xs text-white/60">Model</Label>
-            <Input
-              className="h-8 text-xs bg-black/50 border-white/10 flex-1"
-              placeholder="e.g. gpt-4o"
-              value={config.supervisorModel}
-              onChange={(e) => handleConfigChange({ ...config, supervisorModel: e.target.value })}
-            />
           </div>
         </div>
       )}
 
-      <div className="grid grid-cols-2 gap-4">
-        <div className="p-4 bg-black/20 rounded-lg border border-white/5 space-y-2">
-          <Label className="text-[10px] text-zinc-500 uppercase font-bold">Check Frequency</Label>
-          <div className="flex items-center gap-2">
-            <Input
-              type="number"
-              value={config.checkIntervalSeconds}
-              onChange={(e) => handleConfigChange({ ...config, checkIntervalSeconds: parseInt(e.target.value) || 30 })}
-              className="h-8 bg-black/50 border-white/10 text-xs font-mono w-20"
-            />
-            <span className="text-[10px] text-zinc-600 font-mono uppercase">Seconds</span>
-          </div>
-        </div>
-        
-        <div className="p-4 bg-black/20 rounded-lg border border-white/5 space-y-2">
-          <Label className="text-[10px] text-zinc-500 uppercase font-bold">Inactivity Limit</Label>
-          <div className="flex items-center gap-2">
-            <Input
-              type="number"
-              value={config.inactivityThresholdMinutes}
-              onChange={(e) => handleConfigChange({ ...config, inactivityThresholdMinutes: parseFloat(e.target.value) || 1 })}
-              className="h-8 bg-black/50 border-white/10 text-xs font-mono w-20"
-            />
-            <span className="text-[10px] text-zinc-600 font-mono uppercase">Minutes</span>
-          </div>
-        </div>
-      </div>
-
       <div className="space-y-3">
         <Label className="text-[10px] text-zinc-500 uppercase font-bold flex items-center gap-2">
-          Encouragement Messages
+          Encouragement Messages (fallback)
         </Label>
         <Textarea
           className="min-h-[120px] font-mono text-[10px] bg-black/60 border-white/10 text-zinc-300 focus:border-purple-500/50 transition-colors"
-          value={config.messages.join('\n')}
+          value={(Array.isArray(config.messages) ? config.messages : []).join('\n')}
           onChange={(e) => handleConfigChange({ ...config, messages: e.target.value.split('\n').filter(l => l.trim() !== '') })}
           placeholder="Enter one guidance directive per line..."
         />

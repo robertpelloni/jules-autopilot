@@ -115,7 +115,7 @@ model KeeperSettings {
   id                         String   @id @default("default")
   isEnabled                  Boolean  @default(false)
   autoSwitch                 Boolean  @default(false)
-  checkIntervalSeconds       Int      @default(60)
+  checkIntervalSeconds       Int      @default(900)
   inactivityThresholdMinutes Int      @default(10)
   activeWorkThresholdMinutes Int      @default(5)
   messages                   String   // JSON: string[]

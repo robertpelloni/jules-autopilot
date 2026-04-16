@@ -351,8 +351,23 @@ export class JulesClient {
 
   // Session Management
   async listSessions(): Promise<Session[]> {
-    const response = await this.request<{ sessions: ApiSession[] }>('/sessions');
-    return (response.sessions || []).map(s => this.transformSession(s));
+    let allSessions: ApiSession[] = [];
+    let pageToken: string | undefined;
+
+    do {
+      const params = new URLSearchParams();
+      params.set('pageSize', '50');
+      if (pageToken) params.set('pageToken', pageToken);
+
+      const response = await this.request<{ sessions?: ApiSession[]; nextPageToken?: string }>(`/sessions?${params.toString()}`);
+      
+      if (response.sessions) {
+        allSessions = allSessions.concat(response.sessions);
+      }
+      pageToken = response.nextPageToken;
+    } while (pageToken);
+
+    return allSessions.map(s => this.transformSession(s));
   }
 
   private mapState(state: string): Session['status'] {
