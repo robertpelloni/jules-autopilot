@@ -40,6 +40,11 @@ export class Worker {
 
             if (job) {
                 await this.executeJob(job);
+                // Clean up old completed/failed jobs after each execution
+                const cutoff = new Date(Date.now() - 60000); // older than 1 minute
+                await prisma.queueJob.deleteMany({
+                    where: { status: { in: ['completed', 'failed'] }, createdAt: { lt: cutoff } }
+                }).catch(() => {});
                 // Short pause before next job to avoid blasting APIs
                 await new Promise(r => setTimeout(r, 3000));
                 // Immediately check for next job (no timer delay)

@@ -30,24 +30,46 @@ const DOC_FILES = [
 const MAX_DOC_SIZE = 6000;   // chars per doc file
 const MAX_COMMITS = 20;
 const MAX_HISTORY_ITEMS = 60;
+const MAX_HISTORY_CHARS = 4000;
 const MAX_TOTAL_PROMPT = 14000; // rough char budget for the user message
 
-// Fallback models to try if the primary gets 429'd
-const FALLBACK_MODELS = [
-    'google/gemma-4-26b-a4b-it:free',
-    'google/gemma-3-27b-it:free',
-    'google/gemma-4-31b-it:free',
-    'meta-llama/llama-3.3-70b-instruct:free',
-    'qwen/qwen3-coder:free',
-    'qwen/qwen3-next-80b-a3b-instruct:free',
-    'nousresearch/hermes-3-llama-3.1-405b:free',
-    'minimax/minimax-m2.5:free',
-    'nvidia/nemotron-3-super-120b-a12b:free',
-    'nvidia/nemotron-nano-9b-v2:free',
-    'z-ai/glm-4.5-air:free',
-    'openai/gpt-oss-120b:free',
-    'cognitivecomputations/dolphin-mistral-24b-venice-edition:free',
-];
+// Dynamic model list — fetched from OpenRouter, cached for 10 minutes
+let cachedFreeModels: string[] = [];
+let freeModelsFetchedAt = 0;
+const FREE_MODELS_CACHE_TTL = 10 * 60 * 1000; // 10 minutes
+
+async function getFreeModels(apiKey: string): Promise<string[]> {
+    if (cachedFreeModels.length > 0 && Date.now() - freeModelsFetchedAt < FREE_MODELS_CACHE_TTL) {
+        return cachedFreeModels;
+    }
+    try {
+        const resp = await fetch('https://openrouter.ai/api/v1/models', {
+            headers: { 'Authorization': `Bearer ${apiKey}` },
+        });
+        if (!resp.ok) throw new Error(`OpenRouter returned ${resp.status}`);
+        const data = await resp.json();
+        cachedFreeModels = (data.data || [])
+            .filter((m: any) => {
+                const prompt = parseFloat(m.pricing?.prompt || '1');
+                const completion = parseFloat(m.pricing?.completion || '1');
+                return prompt === 0 && completion === 0;
+            })
+            .map((m: any) => m.id)
+            .sort();
+        freeModelsFetchedAt = Date.now();
+        console.log(`[Supervisor] Fetched ${cachedFreeModels.length} free models from OpenRouter`);
+    } catch (err: any) {
+        console.warn(`[Supervisor] Failed to fetch free models: ${err.message}`);
+        // Keep whatever we had before, or empty
+        if (cachedFreeModels.length === 0) {
+            cachedFreeModels = [
+                'google/gemma-3-27b-it:free', 'meta-llama/llama-3.3-70b-instruct:free',
+                'qwen/qwen3-coder:free', 'minimax/minimax-m2.5:free',
+            ];
+        }
+    }
+    return cachedFreeModels;
+}
 
 /**
  * Load a single doc file, truncated
@@ -225,7 +247,9 @@ export async function superviseSession(
     const dbSettings = await prisma.keeperSettings.findUnique({ where: { id: 'default' } });
     // Build model rotation list: primary first, then fallbacks (excluding primary)
     const primaryModel = dbSettings?.supervisorModel || 'google/gemma-3-27b-it:free';
-    const modelsToTry = [primaryModel, ...FALLBACK_MODELS.filter(m => m !== primaryModel)];
+    const freeModels = await getFreeModels(apiKey);
+    // Put primary first, then all free models (excluding primary), keep looping
+    const modelsToTry = [primaryModel, ...freeModels.filter(m => m !== primaryModel)];
 
     // Resolve the project folder
     const projectFolder = resolveProjectFolder(sourceId);

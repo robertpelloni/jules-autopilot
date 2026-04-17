@@ -389,16 +389,17 @@ export function ActivityFeed({
 
   const parentRef = useRef<HTMLDivElement>(null);
 
+  // The actual scrollable element is the Radix Viewport inside ScrollArea
+  const getScrollEl = () => parentRef.current?.querySelector('[data-slot="scroll-area-viewport"]') as HTMLElement | null;
+
   const handleJumpToTop = () => {
-    if (parentRef.current) {
-      parentRef.current.scrollTop = 0;
-    }
+    const el = getScrollEl();
+    if (el) el.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
   const handleJumpToBottom = () => {
-    if (parentRef.current) {
-      parentRef.current.scrollTop = parentRef.current.scrollHeight;
-    }
+    const el = getScrollEl();
+    if (el) el.scrollTo({ top: el.scrollHeight, behavior: 'smooth' });
   };
 
   const filteredActivities = useMemo(() => activities.filter((activity) => {
@@ -435,18 +436,17 @@ export function ActivityFeed({
 
   const virtualizer = useVirtualizer({
     count: groupedActivities.length,
-    getScrollElement: () => parentRef.current,
+    getScrollElement: () => parentRef.current?.querySelector('[data-slot="scroll-area-viewport"]') as HTMLElement | null,
     estimateSize: () => 250,
     overscan: 10,
   });
 
   // Auto-scroll to bottom on new activities
   useEffect(() => {
-    if (parentRef.current && activities.length > 0) {
-      const scrollElement = parentRef.current;
-      // Use requestAnimationFrame to ensure the virtualizer has finished rendering
+    if (activities.length > 0) {
       requestAnimationFrame(() => {
-        scrollElement.scrollTop = scrollElement.scrollHeight;
+        const el = parentRef.current?.querySelector('[data-slot="scroll-area-viewport"]') as HTMLElement | null;
+        if (el) el.scrollTo({ top: el.scrollHeight, behavior: 'smooth' });
       });
     }
   }, [activities.length]);

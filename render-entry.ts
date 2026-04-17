@@ -1,6 +1,5 @@
 import { prisma } from './lib/prisma/index.ts';
 import { startDaemon } from './server/daemon.ts';
-import { setupWorker } from './server/queue.ts';
 import { serve } from '@hono/node-server';
 import { Hono } from 'hono';
 import { cors } from 'hono/cors';
@@ -35,9 +34,10 @@ const server = serve({
         try {
             const settings = await prisma.keeperSettings.findUnique({ where: { id: 'default' } }).catch(() => null);
             if (settings?.isEnabled) {
-                console.log("[Render] Auto-starting Session Keeper...");
+                console.log("[Render] Auto-starting Session Keeper daemon...");
                 startDaemon();
-                setupWorker();
+                // Queue worker is NOT started — daemon handles everything
+                // to avoid duplicate API calls and memory overhead
             }
         } catch (e) { console.error("[Render] Auto-start failed:", e); }
     }, 1000);

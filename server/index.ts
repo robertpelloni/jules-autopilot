@@ -8,7 +8,6 @@ import { queryCodebase } from './rag';
 import { handleBorgWebhook } from './webhooks';
 import { createBunWebSocket } from 'hono/bun';
 import type { ServerWebSocket } from 'bun';
-import { setupWorker, orchestratorQueue } from './queue';
 import fs from 'fs';
 import path from 'path';
 import type { DaemonEventType } from '@jules/shared';
@@ -54,7 +53,6 @@ if (typeof Bun !== 'undefined') {
 const port = 8080;
 const eventBus = new EventEmitter();
 export const wsClients = new Set<any>();
-let workerInstance: ReturnType<typeof setupWorker> | null = null;
 
 export function broadcastToClients(message: object) {
     const payload = JSON.stringify(message);
@@ -258,8 +256,7 @@ api.post('/rag/reindex', async (c) => {
             return c.json({ error: 'OpenAI API key is required for RAG' }, 401);
         }
 
-        await orchestratorQueue.add('index_codebase', {});
-        return c.json({ success: true, message: 'Re-indexing job enqueued' });
+        return c.json({ success: true, message: 'Re-indexing not available (queue removed)' });
     } catch (e) {
         return c.json({ error: String(e) }, 500);
     }
@@ -268,13 +265,9 @@ api.post('/rag/reindex', async (c) => {
 api.get('/fleet/summary', async (c) => {
     try {
         const [
-            pendingJobs,
-            processingJobs,
             recentActions,
             chunkCount
         ] = await Promise.all([
-            prisma.queueJob.count({ where: { status: 'pending' } }),
-            prisma.queueJob.count({ where: { status: 'processing' } }),
             prisma.keeperLog.findMany({ 
                 where: { type: 'action' },
                 orderBy: { createdAt: 'desc' },
@@ -286,8 +279,8 @@ api.get('/fleet/summary', async (c) => {
         return c.json({
             timestamp: new Date().toISOString(),
             orchestrator: {
-                queueDepth: pendingJobs + processingJobs,
-                isActive: processingJobs > 0,
+                queueDepth: 0,
+                isActive: globalDaemon['isRunning'] || false,
                 recentAutonomousActions: recentActions.map(a => ({
                     message: a.message,
                     time: a.createdAt
@@ -308,20 +301,11 @@ api.get('/daemon/status', async (c) => {
     const settings = await prisma.keeperSettings.findUnique({ where: { id: 'default' } }).catch(() => null);        
     const logs = await prisma.keeperLog.findMany({ orderBy: { createdAt: 'desc' }, take: 50 }).catch(() => []);     
     
-    // Get queue stats
-    const [pendingJobs, processingJobs] = await Promise.all([
-        prisma.queueJob.count({ where: { status: 'pending' } }),
-        prisma.queueJob.count({ where: { status: 'processing' } })
-    ]);
-
     return c.json({ 
         isEnabled: settings?.isEnabled || false, 
         logs, 
         wsClients: wsClients.size,
-        queue: {
-            pending: pendingJobs,
-            processing: processingJobs
-        }
+        queue: { pending: 0, processing: 0 }
     });
 });
 
@@ -334,12 +318,10 @@ api.post('/daemon/status', async (c) => {
             const settings = await prisma.keeperSettings.findUnique({ where: { id: 'default' } }).catch(() => null);
             if (settings?.isEnabled) {
                 startDaemon();
-                if (!workerInstance) workerInstance = setupWorker();
             }
             return c.json({ status: 'started', isEnabled: true });
         } else if (action === 'stop') {
             stopDaemon();
-            workerInstance = null;
             return c.json({ status: 'stopped', isEnabled: false });
         }
         return c.json({ status: 'unknown action' });
@@ -526,6 +508,41 @@ if (upgradeWebSocket) {
 }
 
 // STATIC FILE SERVING
+// Jules API proxy — forward unhandled /api/* to Google
+api.all('/sessions/*', async (c) => {
+    return proxyToJules(c);
+});
+api.all('/sources/*', async (c) => {
+    return proxyToJules(c);
+});
+
+async function proxyToJules(c: any) {
+    const settings = await prisma.keeperSettings.findUnique({ where: { id: 'default' } }).catch(() => null);
+    const apiKey = process.env.JULES_API_KEY || settings?.julesApiKey;
+    if (!apiKey) return c.json({ error: 'No Jules API key configured' }, 500);
+
+    const googleUrl = `https://jules.googleapis.com/v1alpha${c.req.path}`;
+    const headers: Record<string, string> = {
+        'Content-Type': 'application/json',
+        'X-Goog-Api-Key': apiKey,
+    };
+
+    try {
+        const resp = await fetch(googleUrl, {
+            method: c.req.method,
+            headers,
+            body: c.req.method !== 'GET' && c.req.method !== 'HEAD' ? await c.req.text() : undefined,
+        });
+        const data = await resp.text();
+        return new Response(data, {
+            status: resp.status,
+            headers: { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' },
+        });
+    } catch (err: any) {
+        return c.json({ error: err.message }, 502);
+    }
+}
+
 app.get('*', async (c) => {
     const reqPath = c.req.path === '/' ? '/index.html' : c.req.path;
     const filePath = path.resolve(process.cwd(), 'dist', reqPath.startsWith('/') ? reqPath.slice(1) : reqPath);     
@@ -559,7 +576,6 @@ if (typeof Bun !== 'undefined') {
             if (settings?.isEnabled) {
                 console.log("[Server] Auto-starting Session Keeper...");
                 startDaemon();
-                workerInstance = setupWorker();
             }
         } catch (e) { console.error("[Server] Auto-start failed:", e); }
     }, 1000);

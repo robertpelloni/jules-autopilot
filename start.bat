@@ -19,6 +19,6 @@ echo [Prisma] Synchronizing database...
 call npx prisma db push
 
 echo [Server] Starting backend and frontend in development mode...
-:: Run Vite frontend and Hono backend simultaneously using tsx and vite
-:: We'll use a single command that runs both if possible, or just start dev
+set NODE_OPTIONS=--max-old-space-size=4096
+echo [Config] NODE_OPTIONS=%NODE_OPTIONS%
 call npx tsx render-entry.ts

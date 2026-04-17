@@ -1,5 +1,5 @@
 import { safeLocalStorage } from '@/lib/utils';
-import { globalRequestQueue } from './request-queue';
+import { globalRequestQueue, nudgeRequestQueue } from './request-queue';
 import type {
   Source,
   Session,
@@ -178,11 +178,13 @@ export class JulesClient {
   private apiKey?: string;
   private authToken?: string;
   private baseUrl: string;
+  private requestQueue: RequestQueue = globalRequestQueue;
 
-  constructor(apiKey?: string, baseUrl: string = getDefaultApiBaseUrl(), authToken?: string) {
+  constructor(apiKey?: string, baseUrl: string = getDefaultApiBaseUrl(), authToken?: string, queue?: RequestQueue) {
     this.apiKey = apiKey;
     this.authToken = authToken;
     this.baseUrl = baseUrl;
+    if (queue) this.requestQueue = queue;
   }
 
   private normalizeSessionId(sessionId: string): string {
@@ -220,7 +222,7 @@ export class JulesClient {
       }
 
       // THROTTLE GOOGLE API REQUESTS
-      return globalRequestQueue.add(() => this.performRequest<T>(url, options, headers));
+      return this.requestQueue.add(() => this.performRequest<T>(url, options, headers));
     } else {
       // Local daemon headers
       if (this.apiKey) headers['X-Jules-Api-Key'] = this.apiKey;
@@ -264,9 +266,9 @@ export class JulesClient {
         }
 
         if (response.status === 404) {
-          if (endpoint.includes("/activities")) return { activities: [] } as T;
-          if (endpoint.includes("/sessions?")) return { sessions: [] } as T;
-          if (endpoint.includes("/sources?")) return { sources: [] } as T;
+          if (url.includes("/activities")) return { activities: [] } as T;
+          if (url.includes("/sessions?")) return { sessions: [] } as T;
+          if (url.includes("/sources?")) return { sources: [] } as T;
           throw new JulesAPIError('Resource not found.', response.status, errorData);
         }
 
@@ -311,7 +313,7 @@ export class JulesClient {
          console.error("Failed to list sources:", err);
          break;
       }
-    } while (pageToken);
+    } while (pageToken && allSources.length < 500);
 
     const sources = allSources.map((source: ApiSource) => {
       const sourcePath = source.source || source.name || "";
@@ -353,6 +355,7 @@ export class JulesClient {
   async listSessions(): Promise<Session[]> {
     let allSessions: ApiSession[] = [];
     let pageToken: string | undefined;
+    let pageCount = 0;
 
     do {
       const params = new URLSearchParams();
@@ -365,7 +368,8 @@ export class JulesClient {
         allSessions = allSessions.concat(response.sessions);
       }
       pageToken = response.nextPageToken;
-    } while (pageToken);
+      pageCount++;
+    } while (pageToken && pageCount < 10); // cap at 500 sessions
 
     return allSessions.map(s => this.transformSession(s));
   }
@@ -413,17 +417,25 @@ export class JulesClient {
   }
 
   async createSession(sourceId: string, prompt: string, title: string = 'Untitled Session'): Promise<Session> {
-    const requestBody = {
+    // Build the source reference — Google API expects the full path
+    const sourceRef = sourceId && sourceId !== 'global'
+        ? (sourceId.startsWith('sources/') ? sourceId : `sources/github/${sourceId}`)
+        : undefined;
+
+    const requestBody: Record<string, unknown> = {
       prompt,
-      sourceContext: {
-        source: sourceId,
-        githubRepoContext: {
-          startingBranch: 'main'
-        }
-      },
       title: title || 'Untitled Session',
       requirePlanApproval: true
     };
+
+    if (sourceRef) {
+      requestBody.sourceContext = {
+        source: sourceRef,
+        githubRepoContext: {
+          startingBranch: 'main'
+        }
+      };
+    }
 
     const response = await this.request<ApiSession>("/sessions", {
       method: "POST",
@@ -476,34 +488,31 @@ export class JulesClient {
     }
   }
 
-  async listActivities(sessionId: string, limit: number = 1000): Promise<Activity[]> {
+  async listActivities(sessionId: string, limit: number = 50): Promise<Activity[]> {
     const normalizedSessionId = this.normalizeSessionId(sessionId);
-    let allActivities: ApiActivity[] = [];
-    let pageToken: string | undefined;
 
     try {
-      do {
-        const params = new URLSearchParams();
-        params.set('pageSize', String(limit));
-        if (pageToken) {
-          params.set('pageToken', pageToken);
-        }
+        const allActivities: ApiActivity[] = [];
+        let pageToken: string | undefined;
+        let pageCount = 0;
+        const maxPages = 5; // cap at 250 activities to prevent OOM
 
-        const endpoint = `/sessions/${normalizedSessionId}/activities?${params.toString()}`;
-        const response = await this.request<{ activities?: ApiActivity[]; nextPageToken?: string } | ApiActivity[]>(endpoint);
-        
-        if (Array.isArray(response)) {
-          allActivities = response;
-          break;
-        } else {
-          if (response.activities) {
-            allActivities = allActivities.concat(response.activities);
-          }
-          pageToken = response.nextPageToken;
-        }
-      } while (pageToken);
-      
-      return allActivities.map(a => this.transformActivity(a, normalizedSessionId));
+        do {
+          const params = new URLSearchParams();
+          params.set('pageSize', '50');
+          if (pageToken) params.set('pageToken', pageToken);
+
+          const endpoint = `/sessions/${normalizedSessionId}/activities?${params.toString()}`;
+          const response = await this.request<{ activities?: ApiActivity[]; nextPageToken?: string } | ApiActivity[]>(endpoint);
+
+          const rawActivities = Array.isArray(response) ? response : (response.activities || []);
+          allActivities.push(...rawActivities);
+
+          pageToken = !Array.isArray(response) ? response.nextPageToken : undefined;
+          pageCount++;
+        } while (pageToken && pageCount < maxPages);
+
+        return allActivities.map(a => this.transformActivity(a, normalizedSessionId));
     } catch (error) {
       console.error('[JulesClient] Failed to list activities:', error);
       throw error;
@@ -638,27 +647,34 @@ export class JulesClient {
             return this.transformActivity(response, normalizedSessionId);
         }
 
-    } catch (e) {
+    } catch (e: any) {
+        // Don't retry on 429 — just propagate the error to trigger cooldown
+        if (e?.status === 429) throw e;
         console.warn("Failed to create activity, attempting fallback", e);
-        const body = { userMessage: { message: params.content } };
-        const response = await this.request<ApiActivity>(`/sessions/${normalizedSessionId}/activities`, {
-            method: 'POST',
-            body: JSON.stringify(body),
-        });
+        try {
+            const body = { userMessage: { message: params.content } };
+            const response = await this.request<ApiActivity>(`/sessions/${normalizedSessionId}/activities`, {
+                method: 'POST',
+                body: JSON.stringify(body),
+            });
 
-        if (!response || Object.keys(response).length === 0) {
-            return {
-                id: `temp-${Date.now()}`,
-                sessionId: normalizedSessionId,
-                type: 'message',
-                role: 'user',
-                content: params.content,
-                createdAt: new Date().toISOString(),
-                metadata: {}
-            };
+            if (!response || Object.keys(response).length === 0) {
+                return {
+                    id: `temp-${Date.now()}`,
+                    sessionId: normalizedSessionId,
+                    type: 'message',
+                    role: 'user',
+                    content: params.content,
+                    createdAt: new Date().toISOString(),
+                    metadata: {}
+                };
+            }
+
+            return this.transformActivity(response, normalizedSessionId);
+        } catch (fallbackErr) {
+            // Fallback also failed — throw original error
+            throw e;
         }
-
-        return this.transformActivity(response, normalizedSessionId);
     }
   }
 

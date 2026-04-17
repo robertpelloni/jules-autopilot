@@ -53,15 +53,23 @@ export function NewSessionDialog({ trigger, open: controlledOpen, onOpenChange: 
     const [prompt, setPrompt] = useState(initialValues?.prompt || '');
     const [loading, setLoading] = useState(false);
 
-    // Derive available repos from existing sessions instead of calling the unreliable /sources endpoint
+    // Derive available repos from existing sessions
     const { data: sources, isLoading: sourcesLoading } = useSWR(
         client && open ? 'session-sources' : null,
         async () => {
             const sessions = await client!.listSessions();
-            const repoMap = new Map<string, { id: string; name: string }>();
+            const repoMap = new Map<string, { id: string; name: string; fullName: string }>();
             for (const s of sessions) {
                 if (s.sourceId && !repoMap.has(s.sourceId)) {
-                    repoMap.set(s.sourceId, { id: s.sourceId, name: s.sourceId });
+                    // sourceId is "user/repo" after stripping "sources/github/"
+                    // Display as just the repo name part
+                    const parts = s.sourceId.split('/');
+                    const shortName = parts[parts.length - 1] || s.sourceId;
+                    repoMap.set(s.sourceId, {
+                        id: s.sourceId,                    // "user/repo"
+                        name: shortName,                   // "repo"
+                        fullName: s.sourceId,              // "user/repo"
+                    });
                 }
             }
             return Array.from(repoMap.values()).sort((a, b) => a.name.localeCompare(b.name));
@@ -122,7 +130,7 @@ export function NewSessionDialog({ trigger, open: controlledOpen, onOpenChange: 
                             <SelectContent className="bg-zinc-900 border-zinc-800">
                                 <SelectItem value="global">Global (No specific repo)</SelectItem>
                                 {sources?.map(source => (
-                                    <SelectItem key={source.id} value={source.id}>{source.name || source.id}</SelectItem>
+                                    <SelectItem key={source.id} value={source.id}>{source.fullName || source.name}</SelectItem>
                                 ))}
                             </SelectContent>
                         </Select>
