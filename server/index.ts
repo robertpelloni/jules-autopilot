@@ -1,7 +1,17 @@
-import { JulesClient } from '../lib/jules/client';
+import { JulesClient, JulesAPIError } from '../lib/jules/client';
+import { PRIORITY_BROADCAST } from '../lib/jules/request-queue';
 import { prisma } from '../lib/prisma/index.ts';
 import { Hono, type Context } from 'hono';
 import { cors } from 'hono/cors';
+
+function errorResponse(e: any): Response {
+    const status = e?.status || 500;
+    return new Response(JSON.stringify({ error: String(e) }), {
+        status,
+        headers: { 'Content-Type': 'application/json' }
+    });
+}
+
 import { EventEmitter } from 'events';
 import { startDaemon, stopDaemon, forceBump } from './daemon';
 import { queryCodebase } from './rag';
@@ -101,7 +111,7 @@ async function getJulesClient(c?: any) {
         else if (settings?.julesApiKey && !isInvalid(settings.julesApiKey)) apiKey = settings.julesApiKey;
 
         if (apiKey) {
-            return new JulesClient(apiKey, 'https://jules.googleapis.com/v1alpha');
+            return new JulesClient(apiKey, 'https://jules.googleapis.com/v1alpha', undefined, PRIORITY_BROADCAST);
         }
     } catch (e) {
         console.error(`[Auth] Client initialization error:`, e);
@@ -170,7 +180,7 @@ api.get('/sessions/:id', async (c) => {
         const client = await getJulesClient(c);
         if (!client) return c.json({ error: 'Auth required' }, 401);
         return c.json(await client.getSession(id));
-    } catch (e) { return c.json({ error: String(e) }, 500); }
+    } catch (e) { return errorResponse(e); }
 });
 
 api.get('/sessions/:id/activities', async (c) => {
@@ -180,7 +190,7 @@ api.get('/sessions/:id/activities', async (c) => {
         const client = await getJulesClient(c);
         if (!client) return c.json({ error: 'Auth required' }, 401);
         return c.json({ activities: await client.listActivities(id) });
-    } catch (e) { return c.json({ error: String(e) }, 500); }
+    } catch (e) { return errorResponse(e); }
 });
 
 // ROUTE FIX: Handle URLs with colons (Custom Methods) correctly
@@ -205,7 +215,7 @@ api.post('/sessions/:idAndAction', async (c) => {
         }
 
         return c.json({ error: 'Invalid action' }, 400);
-    } catch (e) { return c.json({ error: String(e) }, 500); }
+    } catch (e) { return errorResponse(e); }
 });
 
 api.post('/sessions/:id/activities', async (c) => {
@@ -220,7 +230,7 @@ api.post('/sessions/:id/activities', async (c) => {
             role: body.role,
             type: body.type
         }));
-    } catch (e) { return c.json({ error: String(e) }, 500); }
+    } catch (e) { return errorResponse(e); }
 });
 
 api.post('/rag/query', async (c) => {
@@ -468,7 +478,7 @@ api.get('/fs/list', async (c) => {
             }));
 
         return c.json({ files });
-    } catch (e) { return c.json({ error: String(e) }, 500); }
+    } catch (e) { return errorResponse(e); }
 });
 
 api.get('/fs/read', async (c) => {
@@ -481,7 +491,7 @@ api.get('/fs/read', async (c) => {
 
         const content = fs.readFileSync(targetPath, 'utf8');
         return c.json({ content });
-    } catch (e) { return c.json({ error: String(e) }, 500); }
+    } catch (e) { return errorResponse(e); }
 });
 
 // Mount API

@@ -1,6 +1,6 @@
 import { prisma } from '../lib/prisma/index.ts';
 import { JulesClient } from '../lib/jules/client';
-import { nudgeRequestQueue } from '../lib/jules/request-queue';
+import { isInCooldown, PRIORITY_AUTOPILOT, PRIORITY_SUPERVISOR, PRIORITY_BROADCAST } from '../lib/jules/request-queue';
 import { broadcastToClients, emitDaemonEvent } from './index';
 import { superviseSession } from './supervisor';
 
@@ -97,10 +97,16 @@ export class Daemon {
                     }).catch(() => {});
                 }
 
+                let consecutive429s = 0;
                 for (const session of active) {
                     if (!this.isRunning) break;
+                    // If we're in global cooldown, skip the rest of this batch
+                    if (isInCooldown()) {
+                        console.log(`[Autopilot] Skipping ${active.length - active.indexOf(session)} sessions (cooldown active)`);
+                        break;
+                    }
                     await this.nudgeSession(client, session, settings);
-                    // Short pause — autopilot is lightweight, just sending a message
+                    // Short pause between nudges
                     await sleep(2_000, this.abort.signal);
                 }
 
@@ -161,7 +167,7 @@ export class Daemon {
                     continue;
                 }
 
-                const client = this.makeClient(settings);
+                const client = this.makeSupervisorClient(settings);
                 if (!client) { await sleep(60000, this.abort.signal); continue; }
 
                 const allActive = await getAllSessions(client);
@@ -174,6 +180,11 @@ export class Daemon {
 
                 for (const session of active) {
                     if (!this.isRunning) break;
+                    // Skip the rest of this batch if rate-limited
+                    if (isInCooldown()) {
+                        console.log(`[Supervisor] Skipping remaining sessions (cooldown active)`);
+                        break;
+                    }
 
                     let refreshed;
                     try {
@@ -213,7 +224,7 @@ export class Daemon {
                         const is429 = err.status === 429 || String(err.message).includes('429');
                         console.warn(`[Supervisor] ${is429 ? 'Rate limited' : 'Failed'} for ${session.id?.slice(0, 8)}: ${err.message}`);
                         if (is429) {
-                            await sleep(45_000, this.abort.signal);
+                            await sleep(120_000, this.abort.signal);
                         }
                     }
 
@@ -237,13 +248,19 @@ export class Daemon {
     private makeAutopilotClient(settings: any): JulesClient | null {
         const apiKey = process.env.JULES_API_KEY || settings.julesApiKey;
         if (!apiKey || apiKey === 'placeholder') return null;
-        return new JulesClient(apiKey, 'https://jules.googleapis.com/v1alpha', undefined, nudgeRequestQueue);
+        return new JulesClient(apiKey, 'https://jules.googleapis.com/v1alpha', undefined, PRIORITY_AUTOPILOT);
     }
 
-    private makeClient(settings: any): JulesClient | null {
+    private makeSupervisorClient(settings: any): JulesClient | null {
         const apiKey = process.env.JULES_API_KEY || settings.julesApiKey;
         if (!apiKey || apiKey === 'placeholder') return null;
-        return new JulesClient(apiKey, 'https://jules.googleapis.com/v1alpha');
+        return new JulesClient(apiKey, 'https://jules.googleapis.com/v1alpha', undefined, PRIORITY_SUPERVISOR);
+    }
+
+    private makeBroadcastClient(settings: any): JulesClient | null {
+        const apiKey = process.env.JULES_API_KEY || settings.julesApiKey;
+        if (!apiKey || apiKey === 'placeholder') return null;
+        return new JulesClient(apiKey, 'https://jules.googleapis.com/v1alpha', undefined, PRIORITY_BROADCAST);
     }
 }
 

@@ -1,5 +1,5 @@
 import { safeLocalStorage } from '@/lib/utils';
-import { globalRequestQueue, nudgeRequestQueue } from './request-queue';
+import { googleApiQueue, PRIORITY_AUTOPILOT } from './request-queue';
 import type {
   Source,
   Session,
@@ -178,13 +178,14 @@ export class JulesClient {
   private apiKey?: string;
   private authToken?: string;
   private baseUrl: string;
-  private requestQueue: RequestQueue = globalRequestQueue;
+  private priority: number;
 
-  constructor(apiKey?: string, baseUrl: string = getDefaultApiBaseUrl(), authToken?: string, queue?: RequestQueue) {
+  constructor(apiKey?: string, baseUrl: string = getDefaultApiBaseUrl(), authToken?: string, priorityOrQueue?: number | any) {
     this.apiKey = apiKey;
     this.authToken = authToken;
     this.baseUrl = baseUrl;
-    if (queue) this.requestQueue = queue;
+    // Accept either a number (priority) or legacy queue arg (ignored)
+    this.priority = typeof priorityOrQueue === 'number' ? priorityOrQueue : PRIORITY_AUTOPILOT;
   }
 
   private normalizeSessionId(sessionId: string): string {
@@ -222,7 +223,7 @@ export class JulesClient {
       }
 
       // THROTTLE GOOGLE API REQUESTS
-      return this.requestQueue.add(() => this.performRequest<T>(url, options, headers));
+      return googleApiQueue.add(() => this.performRequest<T>(url, options, headers), this.priority);
     } else {
       // Local daemon headers
       if (this.apiKey) headers['X-Jules-Api-Key'] = this.apiKey;
@@ -650,6 +651,10 @@ export class JulesClient {
     } catch (e: any) {
         // Don't retry on 429 — just propagate the error to trigger cooldown
         if (e?.status === 429) throw e;
+        // Also detect 429 wrapped inside error message (e.g. from server proxy)
+        if (String(e?.message || e).includes('429')) throw e;
+        // Don't retry on 500 that came from a wrapped 429
+        if (String(e).includes('RESOURCE_EXHAUSTED')) throw e;
         console.warn("Failed to create activity, attempting fallback", e);
         try {
             const body = { userMessage: { message: params.content } };
