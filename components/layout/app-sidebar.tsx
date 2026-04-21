@@ -1,17 +1,13 @@
 import { Button } from "@/components/ui/button";
+
 import { 
   ChevronLeft, 
   ChevronRight, 
   MessageSquare, 
-  LayoutTemplate, 
-  Trello, 
-  Users,
   Terminal,
   Brain,
   Zap,
-  Activity,
-  HeartPulse,
-  Shield
+  Activity
 } from "lucide-react";
 import { SessionList } from "@/components/session-list";
 import { Session } from '@jules/shared';
@@ -23,8 +19,8 @@ interface AppSidebarProps {
   onToggleCollapse: () => void;
   onSessionSelect: (session: Session | string) => void;
   selectedSessionId?: string;
-  currentView: 'sessions' | 'templates' | 'kanban' | 'debates' | 'logs' | 'health' | 'audit' | 'swarms';
-  onViewChange: (view: 'sessions' | 'templates' | 'kanban' | 'debates' | 'logs' | 'health' | 'audit' | 'swarms') => void;
+  currentView: 'sessions' | 'logs';
+  onViewChange: (view: 'sessions' | 'logs') => void;
 }
 
 export function AppSidebar({
@@ -43,13 +39,7 @@ export function AppSidebar({
 
   const navItems = [
     { id: 'sessions', label: 'Sessions', icon: MessageSquare },
-    { id: 'templates', label: 'Templates', icon: LayoutTemplate },
-    { id: 'kanban', label: 'Kanban', icon: Trello },
-    { id: 'debates', label: 'Debates', icon: Users },
     { id: 'logs', label: 'System Logs', icon: Terminal },
-    { id: 'health', label: 'Health', icon: HeartPulse },
-    { id: 'audit', label: 'Audit Trail', icon: Shield },
-    { id: 'swarms', label: 'Agent Swarms', icon: Users },
   ] as const;
 
   return (
@@ -150,7 +140,7 @@ export function AppSidebar({
                   "w-1 h-1 rounded-full",
                   isEnabled ? "bg-green-500" : "bg-zinc-700"
                 )} />
-                <span className="text-[8px] font-mono text-zinc-500 uppercase tracking-tighter">Borg Node</span>
+                <span className="text-[8px] font-mono text-zinc-500 uppercase tracking-tighter">HyperCode Node</span>
               </div>
             </div>
             

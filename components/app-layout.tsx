@@ -1,16 +1,15 @@
 'use client';
 
 import { useState } from "react";
-import { DebateDialog } from './debate-dialog';
 import { AppHeader } from "./layout/app-header";
 import { AppSidebar } from "./layout/app-sidebar";
-import { SearchCommandDialog } from "./search-command-dialog";
+import { NewSessionDialog } from "./new-session-dialog";
 import type { Session } from '@jules/shared';
 
 export interface AppLayoutProps {
   children: React.ReactNode;
-  currentView: 'sessions' | 'templates' | 'kanban' | 'debates' | 'logs' | 'health' | 'audit' | 'swarms';
-  onViewChange: (view: 'sessions' | 'templates' | 'kanban' | 'debates' | 'logs' | 'health' | 'audit' | 'swarms') => void;
+  currentView: 'sessions' | 'logs';
+  onViewChange: (view: 'sessions' | 'logs') => void;
   selectedSessionId?: string;
   onSessionSelect: (session: Session | string) => void;
 }
@@ -23,24 +22,12 @@ export function AppLayout({
   onSessionSelect 
 }: AppLayoutProps) {
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
-  const [isSearchOpen, setIsSearchOpen] = useState(false);
+  const [isNewSessionOpen, setIsNewSessionOpen] = useState(false);
   
-  // Debate State (managed locally in layout for now)
-  const [isDebateOpen, setIsDebateOpen] = useState(false);
-  const [debateTopic] = useState("");
-  const [debateContext] = useState("");
-
   return (
     <div className="flex h-screen flex-col bg-black max-w-full overflow-hidden">
-      <SearchCommandDialog 
-        open={isSearchOpen} 
-        onOpenChange={setIsSearchOpen} 
-        onNavigate={onViewChange}
-      />
-
       <AppHeader 
-        onSearchClick={() => setIsSearchOpen(true)}
-        onNewSession={() => {}}
+        onNewSession={() => setIsNewSessionOpen(true)}
       />
 
       <div className="flex flex-1 overflow-hidden">
@@ -58,15 +45,14 @@ export function AppLayout({
         </main>
       </div>
 
-      {isDebateOpen && (
-        <DebateDialog
-          open={isDebateOpen}
-          onOpenChange={setIsDebateOpen}
-          initialTopic={debateTopic}
-          initialContext={debateContext}
-          onDebateStart={() => {}}
-        />
-      )}
+      <NewSessionDialog
+        open={isNewSessionOpen}
+        onOpenChange={setIsNewSessionOpen}
+        onSessionCreated={(session) => {
+          setIsNewSessionOpen(false);
+          onSessionSelect(session);
+        }}
+      />
     </div>
   );
 }

@@ -1,0 +1,146 @@
+{
+  "nextId": 12,
+  "tasks": [
+    {
+      "id": "1",
+      "subject": "Validate and refine Supervisor autonomous behavior",
+      "description": "The \"Enable Auto-Pilot\" and \"Smart Supervisor\" toggles are now visible. The next phase is to ensure they correctly control the backend daemon and that AI-guided autonomous behavior is functional.",
+      "status": "completed",
+      "metadata": {},
+      "blocks": [],
+      "blockedBy": [],
+      "createdAt": 1775951987157,
+      "updatedAt": 1776040218659
+    },
+    {
+      "id": "2",
+      "subject": "Comprehensive Project Analysis and Roadmap Definition",
+      "description": "Perform a deep analysis of the entire project structure, conversation history, and documentation to determine the current state, identify missing features, and establish a comprehensive roadmap. This includes updating AGENTS.md, VISION.md, ROADMAP.md, and TODO.md.",
+      "status": "in_progress",
+      "activeForm": "Analyzing project and history",
+      "metadata": {},
+      "blocks": [],
+      "blockedBy": [],
+      "createdAt": 1776040215768,
+      "updatedAt": 1776040218654
+    },
+    {
+      "id": "3",
+      "subject": "Backend Service Refinement and Robustness",
+      "description": "Refine and optimize backend services (JulesClient, Worker, Daemon) for robustness, specifically addressing the 429 rate limiting with better backoff and concurrency control.",
+      "status": "pending",
+      "activeForm": "Refining core services",
+      "metadata": {},
+      "blocks": [],
+      "blockedBy": [],
+      "createdAt": 1776040215772,
+      "updatedAt": 1776040215772
+    },
+    {
+      "id": "4",
+      "subject": "Frontend Feature Parity and UI/UX Polishing",
+      "description": "Ensure all backend features are comprehensively represented in the React frontend. Fix visibility/layout issues in the Supervisor settings and enhance the Fleet Intelligence dashboard.",
+      "status": "pending",
+      "activeForm": "Polishing UI/UX",
+      "metadata": {},
+      "blocks": [],
+      "blockedBy": [],
+      "createdAt": 1776040215776,
+      "updatedAt": 1776040215776
+    },
+    {
+      "id": "5",
+      "subject": "Documentation and Versioning Synchronization",
+      "description": "Update VERSION, CHANGELOG.md, and all instruction files (CLAUDE.md, AGENTS.md, etc.) to reflect the latest state and ensure multi-agent synchronization. Create/update DEPLOY.md and MEMORY.md.",
+      "status": "pending",
+      "activeForm": "Updating documentation and versioning",
+      "metadata": {},
+      "blocks": [],
+      "blockedBy": [],
+      "createdAt": 1776040215780,
+      "updatedAt": 1776040215780
+    },
+    {
+      "id": "6",
+      "subject": "Port Go backend to TypeScript",
+      "description": "Port the Go backend to TypeScript with a clean rewrite, focusing on core features and removing unnecessary modules as specified by the user.",
+      "status": "completed",
+      "metadata": {},
+      "blocks": [
+        "7"
+      ],
+      "blockedBy": [],
+      "createdAt": 1776113888676,
+      "updatedAt": 1776114004738
+    },
+    {
+      "id": "7",
+      "subject": "Implement core TypeScript server",
+      "description": "Implement a clean TypeScript server using Hono and Bun, including routes for sessions, logs, and settings.",
+      "status": "completed",
+      "metadata": {},
+      "blocks": [],
+      "blockedBy": [
+        "10",
+        "8",
+        "9",
+        "11",
+        "6"
+      ],
+      "createdAt": 1776113891928,
+      "updatedAt": 1776114003330
+    },
+    {
+      "id": "8",
+      "subject": "Implement JulesClient in TypeScript",
+      "description": "Implement a TypeScript version of the JulesClient for interaction with the Google Jules API.",
+      "status": "completed",
+      "metadata": {},
+      "blocks": [
+        "7"
+      ],
+      "blockedBy": [],
+      "createdAt": 1776113893357,
+      "updatedAt": 1776113998873
+    },
+    {
+      "id": "9",
+      "subject": "Implement background daemon and worker",
+      "description": "Implement the background daemon and task worker in TypeScript for automated session monitoring.",
+      "status": "completed",
+      "metadata": {},
+      "blocks": [
+        "7"
+      ],
+      "blockedBy": [],
+      "createdAt": 1776113894970,
+      "updatedAt": 1776114000445
+    },
+    {
+      "id": "10",
+      "subject": "Configure Prisma and database",
+      "description": "Set up the Prisma schema and database configuration for the TypeScript backend.",
+      "status": "completed",
+      "metadata": {},
+      "blocks": [
+        "7"
+      ],
+      "blockedBy": [],
+      "createdAt": 1776113896530,
+      "updatedAt": 1776113997260
+    },
+    {
+      "id": "11",
+      "subject": "Implement RAG and semantic search",
+      "description": "Implement RAG indexing and querying logic in TypeScript for semantic codebase search.",
+      "status": "completed",
+      "metadata": {},
+      "blocks": [
+        "7"
+      ],
+      "blockedBy": [],
+      "createdAt": 1776113898134,
+      "updatedAt": 1776114001864
+    }
+  ]
+}
