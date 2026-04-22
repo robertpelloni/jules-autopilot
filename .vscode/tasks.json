@@ -1,0 +1,50 @@
+{
+	"version": "2.0.0",
+	"tasks": [
+		{
+			"label": "update-nextjs",
+			"type": "shell",
+			"command": "npm install next@latest react@latest react-dom@latest eslint-config-next@latest @types/react@latest @types/react-dom@latest"
+		},
+		{
+			"label": "build-nextjs",
+			"type": "shell",
+			"command": "npm run build"
+		},
+		{
+			"label": "build-nextjs-retry",
+			"type": "shell",
+			"command": "npm run build"
+		},
+		{
+			"label": "build-nextjs-retry-2",
+			"type": "shell",
+			"command": "npm run build"
+		},
+		{
+			"label": "build-nextjs-retry-3",
+			"type": "shell",
+			"command": "npm run build"
+		},
+		{
+			"label": "build-nextjs-retry-4",
+			"type": "shell",
+			"command": "npm run build"
+		},
+		{
+			"label": "build-nextjs-retry-5",
+			"type": "shell",
+			"command": "npm run build"
+		},
+		{
+			"label": "delete-corrupt-file",
+			"type": "shell",
+			"command": "del components\\activity-feed.tsx"
+		},
+		{
+			"label": "check-exports",
+			"type": "shell",
+			"command": "node check_exports.js"
+		}
+	]
+}
