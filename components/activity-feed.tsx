@@ -36,6 +36,7 @@ import {
 } from 'lucide-react';
 import { useVirtualizer } from '@tanstack/react-virtual';
 import { ActivityInput } from './activity-input';
+import { SessionHealthBadge } from './session-health-badge';
 import { ActivityContent } from './activity-content';
 import {
   DropdownMenu,
@@ -43,6 +44,9 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
   DropdownMenuSeparator,
+  DropdownMenuSub,
+  DropdownMenuSubTrigger,
+  DropdownMenuSubContent,
 } from "@/components/ui/dropdown-menu";
 import { toast } from 'sonner';
 
@@ -236,7 +240,7 @@ export function ActivityFeed({
   };
 
   const handleSendMessage = async (content: string) => {
-    if (!client || sending) return;
+    if (!client || sending || isArchived) return;
     try {
       setSending(true);
       const userMessage = await client.createActivity({
@@ -389,17 +393,16 @@ export function ActivityFeed({
 
   const parentRef = useRef<HTMLDivElement>(null);
 
-  // The actual scrollable element is the Radix Viewport inside ScrollArea
-  const getScrollEl = () => parentRef.current?.querySelector('[data-slot="scroll-area-viewport"]') as HTMLElement | null;
-
   const handleJumpToTop = () => {
-    const el = getScrollEl();
-    if (el) el.scrollTo({ top: 0, behavior: 'smooth' });
+    if (parentRef.current) {
+      parentRef.current.scrollTop = 0;
+    }
   };
 
   const handleJumpToBottom = () => {
-    const el = getScrollEl();
-    if (el) el.scrollTo({ top: el.scrollHeight, behavior: 'smooth' });
+    if (parentRef.current) {
+      parentRef.current.scrollTop = parentRef.current.scrollHeight;
+    }
   };
 
   const filteredActivities = useMemo(() => activities.filter((activity) => {
@@ -436,17 +439,18 @@ export function ActivityFeed({
 
   const virtualizer = useVirtualizer({
     count: groupedActivities.length,
-    getScrollElement: () => parentRef.current?.querySelector('[data-slot="scroll-area-viewport"]') as HTMLElement | null,
+    getScrollElement: () => parentRef.current,
     estimateSize: () => 250,
     overscan: 10,
   });
 
   // Auto-scroll to bottom on new activities
   useEffect(() => {
-    if (activities.length > 0) {
+    if (parentRef.current && activities.length > 0) {
+      const scrollElement = parentRef.current;
+      // Use requestAnimationFrame to ensure the virtualizer has finished rendering
       requestAnimationFrame(() => {
-        const el = parentRef.current?.querySelector('[data-slot="scroll-area-viewport"]') as HTMLElement | null;
-        if (el) el.scrollTo({ top: el.scrollHeight, behavior: 'smooth' });
+        scrollElement.scrollTop = scrollElement.scrollHeight;
       });
     }
   }, [activities.length]);
@@ -530,6 +534,7 @@ export function ActivityFeed({
                 <Sparkles className="h-3 w-3" />
                 <span>Jules</span>
               </div>
+              <SessionHealthBadge session={session} />
             </div>
             <div className="flex items-center gap-3 text-[9px] font-mono text-muted-foreground uppercase tracking-wide">
               <span>Started {formatDate(session.createdAt)}</span>
@@ -569,12 +574,41 @@ export function ActivityFeed({
                 </Button>
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end" className="w-48 bg-popover border-border text-popover-foreground">
+                <DropdownMenuSub>
+                  <DropdownMenuSubTrigger className="text-xs">
+                    <Download className="mr-2 h-3.5 w-3.5" /> Export Chat
+                  </DropdownMenuSubTrigger>
+                  <DropdownMenuSubContent className="bg-popover border-border text-popover-foreground">
+                    <DropdownMenuItem onClick={() => handleExport('md')} className="text-xs cursor-pointer">Markdown</DropdownMenuItem>
+                    <DropdownMenuItem onClick={() => handleExport('txt')} className="text-xs cursor-pointer">Text</DropdownMenuItem>
+                    <DropdownMenuItem onClick={() => handleExport('json')} className="text-xs cursor-pointer">JSON</DropdownMenuItem>
+                  </DropdownMenuSubContent>
+                </DropdownMenuSub>
                 <DropdownMenuItem onClick={() => handleCopy(JSON.stringify(activities, null, 2), 'full')} className="text-xs cursor-pointer">
                   {copiedId === 'full' ? <Check className="mr-2 h-3.5 w-3.5 text-green-500" /> : <Copy className="mr-2 h-3.5 w-3.5" />}
                   Copy Full JSON
                 </DropdownMenuItem>
                 <DropdownMenuSeparator className="bg-border" />
                 
+                {session.status === 'active' && (
+                  <>
+                    <DropdownMenuItem onClick={handleQuickReview} disabled={sending} className="focus:bg-accent focus:text-accent-foreground text-xs cursor-pointer">
+                      <Play className="mr-2 h-3.5 w-3.5" />
+                      <span>Start Code Review</span>
+                    </DropdownMenuItem>
+                    <DropdownMenuItem onSelect={(e) => { e.preventDefault(); onStartDebate?.(); }} className="focus:bg-accent focus:text-accent-foreground text-xs cursor-pointer">
+                      <Users className="mr-2 h-3.5 w-3.5" />
+                      <span>Start Debate</span>
+                    </DropdownMenuItem>
+                    {onSaveTemplate && (
+                      <DropdownMenuItem onSelect={(e) => { e.preventDefault(); onSaveTemplate(); }} className="focus:bg-accent focus:text-accent-foreground text-xs cursor-pointer text-primary focus:text-primary">
+                        <LayoutTemplate className="mr-2 h-3.5 w-3.5" />
+                        <span>Save as Template</span>
+                      </DropdownMenuItem>
+                    )}
+                  </>
+                )}
+
                 {isArchived ? (
                   <DropdownMenuItem onClick={handleUnarchive} className="text-xs cursor-pointer text-primary focus:text-primary">
                     <ArchiveRestore className="mr-2 h-3.5 w-3.5" />
@@ -780,7 +814,9 @@ export function ActivityFeed({
         </ScrollArea>
       </div>
 
-      <ActivityInput onSendMessage={handleSendMessage} disabled={sending} placeholder="Send a message to Jules..." />
+      {!isArchived && (
+        <ActivityInput onSendMessage={handleSendMessage} disabled={sending} placeholder="Send a message to Jules..." />
+      )}
     </div>
   );
 }

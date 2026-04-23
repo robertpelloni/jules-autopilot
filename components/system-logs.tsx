@@ -6,11 +6,8 @@ import { ScrollArea } from '@/components/ui/scroll-area';
 import { Terminal, Activity } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
-const LOG_POLL_INTERVAL = 5000; // Refresh logs every 5 seconds
-
 export function SystemLogs() {
   const logs = useSessionKeeperStore((state) => state.logs);
-  const loadLogs = useSessionKeeperStore((state) => state.loadLogs);
   const scrollRef = useRef<HTMLDivElement>(null);
 
   // Auto-scroll to bottom on new logs
@@ -22,13 +19,6 @@ export function SystemLogs() {
       });
     }
   }, [logs]);
-
-  // Poll for new logs periodically
-  useEffect(() => {
-    loadLogs(); // Initial load
-    const interval = setInterval(loadLogs, LOG_POLL_INTERVAL);
-    return () => clearInterval(interval);
-  }, [loadLogs]);
 
   return (
     <div className="flex flex-col h-full bg-black border-l border-white/5">
@@ -59,17 +49,15 @@ export function SystemLogs() {
                   <span className={cn(
                     "shrink-0 px-1.5 py-0.5 rounded-[2px] text-[9px] font-bold uppercase",
                     log.type === 'error' && "bg-red-500/10 text-red-400 border border-red-500/20",
-                    log.type === 'warning' && "bg-yellow-500/10 text-yellow-400 border border-yellow-500/20",
                     log.type === 'info' && "bg-blue-500/10 text-blue-400 border border-blue-500/20",
-                    log.type === 'action' && "bg-purple-500/10 text-purple-400 border border-purple-500/20",
-                    log.type === 'heartbeat' && "bg-green-500/10 text-green-400 border border-green-500/20"
+                    log.type === 'action' && "bg-purple-500/10 text-purple-400 border border-purple-500/20"
                   )}>
                     {log.type}
                   </span>
                   
                   <span className={cn(
                     "break-all",
-                    log.type === 'error' ? "text-red-300" : log.type === 'warning' ? "text-yellow-300" : "text-zinc-300"
+                    log.type === 'error' ? "text-red-300" : "text-zinc-300"
                   )}>
                     {log.message}
                   </span>

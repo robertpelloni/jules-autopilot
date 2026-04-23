@@ -95,7 +95,7 @@ interface SessionKeeperState {
 const DEFAULT_CONFIG: SessionKeeperConfig = {
   isEnabled: false,
   autoSwitch: true,
-  checkIntervalSeconds: 900,
+  checkIntervalSeconds: 30,
   inactivityThresholdMinutes: 1,
   activeWorkThresholdMinutes: 30,
   messages: [
@@ -134,8 +134,7 @@ export const useSessionKeeperStore = create<SessionKeeperState>()(
         try {
           const res = await fetch('/api/settings/keeper');
           if (res.ok) {
-            const rawConfig = await res.json();
-            const config = { ...DEFAULT_CONFIG, ...rawConfig, messages: Array.isArray(rawConfig?.messages) ? rawConfig.messages : DEFAULT_CONFIG.messages };
+            const config = await res.json();
             set({ config });
 
             const statusRes = await fetch('/api/daemon/status');
