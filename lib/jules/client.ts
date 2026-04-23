@@ -1,5 +1,4 @@
 import { safeLocalStorage } from '@/lib/utils';
-import { globalRequestQueue } from './request-queue';
 import type {
   Source,
   Session,
@@ -174,6 +173,7 @@ function getDefaultApiBaseUrl(): string {
     || processEnv?.VITE_JULES_API_BASE_URL
     || '/api';
 }
+
 export class JulesClient {
   private apiKey?: string;
   private authToken?: string;
@@ -218,19 +218,12 @@ export class JulesClient {
       if (typeof window === 'undefined') {
         console.log(`[JulesClient] Outgoing to Google: auth=${!!this.authToken} key=${!!this.apiKey}`);
       }
-
-      // THROTTLE GOOGLE API REQUESTS
-      return globalRequestQueue.add(() => this.performRequest<T>(url, options, headers));
     } else {
       // Local daemon headers
       if (this.apiKey) headers['X-Jules-Api-Key'] = this.apiKey;
       if (this.authToken) headers['X-Jules-Auth-Token'] = this.authToken;
     }
-    
-    return this.performRequest<T>(url, options, headers);
-  }
 
-  private async performRequest<T>(url: string, options: RequestInit, headers: Record<string, string>): Promise<T> {
     try {
       // USE MANUAL FETCH WITHOUT MIDDLEWARE SPREADING
       const response = await fetch(url, {
@@ -475,7 +468,7 @@ export class JulesClient {
 
         const endpoint = `/sessions/${normalizedSessionId}/activities?${params.toString()}`;
         const response = await this.request<{ activities?: ApiActivity[]; nextPageToken?: string } | ApiActivity[]>(endpoint);
-        
+
         if (Array.isArray(response)) {
           allActivities = response;
           break;
@@ -486,7 +479,7 @@ export class JulesClient {
           pageToken = response.nextPageToken;
         }
       } while (pageToken);
-      
+
       return allActivities.map(a => this.transformActivity(a, normalizedSessionId));
     } catch (error) {
       console.error('[JulesClient] Failed to list activities:', error);

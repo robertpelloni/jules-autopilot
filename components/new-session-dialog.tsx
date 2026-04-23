@@ -95,11 +95,11 @@ export function NewSessionDialog({ trigger, open: controlledOpen, onOpenChange: 
                     </Button>
                 )}
             </DialogTrigger>
-            <DialogContent className="sm:max-w-[500px] bg-zinc-950 border-white/10 text-white" aria-describedby="new-session-description">
+            <DialogContent className="sm:max-w-[500px] bg-zinc-950 border-white/10 text-white">
                 <DialogHeader>
                     <DialogTitle>Create New Session</DialogTitle>
-                    <DialogDescription id="new-session-description">
-                        Start a new coding session with Jules by selecting a repository and providing a prompt.
+                    <DialogDescription>
+                        Start a new coding session with Jules.
                     </DialogDescription>
                 </DialogHeader>
                 <form onSubmit={handleSubmit} className="space-y-4 py-4">
