@@ -1,14 +1,21 @@
+import { TemplatesPage } from "@/components/templates-page";
+import { KanbanBoard } from "@/components/kanban-board";
+import { SessionBoard } from "@/components/session-board";
 import { ActivityFeed } from "@/components/activity-feed";
 import { CodeDiffSidebar } from "@/components/code-diff-sidebar";
+import { DebateHistoryList } from "@/components/debate-history-list";
 import { SystemLogs } from "@/components/system-logs";
+import { SystemHealthDashboard } from "@/components/system-health-dashboard";
+import { AuditTrail } from "@/components/audit-trail";
+import { SwarmDashboard } from "@/components/swarm-dashboard";
 import { Session, Activity, SessionTemplate } from '@jules/shared';
 
 interface MainContentProps {
-  view: 'sessions' | 'logs';
+  view: 'sessions' | 'templates' | 'kanban' | 'debates' | 'logs' | 'health' | 'audit' | 'swarms';
   selectedSession: Session | null;
   onSessionSelect: (session: Session | string) => void;
   onStartSessionFromTemplate: (template: SessionTemplate) => void;
-  onViewChange: (view: 'sessions' | 'logs') => void;
+  onViewChange: (view: 'sessions' | 'templates' | 'kanban' | 'debates' | 'logs' | 'health' | 'audit' | 'swarms') => void;
   showCodeDiffs: boolean;
   onToggleCodeDiffs: (show: boolean) => void;
   onActivitiesChange: (activities: Activity[]) => void;
@@ -22,19 +29,39 @@ export function MainContent({
   view,
   selectedSession,
   onSessionSelect,
+  onStartSessionFromTemplate,
   onViewChange,
   showCodeDiffs,
   onToggleCodeDiffs,
   onActivitiesChange,
   currentActivities,
+  onRefresh,
   onStartDebate,
   onSaveTemplate,
 }: MainContentProps) {
   return (
     <div className="flex h-full w-full flex-row min-w-0">
       <main className="flex-1 overflow-hidden bg-black flex flex-col min-w-0">
-        {view === "logs" ? (
+        {view === "templates" ? (
+          <TemplatesPage
+            onStartSession={onStartSessionFromTemplate}
+          />
+        ) : view === "kanban" ? (
+          <KanbanBoard
+            onSelectSession={onSessionSelect}
+          />
+        ) : view === "debates" ? (
+          <DebateHistoryList
+            onRefresh={onRefresh}
+          />
+        ) : view === "logs" ? (
           <SystemLogs />
+        ) : view === "health" ? (
+          <SystemHealthDashboard />
+        ) : view === "audit" ? (
+          <AuditTrail />
+        ) : view === "swarms" ? (
+          <SwarmDashboard />
         ) : selectedSession ? (
           <ActivityFeed
             session={selectedSession}
@@ -45,15 +72,10 @@ export function MainContent({
             onSaveTemplate={onSaveTemplate}
           />
         ) : (
-          <div className="flex-1 flex items-center justify-center text-zinc-600 uppercase tracking-widest text-xs font-mono p-12 text-center">
-            <div className="max-w-md space-y-4">
-              <div className="w-12 h-12 border border-zinc-800 rounded-full flex items-center justify-center mx-auto mb-6">
-                <div className="w-2 h-2 bg-zinc-800 rounded-full animate-pulse" />
-              </div>
-              <p>Autopilot Ready</p>
-              <p className="text-[10px] text-zinc-800 lowercase italic">Select a session from the sidebar to begin orchestration</p>
-            </div>
-          </div>
+          <SessionBoard
+            onSelectSession={(s) => onSessionSelect(s)}
+            onOpenNewSession={() => onViewChange('templates')}
+          />
         )}
       </main>
 

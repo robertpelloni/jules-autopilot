@@ -1,5 +1,4 @@
 import { safeLocalStorage } from '@/lib/utils';
-import { googleApiQueue, PRIORITY_AUTOPILOT } from './request-queue';
 import type {
   Source,
   Session,
@@ -174,18 +173,16 @@ function getDefaultApiBaseUrl(): string {
     || processEnv?.VITE_JULES_API_BASE_URL
     || '/api';
 }
+
 export class JulesClient {
   private apiKey?: string;
   private authToken?: string;
   private baseUrl: string;
-  private priority: number;
 
-  constructor(apiKey?: string, baseUrl: string = getDefaultApiBaseUrl(), authToken?: string, priorityOrQueue?: number | any) {
+  constructor(apiKey?: string, baseUrl: string = getDefaultApiBaseUrl(), authToken?: string) {
     this.apiKey = apiKey;
     this.authToken = authToken;
     this.baseUrl = baseUrl;
-    // Accept either a number (priority) or legacy queue arg (ignored)
-    this.priority = typeof priorityOrQueue === 'number' ? priorityOrQueue : PRIORITY_AUTOPILOT;
   }
 
   private normalizeSessionId(sessionId: string): string {
@@ -221,19 +218,12 @@ export class JulesClient {
       if (typeof window === 'undefined') {
         console.log(`[JulesClient] Outgoing to Google: auth=${!!this.authToken} key=${!!this.apiKey}`);
       }
-
-      // THROTTLE GOOGLE API REQUESTS
-      return googleApiQueue.add(() => this.performRequest<T>(url, options, headers), this.priority);
     } else {
       // Local daemon headers
       if (this.apiKey) headers['X-Jules-Api-Key'] = this.apiKey;
       if (this.authToken) headers['X-Jules-Auth-Token'] = this.authToken;
     }
-    
-    return this.performRequest<T>(url, options, headers);
-  }
 
-  private async performRequest<T>(url: string, options: RequestInit, headers: Record<string, string>): Promise<T> {
     try {
       // USE MANUAL FETCH WITHOUT MIDDLEWARE SPREADING
       const response = await fetch(url, {
@@ -267,9 +257,9 @@ export class JulesClient {
         }
 
         if (response.status === 404) {
-          if (url.includes("/activities")) return { activities: [] } as T;
-          if (url.includes("/sessions?")) return { sessions: [] } as T;
-          if (url.includes("/sources?")) return { sources: [] } as T;
+          if (endpoint.includes("/activities")) return { activities: [] } as T;
+          if (endpoint.includes("/sessions?")) return { sessions: [] } as T;
+          if (endpoint.includes("/sources?")) return { sources: [] } as T;
           throw new JulesAPIError('Resource not found.', response.status, errorData);
         }
 
@@ -314,7 +304,7 @@ export class JulesClient {
          console.error("Failed to list sources:", err);
          break;
       }
-    } while (pageToken && allSources.length < 500);
+    } while (pageToken);
 
     const sources = allSources.map((source: ApiSource) => {
       const sourcePath = source.source || source.name || "";
@@ -354,25 +344,8 @@ export class JulesClient {
 
   // Session Management
   async listSessions(): Promise<Session[]> {
-    let allSessions: ApiSession[] = [];
-    let pageToken: string | undefined;
-    let pageCount = 0;
-
-    do {
-      const params = new URLSearchParams();
-      params.set('pageSize', '50');
-      if (pageToken) params.set('pageToken', pageToken);
-
-      const response = await this.request<{ sessions?: ApiSession[]; nextPageToken?: string }>(`/sessions?${params.toString()}`);
-      
-      if (response.sessions) {
-        allSessions = allSessions.concat(response.sessions);
-      }
-      pageToken = response.nextPageToken;
-      pageCount++;
-    } while (pageToken && pageCount < 10); // cap at 500 sessions
-
-    return allSessions.map(s => this.transformSession(s));
+    const response = await this.request<{ sessions: ApiSession[] }>('/sessions');
+    return (response.sessions || []).map(s => this.transformSession(s));
   }
 
   private mapState(state: string): Session['status'] {
@@ -399,7 +372,6 @@ export class JulesClient {
         id: session.id,
         sourceId: session.sourceContext?.source?.replace('sources/github/', '') || (session.sourceId as string) || '',
         title: session.title || '',
-        prompt: (session.prompt as string) || undefined,
         status: this.mapState(session.state || (session.status as string) || ''),
         rawState: session.state || (session.rawState as string),
         createdAt: session.createTime || (session.createdAt as string),
@@ -418,25 +390,17 @@ export class JulesClient {
   }
 
   async createSession(sourceId: string, prompt: string, title: string = 'Untitled Session'): Promise<Session> {
-    // Build the source reference — Google API expects the full path
-    const sourceRef = sourceId && sourceId !== 'global'
-        ? (sourceId.startsWith('sources/') ? sourceId : `sources/github/${sourceId}`)
-        : undefined;
-
-    const requestBody: Record<string, unknown> = {
+    const requestBody = {
       prompt,
-      title: title || 'Untitled Session',
-      requirePlanApproval: true
-    };
-
-    if (sourceRef) {
-      requestBody.sourceContext = {
-        source: sourceRef,
+      sourceContext: {
+        source: sourceId,
         githubRepoContext: {
           startingBranch: 'main'
         }
-      };
-    }
+      },
+      title: title || 'Untitled Session',
+      requirePlanApproval: true
+    };
 
     const response = await this.request<ApiSession>("/sessions", {
       method: "POST",
@@ -489,31 +453,34 @@ export class JulesClient {
     }
   }
 
-  async listActivities(sessionId: string, limit: number = 50): Promise<Activity[]> {
+  async listActivities(sessionId: string, limit: number = 1000): Promise<Activity[]> {
     const normalizedSessionId = this.normalizeSessionId(sessionId);
+    let allActivities: ApiActivity[] = [];
+    let pageToken: string | undefined;
 
     try {
-        const allActivities: ApiActivity[] = [];
-        let pageToken: string | undefined;
-        let pageCount = 0;
-        const maxPages = 5; // cap at 250 activities to prevent OOM
+      do {
+        const params = new URLSearchParams();
+        params.set('pageSize', String(limit));
+        if (pageToken) {
+          params.set('pageToken', pageToken);
+        }
 
-        do {
-          const params = new URLSearchParams();
-          params.set('pageSize', '50');
-          if (pageToken) params.set('pageToken', pageToken);
+        const endpoint = `/sessions/${normalizedSessionId}/activities?${params.toString()}`;
+        const response = await this.request<{ activities?: ApiActivity[]; nextPageToken?: string } | ApiActivity[]>(endpoint);
 
-          const endpoint = `/sessions/${normalizedSessionId}/activities?${params.toString()}`;
-          const response = await this.request<{ activities?: ApiActivity[]; nextPageToken?: string } | ApiActivity[]>(endpoint);
+        if (Array.isArray(response)) {
+          allActivities = response;
+          break;
+        } else {
+          if (response.activities) {
+            allActivities = allActivities.concat(response.activities);
+          }
+          pageToken = response.nextPageToken;
+        }
+      } while (pageToken);
 
-          const rawActivities = Array.isArray(response) ? response : (response.activities || []);
-          allActivities.push(...rawActivities);
-
-          pageToken = !Array.isArray(response) ? response.nextPageToken : undefined;
-          pageCount++;
-        } while (pageToken && pageCount < maxPages);
-
-        return allActivities.map(a => this.transformActivity(a, normalizedSessionId));
+      return allActivities.map(a => this.transformActivity(a, normalizedSessionId));
     } catch (error) {
       console.error('[JulesClient] Failed to list activities:', error);
       throw error;
@@ -648,38 +615,27 @@ export class JulesClient {
             return this.transformActivity(response, normalizedSessionId);
         }
 
-    } catch (e: any) {
-        // Don't retry on 429 — just propagate the error to trigger cooldown
-        if (e?.status === 429) throw e;
-        // Also detect 429 wrapped inside error message (e.g. from server proxy)
-        if (String(e?.message || e).includes('429')) throw e;
-        // Don't retry on 500 that came from a wrapped 429
-        if (String(e).includes('RESOURCE_EXHAUSTED')) throw e;
+    } catch (e) {
         console.warn("Failed to create activity, attempting fallback", e);
-        try {
-            const body = { userMessage: { message: params.content } };
-            const response = await this.request<ApiActivity>(`/sessions/${normalizedSessionId}/activities`, {
-                method: 'POST',
-                body: JSON.stringify(body),
-            });
+        const body = { userMessage: { message: params.content } };
+        const response = await this.request<ApiActivity>(`/sessions/${normalizedSessionId}/activities`, {
+            method: 'POST',
+            body: JSON.stringify(body),
+        });
 
-            if (!response || Object.keys(response).length === 0) {
-                return {
-                    id: `temp-${Date.now()}`,
-                    sessionId: normalizedSessionId,
-                    type: 'message',
-                    role: 'user',
-                    content: params.content,
-                    createdAt: new Date().toISOString(),
-                    metadata: {}
-                };
-            }
-
-            return this.transformActivity(response, normalizedSessionId);
-        } catch (fallbackErr) {
-            // Fallback also failed — throw original error
-            throw e;
+        if (!response || Object.keys(response).length === 0) {
+            return {
+                id: `temp-${Date.now()}`,
+                sessionId: normalizedSessionId,
+                type: 'message',
+                role: 'user',
+                content: params.content,
+                createdAt: new Date().toISOString(),
+                metadata: {}
+            };
         }
+
+        return this.transformActivity(response, normalizedSessionId);
     }
   }
 

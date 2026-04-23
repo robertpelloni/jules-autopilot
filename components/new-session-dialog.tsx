@@ -2,7 +2,6 @@
 
 import { useState } from 'react';
 import { useJules } from '@/lib/jules/provider';
-import type { Session } from '@jules/shared';
 import { Button } from '@/components/ui/button';
 import {
   Dialog,
@@ -31,7 +30,7 @@ interface NewSessionDialogProps {
     trigger?: React.ReactNode;
     open?: boolean;
     onOpenChange?: (open: boolean) => void;
-    onSessionCreated?: (session: Session) => void;
+    onSessionCreated?: (sessionId: string) => void;
     initialValues?: {
         sourceId?: string;
         title?: string;
@@ -53,27 +52,10 @@ export function NewSessionDialog({ trigger, open: controlledOpen, onOpenChange: 
     const [prompt, setPrompt] = useState(initialValues?.prompt || '');
     const [loading, setLoading] = useState(false);
 
-    // Derive available repos from existing sessions
+    // Fetch available sources (repos)
     const { data: sources, isLoading: sourcesLoading } = useSWR(
-        client && open ? 'session-sources' : null,
-        async () => {
-            const sessions = await client!.listSessions();
-            const repoMap = new Map<string, { id: string; name: string; fullName: string }>();
-            for (const s of sessions) {
-                if (s.sourceId && !repoMap.has(s.sourceId)) {
-                    // sourceId is "user/repo" after stripping "sources/github/"
-                    // Display as just the repo name part
-                    const parts = s.sourceId.split('/');
-                    const shortName = parts[parts.length - 1] || s.sourceId;
-                    repoMap.set(s.sourceId, {
-                        id: s.sourceId,                    // "user/repo"
-                        name: shortName,                   // "repo"
-                        fullName: s.sourceId,              // "user/repo"
-                    });
-                }
-            }
-            return Array.from(repoMap.values()).sort((a, b) => a.name.localeCompare(b.name));
-        }
+        client && open ? 'sources' : null,
+        () => client!.listSources()
     );
 
     const handleSubmit = async (e: React.FormEvent) => {
@@ -89,7 +71,7 @@ export function NewSessionDialog({ trigger, open: controlledOpen, onOpenChange: 
             const effectiveSourceId = sourceId || (sources && sources.length > 0 ? sources[0].id : 'global');
             const session = await client.createSession(effectiveSourceId, prompt, title);
             setOpen?.(false);
-            onSessionCreated?.(session);
+            onSessionCreated?.(session.id);
             toast.success('Session created successfully');
             
             setTitle('');
@@ -113,11 +95,11 @@ export function NewSessionDialog({ trigger, open: controlledOpen, onOpenChange: 
                     </Button>
                 )}
             </DialogTrigger>
-            <DialogContent className="sm:max-w-[500px] bg-zinc-950 border-white/10 text-white" aria-describedby="new-session-description">
+            <DialogContent className="sm:max-w-[500px] bg-zinc-950 border-white/10 text-white">
                 <DialogHeader>
                     <DialogTitle>Create New Session</DialogTitle>
-                    <DialogDescription id="new-session-description">
-                        Start a new coding session with Jules by selecting a repository and providing a prompt.
+                    <DialogDescription>
+                        Start a new coding session with Jules.
                     </DialogDescription>
                 </DialogHeader>
                 <form onSubmit={handleSubmit} className="space-y-4 py-4">
@@ -130,7 +112,7 @@ export function NewSessionDialog({ trigger, open: controlledOpen, onOpenChange: 
                             <SelectContent className="bg-zinc-900 border-zinc-800">
                                 <SelectItem value="global">Global (No specific repo)</SelectItem>
                                 {sources?.map(source => (
-                                    <SelectItem key={source.id} value={source.id}>{source.fullName || source.name}</SelectItem>
+                                    <SelectItem key={source.id} value={source.id}>{source.name || source.id}</SelectItem>
                                 ))}
                             </SelectContent>
                         </Select>
