@@ -1,5 +1,6 @@
 import { Button } from "@/components/ui/button";
 import { 
+  Search,
   Plus, 
   Settings as SettingsIcon, 
   Terminal,
@@ -7,8 +8,10 @@ import {
   Brain,
   RefreshCw
 } from "lucide-react";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { SettingsDialog } from "@/components/settings-dialog";
+import { BroadcastDialog } from "@/components/broadcast-dialog";
+import { NotificationCenter } from "@/components/notification-center";
 import { useJules } from "@/lib/jules/provider";
 import { Badge } from "@/components/ui/badge";
 import { toast } from "sonner";
@@ -25,13 +28,28 @@ import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { APP_VERSION } from "@/lib/version";
 
 interface AppHeaderProps {
+  onSearchClick: () => void;
   onNewSession: () => void;
 }
 
-export function AppHeader({ onNewSession }: AppHeaderProps) {
+export function AppHeader({ onSearchClick, onNewSession }: AppHeaderProps) {
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
   const [isSyncing, setIsSyncing] = useState(false);
-  const { client } = useJules();
+  const { client, refreshTrigger } = useJules();
+  const [sessions, setSessions] = useState<Session[]>([]);
+
+  useEffect(() => {
+    const fetchSessions = async () => {
+      if (!client) return;
+      try {
+        const data = await client.listSessions();
+        setSessions(data);
+      } catch (err) {
+        console.error("[AppHeader] Failed to fetch sessions for broadcast:", err);
+      }
+    };
+    fetchSessions();
+  }, [client, refreshTrigger]);
 
   const handleFleetSync = async () => {
     try {
@@ -71,6 +89,21 @@ export function AppHeader({ onNewSession }: AppHeaderProps) {
         <Button
           variant="ghost"
           size="sm"
+          className="h-8 text-white/40 hover:text-white hover:bg-white/5 gap-2 px-3"
+          onClick={onSearchClick}
+        >
+          <Search className="w-3.5 h-3.5" />
+          <span className="text-[10px] font-medium uppercase tracking-wider hidden sm:inline">Search</span>
+          <kbd className="hidden md:inline-flex h-4 items-center gap-1 rounded border border-white/10 bg-white/5 px-1.5 font-mono text-[8px] font-medium text-white/20">
+            <span>⌘</span>K
+          </kbd>
+        </Button>
+
+        <div className="h-4 w-[1px] bg-white/10 mx-1" />
+
+        <Button
+          variant="ghost"
+          size="sm"
           className={`h-8 gap-2 px-3 ${isSyncing ? 'text-primary' : 'text-white/40 hover:text-white hover:bg-white/5'}`}
           onClick={handleFleetSync}
           disabled={isSyncing}
@@ -79,6 +112,10 @@ export function AppHeader({ onNewSession }: AppHeaderProps) {
           {isSyncing ? <RefreshCw className="w-3.5 h-3.5 animate-spin" /> : <Brain className="w-3.5 h-3.5" />}
           <span className="text-[10px] font-medium uppercase tracking-wider hidden lg:inline">Sync All</span>
         </Button>
+
+        <BroadcastDialog sessions={sessions} />
+
+        <NotificationCenter />
 
         <Button
           size="sm"
