@@ -77,7 +77,7 @@ func TestPredictCostWithHistoricalData(t *testing.T) {
 }
 
 func TestHeuristicPredictionKnownTasks(t *testing.T) {
-	tasks := []string{"check_session", "debate", "review", "index_codebase", "check_issues", "nudge", "recovery"}
+	tasks := []string{"check_session", "index_codebase", "nudge", "recovery"}
 	for _, task := range tasks {
 		pred := heuristicPrediction(task)
 		if pred.EstimatedTokens <= 0 {

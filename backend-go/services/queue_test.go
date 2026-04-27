@@ -198,36 +198,6 @@ func TestChooseNudgeMessage(t *testing.T) {
 	}
 }
 
-func TestHeuristicIssueEvaluation(t *testing.T) {
-	// Good bug report
-	goodIssue := GitHubIssue{
-		Number: 1,
-		Title:  "Fix broken authentication flow",
-		Body:   "Steps to reproduce:\n1. Go to login\n2. Enter credentials\nExpected: Redirect to dashboard\nActual: 500 error",
-	}
-	goodEval := heuristicIssueEvaluation(goodIssue)
-	if !goodEval.IsFixable {
-		t.Error("Good bug report should be fixable")
-	}
-	if goodEval.Confidence < 50 {
-		t.Errorf("Good bug report should have decent confidence, got %d", goodEval.Confidence)
-	}
-
-	// Vague discussion
-	vagueIssue := GitHubIssue{
-		Number: 2,
-		Title:  "Question about architecture",
-		Body:   "Maybe we should investigate this? Not sure. WIP spike.",
-	}
-	vagueEval := heuristicIssueEvaluation(vagueIssue)
-	if vagueEval.IsFixable {
-		t.Error("Vague issue should not be fixable")
-	}
-	if vagueEval.Confidence > 70 {
-		t.Errorf("Vague issue should have low confidence, got %d", vagueEval.Confidence)
-	}
-}
-
 func TestApprovalStatusFromRisk(t *testing.T) {
 	if approvalStatusFromRisk(10) != "approved" {
 		t.Error("Low risk should be approved")

@@ -30,7 +30,7 @@ type WebhookRule struct {
 	Name         string            `json:"name"`
 	Provider     WebhookProvider   `json:"provider"`
 	EventFilter  string            `json:"eventFilter,omitempty"` // regex or specific event type
-	Action       string            `json:"action"`                // "log", "enqueue", "notify", "delegate"
+	Action       string            `json:"action"`                // "log", "enqueue", "notify"
 	JobType      string            `json:"jobType,omitempty"`     // for "enqueue" action
 	JobPayload   map[string]string `json:"jobPayload,omitempty"` // static payload additions
 	IsEnabled    bool              `json:"isEnabled"`
@@ -65,14 +65,6 @@ func init() {
 			CreatedAt:   time.Now(),
 		},
 		{
-			ID:          "default-github-issues",
-			Name:        "GitHub Issue Events",
-			Provider:    WebhookProviderGitHub,
-			EventFilter: "issues",
-			Action:      "enqueue",
-			JobType:     "check_issues",
-			IsEnabled:   true,
-			CreatedAt:   time.Now(),
 		},
 	}
 }
@@ -150,13 +142,6 @@ func executeWebhookRule(rule WebhookRule, event WebhookEvent) error {
 		CreateNotification("info", "webhook", title, message, WithPriority(3))
 		return nil
 
-	case "delegate":
-		// Delegate to the daemon's issue checking
-		if sourceID, ok := event.RawBody["sourceId"].(string); ok {
-			_, err := AddJob("check_issues", map[string]interface{}{"sourceId": sourceID})
-			return err
-		}
-		return fmt.Errorf("rule %s: delegate requires sourceId in payload", rule.Name)
 
 	default:
 		return fmt.Errorf("unknown action: %s", rule.Action)
@@ -214,7 +199,7 @@ func AddWebhookRule(rule WebhookRule) error {
 
 	// Validate action
 	switch rule.Action {
-	case "log", "enqueue", "notify", "delegate":
+	case "log", "enqueue", "notify":
 		// valid
 	default:
 		return fmt.Errorf("invalid action: %s", rule.Action)

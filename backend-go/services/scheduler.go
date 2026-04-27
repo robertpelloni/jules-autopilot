@@ -45,7 +45,6 @@ func (s *Scheduler) Start() {
 	log.Println("[Scheduler] Starting scheduled task engine...")
 
 	s.ScheduleTask("index_codebase", 24*time.Hour)
-	s.ScheduleTask("check_issues", 1*time.Hour)
 	s.ScheduleTask("cleanup_logs", 7*24*time.Hour)
 	s.ScheduleTask("ci_monitor", 30*time.Minute)
 
@@ -166,16 +165,6 @@ func (s *Scheduler) executeTask(name string) {
 	case "index_codebase":
 		if _, err := AddJob("index_codebase", map[string]string{}); err != nil {
 			log.Printf("[Scheduler] Failed to enqueue index_codebase: %v", err)
-		}
-	case "check_issues":
-		if settings.SmartPilotEnabled {
-			client := NewJulesClient()
-			sources, err := client.ListSources("")
-			if err == nil {
-				for _, source := range sources {
-					_, _ = AddJob("check_issues", map[string]interface{}{"sourceId": source.ID})
-				}
-			}
 		}
 	case "cleanup_logs":
 		// Simple retention policy: delete logs older than 30 days

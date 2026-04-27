@@ -9,15 +9,10 @@ import type {
   SessionUpdatedPayload,
   SessionNudgedPayload,
   SessionApprovedPayload,
-  SessionDebateEscalatedPayload,
-  SessionDebateResolvedPayload,
   SessionRecoveryStartedPayload,
   SessionRecoveryCompletedPayload,
   CodebaseIndexStartedPayload,
   CodebaseIndexCompletedPayload,
-  IssueCheckStartedPayload,
-  IssueEvaluatedPayload,
-  IssueSessionSpawnedPayload,
 } from '@jules/shared';
 import { WS_DEFAULTS } from '@jules/shared';
 import { emitDaemonEvent } from './use-daemon-events';
@@ -149,54 +144,6 @@ export function useDaemonWebSocket() {
           break;
         }
 
-        case 'session_debate_escalated': {
-          const payload = message.data as SessionDebateEscalatedPayload;
-          const debateLog: Log = {
-            id: String(Date.now()),
-            sessionId: payload?.sessionId,
-            time: new Date().toLocaleTimeString(),
-            message: `Escalated plan to Council Debate (${payload?.riskScore ?? 0}/100 risk)`,
-            type: 'info',
-            details: {
-              event: 'session_debate_escalated',
-              sessionTitle: payload?.sessionTitle,
-              riskScore: payload?.riskScore,
-            }
-          };
-          useSessionKeeperStore.setState((state) => ({
-            logs: [debateLog, ...state.logs].slice(0, 100)
-          }));
-          setStatusSummary({
-            lastAction: `Debating ${payload?.sessionTitle || payload?.sessionId?.slice(0, 8)}`,
-          });
-          break;
-        }
-
-        case 'session_debate_resolved': {
-          const payload = message.data as SessionDebateResolvedPayload;
-          const resolvedLog: Log = {
-            id: String(Date.now()),
-            sessionId: payload?.sessionId,
-            time: new Date().toLocaleTimeString(),
-            message: `Council Debate resolved with ${payload?.approvalStatus || 'pending'} status (${payload?.riskScore ?? 0}/100 risk)`,
-            type: payload?.approvalStatus === 'approved' ? 'action' : payload?.approvalStatus === 'rejected' ? 'error' : 'info',
-            details: {
-              event: 'session_debate_resolved',
-              sessionTitle: payload?.sessionTitle,
-              riskScore: payload?.riskScore,
-              approvalStatus: payload?.approvalStatus,
-              summary: payload?.summary,
-            }
-          };
-          useSessionKeeperStore.setState((state) => ({
-            logs: [resolvedLog, ...state.logs].slice(0, 100)
-          }));
-          setStatusSummary({
-            lastAction: `Debate resolved for ${payload?.sessionTitle || payload?.sessionId?.slice(0, 8)}`,
-          });
-          break;
-        }
-
         case 'session_recovery_started': {
           const payload = message.data as SessionRecoveryStartedPayload;
           const recoveryLog: Log = {
@@ -254,30 +201,6 @@ export function useDaemonWebSocket() {
           const payload = message.data as CodebaseIndexCompletedPayload;
           setStatusSummary({
             lastAction: `Indexed ${payload?.newChunks ?? 0} chunks`,
-          });
-          break;
-        }
-
-        case 'issue_check_started': {
-          const payload = message.data as IssueCheckStartedPayload;
-          setStatusSummary({
-            lastAction: `Checking issues for ${payload?.sourceId || 'repo'}`,
-          });
-          break;
-        }
-
-        case 'issue_evaluated': {
-          const payload = message.data as IssueEvaluatedPayload;
-          setStatusSummary({
-            lastAction: `Evaluated issue #${payload?.issueNumber ?? '?'} (${payload?.confidence ?? 0}%)`,
-          });
-          break;
-        }
-
-        case 'issue_session_spawned': {
-          const payload = message.data as IssueSessionSpawnedPayload;
-          setStatusSummary({
-            lastAction: `Spawned ${payload?.sessionTitle || payload?.sessionId?.slice(0, 8)}`,
           });
           break;
         }

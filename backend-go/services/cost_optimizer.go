@@ -126,7 +126,6 @@ func heuristicPrediction(taskType string) CostPrediction {
 		"debate":           {8000, 3.2, "openai", "gpt-4o"},
 		"review":           {5000, 1.5, "openai", "gpt-4o-mini"},
 		"index_codebase":   {3000, 0.9, "openai", "gpt-4o-mini"},
-		"check_issues":     {1500, 0.4, "openai", "gpt-4o-mini"},
 		"nudge":            {1000, 0.3, "openai", "gpt-4o-mini"},
 		"recovery":         {4000, 1.2, "openai", "gpt-4o"},
 		"swarm_decompose":  {6000, 2.0, "openai", "gpt-4o"},

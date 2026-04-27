@@ -4,39 +4,6 @@ import (
 	"testing"
 )
 
-func TestNormalizeGitHubRepo(t *testing.T) {
-	tests := []struct {
-		name     string
-		input    string
-		expected string
-		hasError bool
-	}{
-		{"simple owner/repo", "owner/repo", "owner/repo", false},
-		{"sources/github prefix", "sources/github/owner/repo", "owner/repo", false},
-		{"github prefix", "github/owner/repo", "owner/repo", false},
-		{"invalid - no slash", "invalid", "", true},
-		{"empty", "", "", true},
-	}
-
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			result, err := normalizeGitHubRepo(tt.input)
-			if tt.hasError {
-				if err == nil {
-					t.Errorf("Expected error for input %q", tt.input)
-				}
-			} else {
-				if err != nil {
-					t.Errorf("Unexpected error for input %q: %v", tt.input, err)
-				}
-				if result != tt.expected {
-					t.Errorf("normalizeGitHubRepo(%q) = %q, want %q", tt.input, result, tt.expected)
-				}
-			}
-		})
-	}
-}
-
 func TestNormalizeSourceForCreate(t *testing.T) {
 	tests := []struct {
 		name     string

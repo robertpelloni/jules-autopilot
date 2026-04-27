@@ -3,7 +3,6 @@ package services
 import (
 	"fmt"
 	"log"
-	"strings"
 	"sync"
 	"time"
 
@@ -114,33 +113,9 @@ func (d *Daemon) tick() time.Duration {
 	}
 
 	addKeeperLog(fmt.Sprintf("Daemon loop ran. Enqueued %d live sessions.", queuedSessions), "info", "global", map[string]interface{}{
-		"event": "daemon_loop",
+		"event":          "daemon_loop",
 		"queuedSessions": queuedSessions,
 	})
-
-	queuedIssueChecks := 0
-	if settings.SmartPilotEnabled {
-		sources, err := client.ListSources("")
-		if err != nil {
-			log.Printf("[Daemon] Failed to fetch sources for issue checks: %v", err)
-			addKeeperLog("Failed to fetch sources for issue checks in Go daemon.", "error", "global", map[string]interface{}{
-				"event": "daemon_source_poll_failed",
-				"error": err.Error(),
-			})
-		} else {
-			for _, source := range sources {
-				if strings.TrimSpace(source.ID) == "" {
-					continue
-				}
-				payload := map[string]interface{}{"sourceId": source.ID}
-				if _, err := AddJob("check_issues", payload); err != nil {
-					log.Printf("[Daemon] Failed to enqueue check_issues for %s: %v", source.ID, err)
-					continue
-				}
-				queuedIssueChecks++
-			}
-		}
-	}
 
 	var existingIndexJob models.QueueJob
 	indexJobPending := db.DB.Where("type = ? AND status IN ?", "index_codebase", []string{"pending", "processing"}).First(&existingIndexJob).Error == nil
@@ -153,12 +128,11 @@ func (d *Daemon) tick() time.Duration {
 		}
 	}
 
-	if queuedSessions > 0 || queuedIssueChecks > 0 || queuedIndexing {
+	if queuedSessions > 0 || queuedIndexing {
 		addKeeperLog("Go daemon scheduled monitoring work.", "info", "global", map[string]interface{}{
-			"event":             "daemon_tick_enqueued",
-			"queuedSessions":    queuedSessions,
-			"queuedIssueChecks": queuedIssueChecks,
-			"queuedIndexing":    queuedIndexing,
+			"event":          "daemon_tick_enqueued",
+			"queuedSessions": queuedSessions,
+			"queuedIndexing": queuedIndexing,
 		})
 	}
 
