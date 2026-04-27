@@ -34,11 +34,8 @@ const typeConfig: Record<string, { icon: typeof Bell; color: string; bgColor: st
 
 const categoryLabels: Record<string, string> = {
   session: 'Session',
-  debate: 'Debate',
   recovery: 'Recovery',
   indexing: 'Indexing',
-  issues: 'Issues',
-  circuit_breaker: 'Circuit Breaker',
   scheduler: 'Scheduler',
   webhook: 'Webhook',
   system: 'System',

@@ -36,7 +36,6 @@ import {
 } from 'lucide-react';
 import { useVirtualizer } from '@tanstack/react-virtual';
 import { ActivityInput } from './activity-input';
-import { SessionHealthBadge } from './session-health-badge';
 import { ActivityContent } from './activity-content';
 import {
   DropdownMenu,
@@ -56,8 +55,6 @@ interface ActivityFeedProps {
   showCodeDiffs: boolean;
   onToggleCodeDiffs: (show: boolean) => void;
   onActivitiesChange: (activities: Activity[]) => void;
-  onStartDebate?: () => void;
-  onSaveTemplate?: () => void;
   refreshTrigger?: number;
 }
 
@@ -84,8 +81,6 @@ export function ActivityFeed({
   showCodeDiffs, 
   onToggleCodeDiffs, 
   onActivitiesChange, 
-  onStartDebate, 
-  onSaveTemplate,
   refreshTrigger = 0 
 }: ActivityFeedProps) {
   const { client } = useJules();
@@ -283,9 +278,9 @@ export function ActivityFeed({
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
                 codeContext,
-                provider: 'openai', 
-                model: 'gpt-4o',
-                apiKey: localStorage.getItem('openai_api_key') || '',
+                provider: 'openrouter',
+                model: 'free',
+                apiKey: localStorage.getItem('openrouter_api_key') || '',
                 reviewType: 'comprehensive'
             })
         });
@@ -534,7 +529,7 @@ export function ActivityFeed({
                 <Sparkles className="h-3 w-3" />
                 <span>Jules</span>
               </div>
-              <SessionHealthBadge session={session} />
+              <span className="text-[8px] text-white/30">{session.rawState}</span>
             </div>
             <div className="flex items-center gap-3 text-[9px] font-mono text-muted-foreground uppercase tracking-wide">
               <span>Started {formatDate(session.createdAt)}</span>

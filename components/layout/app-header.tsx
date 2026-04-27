@@ -1,11 +1,8 @@
 import { Button } from "@/components/ui/button";
 import { 
-  Search,
   Plus, 
   Settings as SettingsIcon, 
   Terminal,
-  User,
-  Brain,
   RefreshCw
 } from "lucide-react";
 import { useState, useEffect } from "react";
@@ -14,7 +11,6 @@ import { BroadcastDialog } from "@/components/broadcast-dialog";
 import { NotificationCenter } from "@/components/notification-center";
 import { useJules } from "@/lib/jules/provider";
 import { Badge } from "@/components/ui/badge";
-import { toast } from "sonner";
 import type { Session } from "@jules/shared";
 import {
   DropdownMenu,
@@ -51,19 +47,15 @@ export function AppHeader({ onSearchClick, onNewSession }: AppHeaderProps) {
     fetchSessions();
   }, [client, refreshTrigger]);
 
-  const handleFleetSync = async () => {
+  const handleSync = async () => {
     try {
       setIsSyncing(true);
-      const response = await fetch('/api/fleet/sync', { method: 'POST' });
-      const result = await response.json();
+      const response = await fetch('/api/sessions', { method: 'GET' });
       if (response.ok) {
-        toast.success(`Fleet sync started: ${result.message}`);
-      } else {
-        toast.error(`Fleet sync failed: ${result.error}`);
+        setSessions(await response.json());
       }
     } catch (err) {
-      console.error("Fleet sync request failed:", err);
-      toast.error("Fleet sync failed");
+      console.error("Sync failed:", err);
     } finally {
       setIsSyncing(false);
     }
@@ -89,28 +81,13 @@ export function AppHeader({ onSearchClick, onNewSession }: AppHeaderProps) {
         <Button
           variant="ghost"
           size="sm"
-          className="h-8 text-white/40 hover:text-white hover:bg-white/5 gap-2 px-3"
-          onClick={onSearchClick}
-        >
-          <Search className="w-3.5 h-3.5" />
-          <span className="text-[10px] font-medium uppercase tracking-wider hidden sm:inline">Search</span>
-          <kbd className="hidden md:inline-flex h-4 items-center gap-1 rounded border border-white/10 bg-white/5 px-1.5 font-mono text-[8px] font-medium text-white/20">
-            <span>⌘</span>K
-          </kbd>
-        </Button>
-
-        <div className="h-4 w-[1px] bg-white/10 mx-1" />
-
-        <Button
-          variant="ghost"
-          size="sm"
           className={`h-8 gap-2 px-3 ${isSyncing ? 'text-primary' : 'text-white/40 hover:text-white hover:bg-white/5'}`}
-          onClick={handleFleetSync}
+          onClick={handleSync}
           disabled={isSyncing}
-          title="Sync All Repo Memories & Sessions"
+          title="Refresh sessions"
         >
-          {isSyncing ? <RefreshCw className="w-3.5 h-3.5 animate-spin" /> : <Brain className="w-3.5 h-3.5" />}
-          <span className="text-[10px] font-medium uppercase tracking-wider hidden lg:inline">Sync All</span>
+          {isSyncing ? <RefreshCw className="w-3.5 h-3.5 animate-spin" /> : <RefreshCw className="w-3.5 h-3.5" />}
+          <span className="text-[10px] font-medium uppercase tracking-wider hidden lg:inline">Refresh</span>
         </Button>
 
         <BroadcastDialog sessions={sessions} />
@@ -151,10 +128,6 @@ export function AppHeader({ onSearchClick, onNewSession }: AppHeaderProps) {
               </div>
             </DropdownMenuLabel>
             <DropdownMenuSeparator className="bg-white/10" />
-            <DropdownMenuItem className="text-[10px] uppercase tracking-wider focus:bg-white/5 focus:text-white cursor-pointer">
-              <User className="mr-2 h-3.5 w-3.5" />
-              <span>Profile</span>
-            </DropdownMenuItem>
             <DropdownMenuItem className="text-[10px] uppercase tracking-wider focus:bg-white/5 focus:text-white cursor-pointer" onClick={() => setIsSettingsOpen(true)}>
               <SettingsIcon className="mr-2 h-3.5 w-3.5" />
               <span>Settings</span>

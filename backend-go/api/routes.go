@@ -668,6 +668,7 @@ func SetupRoutes(app *fiber.App) {
 
 	// Settings routes
 	api.Get("/settings/keeper", getKeeperSettings)
+	api.Get("/settings", getAppSettings)
 	api.Post("/settings/keeper", updateKeeperSettings)
 
 	// Session routes
@@ -1490,9 +1491,46 @@ func postDaemonStatus(c *fiber.Ctx) error {
 func getKeeperSettings(c *fiber.Ctx) error {
 	var settings models.KeeperSettings
 	if err := db.DB.First(&settings, "id = ?", "default").Error; err != nil {
-		return c.Status(404).JSON(fiber.Map{"error": "Settings not found"})
+		settings = models.KeeperSettings{
+			ID:                         "default",
+			IsEnabled:                  true,
+			AutoSwitch:                 true,
+			SmartPilotEnabled:          true,
+			SupervisorProvider:         "openrouter",
+			SupervisorModel:            "free",
+			CheckIntervalSeconds:       900,
+			InactivityThresholdMinutes: 1,
+			ActiveWorkThresholdMinutes: 30,
+			ContextMessageCount:        20,
+			Messages:                   "[]",
+			CustomMessages:             "[]",
+		}
 	}
 	return c.JSON(settings)
+}
+
+func getAppSettings(c *fiber.Ctx) error {
+	var settings models.KeeperSettings
+	isEnabled := true
+	smartPilotEnabled := true
+	if err := db.DB.First(&settings, "id = ?", "default").Error; err == nil {
+		isEnabled = settings.IsEnabled
+		smartPilotEnabled = settings.SmartPilotEnabled
+	}
+	return c.JSON(fiber.Map{
+		"isEnabled":         isEnabled,
+		"smartPilotEnabled": smartPilotEnabled,
+		"envKeysDetected":   detectEnvKeys(),
+	})
+}
+
+func detectEnvKeys() fiber.Map {
+	julesKey := strings.TrimSpace(os.Getenv("JULES_API_KEY")) != "" || strings.TrimSpace(os.Getenv("GOOGLE_API_KEY")) != ""
+	supervisorKey := strings.TrimSpace(os.Getenv("OPENROUTER_API_KEY")) != "" || strings.TrimSpace(os.Getenv("SUPERVISOR_API_KEY")) != ""
+	return fiber.Map{
+		"jules":      julesKey,
+		"supervisor": supervisorKey,
+	}
 }
 
 func updateKeeperSettings(c *fiber.Ctx) error {

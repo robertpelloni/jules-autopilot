@@ -12,18 +12,16 @@ import {
 } from '@/components/ui/command';
 import { 
   MessageSquare, 
-  LayoutTemplate, 
-  Trello, 
-  Users,
+  Terminal,
   Settings,
   Plus,
-  HeartPulse
 } from 'lucide-react';
+import type { ViewType } from './layout/main-content';
 
 interface SearchCommandDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  onNavigate?: (view: 'sessions' | 'templates' | 'kanban' | 'debates' | 'health') => void;
+  onNavigate?: (view: ViewType) => void;
 }
 
 export function SearchCommandDialog({
@@ -52,26 +50,14 @@ export function SearchCommandDialog({
       <CommandInput placeholder="Type a command or search..." />
       <CommandList className="bg-zinc-950 text-white">
         <CommandEmpty>No results found.</CommandEmpty>
-        <CommandGroup heading="Suggestions">
+        <CommandGroup heading="Navigation">
           <CommandItem onSelect={() => runCommand(() => onNavigate?.('sessions'))}>
             <MessageSquare className="mr-2 h-4 w-4" />
             <span>Go to Sessions</span>
           </CommandItem>
-          <CommandItem onSelect={() => runCommand(() => onNavigate?.('templates'))}>
-            <LayoutTemplate className="mr-2 h-4 w-4" />
-            <span>Go to Templates</span>
-          </CommandItem>
-          <CommandItem onSelect={() => runCommand(() => onNavigate?.('kanban'))}>
-            <Trello className="mr-2 h-4 w-4" />
-            <span>Go to Kanban</span>
-          </CommandItem>
-          <CommandItem onSelect={() => runCommand(() => onNavigate?.('debates'))}>
-            <Users className="mr-2 h-4 w-4" />
-            <span>Go to Debates</span>
-          </CommandItem>
-          <CommandItem onSelect={() => runCommand(() => onNavigate?.('health'))}>
-            <HeartPulse className="mr-2 h-4 w-4" />
-            <span>Go to Health</span>
+          <CommandItem onSelect={() => runCommand(() => onNavigate?.('logs'))}>
+            <Terminal className="mr-2 h-4 w-4" />
+            <span>Go to System Logs</span>
           </CommandItem>
         </CommandGroup>
         <CommandSeparator className="bg-white/10" />

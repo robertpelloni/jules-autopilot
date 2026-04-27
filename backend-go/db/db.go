@@ -118,14 +118,14 @@ func InitTestDB() (*gorm.DB, error) {
 	// Seed default settings for tests
 	settings := models.KeeperSettings{
 		ID:                         "default",
-		IsEnabled:                  false,
-		CheckIntervalSeconds:       30,
+		IsEnabled:                  true,
+		CheckIntervalSeconds:       900,
 		InactivityThresholdMinutes: 10,
 		ActiveWorkThresholdMinutes: 5,
 		Messages:                   "[]",
 		CustomMessages:             "[]",
-		SupervisorProvider:         "openai",
-		SupervisorModel:            "gpt-4o",
+		SupervisorProvider:         "openrouter",
+		SupervisorModel:            "free",
 	}
 	DB.Create(&settings)
 
@@ -138,20 +138,29 @@ func seedDefaultSettings() {
 		log.Println("Seeding default keeper settings...")
 		settings = models.KeeperSettings{
 			ID:                         "default",
-			IsEnabled:                  false,
+			IsEnabled:                  true,
 			AutoSwitch:                 true,
-			CheckIntervalSeconds:       30,
+			CheckIntervalSeconds:       900,
 			InactivityThresholdMinutes: 1,
 			ActiveWorkThresholdMinutes: 30,
 			Messages:                   "Great! Please keep going as you advise!\nYes! Please continue to proceed as you recommend!\nThis looks correct. Please proceed.\nExcellent plan. Go ahead.\nLooks good to me. Continue.",
 			CustomMessages:             "[]",
-			SmartPilotEnabled:          false,
-			SupervisorProvider:         "openai",
-			SupervisorModel:            "gpt-4o",
+			SmartPilotEnabled:          true,
+			SupervisorProvider:         "openrouter",
+			SupervisorModel:            "free",
 			ContextMessageCount:        20,
 		}
 		if err := DB.Create(&settings).Error; err != nil {
 			log.Printf("failed to seed default settings: %v", err)
+		}
+	} else {
+		// Force critical booleans ON for existing rows
+		if !settings.IsEnabled || !settings.SmartPilotEnabled {
+			DB.Model(&settings).Updates(map[string]interface{}{
+				"is_enabled":          true,
+				"smart_pilot_enabled":  true,
+			})
+			log.Println("[DB] Forced isEnabled + smartPilotEnabled = true")
 		}
 	}
 }

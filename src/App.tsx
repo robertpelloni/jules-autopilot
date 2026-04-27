@@ -7,14 +7,13 @@ import { AppLayout } from "@/components/app-layout";
 import { MainContent } from "@/components/layout/main-content";
 import { useDaemonWebSocket } from "@/lib/hooks/use-daemon-websocket";
 import type { Session, Activity } from "@jules/shared";
+import type { ViewType } from "@/components/layout/main-content";
 
-// Sub-component to ensure hooks are called inside JulesProvider
 function AppContent() {
-  // Global WebSocket Connection
   useDaemonWebSocket();
 
   const [selectedSession, setSelectedSession] = useState<Session | null>(null);
-  const [view, setView] = useState<'sessions' | 'templates' | 'kanban' | 'debates' | 'logs' | 'health' | 'audit' | 'swarms'>('sessions');
+  const [view, setView] = useState<ViewType>('sessions');
   const [showCodeDiffs, setShowCodeDiffs] = useState(false);
   const [currentActivities, setCurrentActivities] = useState<Activity[]>([]);
 
@@ -42,11 +41,7 @@ function AppContent() {
         onToggleCodeDiffs={setShowCodeDiffs}
         onActivitiesChange={setCurrentActivities}
         currentActivities={currentActivities}
-        onStartSessionFromTemplate={() => {}}
-        onViewChange={setView}
         onRefresh={() => {}}
-        onStartDebate={() => {}}
-        onSaveTemplate={() => {}}
       />
     </AppLayout>
   );

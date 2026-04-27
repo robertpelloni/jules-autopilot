@@ -93,7 +93,7 @@ interface SessionKeeperState {
 }
 
 const DEFAULT_CONFIG: SessionKeeperConfig = {
-  isEnabled: false,
+  isEnabled: true,
   autoSwitch: true,
   checkIntervalSeconds: 30,
   inactivityThresholdMinutes: 1,
@@ -105,8 +105,8 @@ const DEFAULT_CONFIG: SessionKeeperConfig = {
     "Excellent plan. Go ahead.",
     "Looks good to me. Continue.",
   ],
-  smartPilotEnabled: false,
-  supervisorProvider: 'openai',
+  smartPilotEnabled: true,
+  supervisorProvider: 'openrouter',
   supervisorApiKey: '',
   supervisorModel: '',
   contextMessageCount: 20,
