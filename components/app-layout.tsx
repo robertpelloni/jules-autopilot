@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { AppHeader } from "./layout/app-header";
+import { AppSidebar } from "./layout/app-sidebar";
 import { SearchCommandDialog } from "./search-command-dialog";
 import type { ViewType } from "./layout/main-content";
 import type { Session } from '@jules/shared';
