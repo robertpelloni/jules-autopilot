@@ -692,10 +692,10 @@ export function BroadcastDialog({ sessions }: BroadcastDialogProps) {
           <Megaphone className="h-4 w-4" />
         </Button>
       </DialogTrigger>
-      <DialogContent className="sm:max-w-[425px] bg-zinc-950 border-white/10 text-white" aria-describedby="broadcast-dialog-description">
+      <DialogContent className="sm:max-w-[425px] bg-zinc-950 border-white/10 text-white">
         <DialogHeader>
           <DialogTitle>Broadcast Message</DialogTitle>
-          <DialogDescription id="broadcast-dialog-description" className="text-zinc-400">
+          <DialogDescription className="text-zinc-400">
             Send a message to all {targetSessions.length} open sessions simultaneously.
           </DialogDescription>
         </DialogHeader>

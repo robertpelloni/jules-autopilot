@@ -1,14 +1,28 @@
-import { ActivityFeed } from "@/components/activity-feed";
-import { CodeDiffSidebar } from "@/components/code-diff-sidebar";
-import { SystemLogs } from "@/components/system-logs";
+import { lazy, Suspense } from "react";
 import { Session, Activity, SessionTemplate } from '@jules/shared';
 
+// Lazy-load view components for code-splitting (reduces initial bundle from ~680KB)
+const TemplatesPage = lazy(() => import("@/components/templates-page").then(m => ({ default: m.TemplatesPage })));
+const KanbanBoard = lazy(() => import("@/components/kanban-board").then(m => ({ default: m.KanbanBoard })));
+const SessionBoard = lazy(() => import("@/components/session-board").then(m => ({ default: m.SessionBoard })));
+const ActivityFeed = lazy(() => import("@/components/activity-feed").then(m => ({ default: m.ActivityFeed })));
+const CodeDiffSidebar = lazy(() => import("@/components/code-diff-sidebar").then(m => ({ default: m.CodeDiffSidebar })));
+const DebateHistoryList = lazy(() => import("@/components/debate-history-list").then(m => ({ default: m.DebateHistoryList })));
+const SystemLogs = lazy(() => import("@/components/system-logs").then(m => ({ default: m.SystemLogs })));
+const SystemHealthDashboard = lazy(() => import("@/components/system-health-dashboard").then(m => ({ default: m.SystemHealthDashboard })));
+const AuditTrail = lazy(() => import("@/components/audit-trail").then(m => ({ default: m.AuditTrail })));
+const SwarmDashboard = lazy(() => import("@/components/swarm-dashboard").then(m => ({ default: m.SwarmDashboard })));
+
+function ViewLoader() {
+  return <div className="flex h-full items-center justify-center text-muted-foreground">Loading...</div>;
+}
+
 interface MainContentProps {
-  view: 'sessions' | 'logs';
+  view: 'sessions' | 'templates' | 'kanban' | 'debates' | 'logs' | 'health' | 'audit' | 'swarms';
   selectedSession: Session | null;
   onSessionSelect: (session: Session | string) => void;
   onStartSessionFromTemplate: (template: SessionTemplate) => void;
-  onViewChange: (view: 'sessions' | 'logs') => void;
+  onViewChange: (view: 'sessions' | 'templates' | 'kanban' | 'debates' | 'logs' | 'health' | 'audit' | 'swarms') => void;
   showCodeDiffs: boolean;
   onToggleCodeDiffs: (show: boolean) => void;
   onActivitiesChange: (activities: Activity[]) => void;
@@ -22,19 +36,40 @@ export function MainContent({
   view,
   selectedSession,
   onSessionSelect,
+  onStartSessionFromTemplate,
   onViewChange,
   showCodeDiffs,
   onToggleCodeDiffs,
   onActivitiesChange,
   currentActivities,
+  onRefresh,
   onStartDebate,
   onSaveTemplate,
 }: MainContentProps) {
   return (
     <div className="flex h-full w-full flex-row min-w-0">
       <main className="flex-1 overflow-hidden bg-black flex flex-col min-w-0">
-        {view === "logs" ? (
+        <Suspense fallback={<ViewLoader />}>
+        {view === "templates" ? (
+          <TemplatesPage
+            onStartSession={onStartSessionFromTemplate}
+          />
+        ) : view === "kanban" ? (
+          <KanbanBoard
+            onSelectSession={onSessionSelect}
+          />
+        ) : view === "debates" ? (
+          <DebateHistoryList
+            onRefresh={onRefresh}
+          />
+        ) : view === "logs" ? (
           <SystemLogs />
+        ) : view === "health" ? (
+          <SystemHealthDashboard />
+        ) : view === "audit" ? (
+          <AuditTrail />
+        ) : view === "swarms" ? (
+          <SwarmDashboard />
         ) : selectedSession ? (
           <ActivityFeed
             session={selectedSession}
@@ -45,23 +80,21 @@ export function MainContent({
             onSaveTemplate={onSaveTemplate}
           />
         ) : (
-          <div className="flex-1 flex items-center justify-center text-zinc-600 uppercase tracking-widest text-xs font-mono p-12 text-center">
-            <div className="max-w-md space-y-4">
-              <div className="w-12 h-12 border border-zinc-800 rounded-full flex items-center justify-center mx-auto mb-6">
-                <div className="w-2 h-2 bg-zinc-800 rounded-full animate-pulse" />
-              </div>
-              <p>Autopilot Ready</p>
-              <p className="text-[10px] text-zinc-800 lowercase italic">Select a session from the sidebar to begin orchestration</p>
-            </div>
-          </div>
+          <SessionBoard
+            onSelectSession={(s) => onSessionSelect(s)}
+            onOpenNewSession={() => onViewChange('templates')}
+          />
         )}
+        </Suspense>
       </main>
 
       {showCodeDiffs && selectedSession && (
+        <Suspense fallback={null}>
         <CodeDiffSidebar
           activities={currentActivities}
           onClose={() => onToggleCodeDiffs(false)}
         />
+        </Suspense>
       )}
     </div>
   );
