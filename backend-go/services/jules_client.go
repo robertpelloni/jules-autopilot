@@ -17,7 +17,7 @@ const JulesApiBaseUrl = "https://jules.googleapis.com/v1alpha"
 
 // httpClient with timeout to prevent goroutine leaks from hanging API calls
 var httpClient = &http.Client{
-	Timeout: 30 * time.Second,
+	Timeout: 120 * time.Second,
 }
 
 type JulesClient struct {

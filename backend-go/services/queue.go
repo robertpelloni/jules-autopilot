@@ -531,6 +531,11 @@ func (w *Worker) handleCheckSession(payload string) (string, error) {
 	client := NewJulesClient()
 	session, err := client.GetSession(data.Session.ID)
 	if err != nil {
+		// Timeout/rate-limit — don't retry, just skip
+		if strings.Contains(err.Error(), "deadline exceeded") || strings.Contains(err.Error(), "timeout") || strings.Contains(err.Error(), "429") {
+			log.Printf("[Queue] Skipping session %s due to API error: %v", data.Session.ID[:8], err)
+			return "none", nil
+		}
 		return "fail", fmt.Errorf("failed to refresh session %s: %w", data.Session.ID, err)
 	}
 
