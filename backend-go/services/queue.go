@@ -38,7 +38,7 @@ type Worker struct {
 // NewWorker creates a new queue worker
 func NewWorker(concurrency int) *Worker {
 	if concurrency <= 0 {
-		concurrency = 2
+		concurrency = 1
 	}
 	return &Worker{
 		concurrency: concurrency,
@@ -90,7 +90,7 @@ func (w *Worker) Start() {
 	log.Printf("[Queue] SQLite Task Queue worker started (concurrency: %d)", concurrency)
 
 	go func() {
-		ticker := time.NewTicker(5 * time.Second)
+		ticker := time.NewTicker(10 * time.Second)
 		defer ticker.Stop()
 
 		for {
@@ -136,7 +136,7 @@ func (w *Worker) processJobs() {
 	// Find pending jobs that are ready to run
 	err := db.DB.Where("status = ? AND run_at <= ? AND attempts < max_attempts", "pending", now).
 		Order("run_at ASC").
-		Limit(w.concurrency).
+		Limit(1). // Process one at a time
 		Find(&jobs).Error
 
 	if err != nil {
@@ -148,18 +148,15 @@ func (w *Worker) processJobs() {
 		return
 	}
 
-	for _, job := range jobs {
-		// Run in goroutine to respect concurrency if needed,
-		// but simple loop with goroutines works for now
-		go w.executeJob(job)
-	}
+	// Process sequentially — prevents goroutine leak and API hammering
+	w.executeJob(jobs[0])
 }
 
 func (w *Worker) executeJob(job models.QueueJob) {
-	log.Printf("[Queue] Starting execution of job %s (Type: %s)", job.ID, job.Type)
+	log.Printf("[Queue] Executing %s job %s", job.Type, job.ID[:8])
 	addKeeperLog(fmt.Sprintf("Executing queued background job: %s", job.Type), "action", "global", map[string]interface{}{
-		"event": "queue_job_start",
-		"jobId": job.ID,
+		"event":  "queue_job_start",
+		"jobId":  job.ID,
 		"jobType": job.Type,
 	})
 
@@ -238,7 +235,7 @@ func StartWorker() {
 	globalWorkerMu.Lock()
 	defer globalWorkerMu.Unlock()
 	if globalWorker == nil {
-		globalWorker = NewWorker(2)
+		globalWorker = NewWorker(1)
 	}
 	globalWorker.Start()
 }

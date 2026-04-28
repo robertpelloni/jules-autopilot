@@ -15,6 +15,11 @@ import (
 
 const JulesApiBaseUrl = "https://jules.googleapis.com/v1alpha"
 
+// httpClient with timeout to prevent goroutine leaks from hanging API calls
+var httpClient = &http.Client{
+	Timeout: 30 * time.Second,
+}
+
 type JulesClient struct {
 	apiKey    string
 	authToken string
@@ -150,7 +155,7 @@ func (c *JulesClient) ListSources(filter string) ([]JulesSource, error) {
 		}
 		c.setAuthHeaders(req)
 
-		resp, err := http.DefaultClient.Do(req)
+		resp, err := httpClient.Do(req)
 		if err != nil {
 			return nil, err
 		}
@@ -223,7 +228,7 @@ func (c *JulesClient) ListSessions() ([]models.JulesSession, error) {
 
 	c.setAuthHeaders(req)
 
-	resp, err := http.DefaultClient.Do(req)
+	resp, err := httpClient.Do(req)
 	if err != nil {
 		return nil, err
 	}
@@ -263,7 +268,7 @@ func (c *JulesClient) GetSession(id string) (models.JulesSession, error) {
 
 	c.setAuthHeaders(req)
 
-	resp, err := http.DefaultClient.Do(req)
+	resp, err := httpClient.Do(req)
 	if err != nil {
 		return models.JulesSession{}, err
 	}
@@ -382,7 +387,7 @@ func (c *JulesClient) ListActivities(sessionId string) ([]models.JulesActivity, 
 
 		c.setAuthHeaders(req)
 
-		resp, err := http.DefaultClient.Do(req)
+		resp, err := httpClient.Do(req)
 		if err != nil {
 			return nil, err
 		}
@@ -456,7 +461,7 @@ func (c *JulesClient) CreateActivity(sessionId string, params CreateActivityRequ
 
 	c.setAuthHeaders(req)
 
-	resp, err := http.DefaultClient.Do(req)
+	resp, err := httpClient.Do(req)
 	if err != nil {
 		return nil, err
 	}
@@ -485,7 +490,7 @@ func (c *JulesClient) UpdateSession(sessionID string, updates map[string]interfa
 	}
 	c.setAuthHeaders(req)
 
-	resp, err := http.DefaultClient.Do(req)
+	resp, err := httpClient.Do(req)
 	if err != nil {
 		return models.JulesSession{}, err
 	}
@@ -527,7 +532,7 @@ func (c *JulesClient) CreateSession(sourceID, prompt, title string) (models.Jule
 	}
 	c.setAuthHeaders(req)
 
-	resp, err := http.DefaultClient.Do(req)
+	resp, err := httpClient.Do(req)
 	if err != nil {
 		return models.JulesSession{}, err
 	}
@@ -558,7 +563,7 @@ func (c *JulesClient) ApprovePlan(sessionId string) error {
 
 	c.setAuthHeaders(req)
 
-	resp, err := http.DefaultClient.Do(req)
+	resp, err := httpClient.Do(req)
 	if err != nil {
 		return err
 	}

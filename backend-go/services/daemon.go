@@ -102,6 +102,11 @@ func (d *Daemon) tick() time.Duration {
 
 	queuedSessions := 0
 	for _, session := range sessions {
+		// Skip if a job for this session already exists (dedup)
+		var existing models.QueueJob
+		if db.DB.Where("type = ? AND status IN ? AND payload LIKE ?", "check_session", []string{"pending", "processing"}, fmt.Sprintf("%%%s%%", session.ID)).First(&existing).Error == nil {
+			continue
+		}
 		payload := map[string]interface{}{
 			"session": session,
 		}
