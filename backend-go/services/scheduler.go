@@ -45,7 +45,7 @@ func (s *Scheduler) Start() {
 	log.Println("[Scheduler] Starting scheduled task engine...")
 
 	s.ScheduleTask("index_codebase", 24*time.Hour)
-	s.ScheduleTask("cleanup_logs", 7*24*time.Hour)
+	s.ScheduleTask("cleanup_logs", 6*time.Hour)
 	s.ScheduleTask("ci_monitor", 30*time.Minute)
 
 	s.mu.Lock()
@@ -167,12 +167,21 @@ func (s *Scheduler) executeTask(name string) {
 			log.Printf("[Scheduler] Failed to enqueue index_codebase: %v", err)
 		}
 	case "cleanup_logs":
+		// Purge stale processing jobs (stuck > 30 min)
+		staleCutoff := time.Now().Add(-30 * time.Minute)
+		if result := db.DB.Where("status = ? AND created_at < ?", "processing", staleCutoff).Delete(&models.QueueJob{}); result.RowsAffected > 0 {
+			log.Printf("[Scheduler] Purged %d stale processing jobs", result.RowsAffected)
+		}
+		// Purge deprecated job types
+		db.DB.Where("type = ?", "check_issues").Delete(&models.QueueJob{})
 		// Simple retention policy: delete logs older than 30 days
 		cutoff := time.Now().Add(-30 * 24 * time.Hour)
 		result := db.DB.Where("created_at < ?", cutoff).Delete(&models.KeeperLog{})
 		if result.Error == nil && result.RowsAffected > 0 {
 			log.Printf("[Scheduler] Cleaned up %d old keeper logs", result.RowsAffected)
 		}
+		// Cap audit entries to 1000
+		db.DB.Exec("DELETE FROM audit_entries WHERE id NOT IN (SELECT id FROM audit_entries ORDER BY id DESC LIMIT 1000)")
 		// Cleanup old dismissed notifications
 		if count, err := CleanupOldNotifications(90); err == nil && count > 0 {
 			log.Printf("[Scheduler] Cleaned up %d old notifications", count)

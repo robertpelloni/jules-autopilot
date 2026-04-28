@@ -545,9 +545,6 @@ func postRAGReindex(c *fiber.Ctx) error {
 func SetupRoutes(app *fiber.App) {
 	services.SetBroadcaster(Broadcast)
 
-	// Purge stale check_issues jobs from previous versions
-	db.DB.Where("type = ?", "check_issues").Delete(&models.QueueJob{})
-
 	app.Get("/metrics", getMetrics)
 	app.Get("/healthz", getHealth)
 
