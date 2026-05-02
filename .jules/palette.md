@@ -44,3 +44,8 @@
 
 **Learning:** While relative dates (e.g., "2 days ago") are cleaner for scanning, users often need the precision of exact timestamps. Tooltips provide the perfect mechanism for this "progressive disclosure"—keeping the interface clean while making detailed data available on demand.
 **Action:** Use relative time for display and exact timestamp in tooltips.
+
+## 2025-12-21 - Input Clear Buttons
+
+**Learning:** Search inputs often trap users if they make a mistake or want to start over, requiring them to manually backspace. Adding a clear button ('X' icon) that appears when text is entered significantly improves the search UX. Furthermore, decorative icons positioned over inputs (like search icons) must use `pointer-events-none` to prevent them from blocking clicks on the input field beneath them.
+**Action:** Always include a clear button on search inputs, and ensure decorative icons over inputs have `pointer-events-none`.
