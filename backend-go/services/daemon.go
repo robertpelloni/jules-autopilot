@@ -77,8 +77,17 @@ func (d *Daemon) tick() time.Duration {
 	if interval <= 0 {
 		interval = 30 * time.Second
 	}
+	// Enforce minimum 120s to prevent API rate-limiting
+	if interval < 120*time.Second {
+		interval = 120 * time.Second
+	}
 
 	if !settings.IsEnabled {
+		return interval
+	}
+
+	// Skip this tick if we're in a rate-limit backoff period
+	if IsRateLimited() {
 		return interval
 	}
 
@@ -101,7 +110,11 @@ func (d *Daemon) tick() time.Duration {
 	}
 
 	queuedSessions := 0
+	maxEnqueuePerTick := 3 // Limit how many sessions we enqueue per tick to avoid API flooding
 	for _, session := range sessions {
+		if queuedSessions >= maxEnqueuePerTick {
+			break
+		}
 		// Skip if a job for this session already exists (dedup)
 		var existing models.QueueJob
 		if db.DB.Where("type = ? AND status IN ? AND payload LIKE ?", "check_session", []string{"pending", "processing"}, fmt.Sprintf("%%%s%%", session.ID)).First(&existing).Error == nil {

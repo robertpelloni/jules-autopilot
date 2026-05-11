@@ -25,8 +25,7 @@ import {
   Copy, 
   Check, 
   Loader2, 
-  Users, 
-  LayoutTemplate, 
+   
   Sparkles,
   ArrowUp,
   ArrowDown,
@@ -591,16 +590,6 @@ export function ActivityFeed({
                       <Play className="mr-2 h-3.5 w-3.5" />
                       <span>Start Code Review</span>
                     </DropdownMenuItem>
-                    <DropdownMenuItem onSelect={(e) => { e.preventDefault(); onStartDebate?.(); }} className="focus:bg-accent focus:text-accent-foreground text-xs cursor-pointer">
-                      <Users className="mr-2 h-3.5 w-3.5" />
-                      <span>Start Debate</span>
-                    </DropdownMenuItem>
-                    {onSaveTemplate && (
-                      <DropdownMenuItem onSelect={(e) => { e.preventDefault(); onSaveTemplate(); }} className="focus:bg-accent focus:text-accent-foreground text-xs cursor-pointer text-primary focus:text-primary">
-                        <LayoutTemplate className="mr-2 h-3.5 w-3.5" />
-                        <span>Save as Template</span>
-                      </DropdownMenuItem>
-                    )}
                   </>
                 )}
 

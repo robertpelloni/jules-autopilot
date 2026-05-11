@@ -375,7 +375,7 @@ func (c *JulesClient) ListActivities(sessionId string) ([]models.JulesActivity, 
 	pageToken := ""
 
 	for {
-		url := fmt.Sprintf("%s/sessions/%s/activities?pageSize=1000", JulesApiBaseUrl, sessionId)
+		url := fmt.Sprintf("%s/sessions/%s/activities?pageSize=50", JulesApiBaseUrl, sessionId)
 		if pageToken != "" {
 			url += "&pageToken=" + pageToken
 		}

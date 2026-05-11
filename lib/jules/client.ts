@@ -453,7 +453,7 @@ export class JulesClient {
     }
   }
 
-  async listActivities(sessionId: string, limit: number = 1000): Promise<Activity[]> {
+  async listActivities(sessionId: string, limit: number = 50): Promise<Activity[]> {
     const normalizedSessionId = this.normalizeSessionId(sessionId);
     let allActivities: ApiActivity[] = [];
     let pageToken: string | undefined;

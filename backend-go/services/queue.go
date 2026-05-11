@@ -130,6 +130,11 @@ func (w *Worker) IsRunning() bool {
 }
 
 func (w *Worker) processJobs() {
+	// Check global rate-limit backoff before doing anything
+	if IsRateLimited() {
+		return
+	}
+
 	var jobs []models.QueueJob
 	now := time.Now()
 
@@ -221,14 +226,35 @@ func (w *Worker) executeJob(job models.QueueJob) {
 	})
 
 	log.Printf("[Queue] Job %s (%s) completed: %s", job.ID[:8], job.Type, result)
+
+	// Inter-job delay: pause 5s between jobs to avoid hitting rate limits
+	time.Sleep(5 * time.Second)
 }
 
 // Handlers are currently stubs to be implemented as functionality is ported to Go
 
 var (
-	globalWorker   *Worker
-	globalWorkerMu sync.Mutex
+	globalWorker    *Worker
+	globalWorkerMu  sync.Mutex
+	rateLimitUntil  time.Time
+	rateLimitMu     sync.Mutex
 )
+
+// SetRateLimitBackoff sets a global cooldown period during which the queue
+// worker will not process any new jobs. This prevents cascading 429 errors.
+func SetRateLimitBackoff(d time.Duration) {
+	rateLimitMu.Lock()
+	defer rateLimitMu.Unlock()
+	rateLimitUntil = time.Now().Add(d)
+	log.Printf("[Queue] Rate-limit backoff set for %v (until %v)", d, rateLimitUntil.Format(time.RFC3339))
+}
+
+// IsRateLimited returns true if we're currently in a rate-limit backoff period.
+func IsRateLimited() bool {
+	rateLimitMu.Lock()
+	defer rateLimitMu.Unlock()
+	return time.Now().Before(rateLimitUntil)
+}
 
 // StartWorker initializes and starts the global queue worker
 func StartWorker() {
@@ -534,6 +560,11 @@ func (w *Worker) handleCheckSession(payload string) (string, error) {
 		// Timeout/rate-limit — don't retry, just skip
 		if strings.Contains(err.Error(), "deadline exceeded") || strings.Contains(err.Error(), "timeout") || strings.Contains(err.Error(), "429") {
 			log.Printf("[Queue] Skipping session %s due to API error: %v", data.Session.ID[:8], err)
+			if strings.Contains(err.Error(), "429") {
+				SetRateLimitBackoff(120 * time.Second) // 2-minute backoff on 429
+			} else {
+				SetRateLimitBackoff(30 * time.Second) // 30s backoff on timeout
+			}
 			return "none", nil
 		}
 		return "fail", fmt.Errorf("failed to refresh session %s: %w", data.Session.ID, err)
