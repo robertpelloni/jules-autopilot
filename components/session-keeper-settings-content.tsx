@@ -49,7 +49,6 @@ export function SessionKeeperSettingsContent({
   onConfigChange: propOnChange,
 }: SessionKeeperSettingsContentProps) {
   const [localConfig, setLocalConfig] = useState<SessionKeeperConfig>(DEFAULT_CONFIG);
-
   const config = propConfig || localConfig;
 
   useEffect(() => {
@@ -59,8 +58,9 @@ export function SessionKeeperSettingsContent({
         try {
           const parsed = JSON.parse(stored);
           setTimeout(() => setLocalConfig({ ...DEFAULT_CONFIG, ...parsed }), 0);
+        } catch (e) {
+          console.error(e);
         }
-        catch (e) { console.error(e); }
       }
     }
   }, [propConfig]);
@@ -81,7 +81,8 @@ export function SessionKeeperSettingsContent({
           <div className="flex items-center justify-between">
             <Label htmlFor="keeper-enabled" className="flex flex-col gap-1">
               <span className="font-semibold text-sm flex items-center gap-2">
-                <Rocket className="h-4 w-4 text-green-400" /> Autopilot
+                <Rocket className="h-4 w-4 text-green-400" />
+                Autopilot
               </span>
               <span className="font-normal text-xs text-white/40">Automatically monitor and bump active sessions</span>
             </Label>
@@ -91,7 +92,6 @@ export function SessionKeeperSettingsContent({
               onCheckedChange={(c) => handleConfigChange({ ...config, isEnabled: c })}
             />
           </div>
-
           {config.isEnabled && (
             <>
               <Separator className="bg-white/10" />
@@ -115,7 +115,8 @@ export function SessionKeeperSettingsContent({
           <div className="flex items-center justify-between">
             <Label htmlFor="smart-pilot" className="flex flex-col gap-1">
               <span className="font-semibold text-sm flex items-center gap-2 text-purple-400">
-                <Brain className="h-4 w-4" /> Smart Supervisor
+                <Brain className="h-4 w-4" />
+                Smart Supervisor
               </span>
               <span className="font-normal text-xs text-white/40">Use AI to generate context-aware guidance for stalled sessions</span>
             </Label>
@@ -125,7 +126,6 @@ export function SessionKeeperSettingsContent({
               onCheckedChange={(c) => handleConfigChange({ ...config, smartPilotEnabled: c })}
             />
           </div>
-
           {config.smartPilotEnabled && (
             <div className="grid gap-4 pt-2">
               <div className="grid grid-cols-2 gap-4">
@@ -152,7 +152,6 @@ export function SessionKeeperSettingsContent({
                   />
                 </div>
               </div>
-
               <div className="space-y-2">
                 <Label className="text-xs text-white/60">Model</Label>
                 <Input
@@ -162,7 +161,6 @@ export function SessionKeeperSettingsContent({
                   onChange={(e) => handleConfigChange({ ...config, supervisorModel: e.target.value })}
                 />
               </div>
-
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-2">
                   <Label className="text-xs text-white/60">Check Interval (seconds)</Label>

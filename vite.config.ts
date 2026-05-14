@@ -12,6 +12,7 @@ export default defineConfig({
   resolve: {
     alias: {
       '@': path.resolve(__dirname, './'),
+      '@jules/shared': path.resolve(__dirname, './packages/shared/src/index.ts'),
       'react': path.resolve(__dirname, './node_modules/react'),
       'react-dom': path.resolve(__dirname, './node_modules/react-dom'),
     },
@@ -48,11 +49,11 @@ export default defineConfig({
     port: 3006,
     proxy: {
       '/api': {
-        target: 'http://localhost:8080',
+        target: 'http://localhost:8090',
         changeOrigin: true,
       },
       '/ws': {
-        target: 'ws://localhost:8080',
+        target: 'ws://localhost:8090',
         ws: true,
       },
     },
