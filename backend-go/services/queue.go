@@ -130,10 +130,8 @@ func (w *Worker) IsRunning() bool {
 }
 
 func (w *Worker) processJobs() {
-	// Check global rate-limit backoff before doing anything
-	if IsRateLimited() {
-		return
-	}
+	// Rate-limit backoff only affects the daemon (no new enqueues).
+	// The worker still processes existing jobs — on 429 they get rescheduled.
 
 	var jobs []models.QueueJob
 	now := time.Now()
@@ -205,15 +203,24 @@ func (w *Worker) executeJob(job models.QueueJob) {
 		errMsg := executeErr.Error()
 		log.Printf("[Queue] Job %s failed: %s", job.ID, errMsg)
 
-		// Determine if we should mark as 'failed' or back to 'pending' for retry
+		// Determine if we should mark as failed or back to pending for retry
 		status := "pending"
 		if job.Attempts+1 >= job.MaxAttempts {
 			status = "failed"
 		}
 
+		// On rate-limit or timeout, delay the retry to avoid hammering
+		retryAt := time.Now()
+		if strings.Contains(errMsg, "rate limited") || strings.Contains(errMsg, "429") || strings.Contains(errMsg, "RESOURCE_EXHAUSTED") {
+			retryAt = time.Now().Add(60 * time.Second) // retry in 1 minute
+		} else if strings.Contains(errMsg, "timeout") || strings.Contains(errMsg, "deadline exceeded") {
+			retryAt = time.Now().Add(30 * time.Second) // retry in 30s
+		}
+
 		db.DB.Model(&job).Updates(map[string]interface{}{
 			"status":     status,
 			"last_error": &errMsg,
+			"run_at":     &retryAt,
 		})
 		return
 	}
@@ -227,8 +234,8 @@ func (w *Worker) executeJob(job models.QueueJob) {
 
 	log.Printf("[Queue] Job %s (%s) completed: %s", job.ID[:8], job.Type, result)
 
-	// Inter-job delay: pause 5s between jobs to avoid hitting rate limits
-	time.Sleep(5 * time.Second)
+	// Inter-job delay: pause 2s between jobs
+	time.Sleep(2 * time.Second)
 }
 
 // Handlers are currently stubs to be implemented as functionality is ported to Go
@@ -557,15 +564,16 @@ func (w *Worker) handleCheckSession(payload string) (string, error) {
 	client := NewJulesClient()
 	session, err := client.GetSession(data.Session.ID)
 	if err != nil {
-		// Timeout/rate-limit — don't retry, just skip
-		if strings.Contains(err.Error(), "deadline exceeded") || strings.Contains(err.Error(), "timeout") || strings.Contains(err.Error(), "429") {
-			log.Printf("[Queue] Skipping session %s due to API error: %v", data.Session.ID[:8], err)
-			if strings.Contains(err.Error(), "429") {
-				SetRateLimitBackoff(120 * time.Second) // 2-minute backoff on 429
-			} else {
-				SetRateLimitBackoff(30 * time.Second) // 30s backoff on timeout
-			}
-			return "none", nil
+		// Rate-limit: return error so job is rescheduled with future run_at
+		if strings.Contains(err.Error(), "429") || strings.Contains(err.Error(), "RESOURCE_EXHAUSTED") {
+			log.Printf("[Queue] Session %s hit rate limit: %v", data.Session.ID[:8], err)
+			SetRateLimitBackoff(30 * time.Second) // daemon pauses enqueuing for 30s
+			return "rate_limited", fmt.Errorf("rate limited, will retry: %s", err.Error())
+		}
+		if strings.Contains(err.Error(), "deadline exceeded") || strings.Contains(err.Error(), "timeout") {
+			log.Printf("[Queue] Session %s timed out: %v", data.Session.ID[:8], err)
+			SetRateLimitBackoff(15 * time.Second)
+			return "timeout", fmt.Errorf("timeout, will retry: %s", err.Error())
 		}
 		return "fail", fmt.Errorf("failed to refresh session %s: %w", data.Session.ID, err)
 	}

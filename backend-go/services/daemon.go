@@ -78,7 +78,7 @@ func (d *Daemon) tick() time.Duration {
 		interval = 30 * time.Second
 	}
 	// Enforce minimum 120s to prevent API rate-limiting
-	if interval < 120*time.Second {
+	if interval < 60*time.Second {
 		interval = 120 * time.Second
 	}
 
@@ -110,7 +110,7 @@ func (d *Daemon) tick() time.Duration {
 	}
 
 	queuedSessions := 0
-	maxEnqueuePerTick := 3 // Limit how many sessions we enqueue per tick to avoid API flooding
+	maxEnqueuePerTick := 5 // Limit how many sessions we enqueue per tick to avoid API flooding
 	for _, session := range sessions {
 		if queuedSessions >= maxEnqueuePerTick {
 			break

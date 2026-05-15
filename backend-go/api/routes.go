@@ -1022,7 +1022,7 @@ func handleSessionAction(c *fiber.Ctx) error {
 			errStr := err.Error()
 			if strings.Contains(errStr, "429") || strings.Contains(errStr, "RESOURCE_EXHAUSTED") {
 				// Set global backoff so daemon stops hammering the API too
-				services.SetRateLimitBackoff(60 * time.Second)
+				services.SetRateLimitBackoff(15 * time.Second)
 				return c.Status(429).JSON(fiber.Map{"error": "Rate limited by Jules API. Please wait a moment and try again."})
 			}
 			return c.Status(500).JSON(fiber.Map{"error": errStr})
@@ -1096,7 +1096,7 @@ func createActivity(c *fiber.Ctx) error {
 	if err != nil {
 		errStr := err.Error()
 		if strings.Contains(errStr, "429") || strings.Contains(errStr, "RESOURCE_EXHAUSTED") {
-			services.SetRateLimitBackoff(60 * time.Second)
+			services.SetRateLimitBackoff(15 * time.Second)
 			return c.Status(429).JSON(fiber.Map{"error": "Rate limited by Jules API. Please wait a moment and try again."})
 		}
 		return c.Status(500).JSON(fiber.Map{"error": errStr})
