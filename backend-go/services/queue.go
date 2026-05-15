@@ -157,11 +157,7 @@ func (w *Worker) processJobs() {
 
 func (w *Worker) executeJob(job models.QueueJob) {
 	log.Printf("[Queue] Executing %s job %s", job.Type, job.ID[:8])
-	addKeeperLog(fmt.Sprintf("Executing queued background job: %s", job.Type), "action", "global", map[string]interface{}{
-		"event":  "queue_job_start",
-		"jobId":  job.ID,
-		"jobType": job.Type,
-	})
+	// Skip verbose keeper logging for every job execution
 
 	// Mark as processing
 	now := time.Now()
