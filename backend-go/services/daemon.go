@@ -3,6 +3,7 @@ package services
 import (
 	"fmt"
 	"log"
+	"sort"
 	"sync"
 	"time"
 
@@ -109,8 +110,27 @@ func (d *Daemon) tick() time.Duration {
 		return interval
 	}
 
+	// Prioritize sessions: AWAITING_USER_FEEDBACK first, then IN_PROGRESS, then others
+	sort.SliceStable(sessions, func(i, j int) bool {
+		Priority := func(s models.JulesSession) int {
+			switch s.RawState {
+			case "AWAITING_USER_FEEDBACK":
+				return 0 // highest priority — agent is blocked waiting for us
+			case "IN_PROGRESS":
+				return 1
+			case "AWAITING_PLAN_APPROVAL":
+				return 2
+			case "FAILED":
+				return 3
+			default:
+				return 4 // COMPLETED, SUCCEEDED etc
+			}
+		}
+		return Priority(sessions[i]) < Priority(sessions[j])
+	})
+
 	queuedSessions := 0
-	maxEnqueuePerTick := 5 // Limit how many sessions we enqueue per tick to avoid API flooding
+	maxEnqueuePerTick := 10 // Bumped from 5 — we need to cover all active sessions
 	for _, session := range sessions {
 		if queuedSessions >= maxEnqueuePerTick {
 			break

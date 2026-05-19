@@ -590,6 +590,47 @@ func (w *Worker) handleCheckSession(payload string) (string, error) {
 		emitDaemonEvent("activities_updated", map[string]interface{}{"sessionId": session.ID})
 	}
 
+	// AWAITING_USER_FEEDBACK: the agent is blocked waiting for user input.
+	// These sessions should always be nudged immediately — they can't make progress without us.
+	if session.RawState == "AWAITING_USER_FEEDBACK" {
+		// Check if we already nudged this session recently (avoid duplicate messages)
+		alreadyProcessedNudge := false
+		if supervisorState.LastProcessedActivityTimestamp != nil {
+			if t, err := time.Parse(time.RFC3339, *supervisorState.LastProcessedActivityTimestamp); err == nil && !lastActivityTime.After(t) {
+				alreadyProcessedNudge = true
+			}
+		}
+		if !alreadyProcessedNudge {
+			message := chooseNudgeMessage(settings)
+			if _, err := client.CreateActivity(session.ID, CreateActivityRequest{
+				Content: message,
+				Type:    "message",
+				Role:    "user",
+			}); err != nil {
+				return "fail", err
+			}
+			addKeeperLog(
+				fmt.Sprintf("Bumped AWAITING_USER_FEEDBACK session %s", session.ID[:8]),
+				"action", session.ID, map[string]interface{}{
+					"event":         "session_user_feedback_bumped",
+					"sessionTitle":  session.Title,
+					"nudgeMessage":  message,
+				},
+			)
+			emitDaemonEvent("activities_updated", map[string]interface{}{"sessionId": session.ID})
+			emitDaemonEvent("session_nudged", map[string]interface{}{
+				"sessionId":      session.ID,
+				"sessionTitle":   session.Title,
+				"message":        message,
+			})
+			timestamp := lastActivityTime.Format(time.RFC3339)
+			supervisorState.LastProcessedActivityTimestamp = &timestamp
+			_ = saveSupervisorState(supervisorState)
+			return "bumped_awaiting_feedback", nil
+		}
+		return "already_bumped", nil
+	}
+
 	if session.RawState == "AWAITING_PLAN_APPROVAL" && settings.SmartPilotEnabled {
 		activities, err := client.ListActivities(session.ID)
 		if err == nil {
