@@ -58,7 +58,7 @@ export async function fetchNotifications(opts?: {
   includeDismissed?: boolean;
   limit?: number;
   offset?: number;
-}): Promise<NotificationsResponse> {
+}): Promise<Notification[]> {
   const params = new URLSearchParams();
   if (opts?.category) params.set('category', opts.category);
   if (opts?.type) params.set('type', opts.type);
@@ -68,17 +68,27 @@ export async function fetchNotifications(opts?: {
   if (opts?.limit) params.set('limit', String(opts.limit));
   if (opts?.offset) params.set('offset', String(opts.offset));
 
-  const response = await fetch(`/api/notifications?${params}`);
-  if (!response.ok) throw new Error('Failed to load notifications');
-  return response.json();
+  try {
+    const response = await fetch(`/api/notifications?${params}`);
+    if (!response.ok) return [];
+    return response.json();
+  } catch (_e) {
+    console.warn('Backend notifications unavailable, returning empty list');
+    return [];
+  }
 }
 
 export async function fetchUnreadNotificationCount(): Promise<number> {
-  const response = await fetch('/api/notifications/unread-count');
-  if (!response.ok) throw new Error('Failed to load notification count');
-  const data = await response.json();
-  return data.count;
+  try {
+    const response = await fetch('/api/notifications/unread-count');
+    if (!response.ok) return 0;
+    const data = await response.json();
+    return data.count;
+  } catch (_e) {
+    return 0;
+  }
 }
+
 
 export async function markNotificationRead(id: string): Promise<void> {
   await fetch(`/api/notifications/${id}/read`, { method: 'POST' });

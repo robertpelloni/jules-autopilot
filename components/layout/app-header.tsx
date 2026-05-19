@@ -29,11 +29,10 @@ import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { APP_VERSION } from "@/lib/version";
 
 interface AppHeaderProps {
-  onSearchClick: () => void;
   onNewSession: () => void;
 }
 
-export function AppHeader({ onSearchClick, onNewSession }: AppHeaderProps) {
+export function AppHeader({ onNewSession }: AppHeaderProps) {
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
   const [isSyncing, setIsSyncing] = useState(false);
   const { client } = useJules();

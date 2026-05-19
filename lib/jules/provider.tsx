@@ -23,11 +23,22 @@ export function JulesProvider({ children }: { children: React.ReactNode }) {
   const initClient = useCallback(() => {
     try {
       const localJulesKey = typeof window !== 'undefined' ? safeLocalStorage.getItem('jules_api_key') : null;
-      
-      console.log(`[JulesProvider] Initializing client (API Key: ${!!localJulesKey})`);
-      
+
+      const viteEnv = (() => {
+        try {
+          return (0, eval)('import.meta.env') as { VITE_JULES_API_KEY?: string } | undefined;
+        } catch {
+          return undefined;
+        }
+      })();
+
+      const envJulesKey = viteEnv?.VITE_JULES_API_KEY;
+
+      const apiKey = localJulesKey || envJulesKey;
+
+      console.log(`[JulesProvider] Initializing client (API Key: ${!!apiKey}, Source: ${localJulesKey ? 'local' : 'env'})`);      
       const newClient = new JulesClient(
-        localJulesKey || undefined
+        apiKey || undefined
       );
       
       setClient(newClient);

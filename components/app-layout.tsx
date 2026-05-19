@@ -34,7 +34,6 @@ export function AppLayout({
       />
 
       <AppHeader 
-        onSearchClick={() => setIsSearchOpen(true)}
         onNewSession={() => {}}
       />
 

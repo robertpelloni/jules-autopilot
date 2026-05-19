@@ -1,6 +1,7 @@
 "use client";
 
-import { useState, useMemo, useEffect, useCallback } from "react";
+import { useMemo, useEffect } from "react";
+import useSWR from "swr";
 import { useJules } from "@/lib/jules/provider";
 import type { Session } from '@jules/shared';
 import { Card, CardContent } from "@/components/ui/card";
@@ -25,28 +26,26 @@ interface SessionBoardProps {
 
 export function SessionBoard({ onSelectSession, onOpenNewSession }: SessionBoardProps) {
   const { client, refreshTrigger } = useJules();
-  const [sessions, setSessions] = useState<Session[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
-
-  const loadSessions = useCallback(async () => {
-    if (!client) return;
-    try {
-      setLoading(true);
-      const data = await client.listSessions();
-      setSessions(data);
-      setError(null);
-    } catch (err) {
-      console.error("Failed to load sessions:", err);
-      setError("Failed to load sessions. Is the Jules API key configured?");
-    } finally {
-      setLoading(false);
+  
+  const { 
+    data: sessions = [], 
+    error, 
+    isLoading: loading, 
+    mutate: loadSessions 
+  } = useSWR(
+    client ? "sessions" : null,
+    () => client!.listSessions(),
+    { 
+      refreshInterval: 30000,
+      revalidateOnFocus: true
     }
-  }, [client]);
+  );
 
   useEffect(() => {
-    loadSessions();
-  }, [loadSessions, refreshTrigger]);
+    if (refreshTrigger) {
+      loadSessions();
+    }
+  }, [refreshTrigger, loadSessions]);
 
   const stats = useMemo(() => {
     const active = sessions.filter(s => s.status === 'active').length;
@@ -83,10 +82,10 @@ export function SessionBoard({ onSelectSession, onOpenNewSession }: SessionBoard
           </div>
         </div>
         <div className="flex items-center gap-2">
-          <Button variant="ghost" size="sm" onClick={loadSessions} className="h-8 text-[10px] font-mono uppercase tracking-widest text-white/60 hover:text-white hover:bg-white/5 border border-white/10">
+          <Button variant="ghost" size="sm" onClick={() => loadSessions()} className="h-8 text-[10px] font-mono uppercase tracking-widest text-white/60 hover:text-white hover:bg-white/5 border border-white/10">
             <RefreshCw className="mr-2 h-3 w-3" /> Refresh
           </Button>
-          <NewSessionDialog onSessionCreated={loadSessions} trigger={
+          <NewSessionDialog onSessionCreated={() => loadSessions()} trigger={
             <Button size="sm" className="h-8 text-[10px] font-mono uppercase tracking-widest bg-purple-600 hover:bg-purple-500 text-white border-0">
               <Plus className="h-3 w-3 mr-1.5" /> New Session
             </Button>

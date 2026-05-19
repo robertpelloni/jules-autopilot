@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useCallback } from 'react';
+import useSWR from 'swr';
 import {
   Dialog,
   DialogContent,
@@ -49,28 +49,14 @@ interface SessionReplayDialogProps {
 }
 
 export function SessionReplayDialog({ sessionId, open, onOpenChange }: SessionReplayDialogProps) {
-  const [data, setData] = useState<ReplayData | null>(null);
-  const [loading, setLoading] = useState(false);
-
-  const loadReplay = useCallback(async () => {
-    try {
-      setLoading(true);
-      const response = await fetch(`/api/sessions/${sessionId}/replay`);
+  const { data, isLoading: loading } = useSWR<ReplayData>(
+    open && sessionId ? `/api/sessions/${sessionId}/replay` : null,
+    async (url: string) => {
+      const response = await fetch(url);
       if (!response.ok) throw new Error('Failed to fetch replay data');
-      const json = await response.json();
-      setData(json);
-    } catch (err) {
-      console.error(err);
-    } finally {
-      setLoading(false);
+      return response.json();
     }
-  }, [sessionId]);
-
-  useEffect(() => {
-    if (open && sessionId) {
-      loadReplay();
-    }
-  }, [loadReplay, open, sessionId]);
+  );
 
   const getEventIcon = (event: ReplayEvent) => {
     if (event.type === 'plan') return <Brain className="h-3 w-3 text-purple-400" />;

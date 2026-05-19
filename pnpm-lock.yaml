@@ -4,34 +4,6 @@ settings:
   autoInstallPeers: true
   excludeLinksFromLockfile: false
 
-<<<<<<< HEAD
-overrides:
-  react: ^19.2.3
-  react-dom: ^19.2.3
-  diff@>=4.0.0 <4.0.4: '>=4.0.4'
-  axios@>=1.0.0 <=1.13.4: '>=1.13.5'
-  minimatch@<3.1.3: '>=3.1.3'
-  minimatch@>=9.0.0 <9.0.6: '>=9.0.6'
-  rollup@>=4.0.0 <4.59.0: '>=4.59.0'
-  minimatch@>=9.0.0 <9.0.7: '>=9.0.7'
-  minimatch@<3.1.4: '>=3.1.4'
-  ajv@<6.14.0: '>=6.14.0'
-  flatted@<3.4.0: '>=3.4.0'
-  flatted@<=3.4.1: '>=3.4.2'
-  handlebars@>=4.0.0 <=4.7.8: '>=4.7.9'
-  brace-expansion@<1.1.13: '>=1.1.13'
-  brace-expansion@>=2.0.0 <2.0.3: '>=2.0.3'
-  handlebars@>=4.0.0 <4.7.9: '>=4.7.9'
-  picomatch@<2.3.2: '>=2.3.2'
-  picomatch@>=4.0.0 <4.0.4: '>=4.0.4'
-  handlebars@>=4.6.0 <=4.7.8: '>=4.7.9'
-  vite@<=6.4.1: '>=6.4.2'
-  vite@>=6.0.0 <=6.4.1: '>=6.4.2'
-  follow-redirects@<=1.15.11: '>=1.16.0'
-  axios@>=1.0.0 <1.15.0: '>=1.15.0'
-
-=======
->>>>>>> f95caf5 (feat: migrate to lean OpenRouter-centric architecture with model cycling and integration cleanup)
 importers:
 
   .:
@@ -48,26 +20,18 @@ importers:
       '@dnd-kit/utilities':
         specifier: ^3.2.2
         version: 3.2.2(react@19.2.5)
-<<<<<<< HEAD
-=======
       '@hono/node-server':
         specifier: ^1.13.8
-        version: 1.19.14(hono@4.12.15)
->>>>>>> f95caf5 (feat: migrate to lean OpenRouter-centric architecture with model cycling and integration cleanup)
+        version: 1.19.14(hono@4.12.19)
       '@hookform/resolvers':
         specifier: ^3.1.0
         version: 3.10.0(react-hook-form@7.73.1(react@19.2.5))
       '@jules/shared':
-<<<<<<< HEAD
         specifier: workspace:*
         version: link:packages/shared
-=======
-        specifier: file:archive/packages/shared
-        version: file:archive/packages/shared(ws@8.20.0)
       '@prisma/client':
         specifier: 5.19.1
         version: 5.19.1(prisma@5.19.1)
->>>>>>> f95caf5 (feat: migrate to lean OpenRouter-centric architecture with model cycling and integration cleanup)
       '@radix-ui/react-accordion':
         specifier: ^1.2.12
         version: 1.2.12(@types/react-dom@19.2.3(@types/react@19.2.14))(@types/react@19.2.14)(react-dom@19.2.5(react@19.2.5))(react@19.2.5)
@@ -119,12 +83,9 @@ importers:
       '@tanstack/react-virtual':
         specifier: ^3.13.18
         version: 3.13.24(react-dom@19.2.5(react@19.2.5))(react@19.2.5)
-<<<<<<< HEAD
-=======
       axios:
         specifier: ^1.7.9
         version: 1.15.2
->>>>>>> f95caf5 (feat: migrate to lean OpenRouter-centric architecture with model cycling and integration cleanup)
       class-variance-authority:
         specifier: ^0.7.1
         version: 0.7.1
@@ -137,7 +98,6 @@ importers:
       date-fns:
         specifier: ^4.1.0
         version: 4.1.0
-<<<<<<< HEAD
       diff:
         specifier: ^4.0.4
         version: 4.0.4
@@ -147,14 +107,9 @@ importers:
       handlebars:
         specifier: ^4.7.9
         version: 4.7.9
-=======
-      framer-motion:
-        specifier: ^12.23.25
-        version: 12.38.0(react-dom@19.2.5(react@19.2.5))(react@19.2.5)
       hono:
         specifier: ^4.7.2
-        version: 4.12.15
->>>>>>> f95caf5 (feat: migrate to lean OpenRouter-centric architecture with model cycling and integration cleanup)
+        version: 4.12.19
       lucide-react:
         specifier: ^0.555.0
         version: 0.555.0(react@19.2.5)
@@ -191,21 +146,18 @@ importers:
       tailwind-merge:
         specifier: ^3.4.0
         version: 3.5.0
-<<<<<<< HEAD
-=======
       tsx:
         specifier: ^4.19.3
-        version: 4.21.0
->>>>>>> f95caf5 (feat: migrate to lean OpenRouter-centric architecture with model cycling and integration cleanup)
+        version: 4.22.1
       tunnel-rat:
         specifier: ^0.1.2
-        version: 0.1.2(@types/react@19.2.14)(immer@11.1.3)(react@19.2.5)
+        version: 0.1.2(@types/react@19.2.14)(react@19.2.5)
       zod:
         specifier: ^4.3.5
         version: 4.3.6
       zustand:
         specifier: ^5.0.9
-        version: 5.0.12(@types/react@19.2.14)(immer@11.1.3)(react@19.2.5)(use-sync-external-store@1.6.0(react@19.2.5))
+        version: 5.0.12(@types/react@19.2.14)(react@19.2.5)(use-sync-external-store@1.6.0(react@19.2.5))
     devDependencies:
       '@eslint/js':
         specifier: ^9.39.2
@@ -215,11 +167,7 @@ importers:
         version: 1.59.1
       '@tailwindcss/vite':
         specifier: ^4
-<<<<<<< HEAD
-        version: 4.2.4(vite@6.4.2(@types/node@25.6.0)(jiti@2.6.1)(lightningcss@1.32.0))
-=======
-        version: 4.2.4(vite@6.4.2(@types/node@25.6.0)(jiti@2.6.1)(lightningcss@1.32.0)(tsx@4.21.0))
->>>>>>> f95caf5 (feat: migrate to lean OpenRouter-centric architecture with model cycling and integration cleanup)
+        version: 4.2.4(vite@6.4.2(@types/node@25.6.0)(jiti@2.6.1)(lightningcss@1.32.0)(tsx@4.22.1))
       '@testing-library/jest-dom':
         specifier: ^6.9.1
         version: 6.9.1
@@ -241,21 +189,9 @@ importers:
       '@types/react-dom':
         specifier: ^19.2.3
         version: 19.2.3(@types/react@19.2.14)
-<<<<<<< HEAD
       '@vitejs/plugin-react':
         specifier: ^4.3.4
-        version: 4.7.0(vite@6.4.2(@types/node@25.6.0)(jiti@2.6.1)(lightningcss@1.32.0))
-=======
-      '@types/vscode':
-        specifier: ^1.115.0
-        version: 1.116.0
-      '@types/ws':
-        specifier: ^8.18.1
-        version: 8.18.1
-      '@vitejs/plugin-react':
-        specifier: ^4.3.4
-        version: 4.7.0(vite@6.4.2(@types/node@25.6.0)(jiti@2.6.1)(lightningcss@1.32.0)(tsx@4.21.0))
->>>>>>> f95caf5 (feat: migrate to lean OpenRouter-centric architecture with model cycling and integration cleanup)
+        version: 4.7.0(vite@6.4.2(@types/node@25.6.0)(jiti@2.6.1)(lightningcss@1.32.0)(tsx@4.22.1))
       autoprefixer:
         specifier: ^10.4.20
         version: 10.5.0(postcss@8.5.10)
@@ -280,21 +216,15 @@ importers:
       jest-environment-node:
         specifier: ^30.2.0
         version: 30.3.0
-<<<<<<< HEAD
-      postcss:
-        specifier: ^8.5.3
-        version: 8.5.10
-=======
       jose:
-        specifier: ^6.2.2
-        version: 6.2.2
+        specifier: ^6.2.3
+        version: 6.2.3
       postcss:
         specifier: ^8.5.3
         version: 8.5.10
       prisma:
         specifier: 5.19.1
         version: 5.19.1
->>>>>>> f95caf5 (feat: migrate to lean OpenRouter-centric architecture with model cycling and integration cleanup)
       tailwindcss:
         specifier: ^4
         version: 4.2.4
@@ -314,22 +244,11 @@ importers:
         specifier: ^8.58.0
         version: 8.59.0(eslint@9.39.4(jiti@2.6.1))(typescript@5.9.3)
       vite:
-<<<<<<< HEAD
         specifier: ^6.4.2
-        version: 6.4.2(@types/node@25.6.0)(jiti@2.6.1)(lightningcss@1.32.0)
+        version: 6.4.2(@types/node@25.6.0)(jiti@2.6.1)(lightningcss@1.32.0)(tsx@4.22.1)
       vitest:
         specifier: ^4.0.16
-        version: 4.1.5(@types/node@25.6.0)(jsdom@26.1.0)(vite@6.4.2(@types/node@25.6.0)(jiti@2.6.1)(lightningcss@1.32.0))
-=======
-        specifier: ^6.2.0
-        version: 6.4.2(@types/node@25.6.0)(jiti@2.6.1)(lightningcss@1.32.0)(tsx@4.21.0)
-      vitest:
-        specifier: ^4.0.16
-        version: 4.1.5(@types/node@25.6.0)(jsdom@26.1.0)(vite@6.4.2(@types/node@25.6.0)(jiti@2.6.1)(lightningcss@1.32.0)(tsx@4.21.0))
-      ws:
-        specifier: ^8.20.0
-        version: 8.20.0
->>>>>>> f95caf5 (feat: migrate to lean OpenRouter-centric architecture with model cycling and integration cleanup)
+        version: 4.1.5(@types/node@25.6.0)(jsdom@26.1.0)(vite@6.4.2(@types/node@25.6.0)(jiti@2.6.1)(lightningcss@1.32.0)(tsx@4.22.1))
 
   apps/cli:
     dependencies:
@@ -340,7 +259,7 @@ importers:
         specifier: workspace:*
         version: link:../../packages/shared
       axios:
-        specifier: '>=1.15.0'
+        specifier: ^1.13.2
         version: 1.15.2
       ink:
         specifier: ^5.2.0
@@ -356,7 +275,7 @@ importers:
         version: 19.2.3(react@19.2.3)
       zustand:
         specifier: ^5.0.0
-        version: 5.0.9(@types/react@19.2.7)(immer@11.1.3)(react@19.2.3)(use-sync-external-store@1.6.0(react@19.2.3))
+        version: 5.0.9(@types/react@19.2.7)(react@19.2.3)(use-sync-external-store@1.6.0(react@19.2.3))
     devDependencies:
       '@types/react':
         specifier: ^19.2.7
@@ -686,51 +605,30 @@ packages:
   '@dnd-kit/accessibility@3.1.1':
     resolution: {integrity: sha512-2P+YgaXF+gRsIihwwY1gCsQSYnu9Zyj2py8kY5fFvUM1qm2WA2u639R6YNVfU4GWr+ZM5mqEsfHZZLoRONbemw==}
     peerDependencies:
-<<<<<<< HEAD
-      react: ^19.2.3
-=======
       react: '>=16.8.0'
->>>>>>> f95caf5 (feat: migrate to lean OpenRouter-centric architecture with model cycling and integration cleanup)
 
   '@dnd-kit/core@6.3.1':
     resolution: {integrity: sha512-xkGBRQQab4RLwgXxoqETICr6S5JlogafbhNsidmrkVv2YRs5MLwpjoF2qpiGjQt8S9AoxtIV603s0GIUpY5eYQ==}
     peerDependencies:
-<<<<<<< HEAD
-      react: ^19.2.3
-      react-dom: ^19.2.3
-=======
       react: '>=16.8.0'
       react-dom: '>=16.8.0'
->>>>>>> f95caf5 (feat: migrate to lean OpenRouter-centric architecture with model cycling and integration cleanup)
 
   '@dnd-kit/modifiers@9.0.0':
     resolution: {integrity: sha512-ybiLc66qRGuZoC20wdSSG6pDXFikui/dCNGthxv4Ndy8ylErY0N3KVxY2bgo7AWwIbxDmXDg3ylAFmnrjcbVvw==}
     peerDependencies:
       '@dnd-kit/core': ^6.3.0
-<<<<<<< HEAD
-      react: ^19.2.3
-=======
       react: '>=16.8.0'
->>>>>>> f95caf5 (feat: migrate to lean OpenRouter-centric architecture with model cycling and integration cleanup)
 
   '@dnd-kit/sortable@10.0.0':
     resolution: {integrity: sha512-+xqhmIIzvAYMGfBYYnbKuNicfSsk4RksY2XdmJhT+HAC01nix6fHCztU68jooFiMUB01Ky3F0FyOvhG/BZrWkg==}
     peerDependencies:
       '@dnd-kit/core': ^6.3.0
-<<<<<<< HEAD
-      react: ^19.2.3
-=======
       react: '>=16.8.0'
->>>>>>> f95caf5 (feat: migrate to lean OpenRouter-centric architecture with model cycling and integration cleanup)
 
   '@dnd-kit/utilities@3.2.2':
     resolution: {integrity: sha512-+MKAJEOfaBe5SmV6t34p80MMKhjvUz0vRrvVJbPT0WElzaOJ/1xs+D+KDv+tD/NE5ujfrChEcshd4fLn0wpiqg==}
     peerDependencies:
-<<<<<<< HEAD
-      react: ^19.2.3
-=======
       react: '>=16.8.0'
->>>>>>> f95caf5 (feat: migrate to lean OpenRouter-centric architecture with model cycling and integration cleanup)
 
   '@emnapi/core@1.8.1':
     resolution: {integrity: sha512-AvT9QFpxK0Zd8J0jopedNm+w/2fIzvtPKPjqyw9jwvBaReTTqPBk9Hixaz7KbjimP+QNz605/XnjFcDAL2pqBg==}
@@ -747,390 +645,312 @@ packages:
     cpu: [ppc64]
     os: [aix]
 
-<<<<<<< HEAD
-=======
-  '@esbuild/aix-ppc64@0.27.7':
-    resolution: {integrity: sha512-EKX3Qwmhz1eMdEJokhALr0YiD0lhQNwDqkPYyPhiSwKrh7/4KRjQc04sZ8db+5DVVnZ1LmbNDI1uAMPEUBnQPg==}
+  '@esbuild/aix-ppc64@0.28.0':
+    resolution: {integrity: sha512-lhRUCeuOyJQURhTxl4WkpFTjIsbDayJHih5kZC1giwE+MhIzAb7mEsQMqMf18rHLsrb5qI1tafG20mLxEWcWlA==}
     engines: {node: '>=18'}
     cpu: [ppc64]
     os: [aix]
 
->>>>>>> f95caf5 (feat: migrate to lean OpenRouter-centric architecture with model cycling and integration cleanup)
   '@esbuild/android-arm64@0.25.12':
     resolution: {integrity: sha512-6AAmLG7zwD1Z159jCKPvAxZd4y/VTO0VkprYy+3N2FtJ8+BQWFXU+OxARIwA46c5tdD9SsKGZ/1ocqBS/gAKHg==}
     engines: {node: '>=18'}
     cpu: [arm64]
     os: [android]
 
-<<<<<<< HEAD
-=======
-  '@esbuild/android-arm64@0.27.7':
-    resolution: {integrity: sha512-62dPZHpIXzvChfvfLJow3q5dDtiNMkwiRzPylSCfriLvZeq0a1bWChrGx/BbUbPwOrsWKMn8idSllklzBy+dgQ==}
+  '@esbuild/android-arm64@0.28.0':
+    resolution: {integrity: sha512-+WzIXQOSaGs33tLEgYPYe/yQHf0WTU0X42Jca3y8NWMbUVhp7rUnw+vAsRC/QiDrdD31IszMrZy+qwPOPjd+rw==}
     engines: {node: '>=18'}
     cpu: [arm64]
     os: [android]
 
->>>>>>> f95caf5 (feat: migrate to lean OpenRouter-centric architecture with model cycling and integration cleanup)
   '@esbuild/android-arm@0.25.12':
     resolution: {integrity: sha512-VJ+sKvNA/GE7Ccacc9Cha7bpS8nyzVv0jdVgwNDaR4gDMC/2TTRc33Ip8qrNYUcpkOHUT5OZ0bUcNNVZQ9RLlg==}
     engines: {node: '>=18'}
     cpu: [arm]
     os: [android]
 
-<<<<<<< HEAD
-=======
-  '@esbuild/android-arm@0.27.7':
-    resolution: {integrity: sha512-jbPXvB4Yj2yBV7HUfE2KHe4GJX51QplCN1pGbYjvsyCZbQmies29EoJbkEc+vYuU5o45AfQn37vZlyXy4YJ8RQ==}
+  '@esbuild/android-arm@0.28.0':
+    resolution: {integrity: sha512-wqh0ByljabXLKHeWXYLqoJ5jKC4XBaw6Hk08OfMrCRd2nP2ZQ5eleDZC41XHyCNgktBGYMbqnrJKq/K/lzPMSQ==}
     engines: {node: '>=18'}
     cpu: [arm]
     os: [android]
 
->>>>>>> f95caf5 (feat: migrate to lean OpenRouter-centric architecture with model cycling and integration cleanup)
   '@esbuild/android-x64@0.25.12':
     resolution: {integrity: sha512-5jbb+2hhDHx5phYR2By8GTWEzn6I9UqR11Kwf22iKbNpYrsmRB18aX/9ivc5cabcUiAT/wM+YIZ6SG9QO6a8kg==}
     engines: {node: '>=18'}
     cpu: [x64]
     os: [android]
 
-<<<<<<< HEAD
-=======
-  '@esbuild/android-x64@0.27.7':
-    resolution: {integrity: sha512-x5VpMODneVDb70PYV2VQOmIUUiBtY3D3mPBG8NxVk5CogneYhkR7MmM3yR/uMdITLrC1ml/NV1rj4bMJuy9MCg==}
+  '@esbuild/android-x64@0.28.0':
+    resolution: {integrity: sha512-+VJggoaKhk2VNNqVL7f6S189UzShHC/mR9EE8rDdSkdpN0KflSwWY/gWjDrNxxisg8Fp1ZCD9jLMo4m0OUfeUA==}
     engines: {node: '>=18'}
     cpu: [x64]
     os: [android]
 
->>>>>>> f95caf5 (feat: migrate to lean OpenRouter-centric architecture with model cycling and integration cleanup)
   '@esbuild/darwin-arm64@0.25.12':
     resolution: {integrity: sha512-N3zl+lxHCifgIlcMUP5016ESkeQjLj/959RxxNYIthIg+CQHInujFuXeWbWMgnTo4cp5XVHqFPmpyu9J65C1Yg==}
     engines: {node: '>=18'}
     cpu: [arm64]
     os: [darwin]
 
-<<<<<<< HEAD
-=======
-  '@esbuild/darwin-arm64@0.27.7':
-    resolution: {integrity: sha512-5lckdqeuBPlKUwvoCXIgI2D9/ABmPq3Rdp7IfL70393YgaASt7tbju3Ac+ePVi3KDH6N2RqePfHnXkaDtY9fkw==}
+  '@esbuild/darwin-arm64@0.28.0':
+    resolution: {integrity: sha512-0T+A9WZm+bZ84nZBtk1ckYsOvyA3x7e2Acj1KdVfV4/2tdG4fzUp91YHx+GArWLtwqp77pBXVCPn2We7Letr0Q==}
     engines: {node: '>=18'}
     cpu: [arm64]
     os: [darwin]
 
->>>>>>> f95caf5 (feat: migrate to lean OpenRouter-centric architecture with model cycling and integration cleanup)
   '@esbuild/darwin-x64@0.25.12':
     resolution: {integrity: sha512-HQ9ka4Kx21qHXwtlTUVbKJOAnmG1ipXhdWTmNXiPzPfWKpXqASVcWdnf2bnL73wgjNrFXAa3yYvBSd9pzfEIpA==}
     engines: {node: '>=18'}
     cpu: [x64]
     os: [darwin]
 
-<<<<<<< HEAD
-=======
-  '@esbuild/darwin-x64@0.27.7':
-    resolution: {integrity: sha512-rYnXrKcXuT7Z+WL5K980jVFdvVKhCHhUwid+dDYQpH+qu+TefcomiMAJpIiC2EM3Rjtq0sO3StMV/+3w3MyyqQ==}
+  '@esbuild/darwin-x64@0.28.0':
+    resolution: {integrity: sha512-fyzLm/DLDl/84OCfp2f/XQ4flmORsjU7VKt8HLjvIXChJoFFOIL6pLJPH4Yhd1n1gGFF9mPwtlN5Wf82DZs+LQ==}
     engines: {node: '>=18'}
     cpu: [x64]
     os: [darwin]
 
->>>>>>> f95caf5 (feat: migrate to lean OpenRouter-centric architecture with model cycling and integration cleanup)
   '@esbuild/freebsd-arm64@0.25.12':
     resolution: {integrity: sha512-gA0Bx759+7Jve03K1S0vkOu5Lg/85dou3EseOGUes8flVOGxbhDDh/iZaoek11Y8mtyKPGF3vP8XhnkDEAmzeg==}
     engines: {node: '>=18'}
     cpu: [arm64]
     os: [freebsd]
 
-<<<<<<< HEAD
-=======
-  '@esbuild/freebsd-arm64@0.27.7':
-    resolution: {integrity: sha512-B48PqeCsEgOtzME2GbNM2roU29AMTuOIN91dsMO30t+Ydis3z/3Ngoj5hhnsOSSwNzS+6JppqWsuhTp6E82l2w==}
+  '@esbuild/freebsd-arm64@0.28.0':
+    resolution: {integrity: sha512-l9GeW5UZBT9k9brBYI+0WDffcRxgHQD8ShN2Ur4xWq/NFzUKm3k5lsH4PdaRgb2w7mI9u61nr2gI2mLI27Nh3Q==}
     engines: {node: '>=18'}
     cpu: [arm64]
     os: [freebsd]
 
->>>>>>> f95caf5 (feat: migrate to lean OpenRouter-centric architecture with model cycling and integration cleanup)
   '@esbuild/freebsd-x64@0.25.12':
     resolution: {integrity: sha512-TGbO26Yw2xsHzxtbVFGEXBFH0FRAP7gtcPE7P5yP7wGy7cXK2oO7RyOhL5NLiqTlBh47XhmIUXuGciXEqYFfBQ==}
     engines: {node: '>=18'}
     cpu: [x64]
     os: [freebsd]
 
-<<<<<<< HEAD
-=======
-  '@esbuild/freebsd-x64@0.27.7':
-    resolution: {integrity: sha512-jOBDK5XEjA4m5IJK3bpAQF9/Lelu/Z9ZcdhTRLf4cajlB+8VEhFFRjWgfy3M1O4rO2GQ/b2dLwCUGpiF/eATNQ==}
+  '@esbuild/freebsd-x64@0.28.0':
+    resolution: {integrity: sha512-BXoQai/A0wPO6Es3yFJ7APCiKGc1tdAEOgeTNy3SsB491S3aHn4S4r3e976eUnPdU+NbdtmBuLncYir2tMU9Nw==}
     engines: {node: '>=18'}
     cpu: [x64]
     os: [freebsd]
 
->>>>>>> f95caf5 (feat: migrate to lean OpenRouter-centric architecture with model cycling and integration cleanup)
   '@esbuild/linux-arm64@0.25.12':
     resolution: {integrity: sha512-8bwX7a8FghIgrupcxb4aUmYDLp8pX06rGh5HqDT7bB+8Rdells6mHvrFHHW2JAOPZUbnjUpKTLg6ECyzvas2AQ==}
     engines: {node: '>=18'}
     cpu: [arm64]
     os: [linux]
 
-<<<<<<< HEAD
-=======
-  '@esbuild/linux-arm64@0.27.7':
-    resolution: {integrity: sha512-RZPHBoxXuNnPQO9rvjh5jdkRmVizktkT7TCDkDmQ0W2SwHInKCAV95GRuvdSvA7w4VMwfCjUiPwDi0ZO6Nfe9A==}
+  '@esbuild/linux-arm64@0.28.0':
+    resolution: {integrity: sha512-RVyzfb3FWsGA55n6WY0MEIEPURL1FcbhFE6BffZEMEekfCzCIMtB5yyDcFnVbTnwk+CLAgTujmV/Lgvih56W+A==}
     engines: {node: '>=18'}
     cpu: [arm64]
     os: [linux]
 
->>>>>>> f95caf5 (feat: migrate to lean OpenRouter-centric architecture with model cycling and integration cleanup)
   '@esbuild/linux-arm@0.25.12':
     resolution: {integrity: sha512-lPDGyC1JPDou8kGcywY0YILzWlhhnRjdof3UlcoqYmS9El818LLfJJc3PXXgZHrHCAKs/Z2SeZtDJr5MrkxtOw==}
     engines: {node: '>=18'}
     cpu: [arm]
     os: [linux]
 
-<<<<<<< HEAD
-=======
-  '@esbuild/linux-arm@0.27.7':
-    resolution: {integrity: sha512-RkT/YXYBTSULo3+af8Ib0ykH8u2MBh57o7q/DAs3lTJlyVQkgQvlrPTnjIzzRPQyavxtPtfg0EopvDyIt0j1rA==}
+  '@esbuild/linux-arm@0.28.0':
+    resolution: {integrity: sha512-CjaaREJagqJp7iTaNQjjidaNbCKYcd4IDkzbwwxtSvjI7NZm79qiHc8HqciMddQ6CKvJT6aBd8lO9kN/ZudLlw==}
     engines: {node: '>=18'}
     cpu: [arm]
     os: [linux]
 
->>>>>>> f95caf5 (feat: migrate to lean OpenRouter-centric architecture with model cycling and integration cleanup)
   '@esbuild/linux-ia32@0.25.12':
     resolution: {integrity: sha512-0y9KrdVnbMM2/vG8KfU0byhUN+EFCny9+8g202gYqSSVMonbsCfLjUO+rCci7pM0WBEtz+oK/PIwHkzxkyharA==}
     engines: {node: '>=18'}
     cpu: [ia32]
     os: [linux]
 
-<<<<<<< HEAD
-=======
-  '@esbuild/linux-ia32@0.27.7':
-    resolution: {integrity: sha512-GA48aKNkyQDbd3KtkplYWT102C5sn/EZTY4XROkxONgruHPU72l+gW+FfF8tf2cFjeHaRbWpOYa/uRBz/Xq1Pg==}
+  '@esbuild/linux-ia32@0.28.0':
+    resolution: {integrity: sha512-KBnSTt1kxl9x70q+ydterVdl+Cn0H18ngRMRCEQfrbqdUuntQQ0LoMZv47uB97NljZFzY6HcfqEZ2SAyIUTQBQ==}
     engines: {node: '>=18'}
     cpu: [ia32]
     os: [linux]
 
->>>>>>> f95caf5 (feat: migrate to lean OpenRouter-centric architecture with model cycling and integration cleanup)
   '@esbuild/linux-loong64@0.25.12':
     resolution: {integrity: sha512-h///Lr5a9rib/v1GGqXVGzjL4TMvVTv+s1DPoxQdz7l/AYv6LDSxdIwzxkrPW438oUXiDtwM10o9PmwS/6Z0Ng==}
     engines: {node: '>=18'}
     cpu: [loong64]
     os: [linux]
 
-<<<<<<< HEAD
-=======
-  '@esbuild/linux-loong64@0.27.7':
-    resolution: {integrity: sha512-a4POruNM2oWsD4WKvBSEKGIiWQF8fZOAsycHOt6JBpZ+JN2n2JH9WAv56SOyu9X5IqAjqSIPTaJkqN8F7XOQ5Q==}
+  '@esbuild/linux-loong64@0.28.0':
+    resolution: {integrity: sha512-zpSlUce1mnxzgBADvxKXX5sl8aYQHo2ezvMNI8I0lbblJtp8V4odlm3Yzlj7gPyt3T8ReksE6bK+pT3WD+aJRg==}
     engines: {node: '>=18'}
     cpu: [loong64]
     os: [linux]
 
->>>>>>> f95caf5 (feat: migrate to lean OpenRouter-centric architecture with model cycling and integration cleanup)
   '@esbuild/linux-mips64el@0.25.12':
     resolution: {integrity: sha512-iyRrM1Pzy9GFMDLsXn1iHUm18nhKnNMWscjmp4+hpafcZjrr2WbT//d20xaGljXDBYHqRcl8HnxbX6uaA/eGVw==}
     engines: {node: '>=18'}
     cpu: [mips64el]
     os: [linux]
 
-<<<<<<< HEAD
-=======
-  '@esbuild/linux-mips64el@0.27.7':
-    resolution: {integrity: sha512-KabT5I6StirGfIz0FMgl1I+R1H73Gp0ofL9A3nG3i/cYFJzKHhouBV5VWK1CSgKvVaG4q1RNpCTR2LuTVB3fIw==}
+  '@esbuild/linux-mips64el@0.28.0':
+    resolution: {integrity: sha512-2jIfP6mmjkdmeTlsX/9vmdmhBmKADrWqN7zcdtHIeNSCH1SqIoNI63cYsjQR8J+wGa4Y5izRcSHSm8K3QWmk3w==}
     engines: {node: '>=18'}
     cpu: [mips64el]
     os: [linux]
 
->>>>>>> f95caf5 (feat: migrate to lean OpenRouter-centric architecture with model cycling and integration cleanup)
   '@esbuild/linux-ppc64@0.25.12':
     resolution: {integrity: sha512-9meM/lRXxMi5PSUqEXRCtVjEZBGwB7P/D4yT8UG/mwIdze2aV4Vo6U5gD3+RsoHXKkHCfSxZKzmDssVlRj1QQA==}
     engines: {node: '>=18'}
     cpu: [ppc64]
     os: [linux]
 
-<<<<<<< HEAD
-=======
-  '@esbuild/linux-ppc64@0.27.7':
-    resolution: {integrity: sha512-gRsL4x6wsGHGRqhtI+ifpN/vpOFTQtnbsupUF5R5YTAg+y/lKelYR1hXbnBdzDjGbMYjVJLJTd2OFmMewAgwlQ==}
+  '@esbuild/linux-ppc64@0.28.0':
+    resolution: {integrity: sha512-bc0FE9wWeC0WBm49IQMPSPILRocGTQt3j5KPCA8os6VprfuJ7KD+5PzESSrJ6GmPIPJK965ZJHTUlSA6GNYEhg==}
     engines: {node: '>=18'}
     cpu: [ppc64]
     os: [linux]
 
->>>>>>> f95caf5 (feat: migrate to lean OpenRouter-centric architecture with model cycling and integration cleanup)
   '@esbuild/linux-riscv64@0.25.12':
     resolution: {integrity: sha512-Zr7KR4hgKUpWAwb1f3o5ygT04MzqVrGEGXGLnj15YQDJErYu/BGg+wmFlIDOdJp0PmB0lLvxFIOXZgFRrdjR0w==}
     engines: {node: '>=18'}
     cpu: [riscv64]
     os: [linux]
 
-<<<<<<< HEAD
-=======
-  '@esbuild/linux-riscv64@0.27.7':
-    resolution: {integrity: sha512-hL25LbxO1QOngGzu2U5xeXtxXcW+/GvMN3ejANqXkxZ/opySAZMrc+9LY/WyjAan41unrR3YrmtTsUpwT66InQ==}
+  '@esbuild/linux-riscv64@0.28.0':
+    resolution: {integrity: sha512-SQPZOwoTTT/HXFXQJG/vBX8sOFagGqvZyXcgLA3NhIqcBv1BJU1d46c0rGcrij2B56Z2rNiSLaZOYW5cUk7yLQ==}
     engines: {node: '>=18'}
     cpu: [riscv64]
     os: [linux]
 
->>>>>>> f95caf5 (feat: migrate to lean OpenRouter-centric architecture with model cycling and integration cleanup)
   '@esbuild/linux-s390x@0.25.12':
     resolution: {integrity: sha512-MsKncOcgTNvdtiISc/jZs/Zf8d0cl/t3gYWX8J9ubBnVOwlk65UIEEvgBORTiljloIWnBzLs4qhzPkJcitIzIg==}
     engines: {node: '>=18'}
     cpu: [s390x]
     os: [linux]
 
-<<<<<<< HEAD
-=======
-  '@esbuild/linux-s390x@0.27.7':
-    resolution: {integrity: sha512-2k8go8Ycu1Kb46vEelhu1vqEP+UeRVj2zY1pSuPdgvbd5ykAw82Lrro28vXUrRmzEsUV0NzCf54yARIK8r0fdw==}
+  '@esbuild/linux-s390x@0.28.0':
+    resolution: {integrity: sha512-SCfR0HN8CEEjnYnySJTd2cw0k9OHB/YFzt5zgJEwa+wL/T/raGWYMBqwDNAC6dqFKmJYZoQBRfHjgwLHGSrn3Q==}
     engines: {node: '>=18'}
     cpu: [s390x]
     os: [linux]
 
->>>>>>> f95caf5 (feat: migrate to lean OpenRouter-centric architecture with model cycling and integration cleanup)
   '@esbuild/linux-x64@0.25.12':
     resolution: {integrity: sha512-uqZMTLr/zR/ed4jIGnwSLkaHmPjOjJvnm6TVVitAa08SLS9Z0VM8wIRx7gWbJB5/J54YuIMInDquWyYvQLZkgw==}
     engines: {node: '>=18'}
     cpu: [x64]
     os: [linux]
 
-<<<<<<< HEAD
-=======
-  '@esbuild/linux-x64@0.27.7':
-    resolution: {integrity: sha512-hzznmADPt+OmsYzw1EE33ccA+HPdIqiCRq7cQeL1Jlq2gb1+OyWBkMCrYGBJ+sxVzve2ZJEVeePbLM2iEIZSxA==}
+  '@esbuild/linux-x64@0.28.0':
+    resolution: {integrity: sha512-us0dSb9iFxIi8srnpl931Nvs65it/Jd2a2K3qs7fz2WfGPHqzfzZTfec7oxZJRNPXPnNYZtanmRc4AL/JwVzHQ==}
     engines: {node: '>=18'}
     cpu: [x64]
     os: [linux]
 
->>>>>>> f95caf5 (feat: migrate to lean OpenRouter-centric architecture with model cycling and integration cleanup)
   '@esbuild/netbsd-arm64@0.25.12':
     resolution: {integrity: sha512-xXwcTq4GhRM7J9A8Gv5boanHhRa/Q9KLVmcyXHCTaM4wKfIpWkdXiMog/KsnxzJ0A1+nD+zoecuzqPmCRyBGjg==}
     engines: {node: '>=18'}
     cpu: [arm64]
     os: [netbsd]
 
-<<<<<<< HEAD
-=======
-  '@esbuild/netbsd-arm64@0.27.7':
-    resolution: {integrity: sha512-b6pqtrQdigZBwZxAn1UpazEisvwaIDvdbMbmrly7cDTMFnw/+3lVxxCTGOrkPVnsYIosJJXAsILG9XcQS+Yu6w==}
+  '@esbuild/netbsd-arm64@0.28.0':
+    resolution: {integrity: sha512-CR/RYotgtCKwtftMwJlUU7xCVNg3lMYZ0RzTmAHSfLCXw3NtZtNpswLEj/Kkf6kEL3Gw+BpOekRX0BYCtklhUw==}
     engines: {node: '>=18'}
     cpu: [arm64]
     os: [netbsd]
 
->>>>>>> f95caf5 (feat: migrate to lean OpenRouter-centric architecture with model cycling and integration cleanup)
   '@esbuild/netbsd-x64@0.25.12':
     resolution: {integrity: sha512-Ld5pTlzPy3YwGec4OuHh1aCVCRvOXdH8DgRjfDy/oumVovmuSzWfnSJg+VtakB9Cm0gxNO9BzWkj6mtO1FMXkQ==}
     engines: {node: '>=18'}
     cpu: [x64]
     os: [netbsd]
 
-<<<<<<< HEAD
-=======
-  '@esbuild/netbsd-x64@0.27.7':
-    resolution: {integrity: sha512-OfatkLojr6U+WN5EDYuoQhtM+1xco+/6FSzJJnuWiUw5eVcicbyK3dq5EeV/QHT1uy6GoDhGbFpprUiHUYggrw==}
+  '@esbuild/netbsd-x64@0.28.0':
+    resolution: {integrity: sha512-nU1yhmYutL+fQ71Kxnhg8uEOdC0pwEW9entHykTgEbna2pw2dkbFSMeqjjyHZoCmt8SBkOSvV+yNmm94aUrrqw==}
     engines: {node: '>=18'}
     cpu: [x64]
     os: [netbsd]
 
->>>>>>> f95caf5 (feat: migrate to lean OpenRouter-centric architecture with model cycling and integration cleanup)
   '@esbuild/openbsd-arm64@0.25.12':
     resolution: {integrity: sha512-fF96T6KsBo/pkQI950FARU9apGNTSlZGsv1jZBAlcLL1MLjLNIWPBkj5NlSz8aAzYKg+eNqknrUJ24QBybeR5A==}
     engines: {node: '>=18'}
     cpu: [arm64]
     os: [openbsd]
 
-<<<<<<< HEAD
-=======
-  '@esbuild/openbsd-arm64@0.27.7':
-    resolution: {integrity: sha512-AFuojMQTxAz75Fo8idVcqoQWEHIXFRbOc1TrVcFSgCZtQfSdc1RXgB3tjOn/krRHENUB4j00bfGjyl2mJrU37A==}
+  '@esbuild/openbsd-arm64@0.28.0':
+    resolution: {integrity: sha512-cXb5vApOsRsxsEl4mcZ1XY3D4DzcoMxR/nnc4IyqYs0rTI8ZKmW6kyyg+11Z8yvgMfAEldKzP7AdP64HnSC/6g==}
     engines: {node: '>=18'}
     cpu: [arm64]
     os: [openbsd]
 
->>>>>>> f95caf5 (feat: migrate to lean OpenRouter-centric architecture with model cycling and integration cleanup)
   '@esbuild/openbsd-x64@0.25.12':
     resolution: {integrity: sha512-MZyXUkZHjQxUvzK7rN8DJ3SRmrVrke8ZyRusHlP+kuwqTcfWLyqMOE3sScPPyeIXN/mDJIfGXvcMqCgYKekoQw==}
     engines: {node: '>=18'}
     cpu: [x64]
     os: [openbsd]
 
-<<<<<<< HEAD
-=======
-  '@esbuild/openbsd-x64@0.27.7':
-    resolution: {integrity: sha512-+A1NJmfM8WNDv5CLVQYJ5PshuRm/4cI6WMZRg1by1GwPIQPCTs1GLEUHwiiQGT5zDdyLiRM/l1G0Pv54gvtKIg==}
+  '@esbuild/openbsd-x64@0.28.0':
+    resolution: {integrity: sha512-8wZM2qqtv9UP3mzy7HiGYNH/zjTA355mpeuA+859TyR+e+Tc08IHYpLJuMsfpDJwoLo1ikIJI8jC3GFjnRClzA==}
     engines: {node: '>=18'}
     cpu: [x64]
     os: [openbsd]
 
->>>>>>> f95caf5 (feat: migrate to lean OpenRouter-centric architecture with model cycling and integration cleanup)
   '@esbuild/openharmony-arm64@0.25.12':
     resolution: {integrity: sha512-rm0YWsqUSRrjncSXGA7Zv78Nbnw4XL6/dzr20cyrQf7ZmRcsovpcRBdhD43Nuk3y7XIoW2OxMVvwuRvk9XdASg==}
     engines: {node: '>=18'}
     cpu: [arm64]
     os: [openharmony]
 
-<<<<<<< HEAD
-=======
-  '@esbuild/openharmony-arm64@0.27.7':
-    resolution: {integrity: sha512-+KrvYb/C8zA9CU/g0sR6w2RBw7IGc5J2BPnc3dYc5VJxHCSF1yNMxTV5LQ7GuKteQXZtspjFbiuW5/dOj7H4Yw==}
+  '@esbuild/openharmony-arm64@0.28.0':
+    resolution: {integrity: sha512-FLGfyizszcef5C3YtoyQDACyg95+dndv79i2EekILBofh5wpCa1KuBqOWKrEHZg3zrL3t5ouE5jgr94vA+Wb2w==}
     engines: {node: '>=18'}
     cpu: [arm64]
     os: [openharmony]
 
->>>>>>> f95caf5 (feat: migrate to lean OpenRouter-centric architecture with model cycling and integration cleanup)
   '@esbuild/sunos-x64@0.25.12':
     resolution: {integrity: sha512-3wGSCDyuTHQUzt0nV7bocDy72r2lI33QL3gkDNGkod22EsYl04sMf0qLb8luNKTOmgF/eDEDP5BFNwoBKH441w==}
     engines: {node: '>=18'}
     cpu: [x64]
     os: [sunos]
 
-<<<<<<< HEAD
-=======
-  '@esbuild/sunos-x64@0.27.7':
-    resolution: {integrity: sha512-ikktIhFBzQNt/QDyOL580ti9+5mL/YZeUPKU2ivGtGjdTYoqz6jObj6nOMfhASpS4GU4Q/Clh1QtxWAvcYKamA==}
+  '@esbuild/sunos-x64@0.28.0':
+    resolution: {integrity: sha512-1ZgjUoEdHZZl/YlV76TSCz9Hqj9h9YmMGAgAPYd+q4SicWNX3G5GCyx9uhQWSLcbvPW8Ni7lj4gDa1T40akdlw==}
     engines: {node: '>=18'}
     cpu: [x64]
     os: [sunos]
 
->>>>>>> f95caf5 (feat: migrate to lean OpenRouter-centric architecture with model cycling and integration cleanup)
   '@esbuild/win32-arm64@0.25.12':
     resolution: {integrity: sha512-rMmLrur64A7+DKlnSuwqUdRKyd3UE7oPJZmnljqEptesKM8wx9J8gx5u0+9Pq0fQQW8vqeKebwNXdfOyP+8Bsg==}
     engines: {node: '>=18'}
     cpu: [arm64]
     os: [win32]
 
-<<<<<<< HEAD
-=======
-  '@esbuild/win32-arm64@0.27.7':
-    resolution: {integrity: sha512-7yRhbHvPqSpRUV7Q20VuDwbjW5kIMwTHpptuUzV+AA46kiPze5Z7qgt6CLCK3pWFrHeNfDd1VKgyP4O+ng17CA==}
+  '@esbuild/win32-arm64@0.28.0':
+    resolution: {integrity: sha512-Q9StnDmQ/enxnpxCCLSg0oo4+34B9TdXpuyPeTedN/6+iXBJ4J+zwfQI28u/Jl40nOYAxGoNi7mFP40RUtkmUA==}
     engines: {node: '>=18'}
     cpu: [arm64]
     os: [win32]
 
->>>>>>> f95caf5 (feat: migrate to lean OpenRouter-centric architecture with model cycling and integration cleanup)
   '@esbuild/win32-ia32@0.25.12':
     resolution: {integrity: sha512-HkqnmmBoCbCwxUKKNPBixiWDGCpQGVsrQfJoVGYLPT41XWF8lHuE5N6WhVia2n4o5QK5M4tYr21827fNhi4byQ==}
     engines: {node: '>=18'}
     cpu: [ia32]
     os: [win32]
 
-<<<<<<< HEAD
-=======
-  '@esbuild/win32-ia32@0.27.7':
-    resolution: {integrity: sha512-SmwKXe6VHIyZYbBLJrhOoCJRB/Z1tckzmgTLfFYOfpMAx63BJEaL9ExI8x7v0oAO3Zh6D/Oi1gVxEYr5oUCFhw==}
+  '@esbuild/win32-ia32@0.28.0':
+    resolution: {integrity: sha512-zF3ag/gfiCe6U2iczcRzSYJKH1DCI+ByzSENHlM2FcDbEeo5Zd2C86Aq0tKUYAJJ1obRP84ymxIAksZUcdztHA==}
     engines: {node: '>=18'}
     cpu: [ia32]
     os: [win32]
 
->>>>>>> f95caf5 (feat: migrate to lean OpenRouter-centric architecture with model cycling and integration cleanup)
   '@esbuild/win32-x64@0.25.12':
     resolution: {integrity: sha512-alJC0uCZpTFrSL0CCDjcgleBXPnCrEAhTBILpeAp7M/OFgoqtAetfBzX0xM00MUsVVPpVjlPuMbREqnZCXaTnA==}
     engines: {node: '>=18'}
     cpu: [x64]
     os: [win32]
 
-<<<<<<< HEAD
-=======
-  '@esbuild/win32-x64@0.27.7':
-    resolution: {integrity: sha512-56hiAJPhwQ1R4i+21FVF7V8kSD5zZTdHcVuRFMW0hn753vVfQN8xlx4uOPT4xoGH0Z/oVATuR82AiqSTDIpaHg==}
+  '@esbuild/win32-x64@0.28.0':
+    resolution: {integrity: sha512-pEl1bO9mfAmIC+tW5btTmrKaujg3zGtUmWNdCw/xs70FBjwAL3o9OEKNHvNmnyylD6ubxUERiEhdsL0xBQ9efw==}
     engines: {node: '>=18'}
     cpu: [x64]
     os: [win32]
 
->>>>>>> f95caf5 (feat: migrate to lean OpenRouter-centric architecture with model cycling and integration cleanup)
   '@eslint-community/eslint-utils@4.9.1':
     resolution: {integrity: sha512-phrYmNiYppR7znFEdqgfWHXR6NCkZEK7hwWDHZUjit/2/U0r6XvkDl0SYnoM51Hq7FhCGdLDT6zxCCOY1hexsQ==}
     engines: {node: ^12.22.0 || ^14.17.0 || >=16.0.0}
@@ -1178,13 +998,8 @@ packages:
   '@floating-ui/react-dom@2.1.8':
     resolution: {integrity: sha512-cC52bHwM/n/CxS87FH0yWdngEZrjdtLW/qVruo68qg+prK7ZQ4YGdut2GyDVpoGeAYe/h899rVeOVm6Oi40k2A==}
     peerDependencies:
-<<<<<<< HEAD
-      react: ^19.2.3
-      react-dom: ^19.2.3
-=======
       react: '>=16.8.0'
       react-dom: '>=16.8.0'
->>>>>>> f95caf5 (feat: migrate to lean OpenRouter-centric architecture with model cycling and integration cleanup)
 
   '@floating-ui/utils@0.2.11':
     resolution: {integrity: sha512-RiB/yIh78pcIxl6lLMG0CgBXAZ2Y0eVHqMPYugu+9U0AeT6YBeiJpf7lbdJNIugFP5SIjwNRgo4DhR1Qxi26Gg==}
@@ -1193,15 +1008,12 @@ packages:
     resolution: {integrity: sha512-MqO+MLfM6kjxcKoy0p1wRzG3b4ZZXtPI+z2IE26UogS2Cm/XHO+7gGRBh6gcJsOiIVoH93UwKvW4HdgiOZCy9Q==}
     engines: {node: '>=18.0.0'}
 
-<<<<<<< HEAD
-=======
   '@hono/node-server@1.19.14':
     resolution: {integrity: sha512-GwtvgtXxnWsucXvbQXkRgqksiH2Qed37H9xHZocE5sA3N8O8O8/8FA3uclQXxXVzc9XBZuEOMK7+r02FmSpHtw==}
     engines: {node: '>=18.14.1'}
     peerDependencies:
       hono: ^4
 
->>>>>>> f95caf5 (feat: migrate to lean OpenRouter-centric architecture with model cycling and integration cleanup)
   '@hookform/resolvers@3.10.0':
     resolution: {integrity: sha512-79Dv+3mDF7i+2ajj7SkypSKHhl1cbln1OGavqrsF7p6mbUv11xpqpacPsGDCTRvCSjEEIez2ef1NveSVL3b0Ag==}
     peerDependencies:
@@ -1422,12 +1234,6 @@ packages:
   '@jridgewell/trace-mapping@0.3.9':
     resolution: {integrity: sha512-3Belt6tdc8bPgAtbcmdtNJlirVoTmEb5e2gC94PnkwEW9jI6CAHUeoG85tjWP5WquqfavoMtMwiG4P926ZKKuQ==}
 
-<<<<<<< HEAD
-=======
-  '@jules/shared@file:archive/packages/shared':
-    resolution: {directory: archive/packages/shared, type: directory}
-
->>>>>>> f95caf5 (feat: migrate to lean OpenRouter-centric architecture with model cycling and integration cleanup)
   '@napi-rs/wasm-runtime@0.2.12':
     resolution: {integrity: sha512-ZVWUcfwY4E/yPitQJl481FjFo3K22D6qF0DuFH6Y/nbnE11GY5uguDxZMGXPQ8WQ0128MXQD7TnfHyK4oWoIJQ==}
 
@@ -1444,8 +1250,6 @@ packages:
     engines: {node: '>=18'}
     hasBin: true
 
-<<<<<<< HEAD
-=======
   '@prisma/client@5.19.1':
     resolution: {integrity: sha512-x30GFguInsgt+4z5I4WbkZP2CGpotJMUXy+Gl/aaUjHn2o1DnLYNTA+q9XdYmAQZM8fIIkvUiA2NpgosM3fneg==}
     engines: {node: '>=16.13'}
@@ -1470,7 +1274,6 @@ packages:
   '@prisma/get-platform@5.19.1':
     resolution: {integrity: sha512-sCeoJ+7yt0UjnR+AXZL7vXlg5eNxaFOwC23h0KvW1YIXUoa7+W2ZcAUhoEQBmJTW4GrFqCuZ8YSP0mkDa4k3Zg==}
 
->>>>>>> f95caf5 (feat: migrate to lean OpenRouter-centric architecture with model cycling and integration cleanup)
   '@radix-ui/colors@3.0.0':
     resolution: {integrity: sha512-FUOsGBkHrYJwCSEtWRCIfQbZG7q1e6DgxCIOe1SUQzDe/7rXXeA47s8yCn6fuTNQAj1Zq4oTFi9Yjp3wzElcxg==}
 
@@ -1485,13 +1288,8 @@ packages:
     peerDependencies:
       '@types/react': '*'
       '@types/react-dom': '*'
-<<<<<<< HEAD
-      react: ^19.2.3
-      react-dom: ^19.2.3
-=======
       react: ^16.8 || ^17.0 || ^18.0 || ^19.0 || ^19.0.0-rc
       react-dom: ^16.8 || ^17.0 || ^18.0 || ^19.0 || ^19.0.0-rc
->>>>>>> f95caf5 (feat: migrate to lean OpenRouter-centric architecture with model cycling and integration cleanup)
     peerDependenciesMeta:
       '@types/react':
         optional: true
@@ -1503,13 +1301,8 @@ packages:
     peerDependencies:
       '@types/react': '*'
       '@types/react-dom': '*'
-<<<<<<< HEAD
-      react: ^19.2.3
-      react-dom: ^19.2.3
-=======
       react: ^16.8 || ^17.0 || ^18.0 || ^19.0 || ^19.0.0-rc
       react-dom: ^16.8 || ^17.0 || ^18.0 || ^19.0 || ^19.0.0-rc
->>>>>>> f95caf5 (feat: migrate to lean OpenRouter-centric architecture with model cycling and integration cleanup)
     peerDependenciesMeta:
       '@types/react':
         optional: true
@@ -1521,13 +1314,8 @@ packages:
     peerDependencies:
       '@types/react': '*'
       '@types/react-dom': '*'
-<<<<<<< HEAD
-      react: ^19.2.3
-      react-dom: ^19.2.3
-=======
       react: ^16.8 || ^17.0 || ^18.0 || ^19.0 || ^19.0.0-rc
       react-dom: ^16.8 || ^17.0 || ^18.0 || ^19.0 || ^19.0.0-rc
->>>>>>> f95caf5 (feat: migrate to lean OpenRouter-centric architecture with model cycling and integration cleanup)
     peerDependenciesMeta:
       '@types/react':
         optional: true
@@ -1539,13 +1327,8 @@ packages:
     peerDependencies:
       '@types/react': '*'
       '@types/react-dom': '*'
-<<<<<<< HEAD
-      react: ^19.2.3
-      react-dom: ^19.2.3
-=======
       react: ^16.8 || ^17.0 || ^18.0 || ^19.0 || ^19.0.0-rc
       react-dom: ^16.8 || ^17.0 || ^18.0 || ^19.0 || ^19.0.0-rc
->>>>>>> f95caf5 (feat: migrate to lean OpenRouter-centric architecture with model cycling and integration cleanup)
     peerDependenciesMeta:
       '@types/react':
         optional: true
@@ -1557,13 +1340,8 @@ packages:
     peerDependencies:
       '@types/react': '*'
       '@types/react-dom': '*'
-<<<<<<< HEAD
-      react: ^19.2.3
-      react-dom: ^19.2.3
-=======
       react: ^16.8 || ^17.0 || ^18.0 || ^19.0 || ^19.0.0-rc
       react-dom: ^16.8 || ^17.0 || ^18.0 || ^19.0 || ^19.0.0-rc
->>>>>>> f95caf5 (feat: migrate to lean OpenRouter-centric architecture with model cycling and integration cleanup)
     peerDependenciesMeta:
       '@types/react':
         optional: true
@@ -1575,13 +1353,8 @@ packages:
     peerDependencies:
       '@types/react': '*'
       '@types/react-dom': '*'
-<<<<<<< HEAD
-      react: ^19.2.3
-      react-dom: ^19.2.3
-=======
       react: ^16.8 || ^17.0 || ^18.0 || ^19.0 || ^19.0.0-rc
       react-dom: ^16.8 || ^17.0 || ^18.0 || ^19.0 || ^19.0.0-rc
->>>>>>> f95caf5 (feat: migrate to lean OpenRouter-centric architecture with model cycling and integration cleanup)
     peerDependenciesMeta:
       '@types/react':
         optional: true
@@ -1593,13 +1366,8 @@ packages:
     peerDependencies:
       '@types/react': '*'
       '@types/react-dom': '*'
-<<<<<<< HEAD
-      react: ^19.2.3
-      react-dom: ^19.2.3
-=======
       react: ^16.8 || ^17.0 || ^18.0 || ^19.0 || ^19.0.0-rc
       react-dom: ^16.8 || ^17.0 || ^18.0 || ^19.0 || ^19.0.0-rc
->>>>>>> f95caf5 (feat: migrate to lean OpenRouter-centric architecture with model cycling and integration cleanup)
     peerDependenciesMeta:
       '@types/react':
         optional: true
@@ -1611,13 +1379,8 @@ packages:
     peerDependencies:
       '@types/react': '*'
       '@types/react-dom': '*'
-<<<<<<< HEAD
-      react: ^19.2.3
-      react-dom: ^19.2.3
-=======
       react: ^16.8 || ^17.0 || ^18.0 || ^19.0 || ^19.0.0-rc
       react-dom: ^16.8 || ^17.0 || ^18.0 || ^19.0 || ^19.0.0-rc
->>>>>>> f95caf5 (feat: migrate to lean OpenRouter-centric architecture with model cycling and integration cleanup)
     peerDependenciesMeta:
       '@types/react':
         optional: true
@@ -1629,13 +1392,8 @@ packages:
     peerDependencies:
       '@types/react': '*'
       '@types/react-dom': '*'
-<<<<<<< HEAD
-      react: ^19.2.3
-      react-dom: ^19.2.3
-=======
       react: ^16.8 || ^17.0 || ^18.0 || ^19.0 || ^19.0.0-rc
       react-dom: ^16.8 || ^17.0 || ^18.0 || ^19.0 || ^19.0.0-rc
->>>>>>> f95caf5 (feat: migrate to lean OpenRouter-centric architecture with model cycling and integration cleanup)
     peerDependenciesMeta:
       '@types/react':
         optional: true
@@ -1647,13 +1405,8 @@ packages:
     peerDependencies:
       '@types/react': '*'
       '@types/react-dom': '*'
-<<<<<<< HEAD
-      react: ^19.2.3
-      react-dom: ^19.2.3
-=======
       react: ^16.8 || ^17.0 || ^18.0 || ^19.0 || ^19.0.0-rc
       react-dom: ^16.8 || ^17.0 || ^18.0 || ^19.0 || ^19.0.0-rc
->>>>>>> f95caf5 (feat: migrate to lean OpenRouter-centric architecture with model cycling and integration cleanup)
     peerDependenciesMeta:
       '@types/react':
         optional: true
@@ -1664,11 +1417,7 @@ packages:
     resolution: {integrity: sha512-z4eqJvfiNnFMHIIvXP3CY57y2WJs5g2v3X0zm9mEJkrkNv4rDxu+sg9Jh8EkXyeqBkB7SOcboo9dMVqhyrACIg==}
     peerDependencies:
       '@types/react': '*'
-<<<<<<< HEAD
-      react: ^19.2.3
-=======
       react: ^16.8 || ^17.0 || ^18.0 || ^19.0 || ^19.0.0-rc
->>>>>>> f95caf5 (feat: migrate to lean OpenRouter-centric architecture with model cycling and integration cleanup)
     peerDependenciesMeta:
       '@types/react':
         optional: true
@@ -1678,13 +1427,8 @@ packages:
     peerDependencies:
       '@types/react': '*'
       '@types/react-dom': '*'
-<<<<<<< HEAD
-      react: ^19.2.3
-      react-dom: ^19.2.3
-=======
       react: ^16.8 || ^17.0 || ^18.0 || ^19.0 || ^19.0.0-rc
       react-dom: ^16.8 || ^17.0 || ^18.0 || ^19.0 || ^19.0.0-rc
->>>>>>> f95caf5 (feat: migrate to lean OpenRouter-centric architecture with model cycling and integration cleanup)
     peerDependenciesMeta:
       '@types/react':
         optional: true
@@ -1695,11 +1439,7 @@ packages:
     resolution: {integrity: sha512-jCi/QKUM2r1Ju5a3J64TH2A5SpKAgh0LpknyqdQ4m6DCV0xJ2HG1xARRwNGPQfi1SLdLWZ1OJz6F4OMBBNiGJA==}
     peerDependencies:
       '@types/react': '*'
-<<<<<<< HEAD
-      react: ^19.2.3
-=======
       react: ^16.8 || ^17.0 || ^18.0 || ^19.0 || ^19.0.0-rc
->>>>>>> f95caf5 (feat: migrate to lean OpenRouter-centric architecture with model cycling and integration cleanup)
     peerDependenciesMeta:
       '@types/react':
         optional: true
@@ -1708,11 +1448,7 @@ packages:
     resolution: {integrity: sha512-ieIFACdMpYfMEjF0rEf5KLvfVyIkOz6PDGyNnP+u+4xQ6jny3VCgA4OgXOwNx2aUkxn8zx9fiVcM8CfFYv9Lxw==}
     peerDependencies:
       '@types/react': '*'
-<<<<<<< HEAD
-      react: ^19.2.3
-=======
       react: ^16.8 || ^17.0 || ^18.0 || ^19.0 || ^19.0.0-rc
->>>>>>> f95caf5 (feat: migrate to lean OpenRouter-centric architecture with model cycling and integration cleanup)
     peerDependenciesMeta:
       '@types/react':
         optional: true
@@ -1722,13 +1458,8 @@ packages:
     peerDependencies:
       '@types/react': '*'
       '@types/react-dom': '*'
-<<<<<<< HEAD
-      react: ^19.2.3
-      react-dom: ^19.2.3
-=======
       react: ^16.8 || ^17.0 || ^18.0 || ^19.0 || ^19.0.0-rc
       react-dom: ^16.8 || ^17.0 || ^18.0 || ^19.0 || ^19.0.0-rc
->>>>>>> f95caf5 (feat: migrate to lean OpenRouter-centric architecture with model cycling and integration cleanup)
     peerDependenciesMeta:
       '@types/react':
         optional: true
@@ -1739,11 +1470,7 @@ packages:
     resolution: {integrity: sha512-1UEWRX6jnOA2y4H5WczZ44gOOjTEmlqv1uNW4GAJEO5+bauCBhv8snY65Iw5/VOS/ghKN9gr2KjnLKxrsvoMVw==}
     peerDependencies:
       '@types/react': '*'
-<<<<<<< HEAD
-      react: ^19.2.3
-=======
       react: ^16.8 || ^17.0 || ^18.0 || ^19.0 || ^19.0.0-rc
->>>>>>> f95caf5 (feat: migrate to lean OpenRouter-centric architecture with model cycling and integration cleanup)
     peerDependenciesMeta:
       '@types/react':
         optional: true
@@ -1753,13 +1480,8 @@ packages:
     peerDependencies:
       '@types/react': '*'
       '@types/react-dom': '*'
-<<<<<<< HEAD
-      react: ^19.2.3
-      react-dom: ^19.2.3
-=======
       react: ^16.8 || ^17.0 || ^18.0 || ^19.0 || ^19.0.0-rc
       react-dom: ^16.8 || ^17.0 || ^18.0 || ^19.0 || ^19.0.0-rc
->>>>>>> f95caf5 (feat: migrate to lean OpenRouter-centric architecture with model cycling and integration cleanup)
     peerDependenciesMeta:
       '@types/react':
         optional: true
@@ -1771,13 +1493,8 @@ packages:
     peerDependencies:
       '@types/react': '*'
       '@types/react-dom': '*'
-<<<<<<< HEAD
-      react: ^19.2.3
-      react-dom: ^19.2.3
-=======
       react: ^16.8 || ^17.0 || ^18.0 || ^19.0 || ^19.0.0-rc
       react-dom: ^16.8 || ^17.0 || ^18.0 || ^19.0 || ^19.0.0-rc
->>>>>>> f95caf5 (feat: migrate to lean OpenRouter-centric architecture with model cycling and integration cleanup)
     peerDependenciesMeta:
       '@types/react':
         optional: true
@@ -1788,11 +1505,7 @@ packages:
     resolution: {integrity: sha512-0rFg/Rj2Q62NCm62jZw0QX7a3sz6QCQU0LpZdNrJX8byRGaGVTqbrW9jAoIAHyMQqsNpeZ81YgSizOt5WXq0Pw==}
     peerDependencies:
       '@types/react': '*'
-<<<<<<< HEAD
-      react: ^19.2.3
-=======
       react: ^16.8 || ^17.0 || ^18.0 || ^19.0 || ^19.0.0-rc
->>>>>>> f95caf5 (feat: migrate to lean OpenRouter-centric architecture with model cycling and integration cleanup)
     peerDependenciesMeta:
       '@types/react':
         optional: true
@@ -1802,13 +1515,8 @@ packages:
     peerDependencies:
       '@types/react': '*'
       '@types/react-dom': '*'
-<<<<<<< HEAD
-      react: ^19.2.3
-      react-dom: ^19.2.3
-=======
       react: ^16.8 || ^17.0 || ^18.0 || ^19.0 || ^19.0.0-rc
       react-dom: ^16.8 || ^17.0 || ^18.0 || ^19.0 || ^19.0.0-rc
->>>>>>> f95caf5 (feat: migrate to lean OpenRouter-centric architecture with model cycling and integration cleanup)
     peerDependenciesMeta:
       '@types/react':
         optional: true
@@ -1820,13 +1528,8 @@ packages:
     peerDependencies:
       '@types/react': '*'
       '@types/react-dom': '*'
-<<<<<<< HEAD
-      react: ^19.2.3
-      react-dom: ^19.2.3
-=======
       react: ^16.8 || ^17.0 || ^18.0 || ^19.0 || ^19.0.0-rc
       react-dom: ^16.8 || ^17.0 || ^18.0 || ^19.0 || ^19.0.0-rc
->>>>>>> f95caf5 (feat: migrate to lean OpenRouter-centric architecture with model cycling and integration cleanup)
     peerDependenciesMeta:
       '@types/react':
         optional: true
@@ -1838,13 +1541,8 @@ packages:
     peerDependencies:
       '@types/react': '*'
       '@types/react-dom': '*'
-<<<<<<< HEAD
-      react: ^19.2.3
-      react-dom: ^19.2.3
-=======
       react: ^16.8 || ^17.0 || ^18.0 || ^19.0 || ^19.0.0-rc
       react-dom: ^16.8 || ^17.0 || ^18.0 || ^19.0 || ^19.0.0-rc
->>>>>>> f95caf5 (feat: migrate to lean OpenRouter-centric architecture with model cycling and integration cleanup)
     peerDependenciesMeta:
       '@types/react':
         optional: true
@@ -1854,21 +1552,13 @@ packages:
   '@radix-ui/react-icons@1.3.2':
     resolution: {integrity: sha512-fyQIhGDhzfc9pK2kH6Pl9c4BDJGfMkPqkyIgYDthyNYoNg3wVhoJMMh19WS4Up/1KMPFVpNsT2q3WmXn2N1m6g==}
     peerDependencies:
-<<<<<<< HEAD
-      react: ^19.2.3
-=======
       react: ^16.x || ^17.x || ^18.x || ^19.0.0 || ^19.0.0-rc
->>>>>>> f95caf5 (feat: migrate to lean OpenRouter-centric architecture with model cycling and integration cleanup)
 
   '@radix-ui/react-id@1.1.1':
     resolution: {integrity: sha512-kGkGegYIdQsOb4XjsfM97rXsiHaBwco+hFI66oO4s9LU+PLAC5oJ7khdOVFxkhsmlbpUqDAvXw11CluXP+jkHg==}
     peerDependencies:
       '@types/react': '*'
-<<<<<<< HEAD
-      react: ^19.2.3
-=======
       react: ^16.8 || ^17.0 || ^18.0 || ^19.0 || ^19.0.0-rc
->>>>>>> f95caf5 (feat: migrate to lean OpenRouter-centric architecture with model cycling and integration cleanup)
     peerDependenciesMeta:
       '@types/react':
         optional: true
@@ -1878,13 +1568,8 @@ packages:
     peerDependencies:
       '@types/react': '*'
       '@types/react-dom': '*'
-<<<<<<< HEAD
-      react: ^19.2.3
-      react-dom: ^19.2.3
-=======
       react: ^16.8 || ^17.0 || ^18.0 || ^19.0 || ^19.0.0-rc
       react-dom: ^16.8 || ^17.0 || ^18.0 || ^19.0 || ^19.0.0-rc
->>>>>>> f95caf5 (feat: migrate to lean OpenRouter-centric architecture with model cycling and integration cleanup)
     peerDependenciesMeta:
       '@types/react':
         optional: true
@@ -1896,13 +1581,8 @@ packages:
     peerDependencies:
       '@types/react': '*'
       '@types/react-dom': '*'
-<<<<<<< HEAD
-      react: ^19.2.3
-      react-dom: ^19.2.3
-=======
       react: ^16.8 || ^17.0 || ^18.0 || ^19.0 || ^19.0.0-rc
       react-dom: ^16.8 || ^17.0 || ^18.0 || ^19.0 || ^19.0.0-rc
->>>>>>> f95caf5 (feat: migrate to lean OpenRouter-centric architecture with model cycling and integration cleanup)
     peerDependenciesMeta:
       '@types/react':
         optional: true
@@ -1914,13 +1594,8 @@ packages:
     peerDependencies:
       '@types/react': '*'
       '@types/react-dom': '*'
-<<<<<<< HEAD
-      react: ^19.2.3
-      react-dom: ^19.2.3
-=======
       react: ^16.8 || ^17.0 || ^18.0 || ^19.0 || ^19.0.0-rc
       react-dom: ^16.8 || ^17.0 || ^18.0 || ^19.0 || ^19.0.0-rc
->>>>>>> f95caf5 (feat: migrate to lean OpenRouter-centric architecture with model cycling and integration cleanup)
     peerDependenciesMeta:
       '@types/react':
         optional: true
@@ -1932,13 +1607,8 @@ packages:
     peerDependencies:
       '@types/react': '*'
       '@types/react-dom': '*'
-<<<<<<< HEAD
-      react: ^19.2.3
-      react-dom: ^19.2.3
-=======
       react: ^16.8 || ^17.0 || ^18.0 || ^19.0 || ^19.0.0-rc
       react-dom: ^16.8 || ^17.0 || ^18.0 || ^19.0 || ^19.0.0-rc
->>>>>>> f95caf5 (feat: migrate to lean OpenRouter-centric architecture with model cycling and integration cleanup)
     peerDependenciesMeta:
       '@types/react':
         optional: true
@@ -1950,13 +1620,8 @@ packages:
     peerDependencies:
       '@types/react': '*'
       '@types/react-dom': '*'
-<<<<<<< HEAD
-      react: ^19.2.3
-      react-dom: ^19.2.3
-=======
       react: ^16.8 || ^17.0 || ^18.0 || ^19.0 || ^19.0.0-rc
       react-dom: ^16.8 || ^17.0 || ^18.0 || ^19.0 || ^19.0.0-rc
->>>>>>> f95caf5 (feat: migrate to lean OpenRouter-centric architecture with model cycling and integration cleanup)
     peerDependenciesMeta:
       '@types/react':
         optional: true
@@ -1968,13 +1633,8 @@ packages:
     peerDependencies:
       '@types/react': '*'
       '@types/react-dom': '*'
-<<<<<<< HEAD
-      react: ^19.2.3
-      react-dom: ^19.2.3
-=======
       react: ^16.8 || ^17.0 || ^18.0 || ^19.0 || ^19.0.0-rc
       react-dom: ^16.8 || ^17.0 || ^18.0 || ^19.0 || ^19.0.0-rc
->>>>>>> f95caf5 (feat: migrate to lean OpenRouter-centric architecture with model cycling and integration cleanup)
     peerDependenciesMeta:
       '@types/react':
         optional: true
@@ -1986,13 +1646,8 @@ packages:
     peerDependencies:
       '@types/react': '*'
       '@types/react-dom': '*'
-<<<<<<< HEAD
-      react: ^19.2.3
-      react-dom: ^19.2.3
-=======
       react: ^16.8 || ^17.0 || ^18.0 || ^19.0 || ^19.0.0-rc
       react-dom: ^16.8 || ^17.0 || ^18.0 || ^19.0 || ^19.0.0-rc
->>>>>>> f95caf5 (feat: migrate to lean OpenRouter-centric architecture with model cycling and integration cleanup)
     peerDependenciesMeta:
       '@types/react':
         optional: true
@@ -2004,13 +1659,8 @@ packages:
     peerDependencies:
       '@types/react': '*'
       '@types/react-dom': '*'
-<<<<<<< HEAD
-      react: ^19.2.3
-      react-dom: ^19.2.3
-=======
       react: ^16.8 || ^17.0 || ^18.0 || ^19.0 || ^19.0.0-rc
       react-dom: ^16.8 || ^17.0 || ^18.0 || ^19.0 || ^19.0.0-rc
->>>>>>> f95caf5 (feat: migrate to lean OpenRouter-centric architecture with model cycling and integration cleanup)
     peerDependenciesMeta:
       '@types/react':
         optional: true
@@ -2022,13 +1672,8 @@ packages:
     peerDependencies:
       '@types/react': '*'
       '@types/react-dom': '*'
-<<<<<<< HEAD
-      react: ^19.2.3
-      react-dom: ^19.2.3
-=======
       react: ^16.8 || ^17.0 || ^18.0 || ^19.0 || ^19.0.0-rc
       react-dom: ^16.8 || ^17.0 || ^18.0 || ^19.0 || ^19.0.0-rc
->>>>>>> f95caf5 (feat: migrate to lean OpenRouter-centric architecture with model cycling and integration cleanup)
     peerDependenciesMeta:
       '@types/react':
         optional: true
@@ -2040,13 +1685,8 @@ packages:
     peerDependencies:
       '@types/react': '*'
       '@types/react-dom': '*'
-<<<<<<< HEAD
-      react: ^19.2.3
-      react-dom: ^19.2.3
-=======
       react: ^16.8 || ^17.0 || ^18.0 || ^19.0 || ^19.0.0-rc
       react-dom: ^16.8 || ^17.0 || ^18.0 || ^19.0 || ^19.0.0-rc
->>>>>>> f95caf5 (feat: migrate to lean OpenRouter-centric architecture with model cycling and integration cleanup)
     peerDependenciesMeta:
       '@types/react':
         optional: true
@@ -2058,13 +1698,8 @@ packages:
     peerDependencies:
       '@types/react': '*'
       '@types/react-dom': '*'
-<<<<<<< HEAD
-      react: ^19.2.3
-      react-dom: ^19.2.3
-=======
       react: ^16.8 || ^17.0 || ^18.0 || ^19.0 || ^19.0.0-rc
       react-dom: ^16.8 || ^17.0 || ^18.0 || ^19.0 || ^19.0.0-rc
->>>>>>> f95caf5 (feat: migrate to lean OpenRouter-centric architecture with model cycling and integration cleanup)
     peerDependenciesMeta:
       '@types/react':
         optional: true
@@ -2076,13 +1711,8 @@ packages:
     peerDependencies:
       '@types/react': '*'
       '@types/react-dom': '*'
-<<<<<<< HEAD
-      react: ^19.2.3
-      react-dom: ^19.2.3
-=======
       react: ^16.8 || ^17.0 || ^18.0 || ^19.0 || ^19.0.0-rc
       react-dom: ^16.8 || ^17.0 || ^18.0 || ^19.0 || ^19.0.0-rc
->>>>>>> f95caf5 (feat: migrate to lean OpenRouter-centric architecture with model cycling and integration cleanup)
     peerDependenciesMeta:
       '@types/react':
         optional: true
@@ -2094,13 +1724,8 @@ packages:
     peerDependencies:
       '@types/react': '*'
       '@types/react-dom': '*'
-<<<<<<< HEAD
-      react: ^19.2.3
-      react-dom: ^19.2.3
-=======
       react: ^16.8 || ^17.0 || ^18.0 || ^19.0 || ^19.0.0-rc
       react-dom: ^16.8 || ^17.0 || ^18.0 || ^19.0 || ^19.0.0-rc
->>>>>>> f95caf5 (feat: migrate to lean OpenRouter-centric architecture with model cycling and integration cleanup)
     peerDependenciesMeta:
       '@types/react':
         optional: true
@@ -2112,13 +1737,8 @@ packages:
     peerDependencies:
       '@types/react': '*'
       '@types/react-dom': '*'
-<<<<<<< HEAD
-      react: ^19.2.3
-      react-dom: ^19.2.3
-=======
       react: ^16.8 || ^17.0 || ^18.0 || ^19.0 || ^19.0.0-rc
       react-dom: ^16.8 || ^17.0 || ^18.0 || ^19.0 || ^19.0.0-rc
->>>>>>> f95caf5 (feat: migrate to lean OpenRouter-centric architecture with model cycling and integration cleanup)
     peerDependenciesMeta:
       '@types/react':
         optional: true
@@ -2130,13 +1750,8 @@ packages:
     peerDependencies:
       '@types/react': '*'
       '@types/react-dom': '*'
-<<<<<<< HEAD
-      react: ^19.2.3
-      react-dom: ^19.2.3
-=======
       react: ^16.8 || ^17.0 || ^18.0 || ^19.0 || ^19.0.0-rc
       react-dom: ^16.8 || ^17.0 || ^18.0 || ^19.0 || ^19.0.0-rc
->>>>>>> f95caf5 (feat: migrate to lean OpenRouter-centric architecture with model cycling and integration cleanup)
     peerDependenciesMeta:
       '@types/react':
         optional: true
@@ -2148,13 +1763,8 @@ packages:
     peerDependencies:
       '@types/react': '*'
       '@types/react-dom': '*'
-<<<<<<< HEAD
-      react: ^19.2.3
-      react-dom: ^19.2.3
-=======
       react: ^16.8 || ^17.0 || ^18.0 || ^19.0 || ^19.0.0-rc
       react-dom: ^16.8 || ^17.0 || ^18.0 || ^19.0 || ^19.0.0-rc
->>>>>>> f95caf5 (feat: migrate to lean OpenRouter-centric architecture with model cycling and integration cleanup)
     peerDependenciesMeta:
       '@types/react':
         optional: true
@@ -2166,13 +1776,8 @@ packages:
     peerDependencies:
       '@types/react': '*'
       '@types/react-dom': '*'
-<<<<<<< HEAD
-      react: ^19.2.3
-      react-dom: ^19.2.3
-=======
       react: ^16.8 || ^17.0 || ^18.0 || ^19.0 || ^19.0.0-rc
       react-dom: ^16.8 || ^17.0 || ^18.0 || ^19.0 || ^19.0.0-rc
->>>>>>> f95caf5 (feat: migrate to lean OpenRouter-centric architecture with model cycling and integration cleanup)
     peerDependenciesMeta:
       '@types/react':
         optional: true
@@ -2184,13 +1789,8 @@ packages:
     peerDependencies:
       '@types/react': '*'
       '@types/react-dom': '*'
-<<<<<<< HEAD
-      react: ^19.2.3
-      react-dom: ^19.2.3
-=======
       react: ^16.8 || ^17.0 || ^18.0 || ^19.0 || ^19.0.0-rc
       react-dom: ^16.8 || ^17.0 || ^18.0 || ^19.0 || ^19.0.0-rc
->>>>>>> f95caf5 (feat: migrate to lean OpenRouter-centric architecture with model cycling and integration cleanup)
     peerDependenciesMeta:
       '@types/react':
         optional: true
@@ -2202,13 +1802,8 @@ packages:
     peerDependencies:
       '@types/react': '*'
       '@types/react-dom': '*'
-<<<<<<< HEAD
-      react: ^19.2.3
-      react-dom: ^19.2.3
-=======
       react: ^16.8 || ^17.0 || ^18.0 || ^19.0 || ^19.0.0-rc
       react-dom: ^16.8 || ^17.0 || ^18.0 || ^19.0 || ^19.0.0-rc
->>>>>>> f95caf5 (feat: migrate to lean OpenRouter-centric architecture with model cycling and integration cleanup)
     peerDependenciesMeta:
       '@types/react':
         optional: true
@@ -2220,13 +1815,8 @@ packages:
     peerDependencies:
       '@types/react': '*'
       '@types/react-dom': '*'
-<<<<<<< HEAD
-      react: ^19.2.3
-      react-dom: ^19.2.3
-=======
       react: ^16.8 || ^17.0 || ^18.0 || ^19.0 || ^19.0.0-rc
       react-dom: ^16.8 || ^17.0 || ^18.0 || ^19.0 || ^19.0.0-rc
->>>>>>> f95caf5 (feat: migrate to lean OpenRouter-centric architecture with model cycling and integration cleanup)
     peerDependenciesMeta:
       '@types/react':
         optional: true
@@ -2238,13 +1828,8 @@ packages:
     peerDependencies:
       '@types/react': '*'
       '@types/react-dom': '*'
-<<<<<<< HEAD
-      react: ^19.2.3
-      react-dom: ^19.2.3
-=======
       react: ^16.8 || ^17.0 || ^18.0 || ^19.0 || ^19.0.0-rc
       react-dom: ^16.8 || ^17.0 || ^18.0 || ^19.0 || ^19.0.0-rc
->>>>>>> f95caf5 (feat: migrate to lean OpenRouter-centric architecture with model cycling and integration cleanup)
     peerDependenciesMeta:
       '@types/react':
         optional: true
@@ -2256,13 +1841,8 @@ packages:
     peerDependencies:
       '@types/react': '*'
       '@types/react-dom': '*'
-<<<<<<< HEAD
-      react: ^19.2.3
-      react-dom: ^19.2.3
-=======
       react: ^16.8 || ^17.0 || ^18.0 || ^19.0 || ^19.0.0-rc
       react-dom: ^16.8 || ^17.0 || ^18.0 || ^19.0 || ^19.0.0-rc
->>>>>>> f95caf5 (feat: migrate to lean OpenRouter-centric architecture with model cycling and integration cleanup)
     peerDependenciesMeta:
       '@types/react':
         optional: true
@@ -2273,11 +1853,7 @@ packages:
     resolution: {integrity: sha512-aeNmHnBxbi2St0au6VBVC7JXFlhLlOnvIIlePNniyUNAClzmtAUEY8/pBiK3iHjufOlwA+c20/8jngo7xcrg8A==}
     peerDependencies:
       '@types/react': '*'
-<<<<<<< HEAD
-      react: ^19.2.3
-=======
       react: ^16.8 || ^17.0 || ^18.0 || ^19.0 || ^19.0.0-rc
->>>>>>> f95caf5 (feat: migrate to lean OpenRouter-centric architecture with model cycling and integration cleanup)
     peerDependenciesMeta:
       '@types/react':
         optional: true
@@ -2286,11 +1862,7 @@ packages:
     resolution: {integrity: sha512-Jl+bCv8HxKnlTLVrcDE8zTMJ09R9/ukw4qBs/oZClOfoQk/cOTbDn+NceXfV7j09YPVQUryJPHurafcSg6EVKA==}
     peerDependencies:
       '@types/react': '*'
-<<<<<<< HEAD
-      react: ^19.2.3
-=======
       react: ^16.8 || ^17.0 || ^18.0 || ^19.0 || ^19.0.0-rc
->>>>>>> f95caf5 (feat: migrate to lean OpenRouter-centric architecture with model cycling and integration cleanup)
     peerDependenciesMeta:
       '@types/react':
         optional: true
@@ -2300,13 +1872,8 @@ packages:
     peerDependencies:
       '@types/react': '*'
       '@types/react-dom': '*'
-<<<<<<< HEAD
-      react: ^19.2.3
-      react-dom: ^19.2.3
-=======
       react: ^16.8 || ^17.0 || ^18.0 || ^19.0 || ^19.0.0-rc
       react-dom: ^16.8 || ^17.0 || ^18.0 || ^19.0 || ^19.0.0-rc
->>>>>>> f95caf5 (feat: migrate to lean OpenRouter-centric architecture with model cycling and integration cleanup)
     peerDependenciesMeta:
       '@types/react':
         optional: true
@@ -2318,13 +1885,8 @@ packages:
     peerDependencies:
       '@types/react': '*'
       '@types/react-dom': '*'
-<<<<<<< HEAD
-      react: ^19.2.3
-      react-dom: ^19.2.3
-=======
       react: ^16.8 || ^17.0 || ^18.0 || ^19.0 || ^19.0.0-rc
       react-dom: ^16.8 || ^17.0 || ^18.0 || ^19.0 || ^19.0.0-rc
->>>>>>> f95caf5 (feat: migrate to lean OpenRouter-centric architecture with model cycling and integration cleanup)
     peerDependenciesMeta:
       '@types/react':
         optional: true
@@ -2336,13 +1898,8 @@ packages:
     peerDependencies:
       '@types/react': '*'
       '@types/react-dom': '*'
-<<<<<<< HEAD
-      react: ^19.2.3
-      react-dom: ^19.2.3
-=======
       react: ^16.8 || ^17.0 || ^18.0 || ^19.0 || ^19.0.0-rc
       react-dom: ^16.8 || ^17.0 || ^18.0 || ^19.0 || ^19.0.0-rc
->>>>>>> f95caf5 (feat: migrate to lean OpenRouter-centric architecture with model cycling and integration cleanup)
     peerDependenciesMeta:
       '@types/react':
         optional: true
@@ -2354,13 +1911,8 @@ packages:
     peerDependencies:
       '@types/react': '*'
       '@types/react-dom': '*'
-<<<<<<< HEAD
-      react: ^19.2.3
-      react-dom: ^19.2.3
-=======
       react: ^16.8 || ^17.0 || ^18.0 || ^19.0 || ^19.0.0-rc
       react-dom: ^16.8 || ^17.0 || ^18.0 || ^19.0 || ^19.0.0-rc
->>>>>>> f95caf5 (feat: migrate to lean OpenRouter-centric architecture with model cycling and integration cleanup)
     peerDependenciesMeta:
       '@types/react':
         optional: true
@@ -2372,13 +1924,8 @@ packages:
     peerDependencies:
       '@types/react': '*'
       '@types/react-dom': '*'
-<<<<<<< HEAD
-      react: ^19.2.3
-      react-dom: ^19.2.3
-=======
       react: ^16.8 || ^17.0 || ^18.0 || ^19.0 || ^19.0.0-rc
       react-dom: ^16.8 || ^17.0 || ^18.0 || ^19.0 || ^19.0.0-rc
->>>>>>> f95caf5 (feat: migrate to lean OpenRouter-centric architecture with model cycling and integration cleanup)
     peerDependenciesMeta:
       '@types/react':
         optional: true
@@ -2390,13 +1937,8 @@ packages:
     peerDependencies:
       '@types/react': '*'
       '@types/react-dom': '*'
-<<<<<<< HEAD
-      react: ^19.2.3
-      react-dom: ^19.2.3
-=======
       react: ^16.8 || ^17.0 || ^18.0 || ^19.0 || ^19.0.0-rc
       react-dom: ^16.8 || ^17.0 || ^18.0 || ^19.0 || ^19.0.0-rc
->>>>>>> f95caf5 (feat: migrate to lean OpenRouter-centric architecture with model cycling and integration cleanup)
     peerDependenciesMeta:
       '@types/react':
         optional: true
@@ -2408,13 +1950,8 @@ packages:
     peerDependencies:
       '@types/react': '*'
       '@types/react-dom': '*'
-<<<<<<< HEAD
-      react: ^19.2.3
-      react-dom: ^19.2.3
-=======
       react: ^16.8 || ^17.0 || ^18.0 || ^19.0 || ^19.0.0-rc
       react-dom: ^16.8 || ^17.0 || ^18.0 || ^19.0 || ^19.0.0-rc
->>>>>>> f95caf5 (feat: migrate to lean OpenRouter-centric architecture with model cycling and integration cleanup)
     peerDependenciesMeta:
       '@types/react':
         optional: true
@@ -2425,11 +1962,7 @@ packages:
     resolution: {integrity: sha512-FkBMwD+qbGQeMu1cOHnuGB6x4yzPjho8ap5WtbEJ26umhgqVXbhekKUQO+hZEL1vU92a3wHwdp0HAcqAUF5iDg==}
     peerDependencies:
       '@types/react': '*'
-<<<<<<< HEAD
-      react: ^19.2.3
-=======
       react: ^16.8 || ^17.0 || ^18.0 || ^19.0 || ^19.0.0-rc
->>>>>>> f95caf5 (feat: migrate to lean OpenRouter-centric architecture with model cycling and integration cleanup)
     peerDependenciesMeta:
       '@types/react':
         optional: true
@@ -2438,11 +1971,7 @@ packages:
     resolution: {integrity: sha512-BjasUjixPFdS+NKkypcyyN5Pmg83Olst0+c6vGov0diwTEo6mgdqVR6hxcEgFuh4QrAs7Rc+9KuGJ9TVCj0Zzg==}
     peerDependencies:
       '@types/react': '*'
-<<<<<<< HEAD
-      react: ^19.2.3
-=======
       react: ^16.8 || ^17.0 || ^18.0 || ^19.0 || ^19.0.0-rc
->>>>>>> f95caf5 (feat: migrate to lean OpenRouter-centric architecture with model cycling and integration cleanup)
     peerDependenciesMeta:
       '@types/react':
         optional: true
@@ -2451,11 +1980,7 @@ packages:
     resolution: {integrity: sha512-Qp8WbZOBe+blgpuUT+lw2xheLP8q0oatc9UpmiemEICxGvFLYmHm9QowVZGHtJlGbS6A6yJ3iViad/2cVjnOiA==}
     peerDependencies:
       '@types/react': '*'
-<<<<<<< HEAD
-      react: ^19.2.3
-=======
       react: ^16.8 || ^17.0 || ^18.0 || ^19.0 || ^19.0.0-rc
->>>>>>> f95caf5 (feat: migrate to lean OpenRouter-centric architecture with model cycling and integration cleanup)
     peerDependenciesMeta:
       '@types/react':
         optional: true
@@ -2464,11 +1989,7 @@ packages:
     resolution: {integrity: sha512-Il0+boE7w/XebUHyBjroE+DbByORGR9KKmITzbR7MyQ4akpORYP/ZmbhAr0DG7RmmBqoOnZdy2QlvajJ2QA59g==}
     peerDependencies:
       '@types/react': '*'
-<<<<<<< HEAD
-      react: ^19.2.3
-=======
       react: ^16.8 || ^17.0 || ^18.0 || ^19.0 || ^19.0.0-rc
->>>>>>> f95caf5 (feat: migrate to lean OpenRouter-centric architecture with model cycling and integration cleanup)
     peerDependenciesMeta:
       '@types/react':
         optional: true
@@ -2477,11 +1998,7 @@ packages:
     resolution: {integrity: sha512-U+UORVEq+cTnRIaostJv9AGdV3G6Y+zbVd+12e18jQ5A3c0xL03IhnHuiU4UV69wolOQp5GfR58NW/EgdQhwOA==}
     peerDependencies:
       '@types/react': '*'
-<<<<<<< HEAD
-      react: ^19.2.3
-=======
       react: ^16.8 || ^17.0 || ^18.0 || ^19.0 || ^19.0.0-rc
->>>>>>> f95caf5 (feat: migrate to lean OpenRouter-centric architecture with model cycling and integration cleanup)
     peerDependenciesMeta:
       '@types/react':
         optional: true
@@ -2490,11 +2007,7 @@ packages:
     resolution: {integrity: sha512-RbJRS4UWQFkzHTTwVymMTUv8EqYhOp8dOOviLj2ugtTiXRaRQS7GLGxZTLL1jWhMeoSCf5zmcZkqTl9IiYfXcQ==}
     peerDependencies:
       '@types/react': '*'
-<<<<<<< HEAD
-      react: ^19.2.3
-=======
       react: ^16.8 || ^17.0 || ^18.0 || ^19.0 || ^19.0.0-rc
->>>>>>> f95caf5 (feat: migrate to lean OpenRouter-centric architecture with model cycling and integration cleanup)
     peerDependenciesMeta:
       '@types/react':
         optional: true
@@ -2503,11 +2016,7 @@ packages:
     resolution: {integrity: sha512-2dHfToCj/pzca2Ck724OZ5L0EVrr3eHRNsG/b3xQJLA2hZpVCS99bLAX+hm1IHXDEnzU6by5z/5MIY794/a8NQ==}
     peerDependencies:
       '@types/react': '*'
-<<<<<<< HEAD
-      react: ^19.2.3
-=======
       react: ^16.8 || ^17.0 || ^18.0 || ^19.0 || ^19.0.0-rc
->>>>>>> f95caf5 (feat: migrate to lean OpenRouter-centric architecture with model cycling and integration cleanup)
     peerDependenciesMeta:
       '@types/react':
         optional: true
@@ -2516,11 +2025,7 @@ packages:
     resolution: {integrity: sha512-QTYuDesS0VtuHNNvMh+CjlKJ4LJickCMUAqjlE3+j8w+RlRpwyX3apEQKGFzbZGdo7XNG1tXa+bQqIE7HIXT2w==}
     peerDependencies:
       '@types/react': '*'
-<<<<<<< HEAD
-      react: ^19.2.3
-=======
       react: ^16.8 || ^17.0 || ^18.0 || ^19.0 || ^19.0.0-rc
->>>>>>> f95caf5 (feat: migrate to lean OpenRouter-centric architecture with model cycling and integration cleanup)
     peerDependenciesMeta:
       '@types/react':
         optional: true
@@ -2529,11 +2034,7 @@ packages:
     resolution: {integrity: sha512-ewrXRDTAqAXlkl6t/fkXWNAhFX9I+CkKlw6zjEwk86RSPKwZr3xpBRso655aqYafwtnbpHLj6toFzmd6xdVptQ==}
     peerDependencies:
       '@types/react': '*'
-<<<<<<< HEAD
-      react: ^19.2.3
-=======
       react: ^16.8 || ^17.0 || ^18.0 || ^19.0 || ^19.0.0-rc
->>>>>>> f95caf5 (feat: migrate to lean OpenRouter-centric architecture with model cycling and integration cleanup)
     peerDependenciesMeta:
       '@types/react':
         optional: true
@@ -2543,13 +2044,8 @@ packages:
     peerDependencies:
       '@types/react': '*'
       '@types/react-dom': '*'
-<<<<<<< HEAD
-      react: ^19.2.3
-      react-dom: ^19.2.3
-=======
       react: ^16.8 || ^17.0 || ^18.0 || ^19.0 || ^19.0.0-rc
       react-dom: ^16.8 || ^17.0 || ^18.0 || ^19.0 || ^19.0.0-rc
->>>>>>> f95caf5 (feat: migrate to lean OpenRouter-centric architecture with model cycling and integration cleanup)
     peerDependenciesMeta:
       '@types/react':
         optional: true
@@ -2564,13 +2060,8 @@ packages:
     peerDependencies:
       '@types/react': '*'
       '@types/react-dom': '*'
-<<<<<<< HEAD
-      react: ^19.2.3
-      react-dom: ^19.2.3
-=======
       react: 16.8 || ^17.0 || ^18.0 || ^19.0 || ^19.0.0-rc
       react-dom: 16.8 || ^17.0 || ^18.0 || ^19.0 || ^19.0.0-rc
->>>>>>> f95caf5 (feat: migrate to lean OpenRouter-centric architecture with model cycling and integration cleanup)
     peerDependenciesMeta:
       '@types/react':
         optional: true
@@ -2825,22 +2316,13 @@ packages:
   '@tailwindcss/vite@4.2.4':
     resolution: {integrity: sha512-pCvohwOCspk3ZFn6eJzrrX3g4n2JY73H6MmYC87XfGPyTty4YsCjYTMArRZm/zOI8dIt3+EcrLHAFPe5A4bgtw==}
     peerDependencies:
-<<<<<<< HEAD
-      vite: '>=6.4.2'
-=======
       vite: ^5.2.0 || ^6 || ^7 || ^8
->>>>>>> f95caf5 (feat: migrate to lean OpenRouter-centric architecture with model cycling and integration cleanup)
 
   '@tanstack/react-virtual@3.13.24':
     resolution: {integrity: sha512-aIJvz5OSkhNIhZIpYivrxrPTKYsjW9Uzy+sP/mx0S3sev2HyvPb7xmjbYvokzEpfgYHy/HjzJ2zFAETuUfgCpg==}
     peerDependencies:
-<<<<<<< HEAD
-      react: ^19.2.3
-      react-dom: ^19.2.3
-=======
       react: ^16.8.0 || ^17.0.0 || ^18.0.0 || ^19.0.0
       react-dom: ^16.8.0 || ^17.0.0 || ^18.0.0 || ^19.0.0
->>>>>>> f95caf5 (feat: migrate to lean OpenRouter-centric architecture with model cycling and integration cleanup)
 
   '@tanstack/virtual-core@3.14.0':
     resolution: {integrity: sha512-JLANqGy/D6k4Ujmh8Tr25lGimuOXNiaVyXaCAZS0W+1390sADdGnyUdSWNIfd49gebtIxGMij4IktRVzrdr12Q==}
@@ -2860,13 +2342,8 @@ packages:
       '@testing-library/dom': ^10.0.0
       '@types/react': ^18.0.0 || ^19.0.0
       '@types/react-dom': ^18.0.0 || ^19.0.0
-<<<<<<< HEAD
-      react: ^19.2.3
-      react-dom: ^19.2.3
-=======
       react: ^18.0.0 || ^19.0.0
       react-dom: ^18.0.0 || ^19.0.0
->>>>>>> f95caf5 (feat: migrate to lean OpenRouter-centric architecture with model cycling and integration cleanup)
     peerDependenciesMeta:
       '@types/react':
         optional: true
@@ -2977,15 +2454,6 @@ packages:
   '@types/unist@3.0.3':
     resolution: {integrity: sha512-ko/gIFJRv177XgZsZcBwnqJN5x/Gien8qNOn0D5bQU/zAzVf9Zt3BlcUiLqhV9y4ARk0GbT3tnUiPNgnTXzc/Q==}
 
-<<<<<<< HEAD
-=======
-  '@types/vscode@1.116.0':
-    resolution: {integrity: sha512-sYHp4MO6BqJ2PD7Hjt0hlIS3tMaYsVPJrd0RUjDJ8HtOYnyJIEej0bLSccM8rE77WrC+Xox/kdBwEFDO8MsxNA==}
-
-  '@types/ws@8.18.1':
-    resolution: {integrity: sha512-ThVF6DCVhA8kUGy+aazFQ4kXQ7E1Ty7A3ypFOe0IcJV8O/M511G99AW24irKrW56Wt44yG9+ij8FaqoBGkuBXg==}
-
->>>>>>> f95caf5 (feat: migrate to lean OpenRouter-centric architecture with model cycling and integration cleanup)
   '@types/yargs-parser@21.0.3':
     resolution: {integrity: sha512-I4q9QU9MQv4oEOz4tAHJtNz1cwuLxn2F3xcc2iV5WdqLPpUnj30aUuxt1mAxYTG+oe8CZMV/+6rU4S4gRDzqtQ==}
 
@@ -3053,6 +2521,7 @@ packages:
 
   '@ungap/structured-clone@1.3.0':
     resolution: {integrity: sha512-WmoN8qaIAo7WTYWbAZuG8PYEhn5fkz7dZrqTBZ7dtt//lL2Gwms1IcnQ5yHqjDfX8Ft5j4YzDM23f87zBfDe9g==}
+    deprecated: Potential CWE-502 - Update to 1.3.1 or higher
 
   '@unrs/resolver-binding-android-arm-eabi@1.11.1':
     resolution: {integrity: sha512-ppLRUgHVaGRWUx0R0Ut06Mjo9gBaBkg3v/8AxusGLhsIotbBLuRk51rAzqLC8gq6NyyAojEXglNjzf6R948DNw==}
@@ -3161,11 +2630,7 @@ packages:
     resolution: {integrity: sha512-gUu9hwfWvvEDBBmgtAowQCojwZmJ5mcLn3aufeCsitijs3+f2NsrPtlAWIR6OPiqljl96GVCUbLe0HyqIpVaoA==}
     engines: {node: ^14.18.0 || >=16.0.0}
     peerDependencies:
-<<<<<<< HEAD
-      vite: '>=6.4.2'
-=======
       vite: ^4.2.0 || ^5.0.0 || ^6.0.0 || ^7.0.0
->>>>>>> f95caf5 (feat: migrate to lean OpenRouter-centric architecture with model cycling and integration cleanup)
 
   '@vitest/expect@4.1.5':
     resolution: {integrity: sha512-PWBaRY5JoKuRnHlUHfpV/KohFylaDZTupcXN1H9vYryNLOnitSw60Mw9IAE2r67NbwwzBw/Cc/8q9BK3kIX8Kw==}
@@ -3174,11 +2639,7 @@ packages:
     resolution: {integrity: sha512-/x2EmFC4mT4NNzqvC3fmesuV97w5FC903KPmey4gsnJiMQ3Be1IlDKVaDaG8iqaLFHqJ2FVEkxZk5VmeLjIItw==}
     peerDependencies:
       msw: ^2.4.9
-<<<<<<< HEAD
-      vite: '>=6.4.2'
-=======
       vite: ^6.0.0 || ^7.0.0 || ^8.0.0
->>>>>>> f95caf5 (feat: migrate to lean OpenRouter-centric architecture with model cycling and integration cleanup)
     peerDependenciesMeta:
       msw:
         optional: true
@@ -3341,12 +2802,9 @@ packages:
   bail@2.0.2:
     resolution: {integrity: sha512-0xO6mYd7JB2YesxDKplafRpsiOzPt9V02ddPCLbY1xYGPOX24NTyN50qnUxgCPcSoYMhKpAuBTjQoRZCAkUDRw==}
 
-<<<<<<< HEAD
-=======
   balanced-match@1.0.2:
     resolution: {integrity: sha512-3oSeUO0TMV67hN1AmbXsK4yaqU7tjiHlbxRDZOpH0KW9+CeX4bRAaX0Anxt0tx2MrpRpWwQaPwIlISEJhYU5Pw==}
 
->>>>>>> f95caf5 (feat: migrate to lean OpenRouter-centric architecture with model cycling and integration cleanup)
   balanced-match@4.0.4:
     resolution: {integrity: sha512-BLrgEcRTwX2o6gGxGOCNyMvGSp35YofuYzw9h1IMTRmKqttAZZVU67bdb9Pr2vUHA8+j3i2tJfjO6C6+4myGTA==}
     engines: {node: 18 || 20 || >=22}
@@ -3356,15 +2814,12 @@ packages:
     engines: {node: '>=6.0.0'}
     hasBin: true
 
-<<<<<<< HEAD
-=======
   brace-expansion@1.1.14:
     resolution: {integrity: sha512-MWPGfDxnyzKU7rNOW9SP/c50vi3xrmrua/+6hfPbCS2ABNWfx24vPidzvC7krjU/RTo235sV776ymlsMtGKj8g==}
 
   brace-expansion@2.1.0:
     resolution: {integrity: sha512-TN1kCZAgdgweJhWWpgKYrQaMNHcDULHkWwQIspdtjV4Y5aurRdZpjAqn6yX3FPqTA9ngHCc4hJxMAMgGfve85w==}
 
->>>>>>> f95caf5 (feat: migrate to lean OpenRouter-centric architecture with model cycling and integration cleanup)
   brace-expansion@5.0.5:
     resolution: {integrity: sha512-VZznLgtwhn+Mact9tfiwx64fA9erHH/MCXEUfB/0bX/6Fz6ny5EGTXYltMocqg4xFAQZtnO3DHWWXi8RiuN7cQ==}
     engines: {node: 18 || 20 || >=22}
@@ -3482,13 +2937,8 @@ packages:
   cmdk@1.1.1:
     resolution: {integrity: sha512-Vsv7kFaXm+ptHDMZ7izaRsP70GgrW9NBNGswt9OZaVBLlE0SNpDq8eu/VGXyF9r7M0azK3Wy7OlYXsuyYLFzHg==}
     peerDependencies:
-<<<<<<< HEAD
-      react: ^19.2.3
-      react-dom: ^19.2.3
-=======
       react: ^18 || ^19 || ^19.0.0-rc
       react-dom: ^18 || ^19 || ^19.0.0-rc
->>>>>>> f95caf5 (feat: migrate to lean OpenRouter-centric architecture with model cycling and integration cleanup)
 
   co@4.6.0:
     resolution: {integrity: sha512-QVb0dM5HvG+uaxitm8wONl7jltx8dqhfU33DcqtOZcLSVIKSDDLDi7+0LbAKiyI8hD9u42m2YxXSkMGWThaecQ==}
@@ -3515,12 +2965,9 @@ packages:
   comma-separated-tokens@2.0.3:
     resolution: {integrity: sha512-Fu4hJdvzeylCfQPp9SGWidpzrMs7tTrlu6Vb8XGaRGck8QSNZJJp538Wrb60Lax4fPwR64ViY468OIUTbRlGZg==}
 
-<<<<<<< HEAD
-=======
   concat-map@0.0.1:
     resolution: {integrity: sha512-/Srv4dswyQNBfohGpz9o6Yb3Gz3SrUDqBH5rTuhGR7ahtlbYKnVxw2bCFMRljaA7EXHaXZ8wsHdodFvbkhKmqg==}
 
->>>>>>> f95caf5 (feat: migrate to lean OpenRouter-centric architecture with model cycling and integration cleanup)
   convert-source-map@2.0.0:
     resolution: {integrity: sha512-Kvp459HrV2FEJ1CAsi1Ku+MY3kasH19TFykTz2xWmMeq6bk2NU3XXvfJ+Q61m0xktWwt+1HSYf3JZsTms3aRJg==}
 
@@ -3687,14 +3134,11 @@ packages:
     engines: {node: '>=18'}
     hasBin: true
 
-<<<<<<< HEAD
-=======
-  esbuild@0.27.7:
-    resolution: {integrity: sha512-IxpibTjyVnmrIQo5aqNpCgoACA/dTKLTlhMHihVHhdkxKyPO1uBBthumT0rdHmcsk9uMonIWS0m4FljWzILh3w==}
+  esbuild@0.28.0:
+    resolution: {integrity: sha512-sNR9MHpXSUV/XB4zmsFKN+QgVG82Cc7+/aaxJ8Adi8hyOac+EXptIp45QBPaVyX3N70664wRbTcLTOemCAnyqw==}
     engines: {node: '>=18'}
     hasBin: true
 
->>>>>>> f95caf5 (feat: migrate to lean OpenRouter-centric architecture with model cycling and integration cleanup)
   escalade@3.2.0:
     resolution: {integrity: sha512-WUj2qlxaQtO4g6Pq5c29GTcWGDyd8itL8zTlipgECz3JesAiiOKotd8JU6otB3PACgG6xkJUyVhboMS+bje/jA==}
     engines: {node: '>=6'}
@@ -3818,11 +3262,7 @@ packages:
     resolution: {integrity: sha512-tIbYtZbucOs0BRGqPJkshJUYdL+SDH7dVM8gjy+ERp3WAUjLEFJE+02kanyHtwjWOnwrKYBiwAmM0p4kLJAnXg==}
     engines: {node: '>=12.0.0'}
     peerDependencies:
-<<<<<<< HEAD
-      picomatch: '>=4.0.4'
-=======
       picomatch: ^3 || ^4
->>>>>>> f95caf5 (feat: migrate to lean OpenRouter-centric architecture with model cycling and integration cleanup)
     peerDependenciesMeta:
       picomatch:
         optional: true
@@ -3878,13 +3318,8 @@ packages:
     resolution: {integrity: sha512-rFYkY/pigbcswl1XQSb7q424kSTQ8q6eAC+YUsSKooHQYuLdzdHjrt6uxUC+PRAO++q5IS7+TamgIw1AphxR+g==}
     peerDependencies:
       '@emotion/is-prop-valid': '*'
-<<<<<<< HEAD
-      react: ^19.2.3
-      react-dom: ^19.2.3
-=======
       react: ^18.0.0 || ^19.0.0
       react-dom: ^18.0.0 || ^19.0.0
->>>>>>> f95caf5 (feat: migrate to lean OpenRouter-centric architecture with model cycling and integration cleanup)
     peerDependenciesMeta:
       '@emotion/is-prop-valid':
         optional: true
@@ -3941,12 +3376,6 @@ packages:
     resolution: {integrity: sha512-ts6Wi+2j3jQjqi70w5AlN8DFnkSwC+MqmxEzdEALB2qXZYV3X/b1CTfgPLGJNMeAWxdPfU8FO1ms3NUfaHCPYg==}
     engines: {node: '>=10'}
 
-<<<<<<< HEAD
-=======
-  get-tsconfig@4.14.0:
-    resolution: {integrity: sha512-yTb+8DXzDREzgvYmh6s9vHsSVCHeC0G3PI5bEXNBHtmshPnO+S5O7qgLEOn0I5QvMy6kpZN8K1NKGyilLb93wA==}
-
->>>>>>> f95caf5 (feat: migrate to lean OpenRouter-centric architecture with model cycling and integration cleanup)
   glob-parent@6.0.2:
     resolution: {integrity: sha512-XxwI8EOhVQgWp6iDL+3b0r86f4d6AX6zSU55HfB4ydCEuXLXc5FcYeOu+nnGftS4TEju/11rt4KJPTMgbfmv4A==}
     engines: {node: '>=10.13.0'}
@@ -4008,13 +3437,10 @@ packages:
   hermes-parser@0.25.1:
     resolution: {integrity: sha512-6pEjquH3rqaI6cYAXYPcz9MS4rY6R4ngRgrgfDshRptUZIc3lw0MCIJIGDj9++mfySOuPTHB4nrSW99BCvOPIA==}
 
-<<<<<<< HEAD
-=======
-  hono@4.12.15:
-    resolution: {integrity: sha512-qM0jDhFEaCBb4TxoW7f53Qrpv9RBiayUHo0S52JudprkhvpjIrGoU1mnnr29Fvd1U335ZFPZQY1wlkqgfGXyLg==}
+  hono@4.12.19:
+    resolution: {integrity: sha512-xa3eYXYXx68XTT4hZ7dRzsXBhaq85ToSrlUJNoR0gwz/1Ap/CNwX47wfvV7pc/xWhjKVVkLT7zBJy8chhNguqQ==}
     engines: {node: '>=16.9.0'}
 
->>>>>>> f95caf5 (feat: migrate to lean OpenRouter-centric architecture with model cycling and integration cleanup)
   html-encoding-sniffer@4.0.0:
     resolution: {integrity: sha512-Y22oTqIU4uuPgEemfz7NDJz6OeKf12Lsu+QC+s3BVpda64lTiMYCyGwg5ki4vFxkMwQdeZDl2adZoqUgdFuTgQ==}
     engines: {node: '>=18'}
@@ -4049,9 +3475,6 @@ packages:
     resolution: {integrity: sha512-Hs59xBNfUIunMFgWAbGX5cq6893IbWg4KnrjbYwX3tx0ztorVgTDA6B2sxf8ejHJ4wz8BqGUMYlnzNBer5NvGg==}
     engines: {node: '>= 4'}
 
-  immer@11.1.3:
-    resolution: {integrity: sha512-6jQTc5z0KJFtr1UgFpIL3N9XSC3saRaI9PwWtzM2pSqkNGtiNkYY2OSwkOGDK2XcTRcLb1pi/aNkKZz0nxVH4Q==}
-
   import-fresh@3.3.1:
     resolution: {integrity: sha512-TR3KfrTZTYLPB6jUjfx6MF9WcWrHL9su5TObK4ZkYgBdWKPOFoSoQIdEuTuR82pmtxH2spWG9h6etwfr1pLBqQ==}
     engines: {node: '>=6'}
@@ -4085,7 +3508,7 @@ packages:
     engines: {node: '>=18'}
     peerDependencies:
       '@types/react': '>=18.0.0'
-      react: ^19.2.3
+      react: '>=18.0.0'
       react-devtools-core: ^4.19.1
     peerDependenciesMeta:
       '@types/react':
@@ -4437,12 +3860,9 @@ packages:
     resolution: {integrity: sha512-ekilCSN1jwRvIbgeg/57YFh8qQDNbwDb9xT/qu2DAHbFFZUicIl4ygVaAvzveMhMVr3LnpSKTNnwt8PoOfmKhQ==}
     hasBin: true
 
-<<<<<<< HEAD
-=======
-  jose@6.2.2:
-    resolution: {integrity: sha512-d7kPDd34KO/YnzaDOlikGpOurfF0ByC2sEV4cANCtdqLlTfBlw2p14O/5d/zv40gJPbIQxfES3nSx1/oYNyuZQ==}
+  jose@6.2.3:
+    resolution: {integrity: sha512-YYVDInQKFJfR/xa3ojUTl8c2KoTwiL1R5Wg9YCydwH0x0B9grbzlg5HC7mMjCtUJjbQ/YnGEZIhI5tCgfTb4Hw==}
 
->>>>>>> f95caf5 (feat: migrate to lean OpenRouter-centric architecture with model cycling and integration cleanup)
   js-tokens@4.0.0:
     resolution: {integrity: sha512-RdJUflcE3cUzKiMqQgsCu06FPu9UdIJO0beYbPhHN4k6apgJtifcoCtT9bcxOpYBtpD2kCM6Sbzg4CausW/PKQ==}
 
@@ -4603,11 +4023,7 @@ packages:
   lucide-react@0.555.0:
     resolution: {integrity: sha512-D8FvHUGbxWBRQM90NZeIyhAvkFfsh3u9ekrMvJ30Z6gnpBHS6HC6ldLg7tL45hwiIz/u66eKDtdA23gwwGsAHA==}
     peerDependencies:
-<<<<<<< HEAD
-      react: ^19.2.3
-=======
       react: ^16.5.1 || ^17.0.0 || ^18.0.0 || ^19.0.0
->>>>>>> f95caf5 (feat: migrate to lean OpenRouter-centric architecture with model cycling and integration cleanup)
 
   lz-string@1.5.0:
     resolution: {integrity: sha512-h5bgJWpxJNswbU7qCrV0tIKQCaS3blPDrqKWx+QxzuzL1zGUzij9XCWLrSLsJPu5t+eWA/ycetzYAO5IOMcWAQ==}
@@ -4792,13 +4208,10 @@ packages:
   minimatch@3.1.5:
     resolution: {integrity: sha512-VgjWUsnnT6n+NUk6eZq77zeFdpW2LWDzP6zFGrCbHXiYNul5Dzqk2HHQ5uFH2DNW5Xbp8+jVzaeNt94ssEEl4w==}
 
-<<<<<<< HEAD
-=======
   minimatch@9.0.9:
     resolution: {integrity: sha512-OBwBN9AL4dqmETlpS2zasx+vTeWclWzkblfZk7KTA5j3jeOONz/tRCnZomUyvNg83wL5Zv9Ss6HMJXAgL8R2Yg==}
     engines: {node: '>=16 || 14 >=14.17'}
 
->>>>>>> f95caf5 (feat: migrate to lean OpenRouter-centric architecture with model cycling and integration cleanup)
   minimist@1.2.8:
     resolution: {integrity: sha512-2yyAR8qBkN3YuheJanUpWC5U3bb5osDywNB8RzDVlDwDHbocAJveqqj1u8+SVD7jkWT4yvsHCpWqqWqAxb0zCA==}
 
@@ -4816,13 +4229,8 @@ packages:
     resolution: {integrity: sha512-uYfXzeHlgThchzwz5Te47dlv5JOUC7OB4rjJ/7XTUgtBZD8CchMN8qEJ4ZVsUmTyYA44zjV0fBwsiktRuFnn+w==}
     peerDependencies:
       '@emotion/is-prop-valid': '*'
-<<<<<<< HEAD
-      react: ^19.2.3
-      react-dom: ^19.2.3
-=======
       react: ^18.0.0 || ^19.0.0
       react-dom: ^18.0.0 || ^19.0.0
->>>>>>> f95caf5 (feat: migrate to lean OpenRouter-centric architecture with model cycling and integration cleanup)
     peerDependenciesMeta:
       '@emotion/is-prop-valid':
         optional: true
@@ -4858,13 +4266,8 @@ packages:
   next-themes@0.4.6:
     resolution: {integrity: sha512-pZvgD5L0IEvX5/9GWyHMf3m8BKiVQwsCMHfoFosXtXBMnaS0ZnIJ9ST4b4NqLVKDEm8QBxoNNGNaBv2JNF6XNA==}
     peerDependencies:
-<<<<<<< HEAD
-      react: ^19.2.3
-      react-dom: ^19.2.3
-=======
       react: ^16.8 || ^17 || ^18 || ^19 || ^19.0.0-rc
       react-dom: ^16.8 || ^17 || ^18 || ^19 || ^19.0.0-rc
->>>>>>> f95caf5 (feat: migrate to lean OpenRouter-centric architecture with model cycling and integration cleanup)
 
   node-int64@0.4.0:
     resolution: {integrity: sha512-O5lz91xSOeoXP6DulyHfllpq+Eg00MWitZIbtPfoSEvqIHdl5gfcY6hYzDWnj0qD5tz52PI08u9qUvSVeUBeHw==}
@@ -4972,13 +4375,10 @@ packages:
   picocolors@1.1.1:
     resolution: {integrity: sha512-xceH2snhtb5M9liqDsmEw56le376mTZkEX/jEb/RxNFyegNul7eNslCXP9FDj/Lcu0X8KEyMceP2ntpaHrDEVA==}
 
-<<<<<<< HEAD
-=======
   picomatch@2.3.2:
     resolution: {integrity: sha512-V7+vQEJ06Z+c5tSye8S+nHUfI51xoXIXjHQ99cQtKUkQqqO1kO/KCJUfZXuB47h/YBlDhah2H3hdUGXn8ie0oA==}
     engines: {node: '>=8.6'}
 
->>>>>>> f95caf5 (feat: migrate to lean OpenRouter-centric architecture with model cycling and integration cleanup)
   picomatch@4.0.4:
     resolution: {integrity: sha512-QP88BAKvMam/3NxH6vj2o21R6MjxZUAd6nlwAS/pnGvN9IVLocLHxGYIzFhg6fUQ+5th6P4dv4eW9jX3DSIj7A==}
     engines: {node: '>=12'}
@@ -5024,14 +4424,11 @@ packages:
     resolution: {integrity: sha512-oG4T3wCbfeuvljnyAzhBvpN45E8iOTXCU/TD3zXW80HA3dQ4ahdqMkWGiPWZvjpQwlbyHrPTWUAqUzGzv4l1JQ==}
     engines: {node: ^18.14.0 || ^20.0.0 || ^22.0.0 || >=24.0.0}
 
-<<<<<<< HEAD
-=======
   prisma@5.19.1:
     resolution: {integrity: sha512-c5K9MiDaa+VAAyh1OiYk76PXOme9s3E992D7kvvIOhCrNsBQfy2mP2QAQtX0WNj140IgG++12kwZpYB9iIydNQ==}
     engines: {node: '>=16.13'}
     hasBin: true
 
->>>>>>> f95caf5 (feat: migrate to lean OpenRouter-centric architecture with model cycling and integration cleanup)
   property-information@7.1.0:
     resolution: {integrity: sha512-TwEZ+X+yCJmYfL7TPUOcvBZ4QfoT5YenQiJuX//0th53DE6w0xxLEtfK3iyryQFddXuvkIk51EEgrJQ0WJkOmQ==}
 
@@ -5051,13 +4448,8 @@ packages:
     peerDependencies:
       '@types/react': '*'
       '@types/react-dom': '*'
-<<<<<<< HEAD
-      react: ^19.2.3
-      react-dom: ^19.2.3
-=======
       react: ^16.8 || ^17.0 || ^18.0 || ^19.0 || ^19.0.0-rc
       react-dom: ^16.8 || ^17.0 || ^18.0 || ^19.0 || ^19.0.0-rc
->>>>>>> f95caf5 (feat: migrate to lean OpenRouter-centric architecture with model cycling and integration cleanup)
     peerDependenciesMeta:
       '@types/react':
         optional: true
@@ -5072,21 +4464,13 @@ packages:
   react-dom@19.2.5:
     resolution: {integrity: sha512-J5bAZz+DXMMwW/wV3xzKke59Af6CHY7G4uYLN1OvBcKEsWOs4pQExj86BBKamxl/Ik5bx9whOrvBlSDfWzgSag==}
     peerDependencies:
-<<<<<<< HEAD
-      react: ^19.2.3
-=======
       react: ^19.2.5
->>>>>>> f95caf5 (feat: migrate to lean OpenRouter-centric architecture with model cycling and integration cleanup)
 
   react-hook-form@7.73.1:
     resolution: {integrity: sha512-VAfVYOPcx3piiEVQy95vyFmBwbVUsP/AUIN+mpFG8h11yshDd444nn0VyfaGWSRnhOLVgiDu7HIuBtAIzxn9dA==}
     engines: {node: '>=18.0.0'}
     peerDependencies:
-<<<<<<< HEAD
-      react: ^19.2.3
-=======
       react: ^16.8.0 || ^17 || ^18 || ^19
->>>>>>> f95caf5 (feat: migrate to lean OpenRouter-centric architecture with model cycling and integration cleanup)
 
   react-is@17.0.2:
     resolution: {integrity: sha512-w2GsyukL62IJnlaff/nRegPQR94C/XXamvMWmSHRJ4y7Ts/4ocGRmTHvOs8PSE6pB3dWOrD/nueuU5sduBsQ4w==}
@@ -5098,17 +4482,13 @@ packages:
     resolution: {integrity: sha512-qKxVopLT/TyA6BX3Ue5NwabOsAzm0Q7kAPwq6L+wWDwisYs7R8vZ0nRXqq6rkueboxpkjvLGU9fWifiX/ZZFxQ==}
     peerDependencies:
       '@types/react': '>=18'
-<<<<<<< HEAD
-      react: ^19.2.3
-=======
       react: '>=18'
->>>>>>> f95caf5 (feat: migrate to lean OpenRouter-centric architecture with model cycling and integration cleanup)
 
   react-reconciler@0.29.2:
     resolution: {integrity: sha512-zZQqIiYgDCTP/f1N/mAR10nJGrPD2ZR+jDSEsKWJHYC7Cm2wodlwbR3upZRdC3cjIjSlTLNVyO7Iu0Yy7t2AYg==}
     engines: {node: '>=0.10.0'}
     peerDependencies:
-      react: ^19.2.3
+      react: ^18.3.1
 
   react-refresh@0.17.0:
     resolution: {integrity: sha512-z6F7K9bV85EfseRCp2bzrpyQ0Gkw1uLoCel9XBVWPg/TjRj94SkJzUTGfOa4bs7iJvBWtQG0Wq7wnI0syw3EBQ==}
@@ -5119,11 +4499,7 @@ packages:
     engines: {node: '>=10'}
     peerDependencies:
       '@types/react': '*'
-<<<<<<< HEAD
-      react: ^19.2.3
-=======
       react: ^16.8.0 || ^17.0.0 || ^18.0.0 || ^19.0.0
->>>>>>> f95caf5 (feat: migrate to lean OpenRouter-centric architecture with model cycling and integration cleanup)
     peerDependenciesMeta:
       '@types/react':
         optional: true
@@ -5133,11 +4509,7 @@ packages:
     engines: {node: '>=10'}
     peerDependencies:
       '@types/react': '*'
-<<<<<<< HEAD
-      react: ^19.2.3
-=======
       react: ^16.8.0 || ^17.0.0 || ^18.0.0 || ^19.0.0 || ^19.0.0-rc
->>>>>>> f95caf5 (feat: migrate to lean OpenRouter-centric architecture with model cycling and integration cleanup)
     peerDependenciesMeta:
       '@types/react':
         optional: true
@@ -5147,11 +4519,7 @@ packages:
     engines: {node: '>=10'}
     peerDependencies:
       '@types/react': '*'
-<<<<<<< HEAD
-      react: ^19.2.3
-=======
       react: ^16.8.0 || ^17.0.0 || ^18.0.0 || ^19.0.0 || ^19.0.0-rc
->>>>>>> f95caf5 (feat: migrate to lean OpenRouter-centric architecture with model cycling and integration cleanup)
     peerDependenciesMeta:
       '@types/react':
         optional: true
@@ -5196,12 +4564,6 @@ packages:
     resolution: {integrity: sha512-qYg9KP24dD5qka9J47d0aVky0N+b4fTU89LN9iDnjB5waksiC49rvMB0PrUJQGoTmH50XPiqOvAjDfaijGxYZw==}
     engines: {node: '>=8'}
 
-<<<<<<< HEAD
-=======
-  resolve-pkg-maps@1.0.0:
-    resolution: {integrity: sha512-seS2Tj26TBVOC2NIc2rOe2y2ZO7efxITtLZcGSOnHHNOQ7CkiUBfw0Iw2ck6xkIhPwLhKNLS8BO+hEpngQlqzw==}
-
->>>>>>> f95caf5 (feat: migrate to lean OpenRouter-centric architecture with model cycling and integration cleanup)
   restore-cursor@4.0.0:
     resolution: {integrity: sha512-I9fPXU9geO9bHOt9pHHOhOkYerIMsmVaWB0rA2AI9ERh/+x/i7MV5HKBNrg+ljO5eoPVgCcnFuRjJ9uH6I/3eg==}
     engines: {node: ^12.20.0 || ^14.13.1 || >=16.0.0}
@@ -5274,13 +4636,8 @@ packages:
   sonner@2.0.7:
     resolution: {integrity: sha512-W6ZN4p58k8aDKA4XPcx2hpIQXBRAgyiWVkYhT7CvK6D3iAu7xjvVyhQHg2/iaKJZ1XVJ4r7XuwGL+WGEK37i9w==}
     peerDependencies:
-<<<<<<< HEAD
-      react: ^19.2.3
-      react-dom: ^19.2.3
-=======
       react: ^18.0.0 || ^19.0.0 || ^19.0.0-rc
       react-dom: ^18.0.0 || ^19.0.0 || ^19.0.0-rc
->>>>>>> f95caf5 (feat: migrate to lean OpenRouter-centric architecture with model cycling and integration cleanup)
 
   source-map-js@1.2.1:
     resolution: {integrity: sha512-UXWMKhLOwVKb728IUtQPXxfYU+usdybtUrK/8uGE8CQMvrhOpwvzDBwj0QhSL7MQc7vIsISBG8VQ8+IDQxpfQA==}
@@ -5369,11 +4726,7 @@ packages:
   swr@2.4.1:
     resolution: {integrity: sha512-2CC6CiKQtEwaEeNiqWTAw9PGykW8SR5zZX8MZk6TeAvEAnVS7Visz8WzphqgtQ8v2xz/4Q5K+j+SeMaKXeeQIA==}
     peerDependencies:
-<<<<<<< HEAD
-      react: ^19.2.3
-=======
       react: ^16.11.0 || ^17.0.0 || ^18.0.0 || ^19.0.0
->>>>>>> f95caf5 (feat: migrate to lean OpenRouter-centric architecture with model cycling and integration cleanup)
 
   symbol-tree@3.2.4:
     resolution: {integrity: sha512-9QNk5KwDF+Bvz+PyObkmSYjI5ksVUYtjW7AU22r2NKcfLJcXp96hkDWU3+XndOsUb+AQ9QhfzfCT2O+CNWT5Tw==}
@@ -5520,14 +4873,11 @@ packages:
   tslib@2.8.1:
     resolution: {integrity: sha512-oJFu94HQb+KVduSUQL7wnpmqnfmLsOA/nAh6b6EH0wCEoK0/mPeXU6c3wKDV83MkOuHPRHtSXKKU99IBazS/2w==}
 
-<<<<<<< HEAD
-=======
-  tsx@4.21.0:
-    resolution: {integrity: sha512-5C1sg4USs1lfG0GFb2RLXsdpXqBSEhAaA/0kPL01wxzpMqLILNxIxIOKiILz+cdg/pLnOUxFYOR5yhHU666wbw==}
+  tsx@4.22.1:
+    resolution: {integrity: sha512-TvncJykhxAzFCk0VQZKBTClall4Pm7qXDSodb6uxi8QFa8X8mT6ABjxxsQ2opDRYxG7AzcRWXaFtruz5HJKuWg==}
     engines: {node: '>=18.0.0'}
     hasBin: true
 
->>>>>>> f95caf5 (feat: migrate to lean OpenRouter-centric architecture with model cycling and integration cleanup)
   tunnel-rat@0.1.2:
     resolution: {integrity: sha512-lR5VHmkPhzdhrM092lI2nACsLO4QubF0/yoOhzX7c+wIpbN1GjHNzCc91QlpxBi+cnx8vVJ+Ur6vL5cEoQPFpQ==}
 
@@ -5605,11 +4955,7 @@ packages:
     engines: {node: '>=10'}
     peerDependencies:
       '@types/react': '*'
-<<<<<<< HEAD
-      react: ^19.2.3
-=======
       react: ^16.8.0 || ^17.0.0 || ^18.0.0 || ^19.0.0 || ^19.0.0-rc
->>>>>>> f95caf5 (feat: migrate to lean OpenRouter-centric architecture with model cycling and integration cleanup)
     peerDependenciesMeta:
       '@types/react':
         optional: true
@@ -5619,11 +4965,7 @@ packages:
     engines: {node: '>=10'}
     peerDependencies:
       '@types/react': '*'
-<<<<<<< HEAD
-      react: ^19.2.3
-=======
       react: ^16.8.0 || ^17.0.0 || ^18.0.0 || ^19.0.0 || ^19.0.0-rc
->>>>>>> f95caf5 (feat: migrate to lean OpenRouter-centric architecture with model cycling and integration cleanup)
     peerDependenciesMeta:
       '@types/react':
         optional: true
@@ -5631,11 +4973,7 @@ packages:
   use-sync-external-store@1.6.0:
     resolution: {integrity: sha512-Pp6GSwGP/NrPIrxVFAIkOQeyw8lFenOHijQWkUTrDvrF4ALqylP2C/KCkeS9dpUM3KvYRQhna5vt7IL95+ZQ9w==}
     peerDependencies:
-<<<<<<< HEAD
-      react: ^19.2.3
-=======
       react: ^16.8.0 || ^17.0.0 || ^18.0.0 || ^19.0.0
->>>>>>> f95caf5 (feat: migrate to lean OpenRouter-centric architecture with model cycling and integration cleanup)
 
   v8-compile-cache-lib@3.0.1:
     resolution: {integrity: sha512-wa7YjyUGfNZngI/vtK0UHAN+lgDCxBPCylVXGp0zu59Fz5aiGtNXaq3DhIov063MorB+VfufLh3JlF2KdTK3xg==}
@@ -5706,11 +5044,7 @@ packages:
       '@vitest/ui': 4.1.5
       happy-dom: '*'
       jsdom: '*'
-<<<<<<< HEAD
-      vite: '>=6.4.2'
-=======
       vite: ^6.0.0 || ^7.0.0 || ^8.0.0
->>>>>>> f95caf5 (feat: migrate to lean OpenRouter-centric architecture with model cycling and integration cleanup)
     peerDependenciesMeta:
       '@edge-runtime/vm':
         optional: true
@@ -5874,11 +5208,7 @@ packages:
     peerDependencies:
       '@types/react': '>=16.8'
       immer: '>=9.0.6'
-<<<<<<< HEAD
-      react: ^19.2.3
-=======
       react: '>=16.8'
->>>>>>> f95caf5 (feat: migrate to lean OpenRouter-centric architecture with model cycling and integration cleanup)
     peerDependenciesMeta:
       '@types/react':
         optional: true
@@ -5893,11 +5223,7 @@ packages:
     peerDependencies:
       '@types/react': '>=18.0.0'
       immer: '>=9.0.6'
-<<<<<<< HEAD
-      react: ^19.2.3
-=======
       react: '>=18.0.0'
->>>>>>> f95caf5 (feat: migrate to lean OpenRouter-centric architecture with model cycling and integration cleanup)
       use-sync-external-store: '>=1.2.0'
     peerDependenciesMeta:
       '@types/react':
@@ -5915,7 +5241,7 @@ packages:
     peerDependencies:
       '@types/react': '>=18.0.0'
       immer: '>=9.0.6'
-      react: ^19.2.3
+      react: '>=18.0.0'
       use-sync-external-store: '>=1.2.0'
     peerDependenciesMeta:
       '@types/react':
@@ -6398,237 +5724,159 @@ snapshots:
   '@esbuild/aix-ppc64@0.25.12':
     optional: true
 
-<<<<<<< HEAD
-  '@esbuild/android-arm64@0.25.12':
-    optional: true
-
-  '@esbuild/android-arm@0.25.12':
-    optional: true
-
-  '@esbuild/android-x64@0.25.12':
-    optional: true
-
-  '@esbuild/darwin-arm64@0.25.12':
-    optional: true
-
-  '@esbuild/darwin-x64@0.25.12':
-    optional: true
-
-  '@esbuild/freebsd-arm64@0.25.12':
-    optional: true
-
-  '@esbuild/freebsd-x64@0.25.12':
-    optional: true
-
-  '@esbuild/linux-arm64@0.25.12':
-    optional: true
-
-  '@esbuild/linux-arm@0.25.12':
-    optional: true
-
-  '@esbuild/linux-ia32@0.25.12':
-    optional: true
-
-  '@esbuild/linux-loong64@0.25.12':
-    optional: true
-
-  '@esbuild/linux-mips64el@0.25.12':
-    optional: true
-
-  '@esbuild/linux-ppc64@0.25.12':
-    optional: true
-
-  '@esbuild/linux-riscv64@0.25.12':
-    optional: true
-
-  '@esbuild/linux-s390x@0.25.12':
-    optional: true
-
-  '@esbuild/linux-x64@0.25.12':
-    optional: true
-
-  '@esbuild/netbsd-arm64@0.25.12':
-    optional: true
-
-  '@esbuild/netbsd-x64@0.25.12':
-    optional: true
-
-  '@esbuild/openbsd-arm64@0.25.12':
-    optional: true
-
-  '@esbuild/openbsd-x64@0.25.12':
-    optional: true
-
-  '@esbuild/openharmony-arm64@0.25.12':
-    optional: true
-
-  '@esbuild/sunos-x64@0.25.12':
-    optional: true
-
-  '@esbuild/win32-arm64@0.25.12':
-    optional: true
-
-  '@esbuild/win32-ia32@0.25.12':
-    optional: true
-
-  '@esbuild/win32-x64@0.25.12':
-    optional: true
-
-=======
-  '@esbuild/aix-ppc64@0.27.7':
+  '@esbuild/aix-ppc64@0.28.0':
     optional: true
 
   '@esbuild/android-arm64@0.25.12':
     optional: true
 
-  '@esbuild/android-arm64@0.27.7':
+  '@esbuild/android-arm64@0.28.0':
     optional: true
 
   '@esbuild/android-arm@0.25.12':
     optional: true
 
-  '@esbuild/android-arm@0.27.7':
+  '@esbuild/android-arm@0.28.0':
     optional: true
 
   '@esbuild/android-x64@0.25.12':
     optional: true
 
-  '@esbuild/android-x64@0.27.7':
+  '@esbuild/android-x64@0.28.0':
     optional: true
 
   '@esbuild/darwin-arm64@0.25.12':
     optional: true
 
-  '@esbuild/darwin-arm64@0.27.7':
+  '@esbuild/darwin-arm64@0.28.0':
     optional: true
 
   '@esbuild/darwin-x64@0.25.12':
     optional: true
 
-  '@esbuild/darwin-x64@0.27.7':
+  '@esbuild/darwin-x64@0.28.0':
     optional: true
 
   '@esbuild/freebsd-arm64@0.25.12':
     optional: true
 
-  '@esbuild/freebsd-arm64@0.27.7':
+  '@esbuild/freebsd-arm64@0.28.0':
     optional: true
 
   '@esbuild/freebsd-x64@0.25.12':
     optional: true
 
-  '@esbuild/freebsd-x64@0.27.7':
+  '@esbuild/freebsd-x64@0.28.0':
     optional: true
 
   '@esbuild/linux-arm64@0.25.12':
     optional: true
 
-  '@esbuild/linux-arm64@0.27.7':
+  '@esbuild/linux-arm64@0.28.0':
     optional: true
 
   '@esbuild/linux-arm@0.25.12':
     optional: true
 
-  '@esbuild/linux-arm@0.27.7':
+  '@esbuild/linux-arm@0.28.0':
     optional: true
 
   '@esbuild/linux-ia32@0.25.12':
     optional: true
 
-  '@esbuild/linux-ia32@0.27.7':
+  '@esbuild/linux-ia32@0.28.0':
     optional: true
 
   '@esbuild/linux-loong64@0.25.12':
     optional: true
 
-  '@esbuild/linux-loong64@0.27.7':
+  '@esbuild/linux-loong64@0.28.0':
     optional: true
 
   '@esbuild/linux-mips64el@0.25.12':
     optional: true
 
-  '@esbuild/linux-mips64el@0.27.7':
+  '@esbuild/linux-mips64el@0.28.0':
     optional: true
 
   '@esbuild/linux-ppc64@0.25.12':
     optional: true
 
-  '@esbuild/linux-ppc64@0.27.7':
+  '@esbuild/linux-ppc64@0.28.0':
     optional: true
 
   '@esbuild/linux-riscv64@0.25.12':
     optional: true
 
-  '@esbuild/linux-riscv64@0.27.7':
+  '@esbuild/linux-riscv64@0.28.0':
     optional: true
 
   '@esbuild/linux-s390x@0.25.12':
     optional: true
 
-  '@esbuild/linux-s390x@0.27.7':
+  '@esbuild/linux-s390x@0.28.0':
     optional: true
 
   '@esbuild/linux-x64@0.25.12':
     optional: true
 
-  '@esbuild/linux-x64@0.27.7':
+  '@esbuild/linux-x64@0.28.0':
     optional: true
 
   '@esbuild/netbsd-arm64@0.25.12':
     optional: true
 
-  '@esbuild/netbsd-arm64@0.27.7':
+  '@esbuild/netbsd-arm64@0.28.0':
     optional: true
 
   '@esbuild/netbsd-x64@0.25.12':
     optional: true
 
-  '@esbuild/netbsd-x64@0.27.7':
+  '@esbuild/netbsd-x64@0.28.0':
     optional: true
 
   '@esbuild/openbsd-arm64@0.25.12':
     optional: true
 
-  '@esbuild/openbsd-arm64@0.27.7':
+  '@esbuild/openbsd-arm64@0.28.0':
     optional: true
 
   '@esbuild/openbsd-x64@0.25.12':
     optional: true
 
-  '@esbuild/openbsd-x64@0.27.7':
+  '@esbuild/openbsd-x64@0.28.0':
     optional: true
 
   '@esbuild/openharmony-arm64@0.25.12':
     optional: true
 
-  '@esbuild/openharmony-arm64@0.27.7':
+  '@esbuild/openharmony-arm64@0.28.0':
     optional: true
 
   '@esbuild/sunos-x64@0.25.12':
     optional: true
 
-  '@esbuild/sunos-x64@0.27.7':
+  '@esbuild/sunos-x64@0.28.0':
     optional: true
 
   '@esbuild/win32-arm64@0.25.12':
     optional: true
 
-  '@esbuild/win32-arm64@0.27.7':
+  '@esbuild/win32-arm64@0.28.0':
     optional: true
 
   '@esbuild/win32-ia32@0.25.12':
     optional: true
 
-  '@esbuild/win32-ia32@0.27.7':
+  '@esbuild/win32-ia32@0.28.0':
     optional: true
 
   '@esbuild/win32-x64@0.25.12':
     optional: true
 
-  '@esbuild/win32-x64@0.27.7':
+  '@esbuild/win32-x64@0.28.0':
     optional: true
 
->>>>>>> f95caf5 (feat: migrate to lean OpenRouter-centric architecture with model cycling and integration cleanup)
   '@eslint-community/eslint-utils@4.9.1(eslint@9.39.4(jiti@2.6.1))':
     dependencies:
       eslint: 9.39.4(jiti@2.6.1)
@@ -6694,13 +5942,10 @@ snapshots:
 
   '@google/generative-ai@0.24.1': {}
 
-<<<<<<< HEAD
-=======
-  '@hono/node-server@1.19.14(hono@4.12.15)':
+  '@hono/node-server@1.19.14(hono@4.12.19)':
     dependencies:
-      hono: 4.12.15
+      hono: 4.12.19
 
->>>>>>> f95caf5 (feat: migrate to lean OpenRouter-centric architecture with model cycling and integration cleanup)
   '@hookform/resolvers@3.10.0(react-hook-form@7.73.1(react@19.2.5))':
     dependencies:
       react-hook-form: 7.73.1(react@19.2.5)
@@ -7122,18 +6367,6 @@ snapshots:
       '@jridgewell/resolve-uri': 3.1.2
       '@jridgewell/sourcemap-codec': 1.5.5
 
-<<<<<<< HEAD
-=======
-  '@jules/shared@file:archive/packages/shared(ws@8.20.0)':
-    dependencies:
-      '@google/generative-ai': 0.24.1
-      anthropic: 0.0.0
-      openai: 6.18.0(ws@8.20.0)(zod@4.3.6)
-      zod: 4.3.6
-    transitivePeerDependencies:
-      - ws
-
->>>>>>> f95caf5 (feat: migrate to lean OpenRouter-centric architecture with model cycling and integration cleanup)
   '@napi-rs/wasm-runtime@0.2.12':
     dependencies:
       '@emnapi/core': 1.8.1
@@ -7150,8 +6383,6 @@ snapshots:
     dependencies:
       playwright: 1.59.1
 
-<<<<<<< HEAD
-=======
   '@prisma/client@5.19.1(prisma@5.19.1)':
     optionalDependencies:
       prisma: 5.19.1
@@ -7177,7 +6408,6 @@ snapshots:
     dependencies:
       '@prisma/debug': 5.19.1
 
->>>>>>> f95caf5 (feat: migrate to lean OpenRouter-centric architecture with model cycling and integration cleanup)
   '@radix-ui/colors@3.0.0': {}
 
   '@radix-ui/number@1.1.1': {}
@@ -8160,20 +7390,12 @@ snapshots:
       '@tailwindcss/oxide-win32-arm64-msvc': 4.2.4
       '@tailwindcss/oxide-win32-x64-msvc': 4.2.4
 
-<<<<<<< HEAD
-  '@tailwindcss/vite@4.2.4(vite@6.4.2(@types/node@25.6.0)(jiti@2.6.1)(lightningcss@1.32.0))':
-=======
-  '@tailwindcss/vite@4.2.4(vite@6.4.2(@types/node@25.6.0)(jiti@2.6.1)(lightningcss@1.32.0)(tsx@4.21.0))':
->>>>>>> f95caf5 (feat: migrate to lean OpenRouter-centric architecture with model cycling and integration cleanup)
+  '@tailwindcss/vite@4.2.4(vite@6.4.2(@types/node@25.6.0)(jiti@2.6.1)(lightningcss@1.32.0)(tsx@4.22.1))':
     dependencies:
       '@tailwindcss/node': 4.2.4
       '@tailwindcss/oxide': 4.2.4
       tailwindcss: 4.2.4
-<<<<<<< HEAD
-      vite: 6.4.2(@types/node@25.6.0)(jiti@2.6.1)(lightningcss@1.32.0)
-=======
-      vite: 6.4.2(@types/node@25.6.0)(jiti@2.6.1)(lightningcss@1.32.0)(tsx@4.21.0)
->>>>>>> f95caf5 (feat: migrate to lean OpenRouter-centric architecture with model cycling and integration cleanup)
+      vite: 6.4.2(@types/node@25.6.0)(jiti@2.6.1)(lightningcss@1.32.0)(tsx@4.22.1)
 
   '@tanstack/react-virtual@3.13.24(react-dom@19.2.5(react@19.2.5))(react@19.2.5)':
     dependencies:
@@ -8331,15 +7553,6 @@ snapshots:
 
   '@types/unist@3.0.3': {}
 
-<<<<<<< HEAD
-=======
-  '@types/vscode@1.116.0': {}
-
-  '@types/ws@8.18.1':
-    dependencies:
-      '@types/node': 25.6.0
-
->>>>>>> f95caf5 (feat: migrate to lean OpenRouter-centric architecture with model cycling and integration cleanup)
   '@types/yargs-parser@21.0.3': {}
 
   '@types/yargs@17.0.35':
@@ -8498,11 +7711,7 @@ snapshots:
   '@unrs/resolver-binding-win32-x64-msvc@1.11.1':
     optional: true
 
-<<<<<<< HEAD
-  '@vitejs/plugin-react@4.7.0(vite@6.4.2(@types/node@25.6.0)(jiti@2.6.1)(lightningcss@1.32.0))':
-=======
-  '@vitejs/plugin-react@4.7.0(vite@6.4.2(@types/node@25.6.0)(jiti@2.6.1)(lightningcss@1.32.0)(tsx@4.21.0))':
->>>>>>> f95caf5 (feat: migrate to lean OpenRouter-centric architecture with model cycling and integration cleanup)
+  '@vitejs/plugin-react@4.7.0(vite@6.4.2(@types/node@25.6.0)(jiti@2.6.1)(lightningcss@1.32.0)(tsx@4.22.1))':
     dependencies:
       '@babel/core': 7.29.0
       '@babel/plugin-transform-react-jsx-self': 7.27.1(@babel/core@7.29.0)
@@ -8510,11 +7719,7 @@ snapshots:
       '@rolldown/pluginutils': 1.0.0-beta.27
       '@types/babel__core': 7.20.5
       react-refresh: 0.17.0
-<<<<<<< HEAD
-      vite: 6.4.2(@types/node@25.6.0)(jiti@2.6.1)(lightningcss@1.32.0)
-=======
-      vite: 6.4.2(@types/node@25.6.0)(jiti@2.6.1)(lightningcss@1.32.0)(tsx@4.21.0)
->>>>>>> f95caf5 (feat: migrate to lean OpenRouter-centric architecture with model cycling and integration cleanup)
+      vite: 6.4.2(@types/node@25.6.0)(jiti@2.6.1)(lightningcss@1.32.0)(tsx@4.22.1)
     transitivePeerDependencies:
       - supports-color
 
@@ -8527,21 +7732,13 @@ snapshots:
       chai: 6.2.2
       tinyrainbow: 3.1.0
 
-<<<<<<< HEAD
-  '@vitest/mocker@4.1.5(vite@6.4.2(@types/node@25.6.0)(jiti@2.6.1)(lightningcss@1.32.0))':
-=======
-  '@vitest/mocker@4.1.5(vite@6.4.2(@types/node@25.6.0)(jiti@2.6.1)(lightningcss@1.32.0)(tsx@4.21.0))':
->>>>>>> f95caf5 (feat: migrate to lean OpenRouter-centric architecture with model cycling and integration cleanup)
+  '@vitest/mocker@4.1.5(vite@6.4.2(@types/node@25.6.0)(jiti@2.6.1)(lightningcss@1.32.0)(tsx@4.22.1))':
     dependencies:
       '@vitest/spy': 4.1.5
       estree-walker: 3.0.3
       magic-string: 0.30.21
     optionalDependencies:
-<<<<<<< HEAD
-      vite: 6.4.2(@types/node@25.6.0)(jiti@2.6.1)(lightningcss@1.32.0)
-=======
-      vite: 6.4.2(@types/node@25.6.0)(jiti@2.6.1)(lightningcss@1.32.0)(tsx@4.21.0)
->>>>>>> f95caf5 (feat: migrate to lean OpenRouter-centric architecture with model cycling and integration cleanup)
+      vite: 6.4.2(@types/node@25.6.0)(jiti@2.6.1)(lightningcss@1.32.0)(tsx@4.22.1)
 
   '@vitest/pretty-format@4.1.5':
     dependencies:
@@ -8611,11 +7808,7 @@ snapshots:
   anymatch@3.1.3:
     dependencies:
       normalize-path: 3.0.0
-<<<<<<< HEAD
-      picomatch: 4.0.4
-=======
       picomatch: 2.3.2
->>>>>>> f95caf5 (feat: migrate to lean OpenRouter-centric architecture with model cycling and integration cleanup)
 
   arg@4.1.3: {}
 
@@ -8754,17 +7947,12 @@ snapshots:
 
   bail@2.0.2: {}
 
-<<<<<<< HEAD
-=======
   balanced-match@1.0.2: {}
 
->>>>>>> f95caf5 (feat: migrate to lean OpenRouter-centric architecture with model cycling and integration cleanup)
   balanced-match@4.0.4: {}
 
   baseline-browser-mapping@2.10.21: {}
 
-<<<<<<< HEAD
-=======
   brace-expansion@1.1.14:
     dependencies:
       balanced-match: 1.0.2
@@ -8774,7 +7962,6 @@ snapshots:
     dependencies:
       balanced-match: 1.0.2
 
->>>>>>> f95caf5 (feat: migrate to lean OpenRouter-centric architecture with model cycling and integration cleanup)
   brace-expansion@5.0.5:
     dependencies:
       balanced-match: 4.0.4
@@ -8900,11 +8087,8 @@ snapshots:
 
   comma-separated-tokens@2.0.3: {}
 
-<<<<<<< HEAD
-=======
   concat-map@0.0.1: {}
 
->>>>>>> f95caf5 (feat: migrate to lean OpenRouter-centric architecture with model cycling and integration cleanup)
   convert-source-map@2.0.0: {}
 
   convert-to-spaces@2.0.1: {}
@@ -9050,38 +8234,35 @@ snapshots:
       '@esbuild/win32-ia32': 0.25.12
       '@esbuild/win32-x64': 0.25.12
 
-<<<<<<< HEAD
-=======
-  esbuild@0.27.7:
+  esbuild@0.28.0:
     optionalDependencies:
-      '@esbuild/aix-ppc64': 0.27.7
-      '@esbuild/android-arm': 0.27.7
-      '@esbuild/android-arm64': 0.27.7
-      '@esbuild/android-x64': 0.27.7
-      '@esbuild/darwin-arm64': 0.27.7
-      '@esbuild/darwin-x64': 0.27.7
-      '@esbuild/freebsd-arm64': 0.27.7
-      '@esbuild/freebsd-x64': 0.27.7
-      '@esbuild/linux-arm': 0.27.7
-      '@esbuild/linux-arm64': 0.27.7
-      '@esbuild/linux-ia32': 0.27.7
-      '@esbuild/linux-loong64': 0.27.7
-      '@esbuild/linux-mips64el': 0.27.7
-      '@esbuild/linux-ppc64': 0.27.7
-      '@esbuild/linux-riscv64': 0.27.7
-      '@esbuild/linux-s390x': 0.27.7
-      '@esbuild/linux-x64': 0.27.7
-      '@esbuild/netbsd-arm64': 0.27.7
-      '@esbuild/netbsd-x64': 0.27.7
-      '@esbuild/openbsd-arm64': 0.27.7
-      '@esbuild/openbsd-x64': 0.27.7
-      '@esbuild/openharmony-arm64': 0.27.7
-      '@esbuild/sunos-x64': 0.27.7
-      '@esbuild/win32-arm64': 0.27.7
-      '@esbuild/win32-ia32': 0.27.7
-      '@esbuild/win32-x64': 0.27.7
+      '@esbuild/aix-ppc64': 0.28.0
+      '@esbuild/android-arm': 0.28.0
+      '@esbuild/android-arm64': 0.28.0
+      '@esbuild/android-x64': 0.28.0
+      '@esbuild/darwin-arm64': 0.28.0
+      '@esbuild/darwin-x64': 0.28.0
+      '@esbuild/freebsd-arm64': 0.28.0
+      '@esbuild/freebsd-x64': 0.28.0
+      '@esbuild/linux-arm': 0.28.0
+      '@esbuild/linux-arm64': 0.28.0
+      '@esbuild/linux-ia32': 0.28.0
+      '@esbuild/linux-loong64': 0.28.0
+      '@esbuild/linux-mips64el': 0.28.0
+      '@esbuild/linux-ppc64': 0.28.0
+      '@esbuild/linux-riscv64': 0.28.0
+      '@esbuild/linux-s390x': 0.28.0
+      '@esbuild/linux-x64': 0.28.0
+      '@esbuild/netbsd-arm64': 0.28.0
+      '@esbuild/netbsd-x64': 0.28.0
+      '@esbuild/openbsd-arm64': 0.28.0
+      '@esbuild/openbsd-x64': 0.28.0
+      '@esbuild/openharmony-arm64': 0.28.0
+      '@esbuild/sunos-x64': 0.28.0
+      '@esbuild/win32-arm64': 0.28.0
+      '@esbuild/win32-ia32': 0.28.0
+      '@esbuild/win32-x64': 0.28.0
 
->>>>>>> f95caf5 (feat: migrate to lean OpenRouter-centric architecture with model cycling and integration cleanup)
   escalade@3.2.0: {}
 
   escape-string-regexp@2.0.0: {}
@@ -9328,13 +8509,6 @@ snapshots:
 
   get-stream@6.0.1: {}
 
-<<<<<<< HEAD
-=======
-  get-tsconfig@4.14.0:
-    dependencies:
-      resolve-pkg-maps: 1.0.0
-
->>>>>>> f95caf5 (feat: migrate to lean OpenRouter-centric architecture with model cycling and integration cleanup)
   glob-parent@6.0.2:
     dependencies:
       is-glob: 4.0.3
@@ -9343,11 +8517,7 @@ snapshots:
     dependencies:
       foreground-child: 3.3.1
       jackspeak: 3.4.3
-<<<<<<< HEAD
-      minimatch: 10.2.5
-=======
       minimatch: 9.0.9
->>>>>>> f95caf5 (feat: migrate to lean OpenRouter-centric architecture with model cycling and integration cleanup)
       minipass: 7.1.2
       package-json-from-dist: 1.0.1
       path-scurry: 1.11.1
@@ -9357,11 +8527,7 @@ snapshots:
       fs.realpath: 1.0.0
       inflight: 1.0.6
       inherits: 2.0.4
-<<<<<<< HEAD
-      minimatch: 10.2.5
-=======
       minimatch: 3.1.5
->>>>>>> f95caf5 (feat: migrate to lean OpenRouter-centric architecture with model cycling and integration cleanup)
       once: 1.4.0
       path-is-absolute: 1.0.1
 
@@ -9424,11 +8590,8 @@ snapshots:
     dependencies:
       hermes-estree: 0.25.1
 
-<<<<<<< HEAD
-=======
-  hono@4.12.15: {}
+  hono@4.12.19: {}
 
->>>>>>> f95caf5 (feat: migrate to lean OpenRouter-centric architecture with model cycling and integration cleanup)
   html-encoding-sniffer@4.0.0:
     dependencies:
       whatwg-encoding: 3.1.1
@@ -9460,9 +8623,6 @@ snapshots:
   ignore@5.3.2: {}
 
   ignore@7.0.5: {}
-
-  immer@11.1.3:
-    optional: true
 
   import-fresh@3.3.1:
     dependencies:
@@ -10231,11 +9391,8 @@ snapshots:
 
   jiti@2.6.1: {}
 
-<<<<<<< HEAD
-=======
-  jose@6.2.2: {}
+  jose@6.2.3: {}
 
->>>>>>> f95caf5 (feat: migrate to lean OpenRouter-centric architecture with model cycling and integration cleanup)
   js-tokens@4.0.0: {}
 
   js-yaml@3.14.2:
@@ -10749,11 +9906,7 @@ snapshots:
   micromatch@4.0.8:
     dependencies:
       braces: 3.0.3
-<<<<<<< HEAD
-      picomatch: 4.0.4
-=======
       picomatch: 2.3.2
->>>>>>> f95caf5 (feat: migrate to lean OpenRouter-centric architecture with model cycling and integration cleanup)
 
   mime-db@1.52.0: {}
 
@@ -10771,15 +9924,11 @@ snapshots:
 
   minimatch@3.1.5:
     dependencies:
-<<<<<<< HEAD
-      brace-expansion: 5.0.5
-=======
       brace-expansion: 1.1.14
 
   minimatch@9.0.9:
     dependencies:
       brace-expansion: 2.1.0
->>>>>>> f95caf5 (feat: migrate to lean OpenRouter-centric architecture with model cycling and integration cleanup)
 
   minimist@1.2.8: {}
 
@@ -10843,14 +9992,6 @@ snapshots:
       ws: 8.20.0
       zod: 4.3.5
 
-<<<<<<< HEAD
-=======
-  openai@6.18.0(ws@8.20.0)(zod@4.3.6):
-    optionalDependencies:
-      ws: 8.20.0
-      zod: 4.3.6
-
->>>>>>> f95caf5 (feat: migrate to lean OpenRouter-centric architecture with model cycling and integration cleanup)
   optionator@0.9.4:
     dependencies:
       deep-is: 0.1.4
@@ -10922,11 +10063,8 @@ snapshots:
 
   picocolors@1.1.1: {}
 
-<<<<<<< HEAD
-=======
   picomatch@2.3.2: {}
 
->>>>>>> f95caf5 (feat: migrate to lean OpenRouter-centric architecture with model cycling and integration cleanup)
   picomatch@4.0.4: {}
 
   pirates@4.0.7: {}
@@ -10971,15 +10109,12 @@ snapshots:
       ansi-styles: 5.2.0
       react-is: 18.3.1
 
-<<<<<<< HEAD
-=======
   prisma@5.19.1:
     dependencies:
       '@prisma/engines': 5.19.1
     optionalDependencies:
       fsevents: 2.3.3
 
->>>>>>> f95caf5 (feat: migrate to lean OpenRouter-centric architecture with model cycling and integration cleanup)
   property-information@7.1.0: {}
 
   proxy-from-env@2.1.0: {}
@@ -11175,11 +10310,6 @@ snapshots:
 
   resolve-from@5.0.0: {}
 
-<<<<<<< HEAD
-=======
-  resolve-pkg-maps@1.0.0: {}
-
->>>>>>> f95caf5 (feat: migrate to lean OpenRouter-centric architecture with model cycling and integration cleanup)
   restore-cursor@4.0.0:
     dependencies:
       onetime: 5.1.2
@@ -11374,11 +10504,7 @@ snapshots:
     dependencies:
       '@istanbuljs/schema': 0.1.3
       glob: 7.2.3
-<<<<<<< HEAD
-      minimatch: 10.2.5
-=======
       minimatch: 3.1.5
->>>>>>> f95caf5 (feat: migrate to lean OpenRouter-centric architecture with model cycling and integration cleanup)
 
   tinybench@2.9.0: {}
 
@@ -11479,19 +10605,15 @@ snapshots:
 
   tslib@2.8.1: {}
 
-<<<<<<< HEAD
-=======
-  tsx@4.21.0:
+  tsx@4.22.1:
     dependencies:
-      esbuild: 0.27.7
-      get-tsconfig: 4.14.0
+      esbuild: 0.28.0
     optionalDependencies:
       fsevents: 2.3.3
 
->>>>>>> f95caf5 (feat: migrate to lean OpenRouter-centric architecture with model cycling and integration cleanup)
-  tunnel-rat@0.1.2(@types/react@19.2.14)(immer@11.1.3)(react@19.2.5):
+  tunnel-rat@0.1.2(@types/react@19.2.14)(react@19.2.5):
     dependencies:
-      zustand: 4.5.7(@types/react@19.2.14)(immer@11.1.3)(react@19.2.5)
+      zustand: 4.5.7(@types/react@19.2.14)(react@19.2.5)
     transitivePeerDependencies:
       - '@types/react'
       - immer
@@ -11636,11 +10758,7 @@ snapshots:
       '@types/unist': 3.0.3
       vfile-message: 4.0.3
 
-<<<<<<< HEAD
-  vite@6.4.2(@types/node@25.6.0)(jiti@2.6.1)(lightningcss@1.32.0):
-=======
-  vite@6.4.2(@types/node@25.6.0)(jiti@2.6.1)(lightningcss@1.32.0)(tsx@4.21.0):
->>>>>>> f95caf5 (feat: migrate to lean OpenRouter-centric architecture with model cycling and integration cleanup)
+  vite@6.4.2(@types/node@25.6.0)(jiti@2.6.1)(lightningcss@1.32.0)(tsx@4.22.1):
     dependencies:
       esbuild: 0.25.12
       fdir: 6.5.0(picomatch@4.0.4)
@@ -11653,20 +10771,12 @@ snapshots:
       fsevents: 2.3.3
       jiti: 2.6.1
       lightningcss: 1.32.0
-<<<<<<< HEAD
+      tsx: 4.22.1
 
-  vitest@4.1.5(@types/node@25.6.0)(jsdom@26.1.0)(vite@6.4.2(@types/node@25.6.0)(jiti@2.6.1)(lightningcss@1.32.0)):
+  vitest@4.1.5(@types/node@25.6.0)(jsdom@26.1.0)(vite@6.4.2(@types/node@25.6.0)(jiti@2.6.1)(lightningcss@1.32.0)(tsx@4.22.1)):
     dependencies:
       '@vitest/expect': 4.1.5
-      '@vitest/mocker': 4.1.5(vite@6.4.2(@types/node@25.6.0)(jiti@2.6.1)(lightningcss@1.32.0))
-=======
-      tsx: 4.21.0
-
-  vitest@4.1.5(@types/node@25.6.0)(jsdom@26.1.0)(vite@6.4.2(@types/node@25.6.0)(jiti@2.6.1)(lightningcss@1.32.0)(tsx@4.21.0)):
-    dependencies:
-      '@vitest/expect': 4.1.5
-      '@vitest/mocker': 4.1.5(vite@6.4.2(@types/node@25.6.0)(jiti@2.6.1)(lightningcss@1.32.0)(tsx@4.21.0))
->>>>>>> f95caf5 (feat: migrate to lean OpenRouter-centric architecture with model cycling and integration cleanup)
+      '@vitest/mocker': 4.1.5(vite@6.4.2(@types/node@25.6.0)(jiti@2.6.1)(lightningcss@1.32.0)(tsx@4.22.1))
       '@vitest/pretty-format': 4.1.5
       '@vitest/runner': 4.1.5
       '@vitest/snapshot': 4.1.5
@@ -11683,11 +10793,7 @@ snapshots:
       tinyexec: 1.1.1
       tinyglobby: 0.2.16
       tinyrainbow: 3.1.0
-<<<<<<< HEAD
-      vite: 6.4.2(@types/node@25.6.0)(jiti@2.6.1)(lightningcss@1.32.0)
-=======
-      vite: 6.4.2(@types/node@25.6.0)(jiti@2.6.1)(lightningcss@1.32.0)(tsx@4.21.0)
->>>>>>> f95caf5 (feat: migrate to lean OpenRouter-centric architecture with model cycling and integration cleanup)
+      vite: 6.4.2(@types/node@25.6.0)(jiti@2.6.1)(lightningcss@1.32.0)(tsx@4.22.1)
       why-is-node-running: 2.3.0
     optionalDependencies:
       '@types/node': 25.6.0
@@ -11796,25 +10902,22 @@ snapshots:
 
   zod@4.3.6: {}
 
-  zustand@4.5.7(@types/react@19.2.14)(immer@11.1.3)(react@19.2.5):
+  zustand@4.5.7(@types/react@19.2.14)(react@19.2.5):
     dependencies:
       use-sync-external-store: 1.6.0(react@19.2.5)
     optionalDependencies:
       '@types/react': 19.2.14
-      immer: 11.1.3
       react: 19.2.5
 
-  zustand@5.0.12(@types/react@19.2.14)(immer@11.1.3)(react@19.2.5)(use-sync-external-store@1.6.0(react@19.2.5)):
+  zustand@5.0.12(@types/react@19.2.14)(react@19.2.5)(use-sync-external-store@1.6.0(react@19.2.5)):
     optionalDependencies:
       '@types/react': 19.2.14
-      immer: 11.1.3
       react: 19.2.5
       use-sync-external-store: 1.6.0(react@19.2.5)
 
-  zustand@5.0.9(@types/react@19.2.7)(immer@11.1.3)(react@19.2.3)(use-sync-external-store@1.6.0(react@19.2.3)):
+  zustand@5.0.9(@types/react@19.2.7)(react@19.2.3)(use-sync-external-store@1.6.0(react@19.2.3)):
     optionalDependencies:
       '@types/react': 19.2.7
-      immer: 11.1.3
       react: 19.2.3
       use-sync-external-store: 1.6.0(react@19.2.3)
 

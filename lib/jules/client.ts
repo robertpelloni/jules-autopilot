@@ -169,9 +169,10 @@ function getDefaultApiBaseUrl(): string {
     }
   })();
 
-  return viteEnv?.VITE_JULES_API_BASE_URL
-    || processEnv?.VITE_JULES_API_BASE_URL
-    || '/api';
+  const viteBaseUrl = viteEnv?.VITE_JULES_API_BASE_URL || processEnv?.VITE_JULES_API_BASE_URL;
+  if (viteBaseUrl) return viteBaseUrl;
+
+  return '/api';
 }
 
 export class JulesClient {

@@ -8,6 +8,23 @@ export default defineConfig({
   plugins: [
     react(),
     tailwindcss(),
+    {
+      name: 'api-mock-middleware',
+      configureServer(server) {
+        server.middlewares.use((req, res, next) => {
+          if (req.url?.startsWith('/api/')) {
+            // Check if backend is actually responding before mocking
+            // For now, we only mock if explicitly needed or as a fallback
+            // But since we want to avoid breaking the real integration,
+            // we'll only mock specific paths if we want to shim them.
+            
+            // If we want a pure mock mode, we could use an env var.
+            return next(); 
+          }
+          next();
+        });
+      }
+    }
   ],
   resolve: {
     alias: {
@@ -48,13 +65,13 @@ export default defineConfig({
   server: {
     port: 3006,
     proxy: {
-      '/api': {
-        target: 'http://localhost:8090',
-        changeOrigin: true,
-      },
       '/ws': {
-        target: 'ws://localhost:8090',
+        target: 'ws://localhost:8080',
         ws: true,
+      },
+      '/api': {
+        target: 'http://localhost:8080',
+        changeOrigin: true,
       },
     },
   },

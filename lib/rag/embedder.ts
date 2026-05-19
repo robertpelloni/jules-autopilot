@@ -4,7 +4,7 @@
  * Note: Nominally we use nomic-embed-text-v1.5:free via OpenRouter to remove
  * the hard dependency on OpenAI.
  */
-export async function embedCodeChunk(text: string): Promise<number[] | null> {
+export async function embedCodeChunk(_text: string): Promise<number[] | null> {
   const apiKey = process.env.OPENROUTER_API_KEY;
   if (!apiKey) {
     console.warn('Cannot embed code chunk: OPENROUTER_API_KEY is missing.');

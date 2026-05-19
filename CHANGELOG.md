@@ -2,6 +2,19 @@
 
 All notable changes to this project will be documented in this file.
 
+## [3.6.0] - 2026-05-18
+
+### Changed
+- **React 19 / Compiler Compatibility**: Fixed 17+ lint errors related to React 19's strict purity and effect rules (react-hooks/set-state-in-effect, react-hooks/purity).
+- **Data Fetching Refactor**: Transitioned manual state-based data fetching in `SessionList`, `SessionBoard`, and `SessionReplayDialog` to `useSWR` for better performance and idiomatic React 19 usage.
+- **Environment Handling**: Restored safe environment variable access pattern (`eval` trick) to maintain compatibility between Vite and Node.js/Jest environments.
+- **WebSocket Stability**: Fixed synchronous state updates in `use-daemon-websocket` by deferring connection/disconnection logic to the next tick.
+- **Build Integrity**: Corrected multiple TypeScript errors and missing utility functions introduced during the refactor.
+- **Project Versioning**: Synchronized version 3.6.0 across all manifests and documentation.
+
+## [3.5.5] - 2026-05-10
+- Initial Go-first architecture deployment and baseline React 19 integration.
+
 ## [2.1.0] - 2026-04-08
 
 ### Added

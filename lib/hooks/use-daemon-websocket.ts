@@ -348,13 +348,18 @@ export function useDaemonWebSocket() {
   }, []);
 
   useEffect(() => {
+    let timer: ReturnType<typeof setTimeout> | null = null;
+    
     if (config.isEnabled) {
-      attemptConnection();
+      // Defer connection attempt to avoid cascading render lint error
+      timer = setTimeout(() => attemptConnection(), 0);
     } else {
-      disconnect();
+      // Defer disconnect to avoid cascading render lint error
+      timer = setTimeout(() => disconnect(), 0);
     }
 
     return () => {
+      if (timer) clearTimeout(timer);
       disconnect();
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps

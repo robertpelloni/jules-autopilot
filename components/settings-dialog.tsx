@@ -30,6 +30,16 @@ export function SettingsDialog({ open: propOpen, onOpenChange: propOnOpenChange,
   const open = propOpen !== undefined ? propOpen : internalOpen;
   const onOpenChange = propOnOpenChange || setInternalOpen;
 
+  const handleOpenChange = (newOpen: boolean) => {
+    onOpenChange(newOpen);
+    if (newOpen && typeof window !== 'undefined') {
+      setGithubToken(localStorage.getItem('github_pat') || '');
+      setJulesKey(localStorage.getItem('jules_api_key') || '');
+      setOpenRouterKey(localStorage.getItem('openrouter_api_key') || '');
+      setGeminiKey(localStorage.getItem('gemini_api_key') || '');
+    }
+  };
+
   // Detect env-provided keys
   useEffect(() => {
     if (open) {
@@ -40,15 +50,7 @@ export function SettingsDialog({ open: propOpen, onOpenChange: propOnOpenChange,
     }
   }, [open]);
 
-  // Initialize tokens from localStorage
-  useEffect(() => {
-    if (typeof window !== 'undefined' && open) {
-      setGithubToken(localStorage.getItem('github_pat') || '');
-      setJulesKey(localStorage.getItem('jules_api_key') || '');
-      setOpenRouterKey(localStorage.getItem('openrouter_api_key') || '');
-      setGeminiKey(localStorage.getItem('gemini_api_key') || '');
-    }
-  }, [open]);
+  // handleSaveIntegrations ...
 
   const handleSaveIntegrations = () => {
     localStorage.setItem('github_pat', githubToken);
@@ -106,7 +108,7 @@ export function SettingsDialog({ open: propOpen, onOpenChange: propOnOpenChange,
   }, []);
 
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
+    <Dialog open={open} onOpenChange={handleOpenChange}>
       {trigger && <DialogTrigger asChild>{trigger}</DialogTrigger>}
       <DialogContent className="max-w-3xl bg-zinc-950 border-white/10 text-white h-[80vh] flex flex-col p-0 shadow-2xl">
         <DialogHeader className="px-6 py-4 border-b border-white/10">

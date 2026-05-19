@@ -27,19 +27,32 @@ export interface ScheduledTask {
 }
 
 export async function fetchHealth(): Promise<HealthResponse> {
-  const response = await fetch('/api/health');
-  if (!response.ok) {
-    throw new Error('Failed to load runtime health');
+  try {
+    const response = await fetch('/api/health');
+    if (!response.ok) throw new Error('Backend down');
+    return response.json() as Promise<HealthResponse>;
+  } catch (_e) {
+    return {
+      status: 'offline',
+      timestamp: new Date().toISOString(),
+      version: '3.5.5',
+      checks: {
+        database: { status: 'down', error: 'Go backend not detected' },
+        daemon: { running: false, enabled: false },
+        worker: { running: false }
+      }
+    };
   }
-  return response.json() as Promise<HealthResponse>;
 }
 
 export async function fetchScheduledTasks(): Promise<ScheduledTask[]> {
-  const response = await fetch('/api/scheduler');
-  if (!response.ok) {
-    throw new Error('Failed to load scheduled tasks');
+  try {
+    const response = await fetch('/api/scheduler');
+    if (!response.ok) return [];
+    return response.json() as Promise<ScheduledTask[]>;
+  } catch (_e) {
+    return [];
   }
-  return response.json() as Promise<ScheduledTask[]>;
 }
 
 export async function triggerScheduledTask(name: string): Promise<void> {

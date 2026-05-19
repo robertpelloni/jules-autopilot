@@ -94,7 +94,7 @@ export function BroadcastDialog({ sessions }: BroadcastDialogProps) {
   const [lastFailedAt, setLastFailedAt] = useState<number | null>(null);
   const [lastAvailabilityRefreshAt, setLastAvailabilityRefreshAt] = useState<number | null>(null);
   const [lastRecoveredRetryOutcome, setLastRecoveredRetryOutcome] = useState<RecoveredRetryOutcome | null>(null);
-  const [recoveredNow, setRecoveredNow] = useState(Date.now());
+  const [recoveredNow, setRecoveredNow] = useState(() => Date.now());
   const [refreshingRecoveredAvailability, setRefreshingRecoveredAvailability] = useState(false);
   const [autoRefreshRecoveredAvailability, setAutoRefreshRecoveredAvailability] = useState(false);
   const [autoRefreshRecoveredIntervalMs, setAutoRefreshRecoveredIntervalMs] = useState<number>(30000);
@@ -119,9 +119,9 @@ export function BroadcastDialog({ sessions }: BroadcastDialogProps) {
       ? Math.max(0, Math.ceil((hotkeyRefreshCooldownUntil - recoveredNow) / 1000))
       : 0;
 
-  // Reset progress when dialog closes
-  useEffect(() => {
-    if (!open) {
+  const handleOpenChange = (newOpen: boolean) => {
+    setOpen(newOpen);
+    if (!newOpen) {
       setSending(false);
       setProgress(0);
       setDeliveryReport(null);
@@ -129,7 +129,7 @@ export function BroadcastDialog({ sessions }: BroadcastDialogProps) {
       setBackgroundRetryTotal(0);
       setBackgroundRetryCompleted(0);
     }
-  }, [open]);
+  };
 
   useEffect(() => {
     if (!open || (!lastFailedAt && !lastAvailabilityRefreshAt)) {
@@ -181,13 +181,15 @@ export function BroadcastDialog({ sessions }: BroadcastDialogProps) {
 
       const parsedInterval = Number.parseInt(storedInterval, 10);
       if (AUTO_REFRESH_INTERVAL_OPTIONS.includes(parsedInterval as (typeof AUTO_REFRESH_INTERVAL_OPTIONS)[number])) {
-        setAutoRefreshRecoveredIntervalMs(parsedInterval);
+        // Defer to avoid cascading render
+        setTimeout(() => setAutoRefreshRecoveredIntervalMs(parsedInterval), 0);
       }
 
       return;
     }
 
-    setAutoRefreshRecoveredAvailability(storedValue === "true");
+    // Defer to avoid cascading render
+    setTimeout(() => setAutoRefreshRecoveredAvailability(storedValue === "true"), 0);
 
     const storedInterval = window.localStorage.getItem(AUTO_REFRESH_RECOVERED_INTERVAL_STORAGE_KEY);
     if (!storedInterval) {
@@ -196,7 +198,7 @@ export function BroadcastDialog({ sessions }: BroadcastDialogProps) {
 
     const parsedInterval = Number.parseInt(storedInterval, 10);
     if (AUTO_REFRESH_INTERVAL_OPTIONS.includes(parsedInterval as (typeof AUTO_REFRESH_INTERVAL_OPTIONS)[number])) {
-      setAutoRefreshRecoveredIntervalMs(parsedInterval);
+      setTimeout(() => setAutoRefreshRecoveredIntervalMs(parsedInterval), 0);
     }
   }, []);
 
@@ -216,11 +218,12 @@ export function BroadcastDialog({ sessions }: BroadcastDialogProps) {
 
   useEffect(() => {
     if (!open || !autoRefreshRecoveredAvailability || lastFailedSessionIds.length === 0) {
-      setNextAutoRefreshAt(null);
+      // Defer to avoid cascading render
+      setTimeout(() => setNextAutoRefreshAt(null), 0);
       return;
     }
 
-    setNextAutoRefreshAt(Date.now() + autoRefreshRecoveredIntervalMs);
+    setTimeout(() => setNextAutoRefreshAt(Date.now() + autoRefreshRecoveredIntervalMs), 0);
 
     const intervalId = window.setInterval(() => {
       if (sending || isBackgroundRetrying || refreshingRecoveredAvailability) {
@@ -302,7 +305,15 @@ export function BroadcastDialog({ sessions }: BroadcastDialogProps) {
     };
   };
 
-  const rememberFailedTargets = (report: DeliveryReport, content: string) => {
+  const clearRecoveredFailures = useCallback(() => {
+    setLastFailedSessionIds([]);
+    setLastFailedMessage("");
+    setLastFailedAt(null);
+    setLastAvailabilityRefreshAt(null);
+    setLastRecoveredRetryOutcome(null);
+  }, []);
+
+  const rememberFailedTargets = useCallback((report: DeliveryReport, content: string) => {
     if (report.failedSessions.length === 0) {
       clearRecoveredFailures();
       return;
@@ -313,15 +324,7 @@ export function BroadcastDialog({ sessions }: BroadcastDialogProps) {
     const now = Date.now();
     setLastFailedAt(now);
     setLastAvailabilityRefreshAt(now);
-  };
-
-  const clearRecoveredFailures = () => {
-    setLastFailedSessionIds([]);
-    setLastFailedMessage("");
-    setLastFailedAt(null);
-    setLastAvailabilityRefreshAt(null);
-    setLastRecoveredRetryOutcome(null);
-  };
+  }, [clearRecoveredFailures]);
 
   function getRelativeAgeLabel(timestamp: number | null) {
     if (!timestamp) {
@@ -686,7 +689,7 @@ export function BroadcastDialog({ sessions }: BroadcastDialogProps) {
   };
 
   return (
-    <Dialog open={open} onOpenChange={setOpen}>
+    <Dialog open={open} onOpenChange={handleOpenChange}>
       <DialogTrigger asChild>
         <Button variant="ghost" size="icon" className="h-7 w-7 text-white hover:bg-white/10" title="Broadcast to all open sessions">
           <Megaphone className="h-4 w-4" />

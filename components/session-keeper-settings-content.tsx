@@ -14,7 +14,7 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { Separator } from '@/components/ui/separator';
-import { Sparkles, Rocket, Brain } from 'lucide-react';
+import { Rocket, Brain } from 'lucide-react';
 import { ScrollArea } from '@/components/ui/scroll-area';
 
 const DEFAULT_CONFIG: SessionKeeperConfig = {
@@ -58,8 +58,8 @@ export function SessionKeeperSettingsContent({
         try {
           const parsed = JSON.parse(stored);
           setTimeout(() => setLocalConfig({ ...DEFAULT_CONFIG, ...parsed }), 0);
-        } catch (e) {
-          console.error(e);
+        } catch (_e) {
+          console.error(_e);
         }
       }
     }

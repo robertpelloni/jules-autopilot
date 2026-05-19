@@ -47,6 +47,7 @@
     "external",
     "jules-sdk-reference",
     "server",
-    "apps"
+    "apps",
+    "extensions"
   ]
 }

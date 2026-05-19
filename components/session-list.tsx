@@ -1,6 +1,7 @@
 "use client";
 
-import { useEffect, useState, useCallback, useMemo } from "react";
+import { useEffect, useState, useMemo } from "react";
+import useSWR from "swr";
 import { useJules } from "@/lib/jules/provider";
 import { useDaemonEvent } from "@/lib/hooks/use-daemon-events";
 import type { SessionsListUpdatedPayload } from "@jules/shared";
@@ -32,57 +33,28 @@ export function SessionList({
   className,
 }: SessionListProps) {
   const { client, refreshTrigger } = useJules();
-  
-  const [sessions, setSessions] = useState<Session[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState("");
   const [replaySessionId, setReplaySessionId] = useState<string | null>(null);
 
-  const formatDate = (dateString: string) => {
-    if (!dateString) return "Unknown date";
-    try {
-      const date = parseISO(dateString);
-      if (!isValid(date)) return "Unknown date";
-      return formatDistanceToNow(date, { addSuffix: true });
-    } catch {
-      return "Unknown date";
+  const { 
+    data: sessions = [], 
+    error, 
+    isLoading: loading, 
+    mutate: loadSessions 
+  } = useSWR(
+    client ? "sessions" : null,
+    () => client!.listSessions(),
+    { 
+      refreshInterval: 30000,
+      revalidateOnFocus: true
     }
-  };
-
-  const loadSessions = useCallback(async () => {
-    console.log(`[SessionList] loadSessions called (Client ready: ${!!client})`);
-    if (!client) {
-      setLoading(false);
-      return;
-    }
-
-    try {
-      setLoading(true);
-      setError(null);
-      console.log("[SessionList] Fetching sessions from API...");
-      const data = await client.listSessions();
-      console.log(`[SessionList] Received ${data.length} sessions:`, JSON.stringify(data));
-      
-      const sorted = [...data].sort((a, b) => {
-        const timeA = new Date(a.updatedAt || a.createdAt || 0).getTime();
-        const timeB = new Date(b.updatedAt || b.createdAt || 0).getTime();
-        return timeB - timeA;
-      });
-      
-      setSessions(sorted);
-    } catch (err) {
-      console.error("Failed to load sessions:", err);
-      setError(err instanceof Error ? err.message : "Failed to load sessions");
-      setSessions([]); 
-    } finally {
-      setLoading(false);
-    }
-  }, [client]);
+  );
 
   useEffect(() => {
-    loadSessions();
-  }, [loadSessions, refreshTrigger]);
+    if (refreshTrigger) {
+      loadSessions();
+    }
+  }, [refreshTrigger, loadSessions]);
 
   useDaemonEvent<SessionsListUpdatedPayload>(
     'sessions_list_updated',
@@ -99,6 +71,17 @@ export function SessionList({
     },
     [loadSessions]
   );
+
+  const formatDate = (dateString?: string) => {
+    if (!dateString) return "Unknown date";
+    try {
+      const date = parseISO(dateString);
+      if (!isValid(date)) return "Unknown date";
+      return formatDistanceToNow(date, { addSuffix: true });
+    } catch {
+      return "Unknown date";
+    }
+  };
 
   const getStatusColor = (status: string) => {
     switch (status) {
@@ -166,7 +149,7 @@ export function SessionList({
     return (
       <div className={cn("flex flex-col items-center justify-center gap-3 p-6", className)}>
         <p className="text-xs text-destructive text-center">{error}</p>
-        <Button variant="outline" size="sm" onClick={loadSessions} className="h-7 text-[10px] font-mono uppercase tracking-widest">
+        <Button variant="outline" size="sm" onClick={() => loadSessions()} className="h-7 text-[10px] font-mono uppercase tracking-widest">
           Retry
         </Button>
       </div>
@@ -197,7 +180,7 @@ export function SessionList({
           <div className="flex items-center justify-between mb-1">
              <span className="text-[10px] font-bold text-white/40 uppercase tracking-widest">Navigation</span>
              <div className="flex items-center gap-1">
-                <Button variant="ghost" size="icon" onClick={loadSessions} className="h-5 w-5 text-white/20 hover:text-white hover:bg-white/5">
+                <Button variant="ghost" size="icon" onClick={() => loadSessions()} className="h-5 w-5 text-white/20 hover:text-white hover:bg-white/5">
                     <RefreshCw className="h-3 w-3" />
                 </Button>
              </div>
