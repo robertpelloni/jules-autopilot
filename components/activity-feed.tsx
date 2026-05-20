@@ -194,29 +194,6 @@ export function ActivityFeed({
 
   useEffect(() => {
     onActivitiesChange(activities);
-
-    // Auto-sync memory if [PROJECT_MEMORY] is detected
-    const lastActivity = activities[activities.length - 1];
-    if (lastActivity && lastActivity.role === 'agent' && lastActivity.content.includes('[PROJECT_MEMORY]')) {
-      const content = lastActivity.content.replace('[PROJECT_MEMORY]', '').trim();
-      if (content) {
-        const syncMemory = async () => {
-          try {
-            const res = await fetch(`/api/sessions/${session.id}/save-memory`, {
-              method: 'POST',
-              headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({ content })
-            });
-            if (res.ok) {
-              toast.success("Project memory automatically synced to repo!");
-            }
-          } catch (err) {
-            console.error("Auto-sync memory failed:", err);
-          }
-        };
-        syncMemory();
-      }
-    }
   }, [activities, onActivitiesChange, session.id]);
 
   const handleApprovePlan = async () => {

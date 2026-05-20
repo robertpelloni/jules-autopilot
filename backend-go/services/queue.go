@@ -314,7 +314,7 @@ func GetSettingsForAPI() (models.KeeperSettings, error) {
 	return getSettings()
 }
 
-func parseMessages(raw string) []string {
+func ParseMessages(raw string) []string {
 	if strings.TrimSpace(raw) == "" {
 		return nil
 	}
@@ -361,7 +361,7 @@ func isRiskyPlan(plan string) int {
 }
 
 func chooseNudgeMessage(settings models.KeeperSettings) string {
-	messages := append(parseMessages(settings.Messages), parseMessages(settings.CustomMessages)...)
+	messages := append(ParseMessages(settings.Messages), ParseMessages(settings.CustomMessages)...)
 	for _, message := range messages {
 		if strings.TrimSpace(message) != "" {
 			return strings.TrimSpace(message)
@@ -371,7 +371,7 @@ func chooseNudgeMessage(settings models.KeeperSettings) string {
 }
 
 func buildRAGContext(query string, settings models.KeeperSettings, topK int) string {
-	apiKey := getSupervisorAPIKey("openai", settings.SupervisorApiKey)
+	apiKey := getSupervisorAPIKey(settings.SupervisorProvider, settings.SupervisorApiKey)
 	if strings.TrimSpace(apiKey) == "" || apiKey == "placeholder" {
 		return ""
 	}
@@ -782,14 +782,9 @@ func (w *Worker) handleCheckSession(payload string) (string, error) {
 		}
 	}
 
-	if session.RawState == "COMPLETED" && settings.SmartPilotEnabled {
-		var existing models.MemoryChunk
-		if err := db.DB.First(&existing, "session_id = ?", session.ID).Error; err != nil {
-			if _, addErr := AddJob("sync_session_memory", map[string]string{"sessionId": session.ID}); addErr == nil {
-				addKeeperLog("Queued session memory sync from Go backend.", "info", session.ID, map[string]interface{}{"event": "session_memory_sync_enqueued"})
-			}
-		}
-	}
+	// COMPLETED sessions: no automatic memory sync — sync is only triggered
+	// manually via the UI "Sync Memory" button which calls POST /sessions/:id/save-memory
+	// or by enqueuing a sync_session_memory job from the per-session API endpoint.
 
 	thresholdMinutes := settings.InactivityThresholdMinutes
 	if session.RawState == "IN_PROGRESS" {
@@ -875,7 +870,7 @@ func hasRecentRecoveryCompletionLog(sessionID string, since time.Time) bool {
 func buildRecoveryMessage(session models.JulesSession, activities []models.JulesActivity, settings models.KeeperSettings) string {
 	provider := strings.TrimSpace(settings.SupervisorProvider)
 	if provider == "" {
-		provider = "openai"
+		provider = "openrouter"
 	}
 	apiKey := getSupervisorAPIKey(provider, settings.SupervisorApiKey)
 

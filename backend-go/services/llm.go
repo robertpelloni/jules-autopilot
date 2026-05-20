@@ -79,7 +79,7 @@ type LLMResult struct {
 func normalizeProvider(provider string) string {
 	value := strings.ToLower(strings.TrimSpace(provider))
 	if value == "" {
-		return "openai"
+		return "openrouter"
 	}
 	return value
 }
@@ -109,11 +109,11 @@ func resolveModel(provider, model string) string {
 
 func getSupervisorProvider() string {
 	if db.DB == nil {
-		return "openai"
+		return "openrouter"
 	}
 	var settings models.KeeperSettings
 	if err := db.DB.First(&settings, "id = ?", "default").Error; err != nil {
-		return "openai"
+		return "openrouter"
 	}
 	return normalizeProvider(settings.SupervisorProvider)
 }
