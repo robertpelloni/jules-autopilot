@@ -785,9 +785,57 @@ func (w *Worker) handleCheckSession(payload string) (string, error) {
 		}
 	}
 
-	// COMPLETED sessions: no automatic memory sync — sync is only triggered
-	// manually via the UI "Sync Memory" button which calls POST /sessions/:id/save-memory
-	// or by enqueuing a sync_session_memory job from the per-session API endpoint.
+	// COMPLETED sessions: reactivate them with a follow-up task.
+	// The purpose of this project is to keep sessions cycling — don't let them go dormant.
+	if session.RawState == "COMPLETED" || session.RawState == "SUCCEEDED" {
+		alreadyProcessedComplete := false
+		if supervisorState.LastProcessedActivityTimestamp != nil {
+			if t, err := time.Parse(time.RFC3339, *supervisorState.LastProcessedActivityTimestamp); err == nil && !lastActivityTime.After(t) {
+				alreadyProcessedComplete = true
+			}
+		}
+		if !alreadyProcessedComplete {
+			message := chooseNudgeMessage(settings)
+			ragContext := ""
+			if settings.SmartPilotEnabled {
+				query := session.Title
+				if strings.TrimSpace(query) == "" {
+					query = "next development task"
+				}
+				ragContext = buildRAGContext(query, settings, 3)
+			}
+			finalMessage := message + ragContext
+			if _, err := client.CreateActivity(session.ID, CreateActivityRequest{
+				Content: finalMessage,
+				Type:    "message",
+				Role:    "user",
+			}); err != nil {
+				addKeeperLog(fmt.Sprintf("Failed to reactivate completed session: %v", err), "error", session.ID, map[string]interface{}{
+					"event": "session_reactivation_send_failed",
+				})
+				return "fail", err
+			}
+			addKeeperLog(
+				fmt.Sprintf("Reactivated %s session %s", session.RawState, session.ID[:8]),
+				"action", session.ID, map[string]interface{}{
+					"event":         "session_reactivated",
+					"sessionTitle":  session.Title,
+					"nudgeMessage":  message,
+					"usedRAG":       ragContext != "",
+				},
+			)
+			emitDaemonEvent("activities_updated", map[string]interface{}{"sessionId": session.ID})
+			emitDaemonEvent("session_reactivated", map[string]interface{}{
+				"sessionId":    session.ID,
+				"sessionTitle": session.Title,
+			})
+			timestamp := lastActivityTime.Format(time.RFC3339)
+			supervisorState.LastProcessedActivityTimestamp = &timestamp
+			_ = saveSupervisorState(supervisorState)
+			return "reactivated", nil
+		}
+		return "already_reactivated", nil
+	}
 
 	thresholdMinutes := settings.InactivityThresholdMinutes
 	if session.RawState == "IN_PROGRESS" {

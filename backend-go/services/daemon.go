@@ -110,33 +110,35 @@ func (d *Daemon) tick() time.Duration {
 	// ── Rotation Strategy ──────────────────────────────────────────────
 	// Google Jules Pro allows ~15 concurrent sessions. Users can have 50+
 	// sessions open. We need to rotate through ALL sessions evenly so that
-	// every session gets nudged, not just the first 10-15 in the list.
+	// every session gets nudged/reactivated, not just the first 10-15.
 	//
 	// The strategy:
-	//   1. Filter OUT terminal sessions (COMPLETED, SUCCEEDED) — they don't need nudging
+	//   1. ALL sessions are candidates for nudging — including COMPLETED ones.
+	//      The whole purpose of this project is to keep sessions active and
+	//      cycling, so COMPLETED sessions must be reactivated.
 	//   2. Separate into "immediate" (AWAITING_USER_FEEDBACK, AWAITING_PLAN_APPROVAL)
-	//      and "cooldown" (IN_PROGRESS, FAILED) pools
-	//   3. AWAITING_USER_FEEDBACK sessions bypass ALL cooldowns — the agent is stuck
-	//   4. FAILED and IN_PROGRESS sessions use round-robin rotation based on
-	//      their supervisor_state.last_processed_activity_timestamp. Sessions
+	//      and "cooldown" (everything else) pools.
+	//   3. AWAITING_USER_FEEDBACK sessions bypass ALL cooldowns — the agent is stuck.
+	//   4. All other sessions use round-robin rotation based on their
+	//      supervisor_state.last_processed_activity_timestamp. Sessions
 	//      nudged longest ago get enqueued first.
-	//   5. Skip FAILED/IN_PROGRESS sessions that were nudged within a cooldown
-	//      period to avoid hammering the same session and hitting 429s
+	//   5. Cooldown periods prevent hammering the same session (avoids 429s).
 	// ────────────────────────────────────────────────────────────────────
 
-	cooldownPeriod := 5 * time.Minute     // Don't re-nudge IN_PROGRESS within 5 minutes
-	failedCooldownPeriod := 15 * time.Minute // Don't re-send recovery guidance within 15 minutes
+	cooldownPeriod := 5 * time.Minute          // Don't re-nudge IN_PROGRESS within 5 minutes
+	completedCooldownPeriod := 10 * time.Minute // Don't re-activate COMPLETED within 10 minutes
+	failedCooldownPeriod := 15 * time.Minute   // Don't re-send recovery guidance within 15 minutes
 
-	immediateSessions := []models.JulesSession{}  // AWAITING_USER_FEEDBACK, AWAITING_PLAN_APPROVAL
-	cooldownSessions := []models.JulesSession{}    // IN_PROGRESS, FAILED
+	immediateSessions := []models.JulesSession{} // AWAITING_USER_FEEDBACK, AWAITING_PLAN_APPROVAL
+	cooldownSessions := []models.JulesSession{}   // IN_PROGRESS, COMPLETED, FAILED, SUCCEEDED, etc.
 
 	for _, session := range sessions {
 		switch session.RawState {
 		case "AWAITING_USER_FEEDBACK", "AWAITING_PLAN_APPROVAL":
 			immediateSessions = append(immediateSessions, session)
-		case "IN_PROGRESS", "FAILED":
+		default:
+			// ALL other states including COMPLETED, SUCCEEDED go into the cooldown pool
 			cooldownSessions = append(cooldownSessions, session)
-		// COMPLETED, SUCCEEDED, and unknown states are skipped entirely
 		}
 	}
 
@@ -161,7 +163,7 @@ func (d *Daemon) tick() time.Duration {
 		return iLast.Before(jLast)
 	})
 
-	// Enqueue: urgent first, then rotated active sessions
+	// Enqueue: immediate first, then rotated cooldown sessions
 	queuedSessions := 0
 	maxEnqueuePerTick := 15 // cover up to 15 per tick (Pro limit)
 	skippedCooldown := 0
@@ -176,11 +178,14 @@ func (d *Daemon) tick() time.Duration {
 			return true // already queued, count as handled but don't increment
 		}
 
-		// Cooldown check for IN_PROGRESS and FAILED sessions (immediate ones bypass cooldown)
-		if session.RawState == "IN_PROGRESS" || session.RawState == "FAILED" {
-			cd := cooldownPeriod
-			if session.RawState == "FAILED" {
+		// Cooldown check for all non-immediate sessions
+		if session.RawState != "AWAITING_USER_FEEDBACK" && session.RawState != "AWAITING_PLAN_APPROVAL" {
+			cd := cooldownPeriod // default 5 min
+			switch session.RawState {
+			case "FAILED":
 				cd = failedCooldownPeriod
+			case "COMPLETED", "SUCCEEDED":
+				cd = completedCooldownPeriod
 			}
 			if lastNudged, ok := nudgeTimeMap[session.ID]; ok {
 				if time.Since(lastNudged) < cd {
@@ -215,19 +220,19 @@ func (d *Daemon) tick() time.Duration {
 		}
 	}
 
-	activeCount := len(cooldownSessions)
-	urgentCount := len(immediateSessions)
-	totalNonTerminal := activeCount + urgentCount
+	immediateCount := len(immediateSessions)
+	cooldownCount := len(cooldownSessions)
+	totalPool := immediateCount + cooldownCount
 
-	addKeeperLog(fmt.Sprintf("Daemon loop ran. Enqueued %d sessions (immediate=%d, cooldown=%d, skipped_cooldown=%d, total_pool=%d).",
-		queuedSessions, urgentCount, activeCount, skippedCooldown, totalNonTerminal),
+	addKeeperLog(fmt.Sprintf("Daemon loop ran. Enqueued %d sessions (immediate=%d, cooldown_pool=%d, skipped_cooldown=%d, total_pool=%d).",
+		queuedSessions, immediateCount, cooldownCount, skippedCooldown, totalPool),
 		"info", "global", map[string]interface{}{
 			"event":           "daemon_loop",
 			"queuedSessions":  queuedSessions,
-			"immediateSessions": urgentCount,
-			"cooldownSessions":  activeCount,
+			"immediateSessions": immediateCount,
+			"cooldownPool":    cooldownCount,
 			"skippedCooldown": skippedCooldown,
-			"totalPool":       totalNonTerminal,
+			"totalPool":       totalPool,
 		})
 
 	var existingIndexJob models.QueueJob
@@ -243,9 +248,9 @@ func (d *Daemon) tick() time.Duration {
 
 	if queuedSessions > 0 || queuedIndexing {
 		addKeeperLog("Go daemon scheduled monitoring work.", "info", "global", map[string]interface{}{
-			"event":           "daemon_tick_enqueued",
-			"queuedSessions":  queuedSessions,
-			"queuedIndexing":  queuedIndexing,
+			"event":          "daemon_tick_enqueued",
+			"queuedSessions": queuedSessions,
+			"queuedIndexing": queuedIndexing,
 		})
 	}
 
