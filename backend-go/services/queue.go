@@ -761,6 +761,9 @@ func (w *Worker) handleCheckSession(payload string) (string, error) {
 				Type:    "message",
 				Role:    "user",
 			}); err != nil {
+				addKeeperLog(fmt.Sprintf("Failed to send recovery guidance: %v", err), "error", session.ID, map[string]interface{}{
+					"event": "session_recovery_send_failed",
+				})
 				return "fail", err
 			}
 

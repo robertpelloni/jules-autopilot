@@ -332,6 +332,7 @@ func generateOpenAIText(apiKey, model, systemPrompt string, messages []LLMMessag
 		"model":       model,
 		"messages":    requestMessages,
 		"temperature": 0.2,
+		"max_tokens":  1500,
 	})
 
 	apiURL := "https://api.openai.com/v1/chat/completions"
