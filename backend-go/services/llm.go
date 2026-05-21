@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
+	"log"
 	"net/http"
 	"os"
 	"strings"
@@ -16,9 +17,9 @@ import (
 )
 
 type circuitBreaker struct {
-	mu           sync.RWMutex
-	failures     map[string]int
-	openUntil    map[string]time.Time
+	mu          sync.RWMutex
+	failures    map[string]int
+	openUntil   map[string]time.Time
 	failureLimit int
 	openDuration time.Duration
 }
@@ -71,9 +72,9 @@ type LLMUsage struct {
 }
 
 type LLMResult struct {
-	Content    string
-	Usage      *LLMUsage
-	LatencyMs  float64
+	Content   string
+	Usage     *LLMUsage
+	LatencyMs float64
 }
 
 func normalizeProvider(provider string) string {
@@ -89,13 +90,9 @@ func defaultModelForProvider(provider string) string {
 	case "lmstudio":
 		return "gemma-4-e2b-uncensored-hauhaucs-aggressive"
 	case "openrouter":
-		return "free"
-	case "anthropic":
-		return "claude-3-5-sonnet-latest"
-	case "gemini":
-		return "gemini-1.5-flash"
+		return "google/gemma-3-27b-it"
 	default:
-		return "gpt-4o-mini"
+		return "google/gemma-3-27b-it"
 	}
 }
 
@@ -125,35 +122,12 @@ func getSupervisorAPIKey(provider string, explicit *string) string {
 			return value
 		}
 	}
-
 	switch strings.ToLower(strings.TrimSpace(provider)) {
 	case "lmstudio":
-		return "placeholder" // LM Studio usually doesn't need a key
+		return "placeholder"
 	case "openrouter":
 		if key := strings.TrimSpace(os.Getenv("OPENROUTER_API_KEY")); key != "" {
 			return key
-		}
-	case "anthropic":
-		if key := strings.TrimSpace(os.Getenv("ANTHROPIC_API_KEY")); key != "" {
-			return key
-		}
-	case "gemini":
-		if key := strings.TrimSpace(os.Getenv("GOOGLE_API_KEY")); key != "" {
-			return key
-		}
-		if key := strings.TrimSpace(os.Getenv("GEMINI_API_KEY")); key != "" {
-			return key
-		}
-	default:
-		if key := strings.TrimSpace(os.Getenv("OPENAI_API_KEY")); key != "" {
-			return key
-		}
-	}
-
-	fallbacks := []string{"OPENAI_API_KEY", "GOOGLE_API_KEY", "GEMINI_API_KEY", "ANTHROPIC_API_KEY"}
-	for _, envKey := range fallbacks {
-		if value := strings.TrimSpace(os.Getenv(envKey)); value != "" {
-			return value
 		}
 	}
 	return ""
@@ -163,10 +137,9 @@ func generateLLMText(primaryProvider, primaryApiKey, primaryModel, systemPrompt 
 	primaryProvider = normalizeProvider(primaryProvider)
 	primaryModel = resolveModel(primaryProvider, primaryModel)
 
+	// Only openrouter + lmstudio fallback
 	providers := []string{primaryProvider}
-	
-	// Intelligent Fallback Chain requested by user
-	fallbacks := []string{"lmstudio", "openrouter", "kilocode", "cline", "openai", "anthropic", "gemini"}
+	fallbacks := []string{"lmstudio", "openrouter"}
 	for _, p := range fallbacks {
 		exists := false
 		for _, existing := range providers {
@@ -189,7 +162,6 @@ func generateLLMText(primaryProvider, primaryApiKey, primaryModel, systemPrompt 
 
 		apiKey := primaryApiKey
 		model := primaryModel
-
 		if i > 0 {
 			// This is a fallback attempt
 			apiKey = getSupervisorAPIKey(provider, nil)
@@ -199,45 +171,32 @@ func generateLLMText(primaryProvider, primaryApiKey, primaryModel, systemPrompt 
 			model = resolveModel(provider, "")
 		}
 
-		var result LLMResult
-		var err error
+		log.Printf("[LLM] Trying provider %s (i=%d, model=%s, keyLen=%d)", provider, i, model, len(apiKey))
 
-		switch provider {
-		case "anthropic":
-			result, err = generateAnthropicText(apiKey, model, systemPrompt, messages)
-		case "gemini":
-			result, err = generateGeminiText(apiKey, model, systemPrompt, messages)
-		default:
-			result, err = generateOpenAIText(apiKey, model, systemPrompt, messages)
-		}
-
+		result, err := generateOpenRouterText(apiKey, model, systemPrompt, messages)
 		if err != nil {
+			log.Printf("[LLM] Provider %s failed: %v", provider, err)
 			lastErr = err
 			errStr := err.Error()
 			RecordLLMLatency(provider, result.LatencyMs, false)
-			// Track failure if it's a rate limit or server error
-			if strings.Contains(errStr, "(429)") || strings.Contains(errStr, "(50") || strings.Contains(errStr, "(52") || strings.Contains(errStr, "(53") || strings.Contains(errStr, "timeout") {
-				cb.recordFailure(provider)
+			if strings.TrimSpace(apiKey) != "" && apiKey != "placeholder" {
+				if strings.Contains(errStr, "(429)") || strings.Contains(errStr, "(50") || strings.Contains(errStr, "(52") || strings.Contains(errStr, "(53") || strings.Contains(errStr, "timeout") {
+					cb.recordFailure(provider)
+				}
 			}
-			continue // Try the next fallback provider
+			continue
 		}
 
 		// Success
 		cb.recordSuccess(provider)
-
-		// Record LLM latency metric
 		RecordLLMLatency(provider, result.LatencyMs, true)
 
-		// Record token usage for budget tracking
 		if result.Usage != nil {
 			go func() {
-				_ = RecordTokenUsage(nil, provider, model,
-					result.Usage.PromptTokens, result.Usage.CompletionTokens,
-					"other", 0, true)
+				_ = RecordTokenUsage(nil, provider, model, result.Usage.PromptTokens, result.Usage.CompletionTokens, "other", 0, true)
 			}()
 		}
 
-		// If we used a fallback, log that we successfully recovered
 		if i > 0 {
 			addKeeperLog(fmt.Sprintf("Self-healing successful: rerouted LLM request from %s to %s.", primaryProvider, provider), "action", "global", map[string]interface{}{
 				"event":            "llm_fallback_success",
@@ -245,7 +204,6 @@ func generateLLMText(primaryProvider, primaryApiKey, primaryModel, systemPrompt 
 				"fallbackProvider": provider,
 			})
 		}
-
 		return result, nil
 	}
 
@@ -306,18 +264,15 @@ func generateRiskScore(provider, apiKey, model, topic, summary string, fallback 
 	return extractRiskScoreFromText(result.Content)
 }
 
-func generateOpenAIText(apiKey, model, systemPrompt string, messages []LLMMessage) (LLMResult, error) {
+// generateOpenRouterText handles all OpenAI-compatible API calls (openrouter + lmstudio).
+// It auto-detects the API URL from the model name and API key prefix.
+func generateOpenRouterText(apiKey, model, systemPrompt string, messages []LLMMessage) (LLMResult, error) {
 	start := time.Now()
 
-	provider := "openai"
-	if strings.HasPrefix(model, "gemma") || strings.Contains(model, "lmstudio") {
-		provider = "lmstudio"
-	} else if strings.Contains(model, "openrouter") || strings.Contains(apiKey, "sk-or-") {
-		provider = "openrouter"
-	} else if strings.Contains(model, "kilocode") || strings.Contains(apiKey, "sk-kc-") {
-		provider = "kilocode"
-	} else if strings.Contains(model, "cline") || strings.Contains(apiKey, "sk-cl-") {
-		provider = "cline"
+	// Determine API URL from model/key
+	apiURL := "https://openrouter.ai/api/v1/chat/completions"
+	if strings.Contains(model, "lmstudio") || strings.HasPrefix(model, "gemma-4") {
+		apiURL = "http://localhost:1234/v1/chat/completions"
 	}
 
 	requestMessages := make([]map[string]string, 0, len(messages)+1)
@@ -329,30 +284,11 @@ func generateOpenAIText(apiKey, model, systemPrompt string, messages []LLMMessag
 	}
 
 	requestBody, _ := json.Marshal(map[string]interface{}{
-		"model":       model,
-		"messages":    requestMessages,
+		"model":      model,
+		"messages":   requestMessages,
 		"temperature": 0.2,
-		"max_tokens":  1500,
+		"max_tokens": 1500,
 	})
-
-	apiURL := "https://api.openai.com/v1/chat/completions"
-	switch provider {
-	case "lmstudio":
-		apiURL = "http://localhost:1234/v1/chat/completions"
-	case "openrouter":
-		apiURL = "https://openrouter.ai/api/v1/chat/completions"
-	case "kilocode":
-		// Example URL if they use a standard one, else fallback to standard openrouter structure if they are a proxy
-		apiURL = "https://kilocode.ai/api/v1/chat/completions"
-		if custom := os.Getenv("KILOCODE_API_BASE"); custom != "" {
-			apiURL = custom + "/chat/completions"
-		}
-	case "cline":
-		apiURL = "https://api.cline.bot/v1/chat/completions"
-		if custom := os.Getenv("CLINE_API_BASE"); custom != "" {
-			apiURL = custom + "/chat/completions"
-		}
-	}
 
 	req, err := http.NewRequest(http.MethodPost, apiURL, bytes.NewReader(requestBody))
 	if err != nil {
@@ -361,7 +297,8 @@ func generateOpenAIText(apiKey, model, systemPrompt string, messages []LLMMessag
 	req.Header.Set("Authorization", "Bearer "+apiKey)
 	req.Header.Set("Content-Type", "application/json")
 
-	if provider == "openrouter" {
+	// OpenRouter-specific headers
+	if strings.Contains(apiURL, "openrouter.ai") {
 		req.Header.Set("HTTP-Referer", "https://jules-autopilot.render.com")
 		req.Header.Set("X-Title", "Jules Autopilot")
 	}
@@ -374,7 +311,7 @@ func generateOpenAIText(apiKey, model, systemPrompt string, messages []LLMMessag
 
 	if resp.StatusCode >= 400 {
 		body, _ := io.ReadAll(resp.Body)
-		return LLMResult{}, fmt.Errorf("openai request failed (%d): %s", resp.StatusCode, string(body))
+		return LLMResult{}, fmt.Errorf("LLM request to %s failed (%d): %s", apiURL, resp.StatusCode, string(body))
 	}
 
 	var data struct {
@@ -393,7 +330,7 @@ func generateOpenAIText(apiKey, model, systemPrompt string, messages []LLMMessag
 		return LLMResult{}, err
 	}
 	if len(data.Choices) == 0 {
-		return LLMResult{}, fmt.Errorf("openai response contained no choices")
+		return LLMResult{}, fmt.Errorf("LLM response contained no choices")
 	}
 
 	return LLMResult{
@@ -403,173 +340,6 @@ func generateOpenAIText(apiKey, model, systemPrompt string, messages []LLMMessag
 			PromptTokens:     data.Usage.PromptTokens,
 			CompletionTokens: data.Usage.CompletionTokens,
 			TotalTokens:      data.Usage.TotalTokens,
-		},
-	}, nil
-}
-
-func generateAnthropicText(apiKey, model, systemPrompt string, messages []LLMMessage) (LLMResult, error) {
-	start := time.Now()
-
-	anthropicMessages := make([]map[string]string, 0, len(messages))
-	for _, message := range messages {
-		role := message.Role
-		if role == "system" {
-			role = "user"
-		}
-		anthropicMessages = append(anthropicMessages, map[string]string{
-			"role":    role,
-			"content": message.Content,
-		})
-	}
-
-	requestBody, _ := json.Marshal(map[string]interface{}{
-		"model":      model,
-		"system":     systemPrompt,
-		"max_tokens": 1200,
-		"messages":   anthropicMessages,
-	})
-
-	req, err := http.NewRequest(http.MethodPost, "https://api.anthropic.com/v1/messages", bytes.NewReader(requestBody))
-	if err != nil {
-		return LLMResult{}, err
-	}
-	req.Header.Set("x-api-key", apiKey)
-	req.Header.Set("anthropic-version", "2023-06-01")
-	req.Header.Set("content-type", "application/json")
-
-	resp, err := http.DefaultClient.Do(req)
-	if err != nil {
-		return LLMResult{}, err
-	}
-	defer resp.Body.Close()
-
-	if resp.StatusCode >= 400 {
-		body, _ := io.ReadAll(resp.Body)
-		return LLMResult{}, fmt.Errorf("anthropic request failed (%d): %s", resp.StatusCode, string(body))
-	}
-
-	var data struct {
-		Content []struct {
-			Type string `json:"type"`
-			Text string `json:"text"`
-		} `json:"content"`
-		Usage struct {
-			InputTokens  int `json:"input_tokens"`
-			OutputTokens int `json:"output_tokens"`
-		} `json:"usage"`
-	}
-	if err := json.NewDecoder(resp.Body).Decode(&data); err != nil {
-		return LLMResult{}, err
-	}
-	if len(data.Content) == 0 {
-		return LLMResult{}, fmt.Errorf("anthropic response contained no content")
-	}
-
-	contentParts := make([]string, 0, len(data.Content))
-	for _, part := range data.Content {
-		if strings.TrimSpace(part.Text) != "" {
-			contentParts = append(contentParts, part.Text)
-		}
-	}
-
-	return LLMResult{
-		Content:   strings.TrimSpace(strings.Join(contentParts, "\n")),
-		LatencyMs: float64(time.Since(start).Milliseconds()),
-		Usage: &LLMUsage{
-			PromptTokens:     data.Usage.InputTokens,
-			CompletionTokens: data.Usage.OutputTokens,
-			TotalTokens:      data.Usage.InputTokens + data.Usage.OutputTokens,
-		},
-	}, nil
-}
-
-func generateGeminiText(apiKey, model, systemPrompt string, messages []LLMMessage) (LLMResult, error) {
-	start := time.Now()
-
-	type part struct {
-		Text string `json:"text"`
-	}
-	type content struct {
-		Role  string `json:"role,omitempty"`
-		Parts []part `json:"parts"`
-	}
-
-	contents := make([]content, 0, len(messages))
-	for _, message := range messages {
-		role := "user"
-		if message.Role == "assistant" {
-			role = "model"
-		}
-		contents = append(contents, content{
-			Role:  role,
-			Parts: []part{{Text: message.Content}},
-		})
-	}
-
-	request := map[string]interface{}{
-		"contents": contents,
-	}
-	if strings.TrimSpace(systemPrompt) != "" {
-		request["systemInstruction"] = map[string]interface{}{
-			"parts": []map[string]string{{"text": systemPrompt}},
-		}
-	}
-
-	requestBody, _ := json.Marshal(request)
-	url := fmt.Sprintf("https://generativelanguage.googleapis.com/v1beta/models/%s:generateContent?key=%s", model, apiKey)
-	req, err := http.NewRequest(http.MethodPost, url, bytes.NewReader(requestBody))
-	if err != nil {
-		return LLMResult{}, err
-	}
-	req.Header.Set("Content-Type", "application/json")
-
-	resp, err := http.DefaultClient.Do(req)
-	if err != nil {
-		return LLMResult{}, err
-	}
-	defer resp.Body.Close()
-
-	if resp.StatusCode >= 400 {
-		body, _ := io.ReadAll(resp.Body)
-		return LLMResult{}, fmt.Errorf("gemini request failed (%d): %s", resp.StatusCode, string(body))
-	}
-
-	var data struct {
-		Candidates []struct {
-			Content struct {
-				Parts []struct {
-					Text string `json:"text"`
-				} `json:"parts"`
-			} `json:"content"`
-		} `json:"candidates"`
-		UsageMetadata struct {
-			PromptTokenCount     int `json:"promptTokenCount"`
-			CandidatesTokenCount int `json:"candidatesTokenCount"`
-			TotalTokenCount      int `json:"totalTokenCount"`
-		} `json:"usageMetadata"`
-	}
-	if err := json.NewDecoder(resp.Body).Decode(&data); err != nil {
-		return LLMResult{}, err
-	}
-	if len(data.Candidates) == 0 {
-		return LLMResult{}, fmt.Errorf("gemini response contained no candidates")
-	}
-
-	parts := data.Candidates[0].Content.Parts
-	contentParts := make([]string, 0, len(parts))
-	for _, part := range parts {
-		if strings.TrimSpace(part.Text) != "" {
-			contentParts = append(contentParts, part.Text)
-		}
-	}
-
-	return LLMResult{
-		Content:   strings.TrimSpace(strings.Join(contentParts, "\n")),
-		LatencyMs: float64(time.Since(start).Milliseconds()),
-		Usage: &LLMUsage{
-			PromptTokens:     data.UsageMetadata.PromptTokenCount,
-			CompletionTokens: data.UsageMetadata.CandidatesTokenCount,
-			TotalTokens:      data.UsageMetadata.TotalTokenCount,
 		},
 	}, nil
 }

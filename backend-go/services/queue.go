@@ -379,7 +379,10 @@ func generateSupervisorNudge(client *JulesClient, session models.JulesSession, s
 	apiKey := getSupervisorAPIKey(provider, settings.SupervisorApiKey)
 	model := resolveModel(provider, settings.SupervisorModel)
 
+	log.Printf("[Supervisor] Generating nudge for %s: provider=%s model=%s keyLen=%d", session.ID[:8], provider, model, len(apiKey))
+
 	if strings.TrimSpace(apiKey) == "" || apiKey == "placeholder" {
+		log.Printf("[Supervisor] No API key, falling back to canned message")
 		return chooseNudgeMessage(settings)
 	}
 
@@ -636,6 +639,7 @@ func (w *Worker) handleCheckSession(payload string) (string, error) {
 	}
 
 	supervisorState, _ := getSupervisorState(session.ID)
+	log.Printf("[CheckSession] %s state=%s idle=%v lastProcessed=%v", session.ID[:8], session.RawState, time.Since(lastActivityTime).Round(time.Minute), supervisorState.LastProcessedActivityTimestamp)
 	if supervisorState.LastProcessedActivityTimestamp != nil {
 		if t, err := time.Parse(time.RFC3339, *supervisorState.LastProcessedActivityTimestamp); err == nil {
 			if lastActivityTime.After(t) {

@@ -154,18 +154,41 @@ func (d *Daemon) tick() time.Duration {
 		}
 	}
 
-	// Sort cooldown sessions by "last nudged" time ascending (oldest first = most deserving)
-	// Sessions that have never been nudged will sort to the front (zero time)
+	// Sort cooldown sessions: prioritize COMPLETED/FAILED (they need action),
+	// then by least-recently-nudged within each group
 	sort.SliceStable(cooldownSessions, func(i, j int) bool {
+		iState := cooldownSessions[i].RawState
+		jState := cooldownSessions[j].RawState
+		iPriority := 0
+		jPriority := 0
+		switch iState {
+		case "COMPLETED", "SUCCEEDED":
+			iPriority = 1 // highest priority - needs reactivation
+		case "FAILED":
+			iPriority = 2
+		case "IN_PROGRESS":
+			iPriority = 3 // lowest priority - just needs a nudge if idle
+		}
+		switch jState {
+		case "COMPLETED", "SUCCEEDED":
+			jPriority = 1
+		case "FAILED":
+			jPriority = 2
+		case "IN_PROGRESS":
+			jPriority = 3
+		}
+		if iPriority != jPriority {
+			return iPriority < jPriority
+		}
+		// Within same priority, least recently nudged goes first
 		iLast := nudgeTimeMap[cooldownSessions[i].ID]
 		jLast := nudgeTimeMap[cooldownSessions[j].ID]
-		// Least recently nudged goes first
 		return iLast.Before(jLast)
 	})
 
 	// Enqueue: immediate first, then rotated cooldown sessions
 	queuedSessions := 0
-	maxEnqueuePerTick := 5 // cover up to 15 per tick (Pro limit)
+	maxEnqueuePerTick := 8 // cover up to 15 per tick (Pro limit)
 	skippedCooldown := 0
 
 	enqueueSession := func(session models.JulesSession) bool {
