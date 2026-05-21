@@ -5,7 +5,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
-	"log"
 	"net/http"
 	"os"
 	"strings"
@@ -171,11 +170,9 @@ func generateLLMText(primaryProvider, primaryApiKey, primaryModel, systemPrompt 
 			model = resolveModel(provider, "")
 		}
 
-		log.Printf("[LLM] Trying provider %s (i=%d, model=%s, keyLen=%d)", provider, i, model, len(apiKey))
 
 		result, err := generateOpenRouterText(apiKey, model, systemPrompt, messages)
 		if err != nil {
-			log.Printf("[LLM] Provider %s failed: %v", provider, err)
 			lastErr = err
 			errStr := err.Error()
 			RecordLLMLatency(provider, result.LatencyMs, false)
@@ -287,7 +284,7 @@ func generateOpenRouterText(apiKey, model, systemPrompt string, messages []LLMMe
 		"model":      model,
 		"messages":   requestMessages,
 		"temperature": 0.2,
-		"max_tokens": 1500,
+		"max_tokens": 800,
 	})
 
 	req, err := http.NewRequest(http.MethodPost, apiURL, bytes.NewReader(requestBody))

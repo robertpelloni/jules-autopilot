@@ -639,7 +639,6 @@ func (w *Worker) handleCheckSession(payload string) (string, error) {
 	}
 
 	supervisorState, _ := getSupervisorState(session.ID)
-	log.Printf("[CheckSession] %s state=%s idle=%v lastProcessed=%v", session.ID[:8], session.RawState, time.Since(lastActivityTime).Round(time.Minute), supervisorState.LastProcessedActivityTimestamp)
 	if supervisorState.LastProcessedActivityTimestamp != nil {
 		if t, err := time.Parse(time.RFC3339, *supervisorState.LastProcessedActivityTimestamp); err == nil {
 			if lastActivityTime.After(t) {
