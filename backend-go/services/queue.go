@@ -370,6 +370,62 @@ func chooseNudgeMessage(settings models.KeeperSettings) string {
 	return "Please continue working on this task."
 }
 
+// generateSupervisorNudge uses the OpenRouter supervisor LLM to generate an
+// intelligent, context-aware nudge message. If activities are provided, they'll
+// be used as context. If not, we use the session title/state only (no extra API call).
+// Falls back to chooseNudgeMessage if the LLM call fails.
+func generateSupervisorNudge(client *JulesClient, session models.JulesSession, settings models.KeeperSettings, preFetchedActivities ...[]models.JulesActivity) string {
+	provider := normalizeProvider(settings.SupervisorProvider)
+	apiKey := getSupervisorAPIKey(provider, settings.SupervisorApiKey)
+	model := resolveModel(provider, settings.SupervisorModel)
+
+	if strings.TrimSpace(apiKey) == "" || apiKey == "placeholder" {
+		return chooseNudgeMessage(settings)
+	}
+
+	// Build activity context if we have pre-fetched activities (no extra Jules API call)
+	var activityLog strings.Builder
+	if len(preFetchedActivities) > 0 && len(preFetchedActivities[0]) > 0 {
+		activities := preFetchedActivities[0]
+		limit := 10
+		start := 0
+		if len(activities) > limit {
+			start = len(activities) - limit
+		}
+		for _, a := range activities[start:] {
+			role := strings.ToUpper(a.Role)
+			if role == "" {
+				role = "SYSTEM"
+			}
+			content := a.Content
+			if len(content) > 500 {
+				content = content[:500] + "..."
+			}
+			activityLog.WriteString(fmt.Sprintf("%s [%s]: %s\n", role, a.Type, content))
+		}
+	}
+
+	systemPrompt := "You are a project supervisor AI. Your job is to write a concise, actionable message to a coding agent working on a software project. Write 1-3 sentences that summarize what was accomplished and suggest the next logical step. Be specific and practical. Do NOT use markdown. Write plain text only."
+
+	var userPrompt string
+	if activityLog.Len() > 0 {
+		userPrompt = fmt.Sprintf("Session: %s\nTitle: %s\nState: %s\n\nRecent activity:\n%s\n\nWrite a brief supervisor nudge:", session.ID, session.Title, session.RawState, activityLog.String())
+	} else {
+		// No activities - generate nudge based on session title and state only
+		userPrompt = fmt.Sprintf("Session: %s\nTitle: %s\nState: %s\n\nThis session needs a nudge. Based on the title, suggest the next logical development step in 1-2 sentences:", session.ID, session.Title, session.RawState)
+	}
+
+	result, err := generateLLMText(provider, apiKey, model, systemPrompt, []LLMMessage{
+		{Role: "user", Content: userPrompt},
+	})
+	if err != nil || strings.TrimSpace(result.Content) == "" {
+		log.Printf("[Supervisor] LLM nudge generation failed for %s: %v", session.ID[:8], err)
+		return chooseNudgeMessage(settings)
+	}
+
+	return strings.TrimSpace(result.Content)
+}
+
 func buildRAGContext(query string, settings models.KeeperSettings, topK int) string {
 	apiKey := getSupervisorAPIKey(settings.SupervisorProvider, settings.SupervisorApiKey)
 	if strings.TrimSpace(apiKey) == "" || apiKey == "placeholder" {
@@ -601,7 +657,7 @@ func (w *Worker) handleCheckSession(payload string) (string, error) {
 			}
 		}
 		if !alreadyProcessedNudge {
-			message := chooseNudgeMessage(settings)
+			message := generateSupervisorNudge(client, session, settings)
 			if _, err := client.CreateActivity(session.ID, CreateActivityRequest{
 				Content: message,
 				Type:    "message",
@@ -794,8 +850,9 @@ func (w *Worker) handleCheckSession(payload string) (string, error) {
 				alreadyProcessedComplete = true
 			}
 		}
-		if !alreadyProcessedComplete {
-			message := chooseNudgeMessage(settings)
+			if !alreadyProcessedComplete {
+			// Use supervisor LLM to generate an intelligent, context-aware nudge
+			message := generateSupervisorNudge(client, session, settings)
 			ragContext := ""
 			if settings.SmartPilotEnabled {
 				query := session.Title
@@ -846,7 +903,7 @@ func (w *Worker) handleCheckSession(payload string) (string, error) {
 	}
 
 	if time.Since(lastActivityTime) > time.Duration(thresholdMinutes)*time.Minute && session.RawState != "AWAITING_PLAN_APPROVAL" {
-		message := chooseNudgeMessage(settings)
+		message := generateSupervisorNudge(client, session, settings)
 		ragContext := ""
 		if settings.SmartPilotEnabled {
 			query := session.Title

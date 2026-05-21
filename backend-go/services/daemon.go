@@ -77,7 +77,7 @@ func (d *Daemon) tick() time.Duration {
 		interval = 30 * time.Second
 	}
 	// Enforce minimum 120s to prevent API rate-limiting
-	if interval < 60*time.Second {
+	if interval < 120*time.Second {
 		interval = 120 * time.Second
 	}
 	if !settings.IsEnabled {
@@ -165,7 +165,7 @@ func (d *Daemon) tick() time.Duration {
 
 	// Enqueue: immediate first, then rotated cooldown sessions
 	queuedSessions := 0
-	maxEnqueuePerTick := 15 // cover up to 15 per tick (Pro limit)
+	maxEnqueuePerTick := 5 // cover up to 15 per tick (Pro limit)
 	skippedCooldown := 0
 
 	enqueueSession := func(session models.JulesSession) bool {
