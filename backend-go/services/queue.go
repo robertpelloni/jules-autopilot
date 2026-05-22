@@ -633,6 +633,14 @@ func (w *Worker) handleCheckSession(payload string) (string, error) {
 		return "fail", fmt.Errorf("failed to refresh session %s: %w", data.Session.ID, err)
 	}
 
+	// Helper: check if an error is a Jules 429 rate limit
+	isJules429 := func(err error) bool {
+		if err == nil {
+			return false
+		}
+		return strings.Contains(err.Error(), "429") || strings.Contains(err.Error(), "RESOURCE_EXHAUSTED")
+	}
+
 	lastActivityTime := session.UpdatedAt
 	if session.LastActivityAt != nil {
 		lastActivityTime = *session.LastActivityAt
@@ -666,6 +674,10 @@ func (w *Worker) handleCheckSession(payload string) (string, error) {
 				Type:    "message",
 				Role:    "user",
 			}); err != nil {
+			if isJules429(err) {
+				SetRateLimitBackoff(30 * time.Second)
+				return "rate_limited", err
+			}
 				return "fail", err
 			}
 			addKeeperLog(
@@ -823,7 +835,11 @@ func (w *Worker) handleCheckSession(payload string) (string, error) {
 				addKeeperLog(fmt.Sprintf("Failed to send recovery guidance: %v", err), "error", session.ID, map[string]interface{}{
 					"event": "session_recovery_send_failed",
 				})
-				return "fail", err
+				if isJules429(err) {
+			SetRateLimitBackoff(30 * time.Second)
+			return "rate_limited", err
+		}
+		return "fail", err
 			}
 
 			addKeeperLog("Sent recovery guidance to failed session from Go backend.", "action", session.ID, map[string]interface{}{
@@ -873,7 +889,11 @@ func (w *Worker) handleCheckSession(payload string) (string, error) {
 				addKeeperLog(fmt.Sprintf("Failed to reactivate completed session: %v", err), "error", session.ID, map[string]interface{}{
 					"event": "session_reactivation_send_failed",
 				})
-				return "fail", err
+				if isJules429(err) {
+			SetRateLimitBackoff(30 * time.Second)
+			return "rate_limited", err
+		}
+		return "fail", err
 			}
 			addKeeperLog(
 				fmt.Sprintf("Reactivated %s session %s", session.RawState, session.ID[:8]),
@@ -921,7 +941,15 @@ func (w *Worker) handleCheckSession(payload string) (string, error) {
 			Type:    "message",
 			Role:    "user",
 		}); err != nil {
-			return "fail", err
+			if isJules429(err) {
+				SetRateLimitBackoff(30 * time.Second)
+				return "rate_limited", err
+			}
+			if isJules429(err) {
+			SetRateLimitBackoff(30 * time.Second)
+			return "rate_limited", err
+		}
+		return "fail", err
 		}
 
 		addKeeperLog(

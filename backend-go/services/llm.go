@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"encoding/json"
 	"fmt"
+	"log"
 	"io"
 	"net/http"
 	"os"
@@ -89,9 +90,9 @@ func defaultModelForProvider(provider string) string {
 	case "lmstudio":
 		return "gemma-4-e2b-uncensored-hauhaucs-aggressive"
 	case "openrouter":
-		return "google/gemma-3-27b-it"
+		return "nvidia/nemotron-3-nano-omni-30b-a3b-reasoning:free"
 	default:
-		return "google/gemma-3-27b-it"
+		return "nvidia/nemotron-3-nano-omni-30b-a3b-reasoning:free"
 	}
 }
 
@@ -171,9 +172,11 @@ func generateLLMText(primaryProvider, primaryApiKey, primaryModel, systemPrompt 
 		}
 
 
+		log.Printf("[LLM] Calling %s model=%s keyLen=%d", provider, model, len(apiKey))
 		result, err := generateOpenRouterText(apiKey, model, systemPrompt, messages)
 		if err != nil {
 			lastErr = err
+		log.Printf("[LLM] FAILED %s: %v", provider, err)
 			errStr := err.Error()
 			RecordLLMLatency(provider, result.LatencyMs, false)
 			if strings.TrimSpace(apiKey) != "" && apiKey != "placeholder" {
@@ -284,7 +287,7 @@ func generateOpenRouterText(apiKey, model, systemPrompt string, messages []LLMMe
 		"model":      model,
 		"messages":   requestMessages,
 		"temperature": 0.2,
-		"max_tokens": 800,
+		"max_tokens": 200,
 	})
 
 	req, err := http.NewRequest(http.MethodPost, apiURL, bytes.NewReader(requestBody))
