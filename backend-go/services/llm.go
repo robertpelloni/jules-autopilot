@@ -4,7 +4,6 @@ import (
 	"bytes"
 	"encoding/json"
 	"fmt"
-	"log"
 	"io"
 	"net/http"
 	"os"
@@ -172,11 +171,9 @@ func generateLLMText(primaryProvider, primaryApiKey, primaryModel, systemPrompt 
 		}
 
 
-		log.Printf("[LLM] Calling %s model=%s keyLen=%d", provider, model, len(apiKey))
 		result, err := generateOpenRouterText(apiKey, model, systemPrompt, messages)
 		if err != nil {
 			lastErr = err
-		log.Printf("[LLM] FAILED %s: %v", provider, err)
 			errStr := err.Error()
 			RecordLLMLatency(provider, result.LatencyMs, false)
 			if strings.TrimSpace(apiKey) != "" && apiKey != "placeholder" {
