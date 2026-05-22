@@ -86,10 +86,10 @@ type KeeperSettings struct {
 	Messages                   string         `json:"messages"`
 	CustomMessages             string         `json:"customMessages"`
 	SmartPilotEnabled          bool           `gorm:"default:false" json:"smartPilotEnabled"`
-	SupervisorProvider         string         `gorm:"default:openai" json:"supervisorProvider"`
+	SupervisorProvider         string         `gorm:"default:openrouter" json:"supervisorProvider"`
 	SupervisorApiKey           *string        `json:"supervisorApiKey"`
 	JulesApiKey                *string        `json:"julesApiKey"`
-	SupervisorModel            string         `gorm:"default:gpt-4o" json:"supervisorModel"`
+	SupervisorModel            string         `gorm:"default:free" json:"supervisorModel"`
 	ContextMessageCount        int            `gorm:"default:10" json:"contextMessageCount"`
 	ResumePaused               bool           `gorm:"default:false" json:"resumePaused"`
 	UserID                     *string        `json:"userId"`

@@ -134,8 +134,8 @@ export const useSessionKeeperStore = create<SessionKeeperState>()(
         try {
           const res = await fetch('/api/settings/keeper');
           if (res.ok) {
-            const config = await res.json();
-            set({ config });
+            const data = await res.json();
+            set({ config: { ...DEFAULT_CONFIG, ...data } });
 
             const statusRes = await fetch('/api/daemon/status');
             if (statusRes.ok) {

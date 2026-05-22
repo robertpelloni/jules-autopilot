@@ -314,7 +314,7 @@ func GetSettingsForAPI() (models.KeeperSettings, error) {
 	return getSettings()
 }
 
-func parseMessages(raw string) []string {
+func ParseMessages(raw string) []string {
 	if strings.TrimSpace(raw) == "" {
 		return nil
 	}
@@ -361,7 +361,7 @@ func isRiskyPlan(plan string) int {
 }
 
 func chooseNudgeMessage(settings models.KeeperSettings) string {
-	messages := append(parseMessages(settings.Messages), parseMessages(settings.CustomMessages)...)
+	messages := append(ParseMessages(settings.Messages), ParseMessages(settings.CustomMessages)...)
 	for _, message := range messages {
 		if strings.TrimSpace(message) != "" {
 			return strings.TrimSpace(message)
@@ -370,8 +370,67 @@ func chooseNudgeMessage(settings models.KeeperSettings) string {
 	return "Please continue working on this task."
 }
 
+// generateSupervisorNudge uses the OpenRouter supervisor LLM to generate an
+// intelligent, context-aware nudge message. If activities are provided, they'll
+// be used as context. If not, we use the session title/state only (no extra API call).
+// Falls back to chooseNudgeMessage if the LLM call fails.
+func generateSupervisorNudge(client *JulesClient, session models.JulesSession, settings models.KeeperSettings, preFetchedActivities ...[]models.JulesActivity) string {
+	provider := normalizeProvider(settings.SupervisorProvider)
+	apiKey := getSupervisorAPIKey(provider, settings.SupervisorApiKey)
+	model := resolveModel(provider, settings.SupervisorModel)
+
+	log.Printf("[Supervisor] Generating nudge for %s: provider=%s model=%s keyLen=%d", session.ID[:8], provider, model, len(apiKey))
+
+	if strings.TrimSpace(apiKey) == "" || apiKey == "placeholder" {
+		log.Printf("[Supervisor] No API key, falling back to canned message")
+		return chooseNudgeMessage(settings)
+	}
+
+	// Build activity context if we have pre-fetched activities (no extra Jules API call)
+	var activityLog strings.Builder
+	if len(preFetchedActivities) > 0 && len(preFetchedActivities[0]) > 0 {
+		activities := preFetchedActivities[0]
+		limit := 10
+		start := 0
+		if len(activities) > limit {
+			start = len(activities) - limit
+		}
+		for _, a := range activities[start:] {
+			role := strings.ToUpper(a.Role)
+			if role == "" {
+				role = "SYSTEM"
+			}
+			content := a.Content
+			if len(content) > 500 {
+				content = content[:500] + "..."
+			}
+			activityLog.WriteString(fmt.Sprintf("%s [%s]: %s\n", role, a.Type, content))
+		}
+	}
+
+	systemPrompt := "You are a project supervisor AI. Your job is to write a concise, actionable message to a coding agent working on a software project. Write 1-3 sentences that summarize what was accomplished and suggest the next logical step. Be specific and practical. Do NOT use markdown. Write plain text only."
+
+	var userPrompt string
+	if activityLog.Len() > 0 {
+		userPrompt = fmt.Sprintf("Session: %s\nTitle: %s\nState: %s\n\nRecent activity:\n%s\n\nWrite a brief supervisor nudge:", session.ID, session.Title, session.RawState, activityLog.String())
+	} else {
+		// No activities - generate nudge based on session title and state only
+		userPrompt = fmt.Sprintf("Session: %s\nTitle: %s\nState: %s\n\nThis session needs a nudge. Based on the title, suggest the next logical development step in 1-2 sentences:", session.ID, session.Title, session.RawState)
+	}
+
+	result, err := generateLLMText(provider, apiKey, model, systemPrompt, []LLMMessage{
+		{Role: "user", Content: userPrompt},
+	})
+	if err != nil || strings.TrimSpace(result.Content) == "" {
+		log.Printf("[Supervisor] LLM nudge generation failed for %s: %v", session.ID[:8], err)
+		return chooseNudgeMessage(settings)
+	}
+
+	return strings.TrimSpace(result.Content)
+}
+
 func buildRAGContext(query string, settings models.KeeperSettings, topK int) string {
-	apiKey := getSupervisorAPIKey("openai", settings.SupervisorApiKey)
+	apiKey := getSupervisorAPIKey(settings.SupervisorProvider, settings.SupervisorApiKey)
 	if strings.TrimSpace(apiKey) == "" || apiKey == "placeholder" {
 		return ""
 	}
@@ -574,6 +633,14 @@ func (w *Worker) handleCheckSession(payload string) (string, error) {
 		return "fail", fmt.Errorf("failed to refresh session %s: %w", data.Session.ID, err)
 	}
 
+	// Helper: check if an error is a Jules 429 rate limit
+	isJules429 := func(err error) bool {
+		if err == nil {
+			return false
+		}
+		return strings.Contains(err.Error(), "429") || strings.Contains(err.Error(), "RESOURCE_EXHAUSTED")
+	}
+
 	lastActivityTime := session.UpdatedAt
 	if session.LastActivityAt != nil {
 		lastActivityTime = *session.LastActivityAt
@@ -588,6 +655,51 @@ func (w *Worker) handleCheckSession(payload string) (string, error) {
 		}
 	} else {
 		emitDaemonEvent("activities_updated", map[string]interface{}{"sessionId": session.ID})
+	}
+
+	// AWAITING_USER_FEEDBACK: the agent is blocked waiting for user input.
+	// These sessions should always be nudged immediately — they can't make progress without us.
+	if session.RawState == "AWAITING_USER_FEEDBACK" {
+		// Check if we already nudged this session recently (avoid duplicate messages)
+		alreadyProcessedNudge := false
+		if supervisorState.LastProcessedActivityTimestamp != nil {
+			if t, err := time.Parse(time.RFC3339, *supervisorState.LastProcessedActivityTimestamp); err == nil && !lastActivityTime.After(t) {
+				alreadyProcessedNudge = true
+			}
+		}
+		if !alreadyProcessedNudge {
+			message := generateSupervisorNudge(client, session, settings)
+			if _, err := client.CreateActivity(session.ID, CreateActivityRequest{
+				Content: message,
+				Type:    "message",
+				Role:    "user",
+			}); err != nil {
+			if isJules429(err) {
+				SetRateLimitBackoff(30 * time.Second)
+				return "rate_limited", err
+			}
+				return "fail", err
+			}
+			addKeeperLog(
+				fmt.Sprintf("Bumped AWAITING_USER_FEEDBACK session %s", session.ID[:8]),
+				"action", session.ID, map[string]interface{}{
+					"event":         "session_user_feedback_bumped",
+					"sessionTitle":  session.Title,
+					"nudgeMessage":  message,
+				},
+			)
+			emitDaemonEvent("activities_updated", map[string]interface{}{"sessionId": session.ID})
+			emitDaemonEvent("session_nudged", map[string]interface{}{
+				"sessionId":      session.ID,
+				"sessionTitle":   session.Title,
+				"message":        message,
+			})
+			timestamp := lastActivityTime.Format(time.RFC3339)
+			supervisorState.LastProcessedActivityTimestamp = &timestamp
+			_ = saveSupervisorState(supervisorState)
+			return "bumped_awaiting_feedback", nil
+		}
+		return "already_bumped", nil
 	}
 
 	if session.RawState == "AWAITING_PLAN_APPROVAL" && settings.SmartPilotEnabled {
@@ -720,7 +832,14 @@ func (w *Worker) handleCheckSession(payload string) (string, error) {
 				Type:    "message",
 				Role:    "user",
 			}); err != nil {
-				return "fail", err
+				addKeeperLog(fmt.Sprintf("Failed to send recovery guidance: %v", err), "error", session.ID, map[string]interface{}{
+					"event": "session_recovery_send_failed",
+				})
+				if isJules429(err) {
+			SetRateLimitBackoff(30 * time.Second)
+			return "rate_limited", err
+		}
+		return "fail", err
 			}
 
 			addKeeperLog("Sent recovery guidance to failed session from Go backend.", "action", session.ID, map[string]interface{}{
@@ -741,13 +860,61 @@ func (w *Worker) handleCheckSession(payload string) (string, error) {
 		}
 	}
 
-	if session.RawState == "COMPLETED" && settings.SmartPilotEnabled {
-		var existing models.MemoryChunk
-		if err := db.DB.First(&existing, "session_id = ?", session.ID).Error; err != nil {
-			if _, addErr := AddJob("sync_session_memory", map[string]string{"sessionId": session.ID}); addErr == nil {
-				addKeeperLog("Queued session memory sync from Go backend.", "info", session.ID, map[string]interface{}{"event": "session_memory_sync_enqueued"})
+	// COMPLETED sessions: reactivate them with a follow-up task.
+	// The purpose of this project is to keep sessions cycling — don't let them go dormant.
+	if session.RawState == "COMPLETED" || session.RawState == "SUCCEEDED" {
+		alreadyProcessedComplete := false
+		if supervisorState.LastProcessedActivityTimestamp != nil {
+			if t, err := time.Parse(time.RFC3339, *supervisorState.LastProcessedActivityTimestamp); err == nil && !lastActivityTime.After(t) {
+				alreadyProcessedComplete = true
 			}
 		}
+			if !alreadyProcessedComplete {
+			// Use supervisor LLM to generate an intelligent, context-aware nudge
+			message := generateSupervisorNudge(client, session, settings)
+			ragContext := ""
+			if settings.SmartPilotEnabled {
+				query := session.Title
+				if strings.TrimSpace(query) == "" {
+					query = "next development task"
+				}
+				ragContext = buildRAGContext(query, settings, 3)
+			}
+			finalMessage := message + ragContext
+			if _, err := client.CreateActivity(session.ID, CreateActivityRequest{
+				Content: finalMessage,
+				Type:    "message",
+				Role:    "user",
+			}); err != nil {
+				addKeeperLog(fmt.Sprintf("Failed to reactivate completed session: %v", err), "error", session.ID, map[string]interface{}{
+					"event": "session_reactivation_send_failed",
+				})
+				if isJules429(err) {
+			SetRateLimitBackoff(30 * time.Second)
+			return "rate_limited", err
+		}
+		return "fail", err
+			}
+			addKeeperLog(
+				fmt.Sprintf("Reactivated %s session %s", session.RawState, session.ID[:8]),
+				"action", session.ID, map[string]interface{}{
+					"event":         "session_reactivated",
+					"sessionTitle":  session.Title,
+					"nudgeMessage":  message,
+					"usedRAG":       ragContext != "",
+				},
+			)
+			emitDaemonEvent("activities_updated", map[string]interface{}{"sessionId": session.ID})
+			emitDaemonEvent("session_reactivated", map[string]interface{}{
+				"sessionId":    session.ID,
+				"sessionTitle": session.Title,
+			})
+			timestamp := lastActivityTime.Format(time.RFC3339)
+			supervisorState.LastProcessedActivityTimestamp = &timestamp
+			_ = saveSupervisorState(supervisorState)
+			return "reactivated", nil
+		}
+		return "already_reactivated", nil
 	}
 
 	thresholdMinutes := settings.InactivityThresholdMinutes
@@ -759,7 +926,7 @@ func (w *Worker) handleCheckSession(payload string) (string, error) {
 	}
 
 	if time.Since(lastActivityTime) > time.Duration(thresholdMinutes)*time.Minute && session.RawState != "AWAITING_PLAN_APPROVAL" {
-		message := chooseNudgeMessage(settings)
+		message := generateSupervisorNudge(client, session, settings)
 		ragContext := ""
 		if settings.SmartPilotEnabled {
 			query := session.Title
@@ -774,7 +941,15 @@ func (w *Worker) handleCheckSession(payload string) (string, error) {
 			Type:    "message",
 			Role:    "user",
 		}); err != nil {
-			return "fail", err
+			if isJules429(err) {
+				SetRateLimitBackoff(30 * time.Second)
+				return "rate_limited", err
+			}
+			if isJules429(err) {
+			SetRateLimitBackoff(30 * time.Second)
+			return "rate_limited", err
+		}
+		return "fail", err
 		}
 
 		addKeeperLog(
@@ -834,7 +1009,7 @@ func hasRecentRecoveryCompletionLog(sessionID string, since time.Time) bool {
 func buildRecoveryMessage(session models.JulesSession, activities []models.JulesActivity, settings models.KeeperSettings) string {
 	provider := strings.TrimSpace(settings.SupervisorProvider)
 	if provider == "" {
-		provider = "openai"
+		provider = "openrouter"
 	}
 	apiKey := getSupervisorAPIKey(provider, settings.SupervisorApiKey)
 

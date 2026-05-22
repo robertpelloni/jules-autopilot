@@ -1517,7 +1517,34 @@ func getKeeperSettings(c *fiber.Ctx) error {
 			CustomMessages:             "[]",
 		}
 	}
-	return c.JSON(settings)
+
+	// Transform DB model into frontend-compatible SessionKeeperConfig format.
+	// The frontend expects messages as string[], supervisorApiKey as string (not *string),
+	// and does not use internal fields like customMessages, userId, user, julesApiKey, etc.
+	supervisorApiKey := ""
+	if settings.SupervisorApiKey != nil {
+		supervisorApiKey = *settings.SupervisorApiKey
+	}
+
+	// Parse messages: DB stores as newline-joined string or JSON array
+	messages := services.ParseMessages(settings.Messages)
+
+	frontendConfig := fiber.Map{
+		"isEnabled":                settings.IsEnabled,
+		"autoSwitch":               settings.AutoSwitch,
+		"checkIntervalSeconds":     settings.CheckIntervalSeconds,
+		"inactivityThresholdMinutes": settings.InactivityThresholdMinutes,
+		"activeWorkThresholdMinutes": settings.ActiveWorkThresholdMinutes,
+		"messages":                 messages,
+		"smartPilotEnabled":        settings.SmartPilotEnabled,
+		"supervisorProvider":       settings.SupervisorProvider,
+		"supervisorApiKey":         supervisorApiKey,
+		"supervisorModel":          settings.SupervisorModel,
+		"contextMessageCount":      settings.ContextMessageCount,
+		"debateEnabled":            false,
+		"debateParticipants":       []interface{}{},
+	}
+	return c.JSON(frontendConfig)
 }
 
 func getAppSettings(c *fiber.Ctx) error {
@@ -1545,26 +1572,80 @@ func detectEnvKeys() fiber.Map {
 }
 
 func updateKeeperSettings(c *fiber.Ctx) error {
+	// Parse the frontend SessionKeeperConfig format (messages as array, supervisorApiKey as string)
+	var input struct {
+		IsEnabled                bool     `json:"isEnabled"`
+		AutoSwitch               bool     `json:"autoSwitch"`
+		CheckIntervalSeconds     int      `json:"checkIntervalSeconds"`
+		InactivityThresholdMin   int      `json:"inactivityThresholdMinutes"`
+		ActiveWorkThresholdMin   int      `json:"activeWorkThresholdMinutes"`
+		Messages                 []string `json:"messages"`
+		SmartPilotEnabled        bool     `json:"smartPilotEnabled"`
+		SupervisorProvider       string   `json:"supervisorProvider"`
+		SupervisorApiKey         string   `json:"supervisorApiKey"`
+		SupervisorModel          string   `json:"supervisorModel"`
+		ContextMessageCount      int      `json:"contextMessageCount"`
+	}
+	if err := c.BodyParser(&input); err != nil {
+		return c.Status(400).JSON(fiber.Map{"error": "Invalid request body: " + err.Error()})
+	}
+
+	// Convert messages array to newline-joined string for DB storage
+	messagesStr := strings.Join(input.Messages, "\n")
+	apiKey := input.SupervisorApiKey
+
 	var settings models.KeeperSettings
 	if err := db.DB.First(&settings, "id = ?", "default").Error; err != nil {
-		// If not found, create new one
-		settings.ID = "default"
-		if err := c.BodyParser(&settings); err != nil {
-			return c.Status(400).JSON(fiber.Map{"error": "Invalid request body"})
+		// Create new record
+		settings = models.KeeperSettings{
+			ID:                         "default",
+			IsEnabled:                  input.IsEnabled,
+			AutoSwitch:                 input.AutoSwitch,
+			CheckIntervalSeconds:       input.CheckIntervalSeconds,
+			InactivityThresholdMinutes: input.InactivityThresholdMin,
+			ActiveWorkThresholdMinutes: input.ActiveWorkThresholdMin,
+			Messages:                   messagesStr,
+			SmartPilotEnabled:          input.SmartPilotEnabled,
+			SupervisorProvider:         input.SupervisorProvider,
+			SupervisorApiKey:           &apiKey,
+			SupervisorModel:            input.SupervisorModel,
+			ContextMessageCount:        input.ContextMessageCount,
 		}
 		if err := db.DB.Create(&settings).Error; err != nil {
 			return c.Status(500).JSON(fiber.Map{"error": err.Error()})
 		}
 	} else {
-		if err := c.BodyParser(&settings); err != nil {
-			return c.Status(400).JSON(fiber.Map{"error": "Invalid request body"})
-		}
+		settings.IsEnabled = input.IsEnabled
+		settings.AutoSwitch = input.AutoSwitch
+		settings.CheckIntervalSeconds = input.CheckIntervalSeconds
+		settings.InactivityThresholdMinutes = input.InactivityThresholdMin
+		settings.ActiveWorkThresholdMinutes = input.ActiveWorkThresholdMin
+		settings.Messages = messagesStr
+		settings.SmartPilotEnabled = input.SmartPilotEnabled
+		settings.SupervisorProvider = input.SupervisorProvider
+		settings.SupervisorApiKey = &apiKey
+		settings.SupervisorModel = input.SupervisorModel
+		settings.ContextMessageCount = input.ContextMessageCount
 		settings.UpdatedAt = time.Now()
 		if err := db.DB.Save(&settings).Error; err != nil {
 			return c.Status(500).JSON(fiber.Map{"error": err.Error()})
 		}
 	}
-	return c.JSON(settings)
+
+	// Return the saved settings in frontend-compatible format
+	return c.JSON(fiber.Map{
+		"isEnabled":                settings.IsEnabled,
+		"autoSwitch":               settings.AutoSwitch,
+		"checkIntervalSeconds":     settings.CheckIntervalSeconds,
+		"inactivityThresholdMinutes": settings.InactivityThresholdMinutes,
+		"activeWorkThresholdMinutes": settings.ActiveWorkThresholdMinutes,
+		"messages":                 input.Messages,
+		"smartPilotEnabled":        settings.SmartPilotEnabled,
+		"supervisorProvider":       settings.SupervisorProvider,
+		"supervisorApiKey":         input.SupervisorApiKey,
+		"supervisorModel":          settings.SupervisorModel,
+		"contextMessageCount":      settings.ContextMessageCount,
+	})
 }
 
 func getMockSessions() []models.JulesSession {
