@@ -186,6 +186,14 @@ func (s *Scheduler) executeTask(name string) {
 		if count, err := CleanupOldNotifications(90); err == nil && count > 0 {
 			log.Printf("[Scheduler] Cleaned up %d old notifications", count)
 		}
+		// Auto-read rate-limit error notifications older than 10 minutes
+		if result := db.DB.Model(&models.Notification{}).Where("is_read = 0 AND type = 'error' AND message LIKE '%429%' AND created_at < ?", time.Now().Add(-10*time.Minute)).Updates(map[string]interface{}{"is_read": true}); result.RowsAffected > 0 {
+			log.Printf("[Scheduler] Auto-read %d old 429 notifications", result.RowsAffected)
+		}
+		// Auto-read all error notifications older than 1 hour
+		if result := db.DB.Model(&models.Notification{}).Where("is_read = 0 AND type = 'error' AND created_at < ?", time.Now().Add(-1*time.Hour)).Updates(map[string]interface{}{"is_read": true}); result.RowsAffected > 0 {
+			log.Printf("[Scheduler] Auto-read %d old error notifications", result.RowsAffected)
+		}
 	case "ci_monitor":
 		RunCIMonitor()
 	}

@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"log"
 	"sort"
+	"strings"
 	"sync"
 	"time"
 
@@ -99,11 +100,21 @@ func (d *Daemon) tick() time.Duration {
 
 	sessions, err := client.ListSessions()
 	if err != nil {
+		errStr := err.Error()
 		log.Printf("[Daemon] Failed to fetch live sessions: %v", err)
-		addKeeperLog("Failed to fetch live Jules sessions in Go daemon.", "error", "global", map[string]interface{}{
-			"event": "daemon_session_poll_failed",
-			"error": err.Error(),
-		})
+		// On 429 rate limit, extend the backoff so we don't hammer the API
+		if strings.Contains(errStr, "429") || strings.Contains(errStr, "RESOURCE_EXHAUSTED") {
+			SetRateLimitBackoff(30 * time.Second)
+			log.Printf("[Daemon] Rate limited on ListSessions, extending backoff")
+			addKeeperLog("Rate limited on Jules session list, backing off 30s", "warning", "global", map[string]interface{}{
+				"event": "daemon_rate_limited",
+			})
+		} else {
+			addKeeperLog("Failed to fetch live Jules sessions in Go daemon.", "error", "global", map[string]interface{}{
+				"event": "daemon_session_poll_failed",
+				"error": err.Error(),
+			})
+		}
 		return interval
 	}
 

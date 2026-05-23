@@ -6,6 +6,7 @@ import (
 	"os"
 	"os/signal"
 	"path/filepath"
+	"runtime/debug"
 	"strings"
 	"syscall"
 
@@ -62,6 +63,9 @@ func loadRootEnv() {
 }
 
 func main() {
+	// Cap memory usage to 512MB to prevent unbounded growth
+	debug.SetMemoryLimit(512 * 1024 * 1024)
+
 	// Load environment variables from .env in project root for runtime parity with the Bun server.
 	loadRootEnv()
 

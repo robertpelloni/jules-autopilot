@@ -172,16 +172,24 @@ func checkDiskSpace() DependencyCheck {
 		return check
 	}
 
-	// Get disk usage via `df` on Unix or `dir` on Windows
+	// Get disk usage — use wmic on Windows (doesn't need admin)
 	var cmd *exec.Cmd
 	if runtime.GOOS == "windows" {
-		cmd = exec.Command("fsutil", "volume", "diskfree", wd[:2])
+		cmd = exec.Command("wmic", "logicaldisk", "where", "DeviceID='"+wd[:2]+"'", "get", "FreeSpace,Size", "/format:list")
 	} else {
 		cmd = exec.Command("df", "-h", wd)
 	}
-
 	output, err := cmd.CombinedOutput()
 	if err != nil {
+		// Fallback: just confirm the directory exists
+		if _, statErr := os.Stat(wd); statErr == nil {
+			check.Status = "ok"
+			check.Message = "Disk accessible (usage unavailable)"
+			check.Details = map[string]interface{}{
+				"path": wd,
+			}
+			return check
+		}
 		check.Status = "unknown"
 		check.Message = "Cannot check disk space"
 		check.Details = map[string]interface{}{
@@ -193,10 +201,10 @@ func checkDiskSpace() DependencyCheck {
 	check.Status = "ok"
 	check.Message = "Disk accessible"
 	check.Details = map[string]interface{}{
-		"path":         wd,
-		"checkOutput":  string(output),
+		"path": wd,
+		"checkOutput": string(output),
 	}
-	check.Latency = 0
+check.Latency = 0
 
 	return check
 }

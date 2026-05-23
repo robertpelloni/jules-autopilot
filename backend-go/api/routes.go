@@ -1574,13 +1574,13 @@ func detectEnvKeys() fiber.Map {
 func updateKeeperSettings(c *fiber.Ctx) error {
 	// Parse the frontend SessionKeeperConfig format (messages as array, supervisorApiKey as string)
 	var input struct {
-		IsEnabled                bool     `json:"isEnabled"`
-		AutoSwitch               bool     `json:"autoSwitch"`
+		IsEnabled *bool `json:"isEnabled"`
+		AutoSwitch *bool `json:"autoSwitch"`
 		CheckIntervalSeconds     int      `json:"checkIntervalSeconds"`
 		InactivityThresholdMin   int      `json:"inactivityThresholdMinutes"`
 		ActiveWorkThresholdMin   int      `json:"activeWorkThresholdMinutes"`
 		Messages                 []string `json:"messages"`
-		SmartPilotEnabled        bool     `json:"smartPilotEnabled"`
+		SmartPilotEnabled *bool `json:"smartPilotEnabled"`
 		SupervisorProvider       string   `json:"supervisorProvider"`
 		SupervisorApiKey         string   `json:"supervisorApiKey"`
 		SupervisorModel          string   `json:"supervisorModel"`
@@ -1599,13 +1599,13 @@ func updateKeeperSettings(c *fiber.Ctx) error {
 		// Create new record
 		settings = models.KeeperSettings{
 			ID:                         "default",
-			IsEnabled:                  input.IsEnabled,
-			AutoSwitch:                 input.AutoSwitch,
+			IsEnabled: func() bool { if input.IsEnabled != nil { return *input.IsEnabled }; return false }(),
+			AutoSwitch: func() bool { if input.AutoSwitch != nil { return *input.AutoSwitch }; return false }(),
 			CheckIntervalSeconds:       input.CheckIntervalSeconds,
 			InactivityThresholdMinutes: input.InactivityThresholdMin,
 			ActiveWorkThresholdMinutes: input.ActiveWorkThresholdMin,
 			Messages:                   messagesStr,
-			SmartPilotEnabled:          input.SmartPilotEnabled,
+			SmartPilotEnabled: func() bool { if input.SmartPilotEnabled != nil { return *input.SmartPilotEnabled }; return false }(),
 			SupervisorProvider:         input.SupervisorProvider,
 			SupervisorApiKey:           &apiKey,
 			SupervisorModel:            input.SupervisorModel,
@@ -1615,19 +1615,43 @@ func updateKeeperSettings(c *fiber.Ctx) error {
 			return c.Status(500).JSON(fiber.Map{"error": err.Error()})
 		}
 	} else {
-		settings.IsEnabled = input.IsEnabled
-		settings.AutoSwitch = input.AutoSwitch
-		settings.CheckIntervalSeconds = input.CheckIntervalSeconds
-		settings.InactivityThresholdMinutes = input.InactivityThresholdMin
-		settings.ActiveWorkThresholdMinutes = input.ActiveWorkThresholdMin
-		settings.Messages = messagesStr
-		settings.SmartPilotEnabled = input.SmartPilotEnabled
-		settings.SupervisorProvider = input.SupervisorProvider
-		settings.SupervisorApiKey = &apiKey
-		settings.SupervisorModel = input.SupervisorModel
-		settings.ContextMessageCount = input.ContextMessageCount
-		settings.UpdatedAt = time.Now()
-		if err := db.DB.Save(&settings).Error; err != nil {
+		// Partial update: only overwrite fields that were explicitly provided
+		updates := map[string]interface{}{}
+		if input.IsEnabled != nil {
+			updates["is_enabled"] = *input.IsEnabled
+		}
+		if input.AutoSwitch != nil {
+			updates["auto_switch"] = *input.AutoSwitch
+		}
+		if input.SmartPilotEnabled != nil {
+			updates["smart_pilot_enabled"] = *input.SmartPilotEnabled
+		}
+		if input.CheckIntervalSeconds > 0 {
+			updates["check_interval_seconds"] = input.CheckIntervalSeconds
+		}
+		if input.InactivityThresholdMin > 0 {
+			updates["inactivity_threshold_minutes"] = input.InactivityThresholdMin
+		}
+		if input.ActiveWorkThresholdMin > 0 {
+			updates["active_work_threshold_minutes"] = input.ActiveWorkThresholdMin
+		}
+		if len(input.Messages) > 0 {
+			updates["messages"] = messagesStr
+		}
+		if input.SupervisorProvider != "" {
+			updates["supervisor_provider"] = input.SupervisorProvider
+		}
+		if input.SupervisorModel != "" {
+			updates["supervisor_model"] = input.SupervisorModel
+		}
+		if apiKey != "" {
+			updates["supervisor_api_key"] = apiKey
+		}
+		if input.ContextMessageCount > 0 {
+			updates["context_message_count"] = input.ContextMessageCount
+		}
+		updates["updated_at"] = time.Now()
+		if err := db.DB.Model(&settings).Updates(updates).Error; err != nil {
 			return c.Status(500).JSON(fiber.Map{"error": err.Error()})
 		}
 	}
