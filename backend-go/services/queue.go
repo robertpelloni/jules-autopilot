@@ -832,13 +832,13 @@ func (w *Worker) handleCheckSession(payload string) (string, error) {
 				Type:    "message",
 				Role:    "user",
 			}); err != nil {
-				addKeeperLog(fmt.Sprintf("Failed to send recovery guidance: %v", err), "error", session.ID, map[string]interface{}{
-					"event": "session_recovery_send_failed",
-				})
-				if isJules429(err) {
+		if isJules429(err) {
 			SetRateLimitBackoff(30 * time.Second)
 			return "rate_limited", err
 		}
+		addKeeperLog(fmt.Sprintf("Failed to send recovery guidance: %v", err), "error", session.ID, map[string]interface{}{
+			"event": "session_recovery_send_failed",
+		})
 		return "fail", err
 			}
 
@@ -886,13 +886,13 @@ func (w *Worker) handleCheckSession(payload string) (string, error) {
 				Type:    "message",
 				Role:    "user",
 			}); err != nil {
-				addKeeperLog(fmt.Sprintf("Failed to reactivate completed session: %v", err), "error", session.ID, map[string]interface{}{
-					"event": "session_reactivation_send_failed",
-				})
-				if isJules429(err) {
+		if isJules429(err) {
 			SetRateLimitBackoff(30 * time.Second)
 			return "rate_limited", err
 		}
+		addKeeperLog(fmt.Sprintf("Failed to reactivate completed session: %v", err), "error", session.ID, map[string]interface{}{
+			"event": "session_reactivation_send_failed",
+		})
 		return "fail", err
 			}
 			addKeeperLog(
@@ -945,10 +945,6 @@ func (w *Worker) handleCheckSession(payload string) (string, error) {
 				SetRateLimitBackoff(30 * time.Second)
 				return "rate_limited", err
 			}
-			if isJules429(err) {
-			SetRateLimitBackoff(30 * time.Second)
-			return "rate_limited", err
-		}
 		return "fail", err
 		}
 
