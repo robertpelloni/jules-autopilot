@@ -314,13 +314,14 @@ func generateOpenRouterText(apiKey, model, systemPrompt string, messages []LLMMe
 	var data struct {
 		Choices []struct {
 			Message struct {
-				Content string `json:"content"`
+				Content          string `json:"content"`
+				ReasoningContent string `json:"reasoning_content"`
 			} `json:"message"`
 		} `json:"choices"`
 		Usage struct {
-			PromptTokens     int `json:"prompt_tokens"`
+			PromptTokens int `json:"prompt_tokens"`
 			CompletionTokens int `json:"completion_tokens"`
-			TotalTokens      int `json:"total_tokens"`
+			TotalTokens int `json:"total_tokens"`
 		} `json:"usage"`
 	}
 	if err := json.NewDecoder(resp.Body).Decode(&data); err != nil {
@@ -329,14 +330,21 @@ func generateOpenRouterText(apiKey, model, systemPrompt string, messages []LLMMe
 	if len(data.Choices) == 0 {
 		return LLMResult{}, fmt.Errorf("LLM response contained no choices")
 	}
-
+	// Use content field, fall back to reasoning_content for reasoning models
+	resultContent := strings.TrimSpace(data.Choices[0].Message.Content)
+	if resultContent == "" && data.Choices[0].Message.ReasoningContent != "" {
+		resultContent = strings.TrimSpace(data.Choices[0].Message.ReasoningContent)
+	}
+	if resultContent == "" {
+		return LLMResult{}, fmt.Errorf("LLM returned empty content")
+	}
 	return LLMResult{
-		Content:   strings.TrimSpace(data.Choices[0].Message.Content),
+		Content: resultContent,
 		LatencyMs: float64(time.Since(start).Milliseconds()),
 		Usage: &LLMUsage{
-			PromptTokens:     data.Usage.PromptTokens,
+			PromptTokens: data.Usage.PromptTokens,
 			CompletionTokens: data.Usage.CompletionTokens,
-			TotalTokens:      data.Usage.TotalTokens,
+			TotalTokens: data.Usage.TotalTokens,
 		},
 	}, nil
 }
