@@ -292,16 +292,21 @@ func checkQueueWorker() DependencyCheck {
 
 	var failed int64
 	db.DB.Model(&models.QueueJob{}).Where("status = ?", "failed").Count(&failed)
+	// Only count recent failures (last 10 min) for degraded status
+	var recentFailed int64
+	recentCutoff := time.Now().Add(-10 * time.Minute)
+	db.DB.Model(&models.QueueJob{}).Where("status = ? AND created_at > ?", "failed", recentCutoff).Count(&recentFailed)
 
 	check.Details = map[string]interface{}{
-		"pending":    pending,
+		"pending": pending,
 		"processing": processing,
-		"failed":     failed,
+		"failed": failed,
+		"recentFailed": recentFailed,
 	}
 
-	if failed > 10 {
+	if recentFailed > 10 {
 		check.Status = "degraded"
-		check.Message = fmt.Sprintf("%d failed jobs in queue", failed)
+		check.Message = fmt.Sprintf("%d recent failed jobs", recentFailed)
 	} else if pending > 100 {
 		check.Status = "degraded"
 		check.Message = fmt.Sprintf("Queue backlog: %d pending", pending)

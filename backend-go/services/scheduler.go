@@ -194,6 +194,10 @@ func (s *Scheduler) executeTask(name string) {
 		if result := db.DB.Model(&models.Notification{}).Where("is_read = 0 AND type = 'error' AND created_at < ?", time.Now().Add(-1*time.Hour)).Updates(map[string]interface{}{"is_read": true}); result.RowsAffected > 0 {
 			log.Printf("[Scheduler] Auto-read %d old error notifications", result.RowsAffected)
 		}
+	// Auto-purge old failed 429 queue jobs (>1 hour old)
+	db.DB.Where("status = ? AND last_error LIKE ? AND created_at < ?", "failed", "%429%", time.Now().Add(-1*time.Hour)).Delete(&models.QueueJob{})
+	// Auto-purge old completed queue jobs (>30 min old)
+	db.DB.Where("status = ? AND created_at < ?", "completed", time.Now().Add(-30*time.Minute)).Delete(&models.QueueJob{})
 	case "ci_monitor":
 		RunCIMonitor()
 	}
