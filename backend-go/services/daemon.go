@@ -102,12 +102,20 @@ func (d *Daemon) tick() time.Duration {
 	if err != nil {
 		errStr := err.Error()
 		log.Printf("[Daemon] Failed to fetch live sessions: %v", err)
-		// On 429 rate limit, extend the backoff so we don't hammer the API
-		if strings.Contains(errStr, "429") || strings.Contains(errStr, "RESOURCE_EXHAUSTED") {
-			SetRateLimitBackoff(30 * time.Second)
-			log.Printf("[Daemon] Rate limited on ListSessions, extending backoff")
-			addKeeperLog("Rate limited on Jules session list, backing off 30s", "warning", "global", map[string]interface{}{
-				"event": "daemon_rate_limited",
+		is429 := strings.Contains(errStr, "429") || strings.Contains(errStr, "RESOURCE_EXHAUSTED")
+		isTimeout := strings.Contains(errStr, "deadline exceeded") || strings.Contains(errStr, "context deadline") || strings.Contains(errStr, "Client.Timeout")
+		// On 429 rate limit or timeout, extend the backoff so we don't hammer the API
+		if is429 || isTimeout {
+			backoff := 30 * time.Second
+			if isTimeout {
+				backoff = 60 * time.Second
+			}
+			SetRateLimitBackoff(backoff)
+			log.Printf("[Daemon] %s on ListSessions, extending backoff %v", map[bool]string{true: "Rate limited", false: "Timeout"}[is429], backoff)
+			addKeeperLog(fmt.Sprintf("Jules API temporarily unavailable (%s), backing off %v", map[bool]string{true: "429 rate limited", false: "timeout"}[is429], backoff), "warning", "global", map[string]interface{}{
+				"event": "daemon_backoff",
+				"is429": is429,
+				"isTimeout": isTimeout,
 			})
 		} else {
 			addKeeperLog("Failed to fetch live Jules sessions in Go daemon.", "error", "global", map[string]interface{}{
