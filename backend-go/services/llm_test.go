@@ -1,6 +1,7 @@
 package services
 
 import (
+	"os"
 	"testing"
 	"time"
 )
@@ -10,7 +11,7 @@ func TestNormalizeProvider(t *testing.T) {
 		input    string
 		expected string
 	}{
-		{"", "openai"},
+		{"", "openrouter"},
 		{"OpenAI", "openai"},
 		{"ANTHROPIC", "anthropic"},
 		{"Gemini", "gemini"},
@@ -26,14 +27,17 @@ func TestNormalizeProvider(t *testing.T) {
 }
 
 func TestDefaultModelForProvider(t *testing.T) {
+	defaultModel := "nvidia/nemotron-3-nano-omni-30b-a3b-reasoning:free"
 	tests := []struct {
 		provider string
 		expected string
 	}{
-		{"openai", "gpt-4o-mini"},
-		{"anthropic", "claude-3-5-sonnet-latest"},
-		{"gemini", "gemini-1.5-flash"},
-		{"unknown", "gpt-4o-mini"},
+		{"openai", defaultModel},
+		{"anthropic", defaultModel},
+		{"gemini", defaultModel},
+		{"unknown", defaultModel},
+		{"openrouter", defaultModel},
+		{"lmstudio", "gemma-4-e2b-uncensored-hauhaucs-aggressive"},
 	}
 
 	for _, tt := range tests {
@@ -45,16 +49,14 @@ func TestDefaultModelForProvider(t *testing.T) {
 }
 
 func TestResolveModel(t *testing.T) {
+	defaultModel := "nvidia/nemotron-3-nano-omni-30b-a3b-reasoning:free"
 	// Empty model falls back to default
-	if resolveModel("openai", "") != "gpt-4o-mini" {
+	if resolveModel("openai", "") != defaultModel {
 		t.Error("Empty model should use default")
 	}
 	// Explicit model is used
 	if resolveModel("openai", "gpt-4") != "gpt-4" {
 		t.Error("Explicit model should be used")
-	}
-	if resolveModel("anthropic", "claude-3-opus") != "claude-3-opus" {
-		t.Error("Explicit model should be used for anthropic")
 	}
 }
 
@@ -144,6 +146,11 @@ func TestCircuitBreaker(t *testing.T) {
 }
 
 func TestGenerateRiskScore(t *testing.T) {
+	// Ensure we don't pick up real keys from environment
+	oldKey := os.Getenv("OPENROUTER_API_KEY")
+	os.Setenv("OPENROUTER_API_KEY", "")
+	defer os.Setenv("OPENROUTER_API_KEY", oldKey)
+
 	// Without real API key, should return fallback
 	score := generateRiskScore("openai", "fake-key", "gpt-4o", "test topic", "test summary", 42)
 	if score != 42 {

@@ -5,6 +5,8 @@ import (
 	"fmt"
 	"sync"
 	"time"
+
+	"github.com/google/uuid"
 )
 
 // TraceStatus represents the state of a trace step
@@ -84,10 +86,17 @@ func GetWorkflowTracer() *WorkflowTracer {
 	return globalTracer
 }
 
+// Clear resets the tracer state (mostly for tests)
+func (wt *WorkflowTracer) Clear() {
+	wt.mu.Lock()
+	defer wt.mu.Unlock()
+	wt.traces = make(map[string]*WorkflowTrace)
+}
+
 // StartTrace creates a new workflow trace
 func (wt *WorkflowTracer) StartTrace(sessionID, name string, tags []string) *WorkflowTrace {
 	trace := &WorkflowTrace{
-		ID:        fmt.Sprintf("trace-%d", time.Now().UnixNano()),
+		ID:        uuid.New().String(),
 		SessionID: sessionID,
 		Name:      name,
 		Status:    TraceRunning,
@@ -127,7 +136,7 @@ func (wt *WorkflowTracer) AddStep(traceID, name, stepType, parentID string, inpu
 
 	now := time.Now()
 	step := TraceStep{
-		ID:        fmt.Sprintf("step-%d-%s", time.Now().UnixNano(), name),
+		ID:        uuid.New().String(),
 		TraceID:   traceID,
 		Name:      name,
 		Type:      stepType,

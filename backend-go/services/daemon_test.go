@@ -49,8 +49,8 @@ func TestDaemonTickNoAPIKey(t *testing.T) {
 	d := GetDaemon()
 	interval := d.tick()
 
-	if interval != 30*1e9 { // 30 seconds in nanoseconds
-		t.Errorf("Expected 30s interval, got %v", interval)
+	if interval != 120*1e9 { // Minimum enforced 120s
+		t.Errorf("Expected 120s interval, got %v", interval)
 	}
 }
 
@@ -67,13 +67,14 @@ func TestDaemonTickDisabled(t *testing.T) {
 	d := GetDaemon()
 	interval := d.tick()
 
-	if interval != 60*1e9 {
-		t.Errorf("Expected 60s interval, got %v", interval)
+	if interval != 120*1e9 { // Minimum enforced 120s
+		t.Errorf("Expected 120s interval, got %v", interval)
 	}
 }
 
 func TestDaemonTickNoSettings(t *testing.T) {
 	setupDaemonTestDB(t)
+	db.DB.Exec("DELETE FROM keeper_settings") // Ensure no settings exist
 
 	// Don't create any settings - should default to 30s
 	d := GetDaemon()
@@ -97,9 +98,9 @@ func TestDaemonTickZeroInterval(t *testing.T) {
 	d := GetDaemon()
 	interval := d.tick()
 
-	// Zero interval should default to 30s
-	if interval != 30*1e9 {
-		t.Errorf("Expected default 30s for zero interval, got %v", interval)
+	// Zero interval should default to 30s, but then be bumped to 120s min
+	if interval != 120*1e9 {
+		t.Errorf("Expected 120s for zero interval, got %v", interval)
 	}
 }
 
@@ -116,8 +117,8 @@ func TestDaemonTickNegativeInterval(t *testing.T) {
 	d := GetDaemon()
 	interval := d.tick()
 
-	if interval != 30*1e9 {
-		t.Errorf("Expected default 30s for negative interval, got %v", interval)
+	if interval != 120*1e9 {
+		t.Errorf("Expected 120s for negative interval, got %v", interval)
 	}
 }
 

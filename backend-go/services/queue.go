@@ -38,7 +38,7 @@ type Worker struct {
 // NewWorker creates a new queue worker
 func NewWorker(concurrency int) *Worker {
 	if concurrency <= 0 {
-		concurrency = 1
+		concurrency = 2
 	}
 	return &Worker{
 		concurrency: concurrency,

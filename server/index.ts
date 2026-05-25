@@ -95,23 +95,36 @@ app.onError((err, c) => {
 
 async function getJulesClient(c?: any) {
     try {
-        const headerKey = c?.req?.header('X-Jules-Api-Key') || c?.req?.header('X-Goog-Api-Key');
+        const headerKey = c?.req?.header('X-Jules-Api-Key') || c?.req?.header('X-Goog-Api-Key') || c?.req?.header('X-Jules-Auth-Token');
         const settings = await prisma.keeperSettings.findUnique({ where: { id: 'default' } }).catch(() => null);    
 
         const julesKey = process.env.JULES_API_KEY;
         const googleKey = process.env.GOOGLE_API_KEY;
+        const julesAuthToken = process.env.JULES_AUTH_TOKEN;
 
         let apiKey: string | undefined;
+        let authToken: string | undefined;
         const isInvalid = (val?: string) => !val || val === 'placeholder' || val === 'undefined' || val === 'null' || val.length < 5;
 
         // PRIORITIZE your environment key
         if (!isInvalid(julesKey)) apiKey = julesKey;
         else if (!isInvalid(googleKey)) apiKey = googleKey;
-        else if (!isInvalid(headerKey)) apiKey = headerKey;
-        else if (settings?.julesApiKey && !isInvalid(settings.julesApiKey)) apiKey = settings.julesApiKey;
+        else if (!isInvalid(julesAuthToken)) {
+            // Check if it's actually an API key (AQ.A...)
+            if (julesAuthToken!.startsWith('AQ.A') || julesAuthToken!.length < 100) apiKey = julesAuthToken;
+            else authToken = julesAuthToken;
+        }
+        else if (!isInvalid(headerKey)) {
+            if (headerKey!.startsWith('AQ.A') || headerKey!.length < 100) apiKey = headerKey;
+            else authToken = headerKey;
+        }
+        else if (settings?.julesApiKey && !isInvalid(settings.julesApiKey)) {
+            if (settings.julesApiKey.startsWith('AQ.A') || settings.julesApiKey.length < 100) apiKey = settings.julesApiKey;
+            else authToken = settings.julesApiKey;
+        }
 
-        if (apiKey) {
-            return new JulesClient(apiKey, 'https://jules.googleapis.com/v1alpha', undefined, PRIORITY_BROADCAST);
+        if (apiKey || authToken) {
+            return new JulesClient(apiKey, 'https://jules.googleapis.com/v1alpha', authToken, PRIORITY_BROADCAST);
         }
     } catch (e) {
         console.error(`[Auth] Client initialization error:`, e);

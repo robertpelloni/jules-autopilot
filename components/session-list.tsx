@@ -8,7 +8,7 @@ import type { Session } from '@jules/shared';
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Search, Loader2, Sparkles, RefreshCw, History } from "lucide-react";
+import { Search, Loader2, Sparkles, RefreshCw, History, X } from "lucide-react";
 import {
   Tooltip,
   TooltipContent,
@@ -16,7 +16,7 @@ import {
   TooltipTrigger,
 } from "@/components/ui/tooltip";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { formatDistanceToNow, parseISO, isValid, isToday, differenceInDays } from "date-fns";
+import { formatDistanceToNow, format, parseISO, isValid, isToday, differenceInDays } from "date-fns";
 import { cn } from "@/lib/utils";
 import { SessionReplayDialog } from "./session-replay-dialog";
 
@@ -207,10 +207,21 @@ export function SessionList({
             <Input
               placeholder="Filter sessions..."
               aria-label="Filter sessions"
-              className="h-7 w-full bg-black/50 pl-7 text-[10px] border-white/10 focus-visible:ring-purple-500/50 placeholder:text-muted-foreground/50"
+              className="h-7 w-full bg-black/50 pl-7 pr-7 text-[10px] border-white/10 focus-visible:ring-purple-500/50 placeholder:text-muted-foreground/50"
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
             />
+              {searchQuery && (
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="absolute right-1 top-1/2 -translate-y-1/2 h-5 w-5 text-white/30 hover:text-white hover:bg-white/5"
+                  onClick={() => setSearchQuery("")}
+                  aria-label="Clear search"
+                >
+                  <X className="h-3 w-3" />
+                </Button>
+              )}
           </div>
         </div>
         <ScrollArea className="flex-1 min-h-0">
@@ -268,7 +279,14 @@ export function SessionList({
                   
                   <div className="flex items-center justify-between gap-2">
                     <div className="flex items-center gap-2 text-[9px] text-white/30 font-mono tracking-tight truncate">
+                      <Tooltip>
+                    <TooltipTrigger asChild>
                       <span>{formatDate(displayDate)}</span>
+                    </TooltipTrigger>
+                    <TooltipContent side="bottom" className="bg-zinc-900 border-white/10 text-white text-[9px] font-mono">
+                      {displayDate ? format(parseISO(displayDate), "MMM d, yyyy h:mm a") : "Unknown"}
+                    </TooltipContent>
+                  </Tooltip>
                       {daysOld !== null && daysOld > 0 && <span>({daysOld}d)</span>}
                     </div>
                     {session.sourceId && (

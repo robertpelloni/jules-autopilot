@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file.
 
+## [3.5.6] - 2026-05-25
+
+### Fixed
+- **Auth Protocol Enforcement (Go & TS)**: Hardened Jules API authentication by strictly enforcing `x-goog-api-key` for `AQ.A` tokens and removing `Authorization` headers to prevent gateway blocks and timeouts.
+- **Go Jules Client**: Added `AQ.A` token detection and smarter credential resolution from `JULES_AUTH_TOKEN`.
+- **Bun Backend**: Aligned Jules client initialization with Go backend parity.
+
 ## [2.1.0] - 2026-04-08
 
 ### Added

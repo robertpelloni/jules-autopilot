@@ -116,8 +116,8 @@ func TestWorkerProcessesJobs(t *testing.T) {
 		t.Fatalf("Failed to add job: %v", err)
 	}
 
-	// Wait for processing
-	time.Sleep(8 * time.Second)
+	// Wait for processing (worker ticker is 10s)
+	time.Sleep(15 * time.Second)
 
 	// Job should be completed or at least attempted
 	var job models.QueueJob
@@ -153,7 +153,7 @@ func TestParseMessages(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			result := parseMessages(tt.input)
+			result := ParseMessages(tt.input)
 			if len(result) != tt.expected {
 				t.Errorf("Expected %d messages, got %d", tt.expected, len(result))
 			}
