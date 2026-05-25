@@ -198,6 +198,10 @@ func (s *Scheduler) executeTask(name string) {
 	db.DB.Where("status = ? AND last_error LIKE ? AND created_at < ?", "failed", "%429%", time.Now().Add(-1*time.Hour)).Delete(&models.QueueJob{})
 	// Auto-purge old completed queue jobs (>30 min old)
 	db.DB.Where("status = ? AND created_at < ?", "completed", time.Now().Add(-30*time.Minute)).Delete(&models.QueueJob{})
+	// Auto-read session recovery notifications (>5 min old, not actionable as unread)
+	db.DB.Model(&models.Notification{}).Where("is_read = ? AND type = ? AND title = ? AND created_at < ?", false, "success", "Session Recovery", time.Now().Add(-5*time.Minute)).Update("is_read", true)
+	// Auto-purge very old notifications (>7 days)
+	db.DB.Where("created_at < ?", time.Now().Add(-7*24*time.Hour)).Delete(&models.Notification{})
 	case "ci_monitor":
 		RunCIMonitor()
 	}

@@ -99,6 +99,16 @@ func (d *Daemon) tick() time.Duration {
 	}
 
 	sessions, err := client.ListSessions()
+	// On timeout, retry once after a short pause (Jules API is often slow)
+	if err != nil {
+		errStr := err.Error()
+		isTimeout := strings.Contains(errStr, "deadline exceeded") || strings.Contains(errStr, "context deadline") || strings.Contains(errStr, "Client.Timeout")
+		if isTimeout {
+			log.Printf("[Daemon] ListSessions timed out, retrying in 5s...")
+			time.Sleep(5 * time.Second)
+			sessions, err = client.ListSessions()
+		}
+	}
 	if err != nil {
 		errStr := err.Error()
 		log.Printf("[Daemon] Failed to fetch live sessions: %v", err)
@@ -108,7 +118,7 @@ func (d *Daemon) tick() time.Duration {
 		if is429 || isTimeout {
 			backoff := 30 * time.Second
 			if isTimeout {
-				backoff = 60 * time.Second
+				backoff = 90 * time.Second
 			}
 			SetRateLimitBackoff(backoff)
 			log.Printf("[Daemon] %s on ListSessions, extending backoff %v", map[bool]string{true: "Rate limited", false: "Timeout"}[is429], backoff)
