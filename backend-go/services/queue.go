@@ -180,7 +180,7 @@ func (w *Worker) executeJob(job models.QueueJob) {
 	case "check_session":
 		result, executeErr = w.handleCheckSession(job.Payload)
 	case "index_codebase":
-		result, executeErr = w.handleIndexCodebase(job.Payload)
+		result = "skipped_no_embedding_model"
 	case "sync_session_memory":
 		result, executeErr = w.handleSyncSessionMemory(job.Payload)
 	case "decompose_task":
