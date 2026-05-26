@@ -44,7 +44,8 @@ func GetScheduler() *Scheduler {
 func (s *Scheduler) Start() {
 	log.Println("[Scheduler] Starting scheduled task engine...")
 
-	s.ScheduleTask("index_codebase", 24*time.Hour)
+	// index_codebase disabled :  no free embedding model available on OpenRouter
+	// s.ScheduleTask("index_codebase", 24*time.Hour)
 	s.ScheduleTask("cleanup_logs", 6*time.Hour)
 	s.ScheduleTask("ci_monitor", 30*time.Minute)
 
@@ -181,7 +182,7 @@ func (s *Scheduler) executeTask(name string) {
 			log.Printf("[Scheduler] Cleaned up %d old keeper logs", result.RowsAffected)
 		}
 		// Cap audit entries to 1000
-		db.DB.Exec("DELETE FROM audit_entries WHERE id NOT IN (SELECT id FROM audit_entries ORDER BY id DESC LIMIT 1000)")
+		db.DB.Exec("DELETE FROM audit_entries WHERE id NOT IN (SELECT id FROM audit_entries ORDER BY id DESC LIMIT 500)")
 		// Cleanup old dismissed notifications
 		if count, err := CleanupOldNotifications(90); err == nil && count > 0 {
 			log.Printf("[Scheduler] Cleaned up %d old notifications", count)
@@ -197,7 +198,9 @@ func (s *Scheduler) executeTask(name string) {
 	// Auto-purge old failed 429 queue jobs (>1 hour old)
 	db.DB.Where("status = ? AND last_error LIKE ? AND created_at < ?", "failed", "%429%", time.Now().Add(-1*time.Hour)).Delete(&models.QueueJob{})
 	// Auto-purge old completed queue jobs (>30 min old)
-	db.DB.Where("status = ? AND created_at < ?", "completed", time.Now().Add(-30*time.Minute)).Delete(&models.QueueJob{})
+	db.DB.Where("status = ? AND created_at < ?", "completed", time.Now().Add(-5*time.Minute)).Delete(&models.QueueJob{})
+	// Auto-purge stale pending queue jobs (>1 hour)
+	db.DB.Where("status = ? AND created_at < ?", "pending", time.Now().Add(-1*time.Hour)).Delete(&models.QueueJob{})
 	// Auto-read session recovery notifications (>5 min old, not actionable as unread)
 	db.DB.Model(&models.Notification{}).Where("is_read = ? AND type = ? AND title = ? AND created_at < ?", false, "success", "Session Recovery", time.Now().Add(-5*time.Minute)).Update("is_read", true)
 	// Auto-purge very old notifications (>7 days)
