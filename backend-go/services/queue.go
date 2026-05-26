@@ -466,6 +466,18 @@ func saveSupervisorState(state models.SupervisorState) error {
 	return db.DB.Save(&state).Error
 }
 
+// touchSessionCooldown updates the supervisor state timestamp to prevent
+// the daemon from re-enqueueing the same session immediately after a 429.
+func touchSessionCooldown(sessionID string) {
+	state, err := getSupervisorState(sessionID)
+	if err != nil {
+		return
+	}
+	now := time.Now().Format(time.RFC3339)
+	state.LastProcessedActivityTimestamp = &now
+	saveSupervisorState(state)
+}
+
 type planDebateResult struct {
 	Summary        string
 	RiskScore      int
@@ -834,6 +846,7 @@ func (w *Worker) handleCheckSession(payload string) (string, error) {
 			}); err != nil {
 		if isJules429(err) {
 			SetRateLimitBackoff(30 * time.Second)
+			touchSessionCooldown(session.ID)
 			return "rate_limited", err
 		}
 		addKeeperLog(fmt.Sprintf("Failed to send recovery guidance: %v", err), "error", session.ID, map[string]interface{}{
@@ -888,6 +901,7 @@ func (w *Worker) handleCheckSession(payload string) (string, error) {
 			}); err != nil {
 		if isJules429(err) {
 			SetRateLimitBackoff(30 * time.Second)
+			touchSessionCooldown(session.ID)
 			return "rate_limited", err
 		}
 		addKeeperLog(fmt.Sprintf("Failed to reactivate completed session: %v", err), "error", session.ID, map[string]interface{}{
