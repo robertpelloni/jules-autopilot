@@ -230,6 +230,13 @@ func (w *Worker) executeJob(job models.QueueJob) {
 
 	log.Printf("[Queue] Job %s (%s) completed: %s", job.ID[:8], job.Type, result)
 
+	// Periodic purge: clean completed jobs to prevent bloat
+	var completedCount int64
+	db.DB.Model(&models.QueueJob{}).Where("status = ?", "completed").Count(&completedCount)
+	if completedCount > 50 {
+		db.DB.Where("status = ? AND completed_at < ?", "completed", time.Now().Add(-2*time.Minute)).Delete(&models.QueueJob{})
+	}
+
 	// Inter-job delay: pause 2s between jobs
 	time.Sleep(2 * time.Second)
 }
