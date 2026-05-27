@@ -1268,9 +1268,9 @@ func (w *Worker) handleSyncSessionMemory(payload string) (string, error) {
 		return "fail", fmt.Errorf("failed to send sync prompt: %v", err)
 	}
 
-	// 2. Poll for agent response (max 30 seconds)
+	// 2. Poll for agent response (max 2 minutes)
 	var memoryContent string
-	for i := 0; i < 6; i++ {
+	for i := 0; i < 24; i++ {
 		time.Sleep(5 * time.Second)
 		activities, err := client.ListActivities(data.SessionID)
 		if err != nil {
