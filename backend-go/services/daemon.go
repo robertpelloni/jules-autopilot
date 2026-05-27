@@ -154,9 +154,8 @@ func (d *Daemon) tick() time.Duration {
 	//   5. Cooldown periods prevent hammering the same session (avoids 429s).
 	// ────────────────────────────────────────────────────────────────────
 
-	cooldownPeriod := 30 * time.Minute          // Don't re-nudge IN_PROGRESS within 30 minutes
-	completedCooldownPeriod := 60 * time.Minute // Don't re-activate COMPLETED within 60 minutes
-	failedCooldownPeriod := 120 * time.Minute   // Don't re-send recovery guidance within 2 hours
+		completedCooldownPeriod := time.Hour // Don't re-activate COMPLETED/IDLE/PAUSED within 1 hour
+	failedCooldownPeriod := time.Hour   // Don't re-send recovery guidance within 1 hour
 
 	immediateSessions := []models.JulesSession{} // AWAITING_USER_FEEDBACK, AWAITING_PLAN_APPROVAL
 	cooldownSessions := []models.JulesSession{}   // IN_PROGRESS, COMPLETED, FAILED, SUCCEEDED, etc.
@@ -191,17 +190,17 @@ func (d *Daemon) tick() time.Duration {
 		iPriority := 0
 		jPriority := 0
 		switch iState {
-		case "COMPLETED", "SUCCEEDED":
-			iPriority = 1 // highest priority - needs reactivation
 		case "FAILED":
-			iPriority = 2
+			iPriority = 1 // highest priority - requires recovery
+		case "PAUSED", "IDLE", "COMPLETED", "SUCCEEDED":
+			iPriority = 2 // medium priority - needs reactivation
 		case "IN_PROGRESS":
-			iPriority = 3 // lowest priority - just needs a nudge if idle
+			iPriority = 3 // lowest priority - just needs a nudge
 		}
 		switch jState {
-		case "COMPLETED", "SUCCEEDED":
-			jPriority = 1
 		case "FAILED":
+			jPriority = 1
+		case "PAUSED", "IDLE", "COMPLETED", "SUCCEEDED":
 			jPriority = 2
 		case "IN_PROGRESS":
 			jPriority = 3
@@ -232,11 +231,11 @@ func (d *Daemon) tick() time.Duration {
 
 		// Cooldown check for all non-immediate sessions
 		if session.RawState != "AWAITING_USER_FEEDBACK" && session.RawState != "AWAITING_PLAN_APPROVAL" {
-			cd := cooldownPeriod // default 30 min
+			cd := time.Hour // minimum 1-hour cooldown between bumps
 			switch session.RawState {
 			case "FAILED":
 				cd = failedCooldownPeriod
-			case "COMPLETED", "SUCCEEDED":
+			case "PAUSED", "IDLE", "COMPLETED", "SUCCEEDED":
 				cd = completedCooldownPeriod
 			}
 			if lastNudged, ok := nudgeTimeMap[session.ID]; ok {

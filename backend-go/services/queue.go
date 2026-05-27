@@ -880,9 +880,9 @@ func (w *Worker) handleCheckSession(payload string) (string, error) {
 		}
 	}
 
-	// COMPLETED sessions: reactivate them with a follow-up task.
-	// The purpose of this project is to keep sessions cycling — don't let them go dormant.
-	if session.RawState == "COMPLETED" || session.RawState == "SUCCEEDED" {
+	// COMPLETED/PAUSED/IDLE sessions: reactivate them with a follow-up task.
+	// The purpose of this project is to keep sessions cycling - don't let them go dormant.
+	if session.RawState == "COMPLETED" || session.RawState == "SUCCEEDED" || session.RawState == "PAUSED" || session.RawState == "IDLE" {
 		alreadyProcessedComplete := false
 		if supervisorState.LastProcessedActivityTimestamp != nil {
 			if t, err := time.Parse(time.RFC3339, *supervisorState.LastProcessedActivityTimestamp); err == nil && !lastActivityTime.After(t) {
