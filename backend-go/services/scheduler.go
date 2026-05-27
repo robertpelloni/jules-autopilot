@@ -46,7 +46,7 @@ func (s *Scheduler) Start() {
 
 	// index_codebase disabled :  no free embedding model available on OpenRouter
 	// s.ScheduleTask("index_codebase", 24*time.Hour)
-	s.ScheduleTask("cleanup_logs", 6*time.Hour)
+	s.ScheduleTask("cleanup_logs", 30*time.Minute)
 	s.ScheduleTask("ci_monitor", 30*time.Minute)
 
 	s.mu.Lock()

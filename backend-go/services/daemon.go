@@ -154,9 +154,9 @@ func (d *Daemon) tick() time.Duration {
 	//   5. Cooldown periods prevent hammering the same session (avoids 429s).
 	// ────────────────────────────────────────────────────────────────────
 
-	cooldownPeriod := 5 * time.Minute          // Don't re-nudge IN_PROGRESS within 5 minutes
-	completedCooldownPeriod := 10 * time.Minute // Don't re-activate COMPLETED within 10 minutes
-	failedCooldownPeriod := 15 * time.Minute   // Don't re-send recovery guidance within 15 minutes
+	cooldownPeriod := 30 * time.Minute          // Don't re-nudge IN_PROGRESS within 30 minutes
+	completedCooldownPeriod := 60 * time.Minute // Don't re-activate COMPLETED within 60 minutes
+	failedCooldownPeriod := 120 * time.Minute   // Don't re-send recovery guidance within 2 hours
 
 	immediateSessions := []models.JulesSession{} // AWAITING_USER_FEEDBACK, AWAITING_PLAN_APPROVAL
 	cooldownSessions := []models.JulesSession{}   // IN_PROGRESS, COMPLETED, FAILED, SUCCEEDED, etc.
@@ -232,7 +232,7 @@ func (d *Daemon) tick() time.Duration {
 
 		// Cooldown check for all non-immediate sessions
 		if session.RawState != "AWAITING_USER_FEEDBACK" && session.RawState != "AWAITING_PLAN_APPROVAL" {
-			cd := cooldownPeriod // default 5 min
+			cd := cooldownPeriod // default 30 min
 			switch session.RawState {
 			case "FAILED":
 				cd = failedCooldownPeriod
