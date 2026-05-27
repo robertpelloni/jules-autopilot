@@ -511,7 +511,7 @@ func postBorgWebhook(c *fiber.Ctx) error {
 	}})
 
 	if payload.Type == "repo_updated" {
-		_, _ = services.AddJob("index_codebase", map[string]string{})
+		// index_codebase disabled: no free embedding model
 	}
 	if payload.Type == "dependency_alert" {
 		log.Printf("[Webhooks] Borg Dependency Alert: %v", payload.Data)
@@ -519,7 +519,7 @@ func postBorgWebhook(c *fiber.Ctx) error {
 	if payload.Type == "fleet_command" {
 		if action, ok := payload.Data["action"].(string); ok {
 			if action == "reindex_all" {
-				_, _ = services.AddJob("index_codebase", map[string]string{})
+				// index_codebase disabled: no free embedding model
 			} else if action == "clear_logs" {
 				db.DB.Where("1 = 1").Delete(&models.KeeperLog{})
 			}
@@ -535,9 +535,8 @@ func postBorgWebhook(c *fiber.Ctx) error {
 }
 
 func postRAGReindex(c *fiber.Ctx) error {
-	if _, err := services.AddJob("index_codebase", map[string]string{}); err != nil {
-		return c.Status(500).JSON(fiber.Map{"error": err.Error()})
-	}
+	// index_codebase disabled: no free embedding model
+	return c.JSON(fiber.Map{"status": "skipped", "reason": "no embedding model"})
 	return c.JSON(fiber.Map{"success": true, "message": "Codebase indexing job enqueued"})
 }
 
@@ -790,7 +789,7 @@ func triggerFleetSync(c *fiber.Ctx) error {
 		}
 	}
 
-	_, _ = services.AddJob("index_codebase", map[string]string{})
+	// index_codebase disabled: no free embedding model
 
 	return c.JSON(fiber.Map{
 		"success":            true,

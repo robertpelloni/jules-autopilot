@@ -287,16 +287,8 @@ func (d *Daemon) tick() time.Duration {
 			"totalPool":       totalPool,
 		})
 
-	var existingIndexJob models.QueueJob
-	indexJobPending := db.DB.Where("type = ? AND status IN ?", "index_codebase", []string{"pending", "processing"}).First(&existingIndexJob).Error == nil
+	// index_codebase disabled: no free embedding model on OpenRouter
 	queuedIndexing := false
-	if !indexJobPending {
-		if _, err := AddJob("index_codebase", map[string]string{}); err != nil {
-			log.Printf("[Daemon] Failed to enqueue index_codebase: %v", err)
-		} else {
-			queuedIndexing = true
-		}
-	}
 
 	if queuedSessions > 0 || queuedIndexing {
 		addKeeperLog("Go daemon scheduled monitoring work.", "info", "global", map[string]interface{}{

@@ -164,9 +164,8 @@ func (s *Scheduler) executeTask(name string) {
 
 	switch name {
 	case "index_codebase":
-		if _, err := AddJob("index_codebase", map[string]string{}); err != nil {
-			log.Printf("[Scheduler] Failed to enqueue index_codebase: %v", err)
-		}
+		// Disabled: no free embedding model on OpenRouter
+		log.Printf("[Scheduler] Skipping index_codebase: no embedding model")
 	case "cleanup_logs":
 		// Purge stale processing jobs (stuck > 30 min)
 		staleCutoff := time.Now().Add(-30 * time.Minute)
