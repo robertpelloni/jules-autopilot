@@ -167,13 +167,13 @@ func (s *Scheduler) executeTask(name string) {
 		// Disabled: no free embedding model on OpenRouter
 		log.Printf("[Scheduler] Skipping index_codebase: no embedding model")
 	case "cleanup_logs":
-		// Purge stale processing jobs (stuck > 30 min)
+		// Purge stale processing jobs (stuck > 30 min) - hard delete
 		staleCutoff := time.Now().Add(-30 * time.Minute)
-		if result := db.DB.Where("status = ? AND created_at < ?", "processing", staleCutoff).Delete(&models.QueueJob{}); result.RowsAffected > 0 {
+		if result := db.DB.Unscoped().Where("status = ? AND created_at < ?", "processing", staleCutoff).Delete(&models.QueueJob{}); result.RowsAffected > 0 {
 			log.Printf("[Scheduler] Purged %d stale processing jobs", result.RowsAffected)
 		}
 		// Purge deprecated job types
-		db.DB.Where("type = ?", "check_issues").Delete(&models.QueueJob{})
+		db.DB.Unscoped().Where("type = ?", "check_issues").Delete(&models.QueueJob{})
 		// Simple retention policy: delete logs older than 30 days
 		cutoff := time.Now().Add(-30 * 24 * time.Hour)
 		result := db.DB.Where("created_at < ?", cutoff).Delete(&models.KeeperLog{})
@@ -199,11 +199,11 @@ func (s *Scheduler) executeTask(name string) {
 			log.Printf("[Scheduler] Auto-read %d old error notifications", result.RowsAffected)
 		}
 	// Auto-purge old failed 429 queue jobs (>1 hour old)
-	db.DB.Where("status = ? AND last_error LIKE ? AND created_at < ?", "failed", "%429%", time.Now().Add(-1*time.Hour)).Delete(&models.QueueJob{})
+	db.DB.Unscoped().Where("status = ? AND last_error LIKE ? AND created_at < ?", "failed", "%429%", time.Now().Add(-1*time.Hour)).Delete(&models.QueueJob{})
 	// Auto-purge old completed queue jobs (>5 min old)
-	db.DB.Where("status = ? AND created_at < ?", "completed", time.Now().Add(-5*time.Minute)).Delete(&models.QueueJob{})
+	db.DB.Unscoped().Where("status = ? AND created_at < ?", "completed", time.Now().Add(-5*time.Minute)).Delete(&models.QueueJob{})
 	// Auto-purge stale pending queue jobs (>1 hour)
-	db.DB.Where("status = ? AND created_at < ?", "pending", time.Now().Add(-1*time.Hour)).Delete(&models.QueueJob{})
+	db.DB.Unscoped().Where("status = ? AND created_at < ?", "pending", time.Now().Add(-1*time.Hour)).Delete(&models.QueueJob{})
 	// Auto-read session recovery notifications (>5 min old, not actionable as unread)
 	db.DB.Model(&models.Notification{}).Where("is_read = ? AND type = ? AND title = ? AND created_at < ?", false, "success", "Session Recovery", time.Now().Add(-5*time.Minute)).Update("is_read", true)
 	// Auto-purge very old notifications (>7 days)

@@ -234,7 +234,7 @@ func (w *Worker) executeJob(job models.QueueJob) {
 	var completedCount int64
 	db.DB.Model(&models.QueueJob{}).Where("status = ?", "completed").Count(&completedCount)
 	if completedCount > 50 {
-		db.DB.Where("status = ? AND completed_at < ?", "completed", time.Now().Add(-2*time.Minute)).Delete(&models.QueueJob{})
+		db.DB.Unscoped().Where("status = ? AND completed_at < ?", "completed", time.Now().Add(-2*time.Minute)).Delete(&models.QueueJob{})
 	}
 
 	// Inter-job delay: pause 2s between jobs
