@@ -91,24 +91,24 @@ func purgeStaleData() {
 	var auditCount int64
 	DB.Model(&models.AuditEntry{}).Count(&auditCount)
 	if auditCount > 1000 {
-		DB.Exec("DELETE FROM audit_entries WHERE id NOT IN (SELECT id FROM audit_entries ORDER BY id DESC LIMIT 1000)")
-		log.Printf("[DB] Trimmed audit_entries from %d to 1000", auditCount)
+		DB.Exec("DELETE FROM audit_entries WHERE id NOT IN (SELECT id FROM audit_entries ORDER BY id DESC LIMIT 500)")
+		log.Printf("[DB] Trimmed audit_entries from %d to 500", auditCount)
 	}
 
 	// Cap keeper_logs to last 500
 	var logCount int64
 	DB.Model(&models.KeeperLog{}).Count(&logCount)
 	if logCount > 500 {
-		DB.Exec("DELETE FROM keeper_logs WHERE id NOT IN (SELECT id FROM keeper_logs ORDER BY id DESC LIMIT 500)")
-		log.Printf("[DB] Trimmed keeper_logs from %d to 500", logCount)
+		DB.Exec("DELETE FROM keeper_logs WHERE id NOT IN (SELECT id FROM keeper_logs ORDER BY id DESC LIMIT 200)")
+		log.Printf("[DB] Trimmed keeper_logs from %d to 200", logCount)
 	}
 
 	// Cap notifications to last 200
 	var notifCount int64
 	DB.Model(&models.Notification{}).Count(&notifCount)
 	if notifCount > 200 {
-		DB.Exec("DELETE FROM notifications WHERE id NOT IN (SELECT id FROM notifications ORDER BY id DESC LIMIT 200)")
-		log.Printf("[DB] Trimmed notifications from %d to 200", notifCount)
+		DB.Exec("DELETE FROM notifications WHERE id NOT IN (SELECT id FROM notifications ORDER BY id DESC LIMIT 50)")
+		log.Printf("[DB] Trimmed notifications from %d to 50", notifCount)
 	}
 }
 

@@ -284,7 +284,7 @@ func generateOpenRouterText(apiKey, model, systemPrompt string, messages []LLMMe
 		"model":      model,
 		"messages":   requestMessages,
 		"temperature": 0.2,
-		"max_tokens": 200,
+		"max_tokens": 512,
 	})
 
 	req, err := http.NewRequest(http.MethodPost, apiURL, bytes.NewReader(requestBody))
@@ -314,13 +314,15 @@ func generateOpenRouterText(apiKey, model, systemPrompt string, messages []LLMMe
 	var data struct {
 		Choices []struct {
 			Message struct {
-				Content string `json:"content"`
+				Content          string `json:"content"`
+				ReasoningContent string `json:"reasoning_content"`
+				Reasoning        string `json:"reasoning"`
 			} `json:"message"`
 		} `json:"choices"`
 		Usage struct {
-			PromptTokens     int `json:"prompt_tokens"`
+			PromptTokens int `json:"prompt_tokens"`
 			CompletionTokens int `json:"completion_tokens"`
-			TotalTokens      int `json:"total_tokens"`
+			TotalTokens int `json:"total_tokens"`
 		} `json:"usage"`
 	}
 	if err := json.NewDecoder(resp.Body).Decode(&data); err != nil {
@@ -329,14 +331,24 @@ func generateOpenRouterText(apiKey, model, systemPrompt string, messages []LLMMe
 	if len(data.Choices) == 0 {
 		return LLMResult{}, fmt.Errorf("LLM response contained no choices")
 	}
-
+	// Use content field, fall back to reasoning_content then reasoning for reasoning models
+	resultContent := strings.TrimSpace(data.Choices[0].Message.Content)
+	if resultContent == "" {
+		resultContent = strings.TrimSpace(data.Choices[0].Message.ReasoningContent)
+	}
+	if resultContent == "" {
+		resultContent = strings.TrimSpace(data.Choices[0].Message.Reasoning)
+	}
+	if resultContent == "" {
+		return LLMResult{}, fmt.Errorf("LLM returned empty content (finish_reason may be length)")
+	}
 	return LLMResult{
-		Content:   strings.TrimSpace(data.Choices[0].Message.Content),
+		Content: resultContent,
 		LatencyMs: float64(time.Since(start).Milliseconds()),
 		Usage: &LLMUsage{
-			PromptTokens:     data.Usage.PromptTokens,
+			PromptTokens: data.Usage.PromptTokens,
 			CompletionTokens: data.Usage.CompletionTokens,
-			TotalTokens:      data.Usage.TotalTokens,
+			TotalTokens: data.Usage.TotalTokens,
 		},
 	}, nil
 }

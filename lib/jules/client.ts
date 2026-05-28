@@ -175,6 +175,14 @@ function getDefaultApiBaseUrl(): string {
   return '/api';
 }
 
+function isLikelyApiKey(val: string): boolean {
+  const v = val.trim();
+  if (v.startsWith('AQ.A')) return true;
+  if (v.startsWith('AIza')) return true;
+  if (v.length < 100 && !v.startsWith('ya29.')) return true;
+  return false;
+}
+
 export class JulesClient {
   private apiKey?: string;
   private authToken?: string;
@@ -184,6 +192,17 @@ export class JulesClient {
     this.apiKey = apiKey;
     this.authToken = authToken;
     this.baseUrl = baseUrl;
+
+    // Normalize: if authToken is actually an API key, move it
+    if (this.authToken && isLikelyApiKey(this.authToken)) {
+      this.apiKey = this.authToken;
+      this.authToken = undefined;
+    }
+    // If apiKey is actually an OAuth token, move it (unlikely but for symmetry)
+    if (this.apiKey && !isLikelyApiKey(this.apiKey)) {
+      this.authToken = this.apiKey;
+      this.apiKey = undefined;
+    }
   }
 
   private normalizeSessionId(sessionId: string): string {
@@ -209,10 +228,12 @@ export class JulesClient {
 
     // Google Jules API v1alpha Auth Logic:
     if (isGoogleApi) {
-      if (this.authToken) {
-        headers['Authorization'] = `Bearer ${this.authToken}`;
-      } else if (this.apiKey) {
+      if (this.apiKey) {
         headers['X-Goog-Api-Key'] = this.apiKey;
+        // Strictly ensure Authorization is NOT present
+        delete (headers as any)['Authorization'];
+      } else if (this.authToken) {
+        headers['Authorization'] = `Bearer ${this.authToken}`;
       }
       
       // LOG THE CLEAN HEADERS

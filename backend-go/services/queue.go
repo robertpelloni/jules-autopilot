@@ -38,7 +38,7 @@ type Worker struct {
 // NewWorker creates a new queue worker
 func NewWorker(concurrency int) *Worker {
 	if concurrency <= 0 {
-		concurrency = 1
+		concurrency = 2
 	}
 	return &Worker{
 		concurrency: concurrency,
@@ -180,7 +180,7 @@ func (w *Worker) executeJob(job models.QueueJob) {
 	case "check_session":
 		result, executeErr = w.handleCheckSession(job.Payload)
 	case "index_codebase":
-		result, executeErr = w.handleIndexCodebase(job.Payload)
+		result = "skipped_no_embedding_model"
 	case "sync_session_memory":
 		result, executeErr = w.handleSyncSessionMemory(job.Payload)
 	case "decompose_task":
@@ -264,7 +264,7 @@ func StartWorker() {
 	globalWorkerMu.Lock()
 	defer globalWorkerMu.Unlock()
 	if globalWorker == nil {
-		globalWorker = NewWorker(1)
+		globalWorker = NewWorker(2)
 	}
 	globalWorker.Start()
 }
@@ -464,6 +464,18 @@ func getSupervisorState(sessionID string) (models.SupervisorState, error) {
 func saveSupervisorState(state models.SupervisorState) error {
 	state.UpdatedAt = time.Now()
 	return db.DB.Save(&state).Error
+}
+
+// touchSessionCooldown updates the supervisor state timestamp to prevent
+// the daemon from re-enqueueing the same session immediately after a 429.
+func touchSessionCooldown(sessionID string) {
+	state, err := getSupervisorState(sessionID)
+	if err != nil {
+		return
+	}
+	now := time.Now().Format(time.RFC3339)
+	state.LastProcessedActivityTimestamp = &now
+	saveSupervisorState(state)
 }
 
 type planDebateResult struct {
@@ -832,13 +844,14 @@ func (w *Worker) handleCheckSession(payload string) (string, error) {
 				Type:    "message",
 				Role:    "user",
 			}); err != nil {
-				addKeeperLog(fmt.Sprintf("Failed to send recovery guidance: %v", err), "error", session.ID, map[string]interface{}{
-					"event": "session_recovery_send_failed",
-				})
-				if isJules429(err) {
+		if isJules429(err) {
 			SetRateLimitBackoff(30 * time.Second)
+			touchSessionCooldown(session.ID)
 			return "rate_limited", err
 		}
+		addKeeperLog(fmt.Sprintf("Failed to send recovery guidance: %v", err), "error", session.ID, map[string]interface{}{
+			"event": "session_recovery_send_failed",
+		})
 		return "fail", err
 			}
 
@@ -886,13 +899,14 @@ func (w *Worker) handleCheckSession(payload string) (string, error) {
 				Type:    "message",
 				Role:    "user",
 			}); err != nil {
-				addKeeperLog(fmt.Sprintf("Failed to reactivate completed session: %v", err), "error", session.ID, map[string]interface{}{
-					"event": "session_reactivation_send_failed",
-				})
-				if isJules429(err) {
+		if isJules429(err) {
 			SetRateLimitBackoff(30 * time.Second)
+			touchSessionCooldown(session.ID)
 			return "rate_limited", err
 		}
+		addKeeperLog(fmt.Sprintf("Failed to reactivate completed session: %v", err), "error", session.ID, map[string]interface{}{
+			"event": "session_reactivation_send_failed",
+		})
 		return "fail", err
 			}
 			addKeeperLog(
@@ -945,10 +959,6 @@ func (w *Worker) handleCheckSession(payload string) (string, error) {
 				SetRateLimitBackoff(30 * time.Second)
 				return "rate_limited", err
 			}
-			if isJules429(err) {
-			SetRateLimitBackoff(30 * time.Second)
-			return "rate_limited", err
-		}
 		return "fail", err
 		}
 

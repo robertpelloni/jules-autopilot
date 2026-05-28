@@ -17,7 +17,7 @@ const JulesApiBaseUrl = "https://jules.googleapis.com/v1alpha"
 
 // httpClient with timeout to prevent goroutine leaks from hanging API calls
 var httpClient = &http.Client{
-	Timeout: 30 * time.Second,
+	Timeout: 120 * time.Second,
 }
 
 type JulesClient struct {
@@ -32,13 +32,33 @@ type JulesSource struct {
 	Metadata map[string]interface{} `json:"metadata,omitempty"`
 }
 
+func isLikelyApiKey(val string) bool {
+	val = strings.TrimSpace(val)
+	// Jules Portal keys start with AQ.A
+	if strings.HasPrefix(val, "AQ.A") {
+		return true
+	}
+	// Google API keys typically start with AIza
+	if strings.HasPrefix(val, "AIza") {
+		return true
+	}
+	// If it's short and doesn't have the ya29 prefix, it's likely an API key
+	if len(val) < 100 && !strings.HasPrefix(val, "ya29.") {
+		return true
+	}
+	return false
+}
+
 func resolveJulesCredentials() (string, string) {
-	// 1. Try JULES_AUTH_TOKEN
-	if token := strings.TrimSpace(os.Getenv("JULES_AUTH_TOKEN")); token != "" && token != "placeholder" {
-		return "", token
+	// 1. Try JULES_AUTH_TOKEN - but check if it's actually an API key
+	if val := strings.TrimSpace(os.Getenv("JULES_AUTH_TOKEN")); val != "" && val != "placeholder" {
+		if isLikelyApiKey(val) {
+			return val, ""
+		}
+		return "", val
 	}
 
-	// 2. Try API Keys
+	// 2. Try explicit API Keys
 	for _, envKey := range []string{"JULES_API_KEY", "GOOGLE_API_KEY"} {
 		if key := strings.TrimSpace(os.Getenv(envKey)); key != "" && key != "placeholder" {
 			return key, ""
@@ -51,11 +71,10 @@ func resolveJulesCredentials() (string, string) {
 		if settings.JulesApiKey != nil {
 			val := strings.TrimSpace(*settings.JulesApiKey)
 			if val != "" && val != "placeholder" {
-				// Detect if it's likely a token or key
-				if strings.HasPrefix(val, "ya29.") || len(val) > 100 {
-					return "", val
+				if isLikelyApiKey(val) {
+					return val, ""
 				}
-				return val, ""
+				return "", val
 			}
 		}
 	}
@@ -69,12 +88,12 @@ func NewJulesClient(explicit ...string) *JulesClient {
 
 	if len(explicit) > 0 && strings.TrimSpace(explicit[0]) != "" && explicit[0] != "placeholder" {
 		val := strings.TrimSpace(explicit[0])
-		if strings.HasPrefix(val, "ya29.") || len(val) > 100 {
-			authToken = val
-			apiKey = ""
-		} else {
+		if isLikelyApiKey(val) {
 			apiKey = val
 			authToken = ""
+		} else {
+			authToken = val
+			apiKey = ""
 		}
 	}
 
@@ -85,10 +104,12 @@ func NewJulesClient(explicit ...string) *JulesClient {
 }
 
 func (c *JulesClient) setAuthHeaders(req *http.Request) {
-	if c.authToken != "" {
-		req.Header.Set("Authorization", "Bearer "+c.authToken)
-	} else if c.apiKey != "" {
+	// STRICT ENFORCEMENT: Never send both, and prefer x-goog-api-key for AQ.A tokens
+	if c.apiKey != "" {
 		req.Header.Set("X-Goog-Api-Key", c.apiKey)
+		req.Header.Del("Authorization") // Strictly delete to prevent gateway blocks
+	} else if c.authToken != "" {
+		req.Header.Set("Authorization", "Bearer "+c.authToken)
 	}
 	req.Header.Set("Content-Type", "application/json")
 }

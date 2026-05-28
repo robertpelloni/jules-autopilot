@@ -18,7 +18,7 @@ func TestNormalizeReviewProviderInPackage(t *testing.T) {
 	{"google alias", "google", "", "gemini-pro", "google"},
 	{"gemini stays", "gemini", "", "gemini-pro", "gemini"},
 	{"claude stays", "claude", "", "claude-3", "claude"},
-	{"empty defaults to openai", "", "", "", "openai"},
+	{"empty defaults to openrouter", "", "", "", "openrouter"},
 	{"explicit api key", "openai", "sk-test-key", "gpt-4", "openai"},
 	}
 

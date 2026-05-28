@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"log"
 	"sort"
+	"strings"
 	"sync"
 	"time"
 
@@ -98,12 +99,40 @@ func (d *Daemon) tick() time.Duration {
 	}
 
 	sessions, err := client.ListSessions()
+	// On timeout, retry once after a short pause (Jules API is often slow)
 	if err != nil {
+		errStr := err.Error()
+		isTimeout := strings.Contains(errStr, "deadline exceeded") || strings.Contains(errStr, "context deadline") || strings.Contains(errStr, "Client.Timeout")
+		if isTimeout {
+			log.Printf("[Daemon] ListSessions timed out, retrying in 5s...")
+			time.Sleep(5 * time.Second)
+			sessions, err = client.ListSessions()
+		}
+	}
+	if err != nil {
+		errStr := err.Error()
 		log.Printf("[Daemon] Failed to fetch live sessions: %v", err)
-		addKeeperLog("Failed to fetch live Jules sessions in Go daemon.", "error", "global", map[string]interface{}{
-			"event": "daemon_session_poll_failed",
-			"error": err.Error(),
-		})
+		is429 := strings.Contains(errStr, "429") || strings.Contains(errStr, "RESOURCE_EXHAUSTED")
+		isTimeout := strings.Contains(errStr, "deadline exceeded") || strings.Contains(errStr, "context deadline") || strings.Contains(errStr, "Client.Timeout")
+		// On 429 rate limit or timeout, extend the backoff so we don't hammer the API
+		if is429 || isTimeout {
+			backoff := 30 * time.Second
+			if isTimeout {
+				backoff = 90 * time.Second
+			}
+			SetRateLimitBackoff(backoff)
+			log.Printf("[Daemon] %s on ListSessions, extending backoff %v", map[bool]string{true: "Rate limited", false: "Timeout"}[is429], backoff)
+			addKeeperLog(fmt.Sprintf("Jules API temporarily unavailable (%s), backing off %v", map[bool]string{true: "429 rate limited", false: "timeout"}[is429], backoff), "warning", "global", map[string]interface{}{
+				"event": "daemon_backoff",
+				"is429": is429,
+				"isTimeout": isTimeout,
+			})
+		} else {
+			addKeeperLog("Failed to fetch live Jules sessions in Go daemon.", "error", "global", map[string]interface{}{
+				"event": "daemon_session_poll_failed",
+				"error": err.Error(),
+			})
+		}
 		return interval
 	}
 

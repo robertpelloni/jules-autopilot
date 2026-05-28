@@ -14,6 +14,7 @@ func setupTraceTestDB(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Failed to init test DB: %v", err)
 	}
+	GetWorkflowTracer().Clear()
 }
 
 
