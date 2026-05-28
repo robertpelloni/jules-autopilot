@@ -46,7 +46,7 @@ func (s *Scheduler) Start() {
 
 	// index_codebase disabled :  no free embedding model available on OpenRouter
 	// s.ScheduleTask("index_codebase", 24*time.Hour)
-	s.ScheduleTask("cleanup_logs", 30*time.Minute)
+	s.ScheduleTask("cleanup_logs", 5*time.Minute)
 	s.ScheduleTask("ci_monitor", 30*time.Minute)
 
 	s.mu.Lock()
@@ -180,8 +180,12 @@ func (s *Scheduler) executeTask(name string) {
 		if result.Error == nil && result.RowsAffected > 0 {
 			log.Printf("[Scheduler] Cleaned up %d old keeper logs", result.RowsAffected)
 		}
-		// Cap audit entries to 1000
+		// Cap audit entries to 500
 		db.DB.Exec("DELETE FROM audit_entries WHERE id NOT IN (SELECT id FROM audit_entries ORDER BY id DESC LIMIT 500)")
+		// Cap notifications to 50
+		db.DB.Exec("DELETE FROM notifications WHERE id NOT IN (SELECT id FROM notifications ORDER BY id DESC LIMIT 50)")
+		// Cap keeper_logs to 200
+		db.DB.Exec("DELETE FROM keeper_logs WHERE id NOT IN (SELECT id FROM keeper_logs ORDER BY id DESC LIMIT 200)")
 		// Cleanup old dismissed notifications
 		if count, err := CleanupOldNotifications(90); err == nil && count > 0 {
 			log.Printf("[Scheduler] Cleaned up %d old notifications", count)
@@ -196,7 +200,7 @@ func (s *Scheduler) executeTask(name string) {
 		}
 	// Auto-purge old failed 429 queue jobs (>1 hour old)
 	db.DB.Where("status = ? AND last_error LIKE ? AND created_at < ?", "failed", "%429%", time.Now().Add(-1*time.Hour)).Delete(&models.QueueJob{})
-	// Auto-purge old completed queue jobs (>30 min old)
+	// Auto-purge old completed queue jobs (>5 min old)
 	db.DB.Where("status = ? AND created_at < ?", "completed", time.Now().Add(-5*time.Minute)).Delete(&models.QueueJob{})
 	// Auto-purge stale pending queue jobs (>1 hour)
 	db.DB.Where("status = ? AND created_at < ?", "pending", time.Now().Add(-1*time.Hour)).Delete(&models.QueueJob{})
