@@ -377,6 +377,45 @@ func chooseNudgeMessage(settings models.KeeperSettings) string {
 	return "Please continue working on this task."
 }
 
+// isJulesErrorActivity checks if an activity contains the "Jules encountered an error" message.
+func isJulesErrorActivity(a models.JulesActivity) bool {
+	return strings.Contains(a.Content, "Jules encountered an error when working on the task")
+}
+
+// shouldSendPleaseContinue checks if the last activity is a Jules error and whether
+// we should respond with "Please continue." instead of an LLM-generated nudge.
+// Returns true if we should short-circuit with "Please continue."
+func shouldSendPleaseContinue(sessionID string, activities []models.JulesActivity) bool {
+	if len(activities) == 0 {
+		return false
+	}
+	last := activities[len(activities)-1]
+	if !isJulesErrorActivity(last) {
+		return false
+	}
+	// Check 1-hour cooldown
+	state, err := getSupervisorState(sessionID)
+	if err != nil || state.LastPleaseContinueAt == nil {
+		return true // never sent before, allow it
+	}
+	lastTime, err := time.Parse(time.RFC3339, *state.LastPleaseContinueAt)
+	if err != nil {
+		return true // invalid timestamp, allow it
+	}
+	return time.Since(lastTime) >= time.Hour
+}
+
+// markPleaseContinueSent records that we sent "Please continue." to avoid spamming.
+func markPleaseContinueSent(sessionID string) {
+	state, err := getSupervisorState(sessionID)
+	if err != nil {
+		return
+	}
+	now := time.Now().Format(time.RFC3339)
+	state.LastPleaseContinueAt = &now
+	saveSupervisorState(state)
+}
+
 // generateSupervisorNudge uses the OpenRouter supervisor LLM to generate an
 // intelligent, context-aware nudge message. If activities are provided, they'll
 // be used as context. If not, we use the session title/state only (no extra API call).
@@ -403,6 +442,10 @@ func generateSupervisorNudge(client *JulesClient, session models.JulesSession, s
 			start = len(activities) - limit
 		}
 		for _, a := range activities[start:] {
+			// Skip Jules error messages - they provide no useful context for the nudge
+			if isJulesErrorActivity(a) {
+				continue
+			}
 			role := strings.ToUpper(a.Role)
 			if role == "" {
 				role = "SYSTEM"
@@ -658,6 +701,39 @@ func (w *Worker) handleCheckSession(payload string) (string, error) {
 			return false
 		}
 		return strings.Contains(err.Error(), "429") || strings.Contains(err.Error(), "RESOURCE_EXHAUSTED")
+	}
+
+	
+	// -- Jules Error Detection: "Please continue." shortcut --
+	// If the last activity is "Jules encountered an error when working on the task.",
+	// skip the LLM nudge and just send "Please continue." instead.
+	// This avoids wasting an LLM call on error messages that provide no useful context.
+	// Only sent once per hour per session to avoid spamming.
+	activities, _ := client.ListActivities(session.ID)
+	if shouldSendPleaseContinue(session.ID, activities) {
+		if _, err := client.CreateActivity(session.ID, CreateActivityRequest{
+			Content: "Please continue.",
+			Type:    "message",
+			Role:    "user",
+		}); err != nil {
+			if isJules429(err) {
+				SetRateLimitBackoff(30 * time.Second)
+				touchSessionCooldown(session.ID)
+				return "rate_limited", err
+			}
+			return "fail", err
+		}
+		markPleaseContinueSent(session.ID)
+		addKeeperLog(
+			fmt.Sprintf("Sent \"Please continue.\" to %s (Jules error detected)", session.ID[:8]),
+			"action", session.ID, map[string]interface{}{
+				"event":         "please_continue_sent",
+				"sessionTitle":  session.Title,
+			},
+		)
+		touchSessionCooldown(session.ID)
+		emitDaemonEvent("activities_updated", map[string]interface{}{"sessionId": session.ID})
+		return "please_continue", nil
 	}
 
 	lastActivityTime := session.UpdatedAt

@@ -129,6 +129,7 @@ type SessionTemplate struct {
 type SupervisorState struct {
 	SessionID                      string    `gorm:"primaryKey" json:"sessionId"`
 	LastProcessedActivityTimestamp *string   `json:"lastProcessedActivityTimestamp"`
+	LastPleaseContinueAt              *string `json:"lastPleaseContinueAt"`
 	History                        *string   `json:"history"`
 	OpenaiThreadID                 *string   `json:"openaiThreadId"`
 	OpenaiAssistantID              *string   `json:"openaiAssistantId"`
