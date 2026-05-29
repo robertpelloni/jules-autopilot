@@ -46,7 +46,7 @@ func (s *Scheduler) Start() {
 
 	// index_codebase disabled :  no free embedding model available on OpenRouter
 	// s.ScheduleTask("index_codebase", 24*time.Hour)
-	s.ScheduleTask("cleanup_logs", 6*time.Hour)
+	s.ScheduleTask("cleanup_logs", 5*time.Minute)
 	s.ScheduleTask("ci_monitor", 30*time.Minute)
 
 	s.mu.Lock()
@@ -164,25 +164,28 @@ func (s *Scheduler) executeTask(name string) {
 
 	switch name {
 	case "index_codebase":
-		if _, err := AddJob("index_codebase", map[string]string{}); err != nil {
-			log.Printf("[Scheduler] Failed to enqueue index_codebase: %v", err)
-		}
+		// Disabled: no free embedding model on OpenRouter
+		log.Printf("[Scheduler] Skipping index_codebase: no embedding model")
 	case "cleanup_logs":
-		// Purge stale processing jobs (stuck > 30 min)
+		// Purge stale processing jobs (stuck > 30 min) - hard delete
 		staleCutoff := time.Now().Add(-30 * time.Minute)
-		if result := db.DB.Where("status = ? AND created_at < ?", "processing", staleCutoff).Delete(&models.QueueJob{}); result.RowsAffected > 0 {
+		if result := db.DB.Unscoped().Where("status = ? AND created_at < ?", "processing", staleCutoff).Delete(&models.QueueJob{}); result.RowsAffected > 0 {
 			log.Printf("[Scheduler] Purged %d stale processing jobs", result.RowsAffected)
 		}
 		// Purge deprecated job types
-		db.DB.Where("type = ?", "check_issues").Delete(&models.QueueJob{})
+		db.DB.Unscoped().Where("type = ?", "check_issues").Delete(&models.QueueJob{})
 		// Simple retention policy: delete logs older than 30 days
 		cutoff := time.Now().Add(-30 * 24 * time.Hour)
 		result := db.DB.Where("created_at < ?", cutoff).Delete(&models.KeeperLog{})
 		if result.Error == nil && result.RowsAffected > 0 {
 			log.Printf("[Scheduler] Cleaned up %d old keeper logs", result.RowsAffected)
 		}
-		// Cap audit entries to 1000
+		// Cap audit entries to 500
 		db.DB.Exec("DELETE FROM audit_entries WHERE id NOT IN (SELECT id FROM audit_entries ORDER BY id DESC LIMIT 500)")
+		// Cap notifications to 50
+		db.DB.Exec("DELETE FROM notifications WHERE id NOT IN (SELECT id FROM notifications ORDER BY id DESC LIMIT 50)")
+		// Cap keeper_logs to 200
+		db.DB.Exec("DELETE FROM keeper_logs WHERE id NOT IN (SELECT id FROM keeper_logs ORDER BY id DESC LIMIT 200)")
 		// Cleanup old dismissed notifications
 		if count, err := CleanupOldNotifications(90); err == nil && count > 0 {
 			log.Printf("[Scheduler] Cleaned up %d old notifications", count)
@@ -196,11 +199,11 @@ func (s *Scheduler) executeTask(name string) {
 			log.Printf("[Scheduler] Auto-read %d old error notifications", result.RowsAffected)
 		}
 	// Auto-purge old failed 429 queue jobs (>1 hour old)
-	db.DB.Where("status = ? AND last_error LIKE ? AND created_at < ?", "failed", "%429%", time.Now().Add(-1*time.Hour)).Delete(&models.QueueJob{})
-	// Auto-purge old completed queue jobs (>30 min old)
-	db.DB.Where("status = ? AND created_at < ?", "completed", time.Now().Add(-5*time.Minute)).Delete(&models.QueueJob{})
+	db.DB.Unscoped().Where("status = ? AND last_error LIKE ? AND created_at < ?", "failed", "%429%", time.Now().Add(-1*time.Hour)).Delete(&models.QueueJob{})
+	// Auto-purge old completed queue jobs (>5 min old)
+	db.DB.Unscoped().Where("status = ? AND created_at < ?", "completed", time.Now().Add(-5*time.Minute)).Delete(&models.QueueJob{})
 	// Auto-purge stale pending queue jobs (>1 hour)
-	db.DB.Where("status = ? AND created_at < ?", "pending", time.Now().Add(-1*time.Hour)).Delete(&models.QueueJob{})
+	db.DB.Unscoped().Where("status = ? AND created_at < ?", "pending", time.Now().Add(-1*time.Hour)).Delete(&models.QueueJob{})
 	// Auto-read session recovery notifications (>5 min old, not actionable as unread)
 	db.DB.Model(&models.Notification{}).Where("is_read = ? AND type = ? AND title = ? AND created_at < ?", false, "success", "Session Recovery", time.Now().Add(-5*time.Minute)).Update("is_read", true)
 	// Auto-purge very old notifications (>7 days)

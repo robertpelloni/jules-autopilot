@@ -78,11 +78,11 @@ func InitDB() {
 // purgeStaleData cleans up stale jobs and caps table sizes to prevent OOM
 func purgeStaleData() {
 	// Purge deprecated check_issues jobs
-	DB.Where("type = ?", "check_issues").Delete(&models.QueueJob{})
+	DB.Unscoped().Where("type = ?", "check_issues").Delete(&models.QueueJob{})
 
 	// Purge stale processing jobs (older than 30 minutes = dead worker)
 	cutoff := time.Now().Add(-30 * time.Minute)
-	stale := DB.Where("status = ? AND created_at < ?", "processing", cutoff).Delete(&models.QueueJob{})
+	stale := DB.Unscoped().Where("status = ? AND created_at < ?", "processing", cutoff).Delete(&models.QueueJob{})
 	if stale.RowsAffected > 0 {
 		log.Printf("[DB] Purged %d stale processing jobs", stale.RowsAffected)
 	}
