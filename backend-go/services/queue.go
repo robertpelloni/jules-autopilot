@@ -290,6 +290,12 @@ func IsRateLimited() bool {
 func StartWorker() {
 	globalWorkerMu.Lock()
 	defer globalWorkerMu.Unlock()
+
+	// Reclaim orphaned processing jobs from previous crashed run
+	if result := db.DB.Unscoped().Where("status = ?", "processing").Delete(&models.QueueJob{}); result.RowsAffected > 0 {
+		log.Printf("[Queue] Reclaimed %d orphaned processing jobs from previous run", result.RowsAffected)
+	}
+
 	if globalWorker == nil {
 		globalWorker = NewWorker(2)
 	}
