@@ -1,0 +1,474 @@
+{
+  "version": 1,
+  "projectRoot": "C:/Users/hyper/workspace/jules-autopilot",
+  "generatedAt": "2026-05-30T17:13:35.422Z",
+  "seq": 0,
+  "files": {},
+  "symbols": {},
+  "reverseDeps": {},
+  "cachedExports": [
+    [
+      "activate",
+      "C:\\Users\\hyper\\workspace\\jules-autopilot\\extensions\\vscode\\src\\extension.ts"
+    ],
+    [
+      "broadcastToClients",
+      "C:\\Users\\hyper\\workspace\\jules-autopilot\\server\\index.ts"
+    ],
+    [
+      "buildSystemPrompt",
+      "C:\\Users\\hyper\\workspace\\jules-autopilot\\server\\supervisor.ts"
+    ],
+    [
+      "buildUserPrompt",
+      "C:\\Users\\hyper\\workspace\\jules-autopilot\\server\\supervisor.ts"
+    ],
+    [
+      "calculateDiffStats",
+      "C:\\Users\\hyper\\workspace\\jules-autopilot\\lib\\diff-utils.ts"
+    ],
+    [
+      "calculateRiskScore",
+      "C:\\Users\\hyper\\workspace\\jules-autopilot\\packages\\shared\\src\\orchestration\\supervisor.ts"
+    ],
+    [
+      "cancelSwarm",
+      "C:\\Users\\hyper\\workspace\\jules-autopilot\\lib\\api\\swarm.ts"
+    ],
+    [
+      "cn",
+      "C:\\Users\\hyper\\workspace\\jules-autopilot\\lib\\utils.ts"
+    ],
+    [
+      "commandPauseKeeper",
+      "C:\\Users\\hyper\\workspace\\jules-autopilot\\extensions\\vscode\\src\\extension.ts"
+    ],
+    [
+      "commandResumeKeeper",
+      "C:\\Users\\hyper\\workspace\\jules-autopilot\\extensions\\vscode\\src\\extension.ts"
+    ],
+    [
+      "commandStartSession",
+      "C:\\Users\\hyper\\workspace\\jules-autopilot\\extensions\\vscode\\src\\extension.ts"
+    ],
+    [
+      "commandViewLogs",
+      "C:\\Users\\hyper\\workspace\\jules-autopilot\\extensions\\vscode\\src\\extension.ts"
+    ],
+    [
+      "computeChecksum",
+      "C:\\Users\\hyper\\workspace\\jules-autopilot\\server\\rag.ts"
+    ],
+    [
+      "cosineSimilarity",
+      "C:\\Users\\hyper\\workspace\\jules-autopilot\\server\\rag.ts"
+    ],
+    [
+      "createDaemonEvent",
+      "C:\\Users\\hyper\\workspace\\jules-autopilot\\packages\\shared\\src\\websocket.ts"
+    ],
+    [
+      "createSessionToken",
+      "C:\\Users\\hyper\\workspace\\jules-autopilot\\tests\\orchestration.spec.ts"
+    ],
+    [
+      "createSwarm",
+      "C:\\Users\\hyper\\workspace\\jules-autopilot\\lib\\api\\swarm.ts"
+    ],
+    [
+      "deactivate",
+      "C:\\Users\\hyper\\workspace\\jules-autopilot\\extensions\\vscode\\src\\extension.ts"
+    ],
+    [
+      "decideNextAction",
+      "C:\\Users\\hyper\\workspace\\jules-autopilot\\packages\\shared\\src\\orchestration\\supervisor.ts"
+    ],
+    [
+      "determineApprovalStatus",
+      "C:\\Users\\hyper\\workspace\\jules-autopilot\\packages\\shared\\src\\orchestration\\supervisor.ts"
+    ],
+    [
+      "dismissAllNotifications",
+      "C:\\Users\\hyper\\workspace\\jules-autopilot\\lib\\api\\notifications.ts"
+    ],
+    [
+      "dismissNotification",
+      "C:\\Users\\hyper\\workspace\\jules-autopilot\\lib\\api\\notifications.ts"
+    ],
+    [
+      "embedCodeChunk",
+      "C:\\Users\\hyper\\workspace\\jules-autopilot\\lib\\rag\\embedder.ts"
+    ],
+    [
+      "emitDaemonEvent",
+      "C:\\Users\\hyper\\workspace\\jules-autopilot\\server\\index.ts"
+    ],
+    [
+      "errorResponse",
+      "C:\\Users\\hyper\\workspace\\jules-autopilot\\server\\index.ts"
+    ],
+    [
+      "evaluatePlanRisk",
+      "C:\\Users\\hyper\\workspace\\jules-autopilot\\packages\\shared\\src\\orchestration\\supervisor.ts"
+    ],
+    [
+      "exportSessionToJSON",
+      "C:\\Users\\hyper\\workspace\\jules-autopilot\\lib\\export.ts"
+    ],
+    [
+      "exportSessionToMarkdown",
+      "C:\\Users\\hyper\\workspace\\jules-autopilot\\lib\\export.ts"
+    ],
+    [
+      "fetchActiveAnomalies",
+      "C:\\Users\\hyper\\workspace\\jules-autopilot\\lib\\api\\observability.ts"
+    ],
+    [
+      "fetchAnomalyHistory",
+      "C:\\Users\\hyper\\workspace\\jules-autopilot\\lib\\api\\observability.ts"
+    ],
+    [
+      "fetchAuditEntries",
+      "C:\\Users\\hyper\\workspace\\jules-autopilot\\lib\\api\\notifications.ts"
+    ],
+    [
+      "fetchAuditStats",
+      "C:\\Users\\hyper\\workspace\\jules-autopilot\\lib\\api\\notifications.ts"
+    ],
+    [
+      "fetchBudgetReport",
+      "C:\\Users\\hyper\\workspace\\jules-autopilot\\lib\\api\\swarm.ts"
+    ],
+    [
+      "fetchCostPrediction",
+      "C:\\Users\\hyper\\workspace\\jules-autopilot\\lib\\api\\swarm.ts"
+    ],
+    [
+      "fetchDependencyReport",
+      "C:\\Users\\hyper\\workspace\\jules-autopilot\\lib\\api\\observability.ts"
+    ],
+    [
+      "fetchEmbedding",
+      "C:\\Users\\hyper\\workspace\\jules-autopilot\\server\\rag.ts"
+    ],
+    [
+      "fetchHealth",
+      "C:\\Users\\hyper\\workspace\\jules-autopilot\\lib\\api\\health.ts"
+    ],
+    [
+      "fetchHealthHistory",
+      "C:\\Users\\hyper\\workspace\\jules-autopilot\\lib\\api\\observability.ts"
+    ],
+    [
+      "fetchHealthTrend",
+      "C:\\Users\\hyper\\workspace\\jules-autopilot\\lib\\api\\observability.ts"
+    ],
+    [
+      "fetchMetricsText",
+      "C:\\Users\\hyper\\workspace\\jules-autopilot\\lib\\api\\health.ts"
+    ],
+    [
+      "fetchNotifications",
+      "C:\\Users\\hyper\\workspace\\jules-autopilot\\lib\\api\\notifications.ts"
+    ],
+    [
+      "fetchProviderProfiles",
+      "C:\\Users\\hyper\\workspace\\jules-autopilot\\lib\\api\\swarm.ts"
+    ],
+    [
+      "fetchScheduledTasks",
+      "C:\\Users\\hyper\\workspace\\jules-autopilot\\lib\\api\\health.ts"
+    ],
+    [
+      "fetchSessionHistory",
+      "C:\\Users\\hyper\\workspace\\jules-autopilot\\server\\supervisor.ts"
+    ],
+    [
+      "fetchSessionTokenUsage",
+      "C:\\Users\\hyper\\workspace\\jules-autopilot\\lib\\api\\observability.ts"
+    ],
+    [
+      "fetchShadowPilotStatus",
+      "C:\\Users\\hyper\\workspace\\jules-autopilot\\lib\\api\\observability.ts"
+    ],
+    [
+      "fetchSpendingTrend",
+      "C:\\Users\\hyper\\workspace\\jules-autopilot\\lib\\api\\swarm.ts"
+    ],
+    [
+      "fetchSwarm",
+      "C:\\Users\\hyper\\workspace\\jules-autopilot\\lib\\api\\swarm.ts"
+    ],
+    [
+      "fetchSwarmAgents",
+      "C:\\Users\\hyper\\workspace\\jules-autopilot\\lib\\api\\swarm.ts"
+    ],
+    [
+      "fetchSwarmEvents",
+      "C:\\Users\\hyper\\workspace\\jules-autopilot\\lib\\api\\swarm.ts"
+    ],
+    [
+      "fetchSwarms",
+      "C:\\Users\\hyper\\workspace\\jules-autopilot\\lib\\api\\swarm.ts"
+    ],
+    [
+      "fetchSystemInfo",
+      "C:\\Users\\hyper\\workspace\\jules-autopilot\\lib\\api\\observability.ts"
+    ],
+    [
+      "fetchTokenUsageStats",
+      "C:\\Users\\hyper\\workspace\\jules-autopilot\\lib\\api\\observability.ts"
+    ],
+    [
+      "fetchUnreadNotificationCount",
+      "C:\\Users\\hyper\\workspace\\jules-autopilot\\lib\\api\\notifications.ts"
+    ],
+    [
+      "forceBump",
+      "C:\\Users\\hyper\\workspace\\jules-autopilot\\server\\daemon.ts"
+    ],
+    [
+      "generateLLMText",
+      "C:\\Users\\hyper\\workspace\\jules-autopilot\\server\\llm.ts"
+    ],
+    [
+      "generateText",
+      "C:\\Users\\hyper\\workspace\\jules-autopilot\\packages\\shared\\src\\orchestration\\providers\\index.ts"
+    ],
+    [
+      "getAllSessions",
+      "C:\\Users\\hyper\\workspace\\jules-autopilot\\server\\daemon.ts"
+    ],
+    [
+      "getDefaultApiBaseUrl",
+      "C:\\Users\\hyper\\workspace\\jules-autopilot\\lib\\jules\\client.ts"
+    ],
+    [
+      "getFreeModels",
+      "C:\\Users\\hyper\\workspace\\jules-autopilot\\server\\supervisor.ts"
+    ],
+    [
+      "getJulesClient",
+      "C:\\Users\\hyper\\workspace\\jules-autopilot\\server\\index.ts"
+    ],
+    [
+      "getProvider",
+      "C:\\Users\\hyper\\workspace\\jules-autopilot\\packages\\shared\\src\\orchestration\\providers\\index.ts"
+    ],
+    [
+      "getSession",
+      "C:\\Users\\hyper\\workspace\\jules-autopilot\\lib\\session.ts"
+    ],
+    [
+      "getSupervisorAPIKey",
+      "C:\\Users\\hyper\\workspace\\jules-autopilot\\server\\llm.ts"
+    ],
+    [
+      "isInCooldown",
+      "C:\\Users\\hyper\\workspace\\jules-autopilot\\lib\\jules\\request-queue.ts"
+    ],
+    [
+      "isLikelyApiKey",
+      "C:\\Users\\hyper\\workspace\\jules-autopilot\\lib\\jules\\client.ts"
+    ],
+    [
+      "loadDoc",
+      "C:\\Users\\hyper\\workspace\\jules-autopilot\\server\\supervisor.ts"
+    ],
+    [
+      "loadGitLog",
+      "C:\\Users\\hyper\\workspace\\jules-autopilot\\server\\supervisor.ts"
+    ],
+    [
+      "loadProjectDocs",
+      "C:\\Users\\hyper\\workspace\\jules-autopilot\\server\\supervisor.ts"
+    ],
+    [
+      "main",
+      "C:\\Users\\hyper\\workspace\\jules-autopilot\\reduce-interval.ts"
+    ],
+    [
+      "markAllNotificationsRead",
+      "C:\\Users\\hyper\\workspace\\jules-autopilot\\lib\\api\\notifications.ts"
+    ],
+    [
+      "markNotificationRead",
+      "C:\\Users\\hyper\\workspace\\jules-autopilot\\lib\\api\\notifications.ts"
+    ],
+    [
+      "normalizeProvider",
+      "C:\\Users\\hyper\\workspace\\jules-autopilot\\server\\llm.ts"
+    ],
+    [
+      "proxyToJules",
+      "C:\\Users\\hyper\\workspace\\jules-autopilot\\server\\index.ts"
+    ],
+    [
+      "pruneOldLogs",
+      "C:\\Users\\hyper\\workspace\\jules-autopilot\\server\\daemon.ts"
+    ],
+    [
+      "queryCodebase",
+      "C:\\Users\\hyper\\workspace\\jules-autopilot\\server\\rag.ts"
+    ],
+    [
+      "resolveAnomaly",
+      "C:\\Users\\hyper\\workspace\\jules-autopilot\\lib\\api\\observability.ts"
+    ],
+    [
+      "resolveModel",
+      "C:\\Users\\hyper\\workspace\\jules-autopilot\\server\\llm.ts"
+    ],
+    [
+      "resolveProjectFolder",
+      "C:\\Users\\hyper\\workspace\\jules-autopilot\\server\\supervisor.ts"
+    ],
+    [
+      "shuffleArray",
+      "C:\\Users\\hyper\\workspace\\jules-autopilot\\server\\daemon.ts"
+    ],
+    [
+      "sleep",
+      "C:\\Users\\hyper\\workspace\\jules-autopilot\\server\\daemon.ts"
+    ],
+    [
+      "startDaemon",
+      "C:\\Users\\hyper\\workspace\\jules-autopilot\\server\\daemon.ts"
+    ],
+    [
+      "startShadowPilot",
+      "C:\\Users\\hyper\\workspace\\jules-autopilot\\lib\\api\\observability.ts"
+    ],
+    [
+      "stopDaemon",
+      "C:\\Users\\hyper\\workspace\\jules-autopilot\\server\\daemon.ts"
+    ],
+    [
+      "stopShadowPilot",
+      "C:\\Users\\hyper\\workspace\\jules-autopilot\\lib\\api\\observability.ts"
+    ],
+    [
+      "subscribeToDaemonEvent",
+      "C:\\Users\\hyper\\workspace\\jules-autopilot\\lib\\hooks\\use-daemon-events.ts"
+    ],
+    [
+      "summarizeSession",
+      "C:\\Users\\hyper\\workspace\\jules-autopilot\\packages\\shared\\src\\orchestration\\summarize.ts"
+    ],
+    [
+      "superviseSession",
+      "C:\\Users\\hyper\\workspace\\jules-autopilot\\server\\supervisor.ts"
+    ],
+    [
+      "triggerScheduledTask",
+      "C:\\Users\\hyper\\workspace\\jules-autopilot\\lib\\api\\health.ts"
+    ],
+    [
+      "updateStatusBar",
+      "C:\\Users\\hyper\\workspace\\jules-autopilot\\extensions\\vscode\\src\\extension.ts"
+    ],
+    [
+      "useDaemonEvent",
+      "C:\\Users\\hyper\\workspace\\jules-autopilot\\lib\\hooks\\use-daemon-events.ts"
+    ],
+    [
+      "useDaemonEvents",
+      "C:\\Users\\hyper\\workspace\\jules-autopilot\\lib\\hooks\\use-daemon-events.ts"
+    ],
+    [
+      "useDaemonWebSocket",
+      "C:\\Users\\hyper\\workspace\\jules-autopilot\\lib\\hooks\\use-daemon-websocket.ts"
+    ],
+    [
+      "useNotifications",
+      "C:\\Users\\hyper\\workspace\\jules-autopilot\\hooks\\use-notifications.ts"
+    ],
+    [
+      "useTerminalAvailable",
+      "C:\\Users\\hyper\\workspace\\jules-autopilot\\hooks\\use-terminal-available.ts"
+    ],
+    [
+      "useWebSocket",
+      "C:\\Users\\hyper\\workspace\\jules-autopilot\\apps\\cli\\src\\hooks\\useWebSocket.ts"
+    ]
+  ],
+  "projectRulesScan": {
+    "rules": [
+      {
+        "source": "root",
+        "name": "CLAUDE.md",
+        "filePath": "C:\\Users\\hyper\\workspace\\jules-autopilot\\CLAUDE.md",
+        "relativePath": "CLAUDE.md"
+      },
+      {
+        "source": "root",
+        "name": "AGENTS.md",
+        "filePath": "C:\\Users\\hyper\\workspace\\jules-autopilot\\AGENTS.md",
+        "relativePath": "AGENTS.md"
+      }
+    ],
+    "hasCustomRules": true
+  },
+  "projectIndex": {
+    "entryCount": 186
+  },
+  "startupScan": {
+    "cwd": "C:\\Users\\hyper\\workspace\\jules-autopilot",
+    "scanRoot": "C:\\Users\\hyper\\workspace\\jules-autopilot",
+    "projectRoot": "C:\\Users\\hyper\\workspace\\jules-autopilot",
+    "canWarmCaches": true,
+    "sourceFileCount": 174
+  },
+  "languageProfile": {
+    "present": {
+      "jsts": true,
+      "python": false,
+      "go": true,
+      "rust": false,
+      "cxx": false,
+      "cmake": false,
+      "fish": false,
+      "shell": false,
+      "json": false,
+      "markdown": false,
+      "css": false,
+      "yaml": false,
+      "sql": false,
+      "ruby": false,
+      "html": false,
+      "docker": false,
+      "php": false,
+      "powershell": false,
+      "prisma": true,
+      "csharp": false,
+      "fsharp": false,
+      "java": false,
+      "kotlin": false,
+      "swift": false,
+      "dart": false,
+      "lua": false,
+      "zig": false,
+      "haskell": false,
+      "elixir": false,
+      "gleam": false,
+      "ocaml": false,
+      "clojure": false,
+      "terraform": false,
+      "nix": false,
+      "toml": false
+    },
+    "configured": {
+      "jsts": true,
+      "prisma": true
+    },
+    "counts": {
+      "jsts": 116,
+      "go": 59
+    },
+    "detectedKinds": [
+      "jsts",
+      "go",
+      "prisma"
+    ]
+  }
+}
