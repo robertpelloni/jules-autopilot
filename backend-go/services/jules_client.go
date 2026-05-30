@@ -389,54 +389,54 @@ func transformActivity(a map[string]interface{}, sessionId string) models.JulesA
 
 // ListActivities fetches all activities for a session from the Jules API
 func (c *JulesClient) ListActivities(sessionId string) ([]models.JulesActivity, error) {
+	return c.ListActivitiesWithLimit(sessionId, 2) // max 2 pages = ~100 most recent activities
+}
+
+// ListActivitiesWithLimit fetches up to maxPages pages of recent activities.
+// The supervisor only needs the last ~10 activities for nudge context,
+// so fetching all pages is wasteful and slow for long-running sessions.
+func (c *JulesClient) ListActivitiesWithLimit(sessionId string, maxPages int) ([]models.JulesActivity, error) {
 	if !c.isConfigured() {
 		return nil, fmt.Errorf("Jules credentials not found")
 	}
-
 	var allActivities []models.JulesActivity
 	pageToken := ""
-
+	pagesFetched := 0
 	for {
 		url := fmt.Sprintf("%s/sessions/%s/activities?pageSize=50", JulesApiBaseUrl, sessionId)
 		if pageToken != "" {
 			url += "&pageToken=" + pageToken
 		}
-
 		log.Printf("[Jules] GET %s", url)
 		req, err := http.NewRequest("GET", url, nil)
 		if err != nil {
 			return nil, err
 		}
-
 		c.setAuthHeaders(req)
-
 		resp, err := httpClient.Do(req)
 		if err != nil {
 			return nil, err
 		}
-
 		if resp.StatusCode != http.StatusOK {
 			body, _ := io.ReadAll(resp.Body)
 			resp.Body.Close()
 			return nil, fmt.Errorf("Jules API activities request failed with status %d: %s", resp.StatusCode, string(body))
 		}
-
 		var data struct {
-			Activities    []map[string]interface{} `json:"activities"`
-			NextPageToken string                   `json:"nextPageToken"`
+			Activities []map[string]interface{} `json:"activities"`
+			NextPageToken string `json:"nextPageToken"`
 		}
 		err = json.NewDecoder(resp.Body).Decode(&data)
 		resp.Body.Close()
 		if err != nil {
 			return nil, err
 		}
-
 		for _, a := range data.Activities {
 			allActivities = append(allActivities, transformActivity(a, sessionId))
 		}
-
 		pageToken = data.NextPageToken
-		if pageToken == "" {
+	pagesFetched++
+		if pageToken == "" || pagesFetched >= maxPages {
 			break
 		}
 	}
