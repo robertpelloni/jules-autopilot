@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
+	"log"
 	"net/http"
 	"os"
 	"strings"
@@ -261,6 +262,10 @@ func generateRiskScore(provider, apiKey, model, topic, summary string, fallback 
 	return extractRiskScoreFromText(result.Content)
 }
 
+var llmHttpClient = &http.Client{
+	Timeout: 60 * time.Second,
+}
+
 // generateOpenRouterText handles all OpenAI-compatible API calls (openrouter + lmstudio).
 // It auto-detects the API URL from the model name and API key prefix.
 func generateOpenRouterText(apiKey, model, systemPrompt string, messages []LLMMessage) (LLMResult, error) {
@@ -300,7 +305,8 @@ func generateOpenRouterText(apiKey, model, systemPrompt string, messages []LLMMe
 		req.Header.Set("X-Title", "Jules Autopilot")
 	}
 
-	resp, err := http.DefaultClient.Do(req)
+	log.Printf("[LLM] Sending request to %s (model: %s)", apiURL, model)
+	resp, err := llmHttpClient.Do(req)
 	if err != nil {
 		return LLMResult{}, err
 	}

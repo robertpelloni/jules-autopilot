@@ -2,6 +2,17 @@
 
 All notable changes to this project will be documented in this file.
 
+## [3.6.0] - 2026-05-30
+
+### Added
+- **Concurrent Queue Worker (Go)**: Refactored the Go queue worker to support concurrent job processing using a semaphore-based goroutine pool. Improved polling frequency from 10s to 2s, significantly increasing responsiveness for background monitoring and automation tasks.
+- **Queue Startup Recovery**: Added database initialization logic to reset 'processing' jobs to 'pending' on startup, ensuring that jobs interrupted by a backend crash or restart are correctly retried.
+- **Enhanced Codebase Indexing**: Enabled codebase reindexing in the Go daemon and API. The system now supports periodic indexing every 4 hours if an API key is available, ensuring the semantic RAG memory stays in sync with the source code.
+
+### Fixed
+- **Indexing Job Skip**: Fixed a regression where the `index_codebase` job was hardcoded to skip even when a valid API key was present.
+- **Indexing API Parity**: Fully enabled the `POST /api/rag/reindex` endpoint in the Go backend.
+
 ## [3.5.6] - 2026-05-25
 
 ### Fixed

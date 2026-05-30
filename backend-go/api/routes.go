@@ -519,7 +519,7 @@ func postBorgWebhook(c *fiber.Ctx) error {
 	if payload.Type == "fleet_command" {
 		if action, ok := payload.Data["action"].(string); ok {
 			if action == "reindex_all" {
-				// index_codebase disabled: no free embedding model
+				services.AddJob("index_codebase", map[string]interface{}{})
 			} else if action == "clear_logs" {
 				db.DB.Where("1 = 1").Delete(&models.KeeperLog{})
 			}
@@ -535,8 +535,10 @@ func postBorgWebhook(c *fiber.Ctx) error {
 }
 
 func postRAGReindex(c *fiber.Ctx) error {
-	// index_codebase disabled: no free embedding model
-	return c.JSON(fiber.Map{"status": "skipped", "reason": "no embedding model"})
+	_, err := services.AddJob("index_codebase", map[string]interface{}{})
+	if err != nil {
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": err.Error()})
+	}
 	return c.JSON(fiber.Map{"success": true, "message": "Codebase indexing job enqueued"})
 }
 

@@ -3,6 +3,7 @@ package services
 import (
 	"fmt"
 	"log"
+	"os"
 	"sort"
 	"strings"
 	"sync"
@@ -286,8 +287,27 @@ func (d *Daemon) tick() time.Duration {
 			"totalPool":       totalPool,
 		})
 
-	// index_codebase disabled: no free embedding model on OpenRouter
+	// index_codebase: only enabled if an API key is available
 	queuedIndexing := false
+	apiKey := strings.TrimSpace(os.Getenv("OPENAI_API_KEY"))
+	if apiKey == "" && settings.SupervisorApiKey != nil {
+		apiKey = strings.TrimSpace(*settings.SupervisorApiKey)
+	}
+
+	if apiKey != "" && apiKey != "placeholder" {
+		// Periodically enqueue indexing (e.g. once every 4 hours)
+		var lastIndex models.AuditEntry
+		err := db.DB.Where("action = ?", "codebase_index_completed").Order("created_at DESC").First(&lastIndex).Error
+		if err != nil || time.Since(lastIndex.CreatedAt) > 4*time.Hour {
+			// Check if already queued
+			var existing models.QueueJob
+			if db.DB.Where("type = ? AND status IN ?", "index_codebase", []string{"pending", "processing"}).First(&existing).Error != nil {
+				if _, err := AddJob("index_codebase", map[string]interface{}{}); err == nil {
+					queuedIndexing = true
+				}
+			}
+		}
+	}
 
 	if queuedSessions > 0 || queuedIndexing {
 		addKeeperLog("Go daemon scheduled monitoring work.", "info", "global", map[string]interface{}{
@@ -298,7 +318,7 @@ func (d *Daemon) tick() time.Duration {
 	}
 
 	return interval
-}
+	}
 
 func (d *Daemon) IsRunning() bool {
 	d.mu.Lock()

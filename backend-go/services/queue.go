@@ -33,15 +33,17 @@ type Worker struct {
 	isRunning   bool
 	stopChan    chan struct{}
 	mu          sync.Mutex
+	sem         chan struct{} // Concurrency semaphore
 }
 
 // NewWorker creates a new queue worker
 func NewWorker(concurrency int) *Worker {
 	if concurrency <= 0 {
-		concurrency = 2
+		concurrency = 4 // Default to 4 for better performance
 	}
 	return &Worker{
 		concurrency: concurrency,
+		sem:         make(chan struct{}, concurrency),
 	}
 }
 
@@ -90,7 +92,8 @@ func (w *Worker) Start() {
 	log.Printf("[Queue] SQLite Task Queue worker started (concurrency: %d)", concurrency)
 
 	go func() {
-		ticker := time.NewTicker(10 * time.Second)
+		// Faster initial poll, then regular intervals
+		ticker := time.NewTicker(2 * time.Second)
 		defer ticker.Stop()
 
 		for {
@@ -130,16 +133,26 @@ func (w *Worker) IsRunning() bool {
 }
 
 func (w *Worker) processJobs() {
-	// Rate-limit backoff only affects the daemon (no new enqueues).
-	// The worker still processes existing jobs — on 429 they get rescheduled.
+	if IsRateLimited() {
+		return
+	}
+
+	// Determine how many slots are available in the semaphore
+	w.mu.Lock()
+	availableSlots := w.concurrency - len(w.sem)
+	w.mu.Unlock()
+
+	if availableSlots <= 0 {
+		return
+	}
 
 	var jobs []models.QueueJob
 	now := time.Now()
 
-	// Find pending jobs that are ready to run
+	// Find pending jobs that are ready to run, up to available slots
 	err := db.DB.Where("status = ? AND run_at <= ? AND attempts < max_attempts", "pending", now).
 		Order("run_at ASC").
-		Limit(1). // Process one at a time
+		Limit(availableSlots).
 		Find(&jobs).Error
 
 	if err != nil {
@@ -147,17 +160,24 @@ func (w *Worker) processJobs() {
 		return
 	}
 
-	if len(jobs) == 0 {
-		return
+	for _, job := range jobs {
+		// Acquisition is non-blocking here because we checked availableSlots,
+		// but we still do it to be safe and manage the count.
+		select {
+		case w.sem <- struct{}{}:
+			go func(j models.QueueJob) {
+				defer func() { <-w.sem }()
+				w.executeJob(j)
+			}(job)
+		default:
+			// Should not happen based on our limit query
+			return
+		}
 	}
-
-	// Process sequentially — prevents goroutine leak and API hammering
-	w.executeJob(jobs[0])
 }
 
 func (w *Worker) executeJob(job models.QueueJob) {
 	log.Printf("[Queue] Executing %s job %s", job.Type, job.ID[:8])
-	// Skip verbose keeper logging for every job execution
 
 	// Mark as processing
 	now := time.Now()
@@ -180,7 +200,7 @@ func (w *Worker) executeJob(job models.QueueJob) {
 	case "check_session":
 		result, executeErr = w.handleCheckSession(job.Payload)
 	case "index_codebase":
-		result = "skipped_no_embedding_model"
+		result, executeErr = w.handleIndexCodebase(job.Payload)
 	case "sync_session_memory":
 		result, executeErr = w.handleSyncSessionMemory(job.Payload)
 	case "decompose_task":
@@ -201,7 +221,7 @@ func (w *Worker) executeJob(job models.QueueJob) {
 
 		// Determine if we should mark as failed or back to pending for retry
 		status := "pending"
-		if job.Attempts+1 >= job.MaxAttempts {
+		if job.Attempts >= job.MaxAttempts {
 			status = "failed"
 		}
 
@@ -237,8 +257,8 @@ func (w *Worker) executeJob(job models.QueueJob) {
 		db.DB.Unscoped().Where("status = ? AND completed_at < ?", "completed", time.Now().Add(-2*time.Minute)).Delete(&models.QueueJob{})
 	}
 
-	// Inter-job delay: pause 2s between jobs
-	time.Sleep(2 * time.Second)
+	// Inter-job delay: pause 1s between jobs on this worker
+	time.Sleep(1 * time.Second)
 }
 
 // Handlers are currently stubs to be implemented as functionality is ported to Go
@@ -670,11 +690,13 @@ func (w *Worker) handleCheckSession(payload string) (string, error) {
 	}
 
 	if data.Session.ID == "" {
+		log.Printf("[Worker] Skipping check_session: missing session ID in payload")
 		return "none", fmt.Errorf("missing session in payload")
 	}
 
 	settings, err := getSettings()
 	if err != nil {
+		log.Printf("[Worker] Skipping check_session for %s: failed to get settings: %v", data.Session.ID[:8], err)
 		return "none", err
 	}
 
@@ -692,8 +714,11 @@ func (w *Worker) handleCheckSession(payload string) (string, error) {
 			SetRateLimitBackoff(15 * time.Second)
 			return "timeout", fmt.Errorf("timeout, will retry: %s", err.Error())
 		}
+		log.Printf("[Worker] Failed to refresh session %s: %v", data.Session.ID[:8], err)
 		return "fail", fmt.Errorf("failed to refresh session %s: %w", data.Session.ID, err)
 	}
+
+	log.Printf("[Worker] Checking session %s (state: %s)", session.ID[:8], session.RawState)
 
 	// Helper: check if an error is a Jules 429 rate limit
 	isJules429 := func(err error) bool {

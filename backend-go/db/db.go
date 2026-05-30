@@ -80,11 +80,17 @@ func purgeStaleData() {
 	// Purge deprecated check_issues jobs
 	DB.Unscoped().Where("type = ?", "check_issues").Delete(&models.QueueJob{})
 
-	// Purge stale processing jobs (older than 30 minutes = dead worker)
+	// Reset ALL processing jobs to pending on startup (they were likely interrupted)
+	reset := DB.Model(&models.QueueJob{}).Where("status = ?", "processing").Update("status", "pending")
+	if reset.RowsAffected > 0 {
+		log.Printf("[DB] Reset %d processing jobs to pending for retry", reset.RowsAffected)
+	}
+
+	// Purge stale jobs (older than 30 minutes)
 	cutoff := time.Now().Add(-30 * time.Minute)
-	stale := DB.Unscoped().Where("status = ? AND created_at < ?", "processing", cutoff).Delete(&models.QueueJob{})
+	stale := DB.Unscoped().Where("created_at < ?", cutoff).Delete(&models.QueueJob{})
 	if stale.RowsAffected > 0 {
-		log.Printf("[DB] Purged %d stale processing jobs", stale.RowsAffected)
+		log.Printf("[DB] Purged %d stale jobs", stale.RowsAffected)
 	}
 
 	// Cap audit entries to last 1000

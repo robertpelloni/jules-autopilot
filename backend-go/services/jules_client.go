@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
+	"log"
 	"net/http"
 	"os"
 	"strings"
@@ -401,6 +402,7 @@ func (c *JulesClient) ListActivities(sessionId string) ([]models.JulesActivity, 
 			url += "&pageToken=" + pageToken
 		}
 
+		log.Printf("[Jules] GET %s", url)
 		req, err := http.NewRequest("GET", url, nil)
 		if err != nil {
 			return nil, err
@@ -412,10 +414,10 @@ func (c *JulesClient) ListActivities(sessionId string) ([]models.JulesActivity, 
 		if err != nil {
 			return nil, err
 		}
-		defer resp.Body.Close()
 
 		if resp.StatusCode != http.StatusOK {
 			body, _ := io.ReadAll(resp.Body)
+			resp.Body.Close()
 			return nil, fmt.Errorf("Jules API activities request failed with status %d: %s", resp.StatusCode, string(body))
 		}
 
@@ -423,7 +425,9 @@ func (c *JulesClient) ListActivities(sessionId string) ([]models.JulesActivity, 
 			Activities    []map[string]interface{} `json:"activities"`
 			NextPageToken string                   `json:"nextPageToken"`
 		}
-		if err := json.NewDecoder(resp.Body).Decode(&data); err != nil {
+		err = json.NewDecoder(resp.Body).Decode(&data)
+		resp.Body.Close()
+		if err != nil {
 			return nil, err
 		}
 

@@ -59,3 +59,5 @@ This document tracks granular bugs, missing features, and technical debt. For ep
 - [x] **Autonomous Self-Healing:** Autopilot now detects `FAILED` sessions and enqueues recovery plans.
 - [x] **Council Debate Engine:** High-risk plans now trigger background debates between persona models before approval.
 - [x] **Historical Retrieval:** RAG queries now pull from both the current codebase and successful past session outcomes.
+- [x] **Concurrent Queue Worker (v3.6.0):** Refactored the Go worker to use a goroutine-based semaphore pool, matching `concurrency` (2-4). Improved polling frequency to 2s, enabling faster session nudges and background tasks. Added startup job recovery.
+- [x] **Codebase Indexing Parity (Go):** Fully enabled the `POST /api/rag/reindex` endpoint and periodic daemon-driven indexing in the Go runtime.
