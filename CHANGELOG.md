@@ -2,6 +2,19 @@
 
 All notable changes to this project will be documented in this file.
 
+## [3.6.1] - 2026-05-31
+
+### Added
+- **Activity Caching & Fetch Optimization**: Drastically improved background worker performance by implementing activity history caching in the Go backend. The worker now skips expensive Jules API pagination calls if the session's `LastActivityAt` timestamp hasn't changed since the last check.
+- **Enhanced API Observability**: Added detailed logging for Jules API and LLM requests, including batch ranges, timestamps, and provider details. This provides much better visibility into background automation behavior.
+- **LLM Client Timeouts**: Replaced the timeout-less `http.DefaultClient` with a dedicated `llmHttpClient` (60s timeout) to prevent worker hangs during slow provider responses.
+
+### Fixed
+- **Critical Compilation Errors**: Resolved multiple `undefined: os` and `undefined: log` errors in the Go backend (`daemon.go`, `llm.go`, `jules_client.go`).
+- **Jules Client Resource Leak**: Fixed a leak where HTTP response bodies were not being closed inside pagination loops in `ListActivities`.
+- **Database Migration Conflict**: Resolved a SQL logic error (`idx_workspaces_deleted_at already exists`) by removing redundant GORM index tags from the `Workspace` model.
+- **Pagination Resume Bug**: Fixed a bug where reaching the end of an activity list would reset the page token, causing the next check to re-fetch the entire history.
+
 ## [3.6.0] - 2026-05-30
 
 ### Added

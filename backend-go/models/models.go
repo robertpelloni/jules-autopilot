@@ -170,7 +170,7 @@ type Workspace struct {
 	Debates                   []Debate          `gorm:"foreignKey:WorkspaceID" json:"debates"`
 	Templates                 []SessionTemplate `gorm:"foreignKey:WorkspaceID" json:"templates"`
 	Members                   []WorkspaceMember `gorm:"foreignKey:WorkspaceID" json:"members"`
-	DeletedAt                 gorm.DeletedAt    `gorm:"index" json:"-"`
+	DeletedAt                 gorm.DeletedAt    `json:"-"`
 }
 
 // WorkspaceMember represents the WorkspaceMember model from Prisma
