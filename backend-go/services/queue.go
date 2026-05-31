@@ -794,7 +794,7 @@ func (w *Worker) handleCheckSession(payload string) (string, error) {
 			}
 		}
 		if !alreadyProcessedNudge {
-			message := generateSupervisorNudge(client, session, settings)
+			message := generateSupervisorNudge(client, session, settings, activities)
 			if _, err := client.CreateActivity(session.ID, CreateActivityRequest{
 				Content: message,
 				Type:    "message",
@@ -928,7 +928,7 @@ func (w *Worker) handleCheckSession(payload string) (string, error) {
 		}
 
 		if !alreadyProcessedFailure {
-			activities, _ := client.ListActivities(session.ID)
+			// activities already fetched at top of handleCheckSession
 			if hasRecentRecoveryGuidance(activities) || hasRecentRecoveryCompletionLog(session.ID, lastActivityTime) {
 				timestamp := lastActivityTime.Format(time.RFC3339)
 				supervisorState.LastProcessedActivityTimestamp = &timestamp
@@ -998,7 +998,7 @@ func (w *Worker) handleCheckSession(payload string) (string, error) {
 		}
 			if !alreadyProcessedComplete {
 			// Use supervisor LLM to generate an intelligent, context-aware nudge
-			message := generateSupervisorNudge(client, session, settings)
+			message := generateSupervisorNudge(client, session, settings, activities)
 			ragContext := ""
 			if settings.SmartPilotEnabled {
 				query := session.Title
@@ -1054,7 +1054,7 @@ func (w *Worker) handleCheckSession(payload string) (string, error) {
 	}
 
 	if time.Since(lastActivityTime) > time.Duration(thresholdMinutes)*time.Minute && session.RawState != "AWAITING_PLAN_APPROVAL" {
-		message := generateSupervisorNudge(client, session, settings)
+		message := generateSupervisorNudge(client, session, settings, activities)
 		ragContext := ""
 		if settings.SmartPilotEnabled {
 			query := session.Title
