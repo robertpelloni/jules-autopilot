@@ -91,6 +91,8 @@ func defaultModelForProvider(provider string) string {
 		return "gemma-4-e2b-uncensored-hauhaucs-aggressive"
 	case "openrouter":
 		return "nvidia/nemotron-3-nano-omni-30b-a3b-reasoning:free"
+	case "gemini":
+		return "gemini-2.0-flash-exp"
 	default:
 		return "nvidia/nemotron-3-nano-omni-30b-a3b-reasoning:free"
 	}
@@ -98,10 +100,10 @@ func defaultModelForProvider(provider string) string {
 
 func resolveModel(provider, model string) string {
 	value := strings.TrimSpace(model)
-	if value != "" {
-		return value
+	if value == "" || value == "free" || value == "default" {
+		return defaultModelForProvider(provider)
 	}
-	return defaultModelForProvider(provider)
+	return value
 }
 
 func getSupervisorProvider() string {
@@ -129,6 +131,13 @@ func getSupervisorAPIKey(provider string, explicit *string) string {
 		if key := strings.TrimSpace(os.Getenv("OPENROUTER_API_KEY")); key != "" {
 			return key
 		}
+	case "gemini":
+		if key := strings.TrimSpace(os.Getenv("GEMINI_API_KEY")); key != "" {
+			return key
+		}
+		if key := strings.TrimSpace(os.Getenv("GOOGLE_API_KEY")); key != "" {
+			return key
+		}
 	}
 	return ""
 }
@@ -137,9 +146,9 @@ func generateLLMText(primaryProvider, primaryApiKey, primaryModel, systemPrompt 
 	primaryProvider = normalizeProvider(primaryProvider)
 	primaryModel = resolveModel(primaryProvider, primaryModel)
 
-	// Only openrouter + lmstudio fallback
+	// Fallback chain: Primary -> Gemini -> OpenRouter -> LMStudio
 	providers := []string{primaryProvider}
-	fallbacks := []string{"lmstudio", "openrouter"}
+	fallbacks := []string{"gemini", "openrouter", "lmstudio"}
 	for _, p := range fallbacks {
 		exists := false
 		for _, existing := range providers {
@@ -171,14 +180,22 @@ func generateLLMText(primaryProvider, primaryApiKey, primaryModel, systemPrompt 
 			model = resolveModel(provider, "")
 		}
 
+		var result LLMResult
+		var err error
 
-		result, err := generateOpenRouterText(apiKey, model, systemPrompt, messages)
+		if provider == "gemini" {
+			result, err = generateGeminiText(apiKey, model, systemPrompt, messages)
+		} else {
+			result, err = generateOpenRouterText(apiKey, model, systemPrompt, messages)
+		}
+
 		if err != nil {
 			lastErr = err
 			errStr := err.Error()
 			RecordLLMLatency(provider, result.LatencyMs, false)
 			if strings.TrimSpace(apiKey) != "" && apiKey != "placeholder" {
-				if strings.Contains(errStr, "(429)") || strings.Contains(errStr, "(50") || strings.Contains(errStr, "(52") || strings.Contains(errStr, "(53") || strings.Contains(errStr, "timeout") {
+				// Record failure for circuit breaker on 429 or 5xx
+				if strings.Contains(errStr, "429") || strings.Contains(errStr, "RESOURCE_EXHAUSTED") || strings.Contains(errStr, "502") || strings.Contains(errStr, "503") || strings.Contains(errStr, "timeout") {
 					cb.recordFailure(provider)
 				}
 			}
@@ -260,6 +277,98 @@ func generateRiskScore(provider, apiKey, model, topic, summary string, fallback 
 		return fallback
 	}
 	return extractRiskScoreFromText(result.Content)
+}
+
+func generateGeminiText(apiKey, model, systemPrompt string, messages []LLMMessage) (LLMResult, error) {
+	start := time.Now()
+
+	// Map generic model names to Gemini-specific ones if needed
+	geminiModel := model
+	if !strings.HasPrefix(geminiModel, "models/") {
+		geminiModel = "models/" + geminiModel
+	}
+
+	apiURL := fmt.Sprintf("https://generativelanguage.googleapis.com/v1beta/%s:generateContent?key=%s", geminiModel, apiKey)
+
+	type GeminiContent struct {
+		Role  string              `json:"role,omitempty"`
+		Parts []map[string]string `json:"parts"`
+	}
+
+	var contents []GeminiContent
+
+	// Note: v1beta has system_instruction, but for simplicity we'll prepend it to the first user message
+	// or use the system_instruction field if supported.
+
+	for _, msg := range messages {
+		contents = append(contents, GeminiContent{
+			Role:  map[bool]string{true: "user", false: "model"}[msg.Role == "user" || msg.Role == "system"],
+			Parts: []map[string]string{{"text": msg.Content}},
+		})
+	}
+
+	requestBody, _ := json.Marshal(map[string]interface{}{
+		"contents": contents,
+		"generationConfig": map[string]interface{}{
+			"temperature":     0.2,
+			"maxOutputTokens": 1024,
+		},
+		"system_instruction": map[string]interface{}{
+			"parts": []map[string]string{{"text": systemPrompt}},
+		},
+	})
+
+	req, err := http.NewRequest(http.MethodPost, apiURL, bytes.NewReader(requestBody))
+	if err != nil {
+		return LLMResult{}, err
+	}
+	req.Header.Set("Content-Type", "application/json")
+
+	log.Printf("[LLM] Sending request to Gemini (%s)", geminiModel)
+	resp, err := llmHttpClient.Do(req)
+	if err != nil {
+		return LLMResult{}, err
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode >= 400 {
+		body, _ := io.ReadAll(resp.Body)
+		return LLMResult{}, fmt.Errorf("Gemini request failed (%d): %s", resp.StatusCode, string(body))
+	}
+
+	var data struct {
+		Candidates []struct {
+			Content struct {
+				Parts []struct {
+					Text string `json:"text"`
+				} `json:"parts"`
+			} `json:"content"`
+			FinishReason string `json:"finishReason"`
+		} `json:"candidates"`
+		UsageMetadata struct {
+			PromptTokenCount     int `json:"promptTokenCount"`
+			CandidatesTokenCount int `json:"candidatesTokenCount"`
+			TotalTokenCount      int `json:"totalTokenCount"`
+		} `json:"usageMetadata"`
+	}
+	if err := json.NewDecoder(resp.Body).Decode(&data); err != nil {
+		return LLMResult{}, err
+	}
+
+	if len(data.Candidates) == 0 || len(data.Candidates[0].Content.Parts) == 0 {
+		return LLMResult{}, fmt.Errorf("Gemini response contained no candidates")
+	}
+
+	resultContent := data.Candidates[0].Content.Parts[0].Text
+	return LLMResult{
+		Content:   strings.TrimSpace(resultContent),
+		LatencyMs: float64(time.Since(start).Milliseconds()),
+		Usage: &LLMUsage{
+			PromptTokens:     data.UsageMetadata.PromptTokenCount,
+			CompletionTokens: data.UsageMetadata.CandidatesTokenCount,
+			TotalTokens:      data.UsageMetadata.TotalTokenCount,
+		},
+	}, nil
 }
 
 var llmHttpClient = &http.Client{

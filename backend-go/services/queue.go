@@ -724,7 +724,35 @@ func (w *Worker) handleCheckSession(payload string) (string, error) {
 		return "fail", fmt.Errorf("failed to refresh session %s: %w", data.Session.ID, err)
 	}
 
-	log.Printf("[Worker] Checking session %s (state: %s)", session.ID[:8], session.RawState)
+	lastActivityTime := session.UpdatedAt
+	if session.LastActivityAt != nil {
+		lastActivityTime = *session.LastActivityAt
+	}
+
+	supervisorState, _ := getSupervisorState(session.ID)
+	hasNewActivity := true
+	if supervisorState.LastProcessedActivityTimestamp != nil {
+		if t, err := time.Parse(time.RFC3339, *supervisorState.LastProcessedActivityTimestamp); err == nil {
+			if !lastActivityTime.After(t) {
+				hasNewActivity = false
+			}
+		}
+	}
+
+	log.Printf("[Worker] Checking session %s (state: %s, hasNew: %v)", session.ID[:8], session.RawState, hasNewActivity)
+
+	// Optimization: Skip expensive activity fetching if the session hasn't been updated
+	// unless it's in a state that REQUIRES a check (like AWAITING_PLAN_APPROVAL or AWAITING_USER_FEEDBACK
+	// where we might have missed the state change in the previous tick).
+	shouldSkipFetch := !hasNewActivity &&
+		session.RawState != "AWAITING_USER_FEEDBACK" &&
+		session.RawState != "AWAITING_PLAN_APPROVAL" &&
+		session.RawState != "FAILED"
+
+	if shouldSkipFetch {
+		log.Printf("[Worker] Skipping activity fetch for %s - no new activity since %v", session.ID[:8], lastActivityTime.Format(time.Kitchen))
+		return "none", nil
+	}
 
 	// Helper: check if an error is a Jules 429 rate limit
 	isJules429 := func(err error) bool {
@@ -734,12 +762,7 @@ func (w *Worker) handleCheckSession(payload string) (string, error) {
 		return strings.Contains(err.Error(), "429") || strings.Contains(err.Error(), "RESOURCE_EXHAUSTED")
 	}
 
-	
 	// -- Jules Error Detection: "Please continue." shortcut --
-	// If the last activity is "Jules encountered an error when working on the task.",
-	// skip the LLM nudge and just send "Please continue." instead.
-	// This avoids wasting an LLM call on error messages that provide no useful context.
-	// Only sent once per hour per session to avoid spamming.
 	activities, _ := client.ListActivities(session.ID)
 	if shouldSendPleaseContinue(session.ID, activities) {
 		if _, err := client.CreateActivity(session.ID, CreateActivityRequest{
@@ -758,8 +781,8 @@ func (w *Worker) handleCheckSession(payload string) (string, error) {
 		addKeeperLog(
 			fmt.Sprintf("Sent \"Please continue.\" to %s (Jules error detected)", session.ID[:8]),
 			"action", session.ID, map[string]interface{}{
-				"event":         "please_continue_sent",
-				"sessionTitle":  session.Title,
+				"event":        "please_continue_sent",
+				"sessionTitle": session.Title,
 			},
 		)
 		touchSessionCooldown(session.ID)
@@ -767,170 +790,148 @@ func (w *Worker) handleCheckSession(payload string) (string, error) {
 		return "please_continue", nil
 	}
 
-	lastActivityTime := session.UpdatedAt
-	if session.LastActivityAt != nil {
-		lastActivityTime = *session.LastActivityAt
+	if hasNewActivity {
+		emitDaemonEvent("activities_updated", map[string]interface{}{"sessionId": session.ID})
 	}
 
-	supervisorState, _ := getSupervisorState(session.ID)
-	if supervisorState.LastProcessedActivityTimestamp != nil {
-		if t, err := time.Parse(time.RFC3339, *supervisorState.LastProcessedActivityTimestamp); err == nil {
-			if lastActivityTime.After(t) {
-				emitDaemonEvent("activities_updated", map[string]interface{}{"sessionId": session.ID})
-			}
-		}
-	} else {
-		emitDaemonEvent("activities_updated", map[string]interface{}{"sessionId": session.ID})
+	// Helper: check if the last activity was from a user
+	lastActivityIsUser := false
+	if len(activities) > 0 {
+		lastActivityIsUser = activities[len(activities)-1].Role == "user"
 	}
 
 	// AWAITING_USER_FEEDBACK: the agent is blocked waiting for user input.
 	// These sessions should always be nudged immediately — they can't make progress without us.
 	if session.RawState == "AWAITING_USER_FEEDBACK" {
-		// Check if we already nudged this session recently (avoid duplicate messages)
-		alreadyProcessedNudge := false
-		if supervisorState.LastProcessedActivityTimestamp != nil {
-			if t, err := time.Parse(time.RFC3339, *supervisorState.LastProcessedActivityTimestamp); err == nil && !lastActivityTime.After(t) {
-				alreadyProcessedNudge = true
-			}
-		}
-		if !alreadyProcessedNudge {
+		if !lastActivityIsUser {
 			message := generateSupervisorNudge(client, session, settings, activities)
 			if _, err := client.CreateActivity(session.ID, CreateActivityRequest{
 				Content: message,
 				Type:    "message",
 				Role:    "user",
 			}); err != nil {
-			if isJules429(err) {
-				SetRateLimitBackoff(30 * time.Second)
-				return "rate_limited", err
-			}
+				if isJules429(err) {
+					SetRateLimitBackoff(30 * time.Second)
+					return "rate_limited", err
+				}
 				return "fail", err
 			}
 			addKeeperLog(
 				fmt.Sprintf("Bumped AWAITING_USER_FEEDBACK session %s", session.ID[:8]),
 				"action", session.ID, map[string]interface{}{
-					"event":         "session_user_feedback_bumped",
-					"sessionTitle":  session.Title,
-					"nudgeMessage":  message,
+					"event":        "session_user_feedback_bumped",
+					"sessionTitle": session.Title,
+					"nudgeMessage": message,
 				},
 			)
 			emitDaemonEvent("activities_updated", map[string]interface{}{"sessionId": session.ID})
 			emitDaemonEvent("session_nudged", map[string]interface{}{
-				"sessionId":      session.ID,
-				"sessionTitle":   session.Title,
-				"message":        message,
+				"sessionId":    session.ID,
+				"sessionTitle": session.Title,
+				"message":      message,
 			})
-			timestamp := lastActivityTime.Format(time.RFC3339)
+			timestamp := time.Now().Format(time.RFC3339) // Use current time to avoid double nudge
 			supervisorState.LastProcessedActivityTimestamp = &timestamp
 			_ = saveSupervisorState(supervisorState)
 			return "bumped_awaiting_feedback", nil
 		}
-		return "already_bumped", nil
+		return "already_bumped_or_user_active", nil
 	}
 
 	if session.RawState == "AWAITING_PLAN_APPROVAL" && settings.SmartPilotEnabled {
-		activities, err := client.ListActivities(session.ID)
-		if err == nil {
-			for _, activity := range activities {
-				if activity.Type != "plan" {
-					continue
+		// Use already fetched activities
+		for _, activity := range activities {
+			if activity.Type != "plan" {
+				continue
+			}
+
+			riskScore := isRiskyPlan(activity.Content)
+			addKeeperLog(fmt.Sprintf("Plan Risk Score for %s is %d/100", session.ID[:8], riskScore), "info", session.ID, map[string]interface{}{
+				"event":     "session_plan_risk_scored",
+				"riskScore": riskScore,
+			})
+
+			if riskScore < lowRiskApprovalThreshold {
+				if err := client.ApprovePlan(session.ID); err != nil {
+					return "fail", err
 				}
-
-				riskScore := isRiskyPlan(activity.Content)
-				addKeeperLog(fmt.Sprintf("Plan Risk Score for %s is %d/100", session.ID[:8], riskScore), "info", session.ID, map[string]interface{}{
-					"event":     "session_plan_risk_scored",
-					"riskScore": riskScore,
+				addKeeperLog("Auto-approved low-risk plan from Go backend.", "action", session.ID, map[string]interface{}{
+					"event":     "session_approved",
+					"sessionId": session.ID,
 				})
+				emitDaemonEvent("activities_updated", map[string]interface{}{"sessionId": session.ID})
+				emitDaemonEvent("session_approved", map[string]interface{}{"sessionId": session.ID, "sessionTitle": session.Title})
+				return "plan_approved", nil
+			}
 
-				if riskScore < lowRiskApprovalThreshold {
-					if err := client.ApprovePlan(session.ID); err != nil {
-						return "fail", err
-					}
-					addKeeperLog("Auto-approved low-risk plan from Go backend.", "action", session.ID, map[string]interface{}{
-						"event":     "session_approved",
-						"sessionId": session.ID,
-					})
-					emitDaemonEvent("activities_updated", map[string]interface{}{"sessionId": session.ID})
-					emitDaemonEvent("session_approved", map[string]interface{}{"sessionId": session.ID, "sessionTitle": session.Title})
-					return "plan_approved", nil
+			addKeeperLog("Plan risk is high. Escalating to council debate review path in Go backend.", "info", session.ID, map[string]interface{}{
+				"event":     "session_debate_escalated",
+				"riskScore": riskScore,
+			})
+			emitDaemonEvent("session_debate_escalated", map[string]interface{}{
+				"sessionId":    session.ID,
+				"sessionTitle": session.Title,
+				"riskScore":    riskScore,
+			})
+
+			debateResult, debateErr := reviewPlanWithCouncil(session, activity.Content, settings)
+			if debateErr != nil {
+				return "fail", debateErr
+			}
+
+			addKeeperLog(fmt.Sprintf("Council debate concluded. Final Risk Score: %d", debateResult.RiskScore), "info", session.ID, map[string]interface{}{
+				"event":          "session_debate_resolved",
+				"riskScore":      debateResult.RiskScore,
+				"approvalStatus": debateResult.ApprovalStatus,
+				"summary":        debateResult.Summary,
+			})
+			emitDaemonEvent("session_debate_resolved", map[string]interface{}{
+				"sessionId":      session.ID,
+				"sessionTitle":   session.Title,
+				"riskScore":      debateResult.RiskScore,
+				"approvalStatus": debateResult.ApprovalStatus,
+				"summary":        debateResult.Summary,
+			})
+
+			if debateResult.RiskScore < lowRiskApprovalThreshold || debateResult.ApprovalStatus == "approved" {
+				if err := client.ApprovePlan(session.ID); err != nil {
+					return "fail", err
 				}
-
-				addKeeperLog("Plan risk is high. Escalating to council debate review path in Go backend.", "info", session.ID, map[string]interface{}{
-					"event":     "session_debate_escalated",
-					"riskScore": riskScore,
-				})
-				emitDaemonEvent("session_debate_escalated", map[string]interface{}{
-					"sessionId":    session.ID,
-					"sessionTitle": session.Title,
-					"riskScore":    riskScore,
-				})
-
-				debateResult, debateErr := reviewPlanWithCouncil(session, activity.Content, settings)
-				if debateErr != nil {
-					return "fail", debateErr
-				}
-
-				addKeeperLog(fmt.Sprintf("Council debate concluded. Final Risk Score: %d", debateResult.RiskScore), "info", session.ID, map[string]interface{}{
-					"event":          "session_debate_resolved",
-					"riskScore":      debateResult.RiskScore,
-					"approvalStatus": debateResult.ApprovalStatus,
-					"summary":        debateResult.Summary,
-				})
-				emitDaemonEvent("session_debate_resolved", map[string]interface{}{
-					"sessionId":      session.ID,
-					"sessionTitle":   session.Title,
-					"riskScore":      debateResult.RiskScore,
-					"approvalStatus": debateResult.ApprovalStatus,
-					"summary":        debateResult.Summary,
-				})
-
-				if debateResult.RiskScore < lowRiskApprovalThreshold || debateResult.ApprovalStatus == "approved" {
-					if err := client.ApprovePlan(session.ID); err != nil {
-						return "fail", err
-					}
-					_, _ = client.CreateActivity(session.ID, CreateActivityRequest{
-						Content: fmt.Sprintf("Council Supervisor Debate Summary:\n\n%s\n\nThe plan has been approved. Proceed with implementation.", debateResult.Summary),
-						Type:    "message",
-						Role:    "user",
-					})
-					addKeeperLog("Council approved plan after debate. Auto-approving from Go backend.", "action", session.ID, map[string]interface{}{
-						"event":          "session_approved",
-						"sessionId":      session.ID,
-						"riskScore":      debateResult.RiskScore,
-						"approvalStatus": debateResult.ApprovalStatus,
-					})
-					emitDaemonEvent("activities_updated", map[string]interface{}{"sessionId": session.ID})
-					emitDaemonEvent("session_approved", map[string]interface{}{"sessionId": session.ID, "sessionTitle": session.Title})
-					return "plan_approved_by_council", nil
-				}
-
 				_, _ = client.CreateActivity(session.ID, CreateActivityRequest{
-					Content: fmt.Sprintf("The Council Supervisor flagged the implementation plan as high-risk.\n\nDebate Summary:\n%s\n\nPlease revise the plan addressing these concerns and submit it for approval again.", debateResult.Summary),
+					Content: fmt.Sprintf("Council Supervisor Debate Summary:\n\n%s\n\nThe plan has been approved. Proceed with implementation.", debateResult.Summary),
 					Type:    "message",
 					Role:    "user",
 				})
-				addKeeperLog("Council rejected or flagged plan after debate. Manual revision required.", "error", session.ID, map[string]interface{}{
-					"event":          "session_plan_flagged",
+				addKeeperLog("Council approved plan after debate. Auto-approving from Go backend.", "action", session.ID, map[string]interface{}{
+					"event":          "session_approved",
+					"sessionId":      session.ID,
 					"riskScore":      debateResult.RiskScore,
 					"approvalStatus": debateResult.ApprovalStatus,
 				})
-				return "plan_flagged_by_council", nil
+				emitDaemonEvent("activities_updated", map[string]interface{}{"sessionId": session.ID})
+				emitDaemonEvent("session_approved", map[string]interface{}{"sessionId": session.ID, "sessionTitle": session.Title})
+				return "plan_approved_by_council", nil
 			}
+
+			_, _ = client.CreateActivity(session.ID, CreateActivityRequest{
+				Content: fmt.Sprintf("The Council Supervisor flagged the implementation plan as high-risk.\n\nDebate Summary:\n%s\n\nPlease revise the plan addressing these concerns and submit it for approval again.", debateResult.Summary),
+				Type:    "message",
+				Role:    "user",
+			})
+			addKeeperLog("Council rejected or flagged plan after debate. Manual revision required.", "error", session.ID, map[string]interface{}{
+				"event":          "session_plan_flagged",
+				"riskScore":      debateResult.RiskScore,
+				"approvalStatus": debateResult.ApprovalStatus,
+			})
+			return "plan_flagged_by_council", nil
 		}
 	}
 
 	if session.RawState == "FAILED" && settings.SmartPilotEnabled {
-		alreadyProcessedFailure := false
-		if supervisorState.LastProcessedActivityTimestamp != nil {
-			if t, err := time.Parse(time.RFC3339, *supervisorState.LastProcessedActivityTimestamp); err == nil && !lastActivityTime.After(t) {
-				alreadyProcessedFailure = true
-			}
-		}
-
-		if !alreadyProcessedFailure {
-			// activities already fetched at top of handleCheckSession
+		if !lastActivityIsUser {
+			// activities already fetched at top
 			if hasRecentRecoveryGuidance(activities) || hasRecentRecoveryCompletionLog(session.ID, lastActivityTime) {
-				timestamp := lastActivityTime.Format(time.RFC3339)
+				timestamp := time.Now().Format(time.RFC3339)
 				supervisorState.LastProcessedActivityTimestamp = &timestamp
 				_ = saveSupervisorState(supervisorState)
 				addKeeperLog("Skipped duplicate recovery guidance because a recent recovery instruction is already present.", "skip", session.ID, map[string]interface{}{
@@ -958,15 +959,15 @@ func (w *Worker) handleCheckSession(payload string) (string, error) {
 				Type:    "message",
 				Role:    "user",
 			}); err != nil {
-		if isJules429(err) {
-			SetRateLimitBackoff(30 * time.Second)
-			touchSessionCooldown(session.ID)
-			return "rate_limited", err
-		}
-		addKeeperLog(fmt.Sprintf("Failed to send recovery guidance: %v", err), "error", session.ID, map[string]interface{}{
-			"event": "session_recovery_send_failed",
-		})
-		return "fail", err
+				if isJules429(err) {
+					SetRateLimitBackoff(30 * time.Second)
+					touchSessionCooldown(session.ID)
+					return "rate_limited", err
+				}
+				addKeeperLog(fmt.Sprintf("Failed to send recovery guidance: %v", err), "error", session.ID, map[string]interface{}{
+					"event": "session_recovery_send_failed",
+				})
+				return "fail", err
 			}
 
 			addKeeperLog("Sent recovery guidance to failed session from Go backend.", "action", session.ID, map[string]interface{}{
@@ -980,7 +981,7 @@ func (w *Worker) handleCheckSession(payload string) (string, error) {
 				"summary":      recoveryMessage,
 			})
 
-			timestamp := lastActivityTime.Format(time.RFC3339)
+			timestamp := time.Now().Format(time.RFC3339)
 			supervisorState.LastProcessedActivityTimestamp = &timestamp
 			_ = saveSupervisorState(supervisorState)
 			return "recovery_sent", nil
@@ -988,15 +989,8 @@ func (w *Worker) handleCheckSession(payload string) (string, error) {
 	}
 
 	// COMPLETED/PAUSED/IDLE sessions: reactivate them with a follow-up task.
-	// The purpose of this project is to keep sessions cycling - don't let them go dormant.
 	if session.RawState == "COMPLETED" || session.RawState == "SUCCEEDED" || session.RawState == "PAUSED" || session.RawState == "IDLE" {
-		alreadyProcessedComplete := false
-		if supervisorState.LastProcessedActivityTimestamp != nil {
-			if t, err := time.Parse(time.RFC3339, *supervisorState.LastProcessedActivityTimestamp); err == nil && !lastActivityTime.After(t) {
-				alreadyProcessedComplete = true
-			}
-		}
-			if !alreadyProcessedComplete {
+		if !lastActivityIsUser {
 			// Use supervisor LLM to generate an intelligent, context-aware nudge
 			message := generateSupervisorNudge(client, session, settings, activities)
 			ragContext := ""
@@ -1013,23 +1007,23 @@ func (w *Worker) handleCheckSession(payload string) (string, error) {
 				Type:    "message",
 				Role:    "user",
 			}); err != nil {
-		if isJules429(err) {
-			SetRateLimitBackoff(30 * time.Second)
-			touchSessionCooldown(session.ID)
-			return "rate_limited", err
-		}
-		addKeeperLog(fmt.Sprintf("Failed to reactivate completed session: %v", err), "error", session.ID, map[string]interface{}{
-			"event": "session_reactivation_send_failed",
-		})
-		return "fail", err
+				if isJules429(err) {
+					SetRateLimitBackoff(30 * time.Second)
+					touchSessionCooldown(session.ID)
+					return "rate_limited", err
+				}
+				addKeeperLog(fmt.Sprintf("Failed to reactivate completed session: %v", err), "error", session.ID, map[string]interface{}{
+					"event": "session_reactivation_send_failed",
+				})
+				return "fail", err
 			}
 			addKeeperLog(
 				fmt.Sprintf("Reactivated %s session %s", session.RawState, session.ID[:8]),
 				"action", session.ID, map[string]interface{}{
-					"event":         "session_reactivated",
-					"sessionTitle":  session.Title,
-					"nudgeMessage":  message,
-					"usedRAG":       ragContext != "",
+					"event":        "session_reactivated",
+					"sessionTitle": session.Title,
+					"nudgeMessage": message,
+					"usedRAG":      ragContext != "",
 				},
 			)
 			emitDaemonEvent("activities_updated", map[string]interface{}{"sessionId": session.ID})
@@ -1037,12 +1031,12 @@ func (w *Worker) handleCheckSession(payload string) (string, error) {
 				"sessionId":    session.ID,
 				"sessionTitle": session.Title,
 			})
-			timestamp := lastActivityTime.Format(time.RFC3339)
+			timestamp := time.Now().Format(time.RFC3339)
 			supervisorState.LastProcessedActivityTimestamp = &timestamp
 			_ = saveSupervisorState(supervisorState)
 			return "reactivated", nil
 		}
-		return "already_reactivated", nil
+		return "already_reactivated_or_user_active", nil
 	}
 
 	thresholdMinutes := settings.InactivityThresholdMinutes
@@ -1166,7 +1160,7 @@ func buildRecoveryMessage(session models.JulesSession, activities []models.Jules
 	return "Recovery Guidance:\n\nThe session appears to have failed. Review the most recent error, identify the last successful step, fix the immediate cause, and continue with a revised plan. If a prior assumption was wrong, state it explicitly before proceeding."
 }
 
-func getProjectRoot() string {
+func GetProjectRoot() string {
 	candidates := []string{filepath.Clean("."), filepath.Clean("..")}
 	for _, candidate := range candidates {
 		if info, err := os.Stat(filepath.Join(candidate, "src")); err == nil && info.IsDir() {
@@ -1177,7 +1171,7 @@ func getProjectRoot() string {
 }
 
 func getIndexRoot(dir string) string {
-	root := getProjectRoot()
+	root := GetProjectRoot()
 	candidate := filepath.Clean(filepath.Join(root, dir))
 	if info, err := os.Stat(candidate); err == nil && info.IsDir() {
 		return candidate
@@ -1216,7 +1210,7 @@ func collectIndexFiles(dir string) ([]string, error) {
 			return nil
 		}
 
-		rel, relErr := filepath.Rel(getProjectRoot(), path)
+		rel, relErr := filepath.Rel(GetProjectRoot(), path)
 		if relErr != nil {
 			rel = path
 		}
@@ -1312,7 +1306,7 @@ func IndexCodebase() (string, error) {
 
 	newChunks := 0
 	for _, relativePath := range allFiles {
-		fullPath := filepath.Join(getProjectRoot(), filepath.FromSlash(relativePath))
+		fullPath := filepath.Join(GetProjectRoot(), filepath.FromSlash(relativePath))
 
 		contentBytes, err := os.ReadFile(fullPath)
 		if err != nil || len(contentBytes) > maxIndexedFileSizeBytes {
@@ -1455,14 +1449,16 @@ func resolveRepoPath(sourceId string) string {
 		return mapping.LocalPath
 	}
 
-	// Default to C:/Users/hyper/workspace/[reponame]
+	// Dynamic resolution from project root instead of hardcoded C:/Users/hyper/
 	repoName := sourceId
 	if strings.Contains(sourceId, "/") {
 		parts := strings.Split(sourceId, "/")
 		repoName = parts[len(parts)-1]
 	}
 
-	return "C:/Users/hyper/workspace/" + repoName
+	projectRoot := GetProjectRoot()
+	workspaceRoot := filepath.Dir(projectRoot)
+	return filepath.Join(workspaceRoot, repoName)
 }
 
 func (w *Worker) handleDecomposeTask(payload string) (string, error) {

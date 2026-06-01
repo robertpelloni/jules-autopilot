@@ -1112,14 +1112,16 @@ func resolveRepoPath(sourceId string) string {
 		return mapping.LocalPath
 	}
 
-	// Default to C:/Users/hyper/workspace/[reponame]
+	// Dynamic resolution from project root instead of hardcoded C:/Users/hyper/
 	repoName := sourceId
 	if strings.Contains(sourceId, "/") {
 		parts := strings.Split(sourceId, "/")
 		repoName = parts[len(parts)-1]
 	}
 
-	return "C:/Users/hyper/workspace/" + repoName
+	projectRoot := services.GetProjectRoot()
+	workspaceRoot := filepath.Dir(projectRoot)
+	return filepath.Join(workspaceRoot, repoName)
 }
 
 func exportSessionToRepo(c *fiber.Ctx) error {
