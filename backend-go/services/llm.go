@@ -88,7 +88,7 @@ func normalizeProvider(provider string) string {
 func defaultModelForProvider(provider string) string {
 	switch normalizeProvider(provider) {
 	case "lmstudio":
-		return "gemma-4-e2b-uncensored-hauhaucs-aggressive"
+		return "gemma-4-e4b-uncensored-hauhaucs-aggressive"
 	case "openrouter":
 		return "nvidia/nemotron-3-nano-omni-30b-a3b-reasoning:free"
 	case "gemini":
@@ -174,8 +174,8 @@ func generateLLMText(primaryProvider, primaryApiKey, primaryModel, systemPrompt 
 		if i > 0 {
 			// This is a fallback attempt
 			apiKey = getSupervisorAPIKey(provider, nil)
-			if apiKey == "" || apiKey == "placeholder" {
-				continue // Cannot fallback without an API key
+			if provider != "lmstudio" && (apiKey == "" || apiKey == "placeholder") {
+				continue // Cannot fallback without an API key (lmstudio is local, no key needed)
 			}
 			model = resolveModel(provider, "")
 		}

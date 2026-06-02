@@ -1,7 +1,7 @@
 {
   "version": 1,
   "projectRoot": "C:/Users/hyper/workspace/jules-autopilot",
-  "generatedAt": "2026-05-30T17:13:35.422Z",
+  "generatedAt": "2026-06-01T18:05:30.532Z",
   "seq": 0,
   "files": {},
   "symbols": {},
@@ -410,7 +410,7 @@
     "hasCustomRules": true
   },
   "projectIndex": {
-    "entryCount": 186
+    "entryCount": 171
   },
   "startupScan": {
     "cwd": "C:\\Users\\hyper\\workspace\\jules-autopilot",

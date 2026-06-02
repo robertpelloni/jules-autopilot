@@ -3,16 +3,6 @@
   "issues": [
     {
       "type": "file",
-      "name": "reduce-interval.ts",
-      "file": "reduce-interval.ts"
-    },
-    {
-      "type": "file",
-      "name": "render-entry.ts",
-      "file": "render-entry.ts"
-    },
-    {
-      "type": "file",
       "name": "components/activity-group.tsx",
       "file": "components/activity-group.tsx"
     },
@@ -43,51 +33,6 @@
     },
     {
       "type": "file",
-      "name": "lib/diff-utils.ts",
-      "file": "lib/diff-utils.ts"
-    },
-    {
-      "type": "file",
-      "name": "lib/help-content.ts",
-      "file": "lib/help-content.ts"
-    },
-    {
-      "type": "file",
-      "name": "lib/session.ts",
-      "file": "lib/session.ts"
-    },
-    {
-      "type": "file",
-      "name": "prisma/schema-proposal.prisma",
-      "file": "prisma/schema-proposal.prisma"
-    },
-    {
-      "type": "file",
-      "name": "server/daemon.ts",
-      "file": "server/daemon.ts"
-    },
-    {
-      "type": "file",
-      "name": "server/index.ts",
-      "file": "server/index.ts"
-    },
-    {
-      "type": "file",
-      "name": "server/llm.ts",
-      "file": "server/llm.ts"
-    },
-    {
-      "type": "file",
-      "name": "server/rag.ts",
-      "file": "server/rag.ts"
-    },
-    {
-      "type": "file",
-      "name": "server/supervisor.ts",
-      "file": "server/supervisor.ts"
-    },
-    {
-      "type": "file",
       "name": "scripts/check-doc-drift.js",
       "file": "scripts/check-doc-drift.js"
     },
@@ -103,8 +48,33 @@
     },
     {
       "type": "file",
+      "name": "lib/diff-utils.ts",
+      "file": "lib/diff-utils.ts"
+    },
+    {
+      "type": "file",
+      "name": "lib/help-content.ts",
+      "file": "lib/help-content.ts"
+    },
+    {
+      "type": "file",
+      "name": "lib/session.ts",
+      "file": "lib/session.ts"
+    },
+    {
+      "type": "file",
+      "name": "server/index.ts",
+      "file": "server/index.ts"
+    },
+    {
+      "type": "file",
       "name": "types/jules.ts",
       "file": "types/jules.ts"
+    },
+    {
+      "type": "file",
+      "name": "prisma/schema-proposal.prisma",
+      "file": "prisma/schema-proposal.prisma"
     },
     {
       "type": "file",
@@ -153,18 +123,13 @@
     },
     {
       "type": "file",
-      "name": "lib/jules/request-queue.ts",
-      "file": "lib/jules/request-queue.ts"
-    },
-    {
-      "type": "file",
       "name": "lib/rag/embedder.ts",
       "file": "lib/rag/embedder.ts"
     },
     {
       "type": "file",
-      "name": "lib/prisma/index.ts",
-      "file": "lib/prisma/index.ts"
+      "name": "lib/jules/request-queue.ts",
+      "file": "lib/jules/request-queue.ts"
     },
     {
       "type": "file",
@@ -681,13 +646,13 @@
       "type": "export",
       "name": "fetchAuditEntries",
       "file": "lib/api/notifications.ts",
-      "line": 99
+      "line": 109
     },
     {
       "type": "export",
       "name": "fetchAuditStats",
       "file": "lib/api/notifications.ts",
-      "line": 126
+      "line": 136
     },
     {
       "type": "export",
@@ -953,13 +918,13 @@
       "type": "export",
       "name": "fetchAuditEntries",
       "file": "lib/api/notifications.ts",
-      "line": 99
+      "line": 109
     },
     {
       "type": "export",
       "name": "fetchAuditStats",
       "file": "lib/api/notifications.ts",
-      "line": 126
+      "line": 136
     },
     {
       "type": "export",
@@ -1031,16 +996,6 @@
   "unusedFiles": [
     {
       "type": "file",
-      "name": "reduce-interval.ts",
-      "file": "reduce-interval.ts"
-    },
-    {
-      "type": "file",
-      "name": "render-entry.ts",
-      "file": "render-entry.ts"
-    },
-    {
-      "type": "file",
       "name": "components/activity-group.tsx",
       "file": "components/activity-group.tsx"
     },
@@ -1071,51 +1026,6 @@
     },
     {
       "type": "file",
-      "name": "lib/diff-utils.ts",
-      "file": "lib/diff-utils.ts"
-    },
-    {
-      "type": "file",
-      "name": "lib/help-content.ts",
-      "file": "lib/help-content.ts"
-    },
-    {
-      "type": "file",
-      "name": "lib/session.ts",
-      "file": "lib/session.ts"
-    },
-    {
-      "type": "file",
-      "name": "prisma/schema-proposal.prisma",
-      "file": "prisma/schema-proposal.prisma"
-    },
-    {
-      "type": "file",
-      "name": "server/daemon.ts",
-      "file": "server/daemon.ts"
-    },
-    {
-      "type": "file",
-      "name": "server/index.ts",
-      "file": "server/index.ts"
-    },
-    {
-      "type": "file",
-      "name": "server/llm.ts",
-      "file": "server/llm.ts"
-    },
-    {
-      "type": "file",
-      "name": "server/rag.ts",
-      "file": "server/rag.ts"
-    },
-    {
-      "type": "file",
-      "name": "server/supervisor.ts",
-      "file": "server/supervisor.ts"
-    },
-    {
-      "type": "file",
       "name": "scripts/check-doc-drift.js",
       "file": "scripts/check-doc-drift.js"
     },
@@ -1131,8 +1041,33 @@
     },
     {
       "type": "file",
+      "name": "lib/diff-utils.ts",
+      "file": "lib/diff-utils.ts"
+    },
+    {
+      "type": "file",
+      "name": "lib/help-content.ts",
+      "file": "lib/help-content.ts"
+    },
+    {
+      "type": "file",
+      "name": "lib/session.ts",
+      "file": "lib/session.ts"
+    },
+    {
+      "type": "file",
+      "name": "server/index.ts",
+      "file": "server/index.ts"
+    },
+    {
+      "type": "file",
       "name": "types/jules.ts",
       "file": "types/jules.ts"
+    },
+    {
+      "type": "file",
+      "name": "prisma/schema-proposal.prisma",
+      "file": "prisma/schema-proposal.prisma"
     },
     {
       "type": "file",
@@ -1181,18 +1116,13 @@
     },
     {
       "type": "file",
-      "name": "lib/jules/request-queue.ts",
-      "file": "lib/jules/request-queue.ts"
-    },
-    {
-      "type": "file",
       "name": "lib/rag/embedder.ts",
       "file": "lib/rag/embedder.ts"
     },
     {
       "type": "file",
-      "name": "lib/prisma/index.ts",
-      "file": "lib/prisma/index.ts"
+      "name": "lib/jules/request-queue.ts",
+      "file": "lib/jules/request-queue.ts"
     },
     {
       "type": "file",
@@ -1518,5 +1448,5 @@
       "line": 2
     }
   ],
-  "summary": "Found 134 issues"
+  "summary": "Found 127 issues"
 }
