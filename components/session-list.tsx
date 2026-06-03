@@ -186,7 +186,7 @@ export function SessionList({
              </div>
           </div>
           <div className="relative">
-            <Search className="absolute left-2 top-1/2 h-3 w-3 -translate-y-1/2 text-muted-foreground" />
+            <Search className="absolute left-2 top-1/2 h-3 w-3 -translate-y-1/2 text-muted-foreground pointer-events-none" />
             <Input
               placeholder="Filter sessions..."
               aria-label="Filter sessions"
