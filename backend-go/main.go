@@ -108,9 +108,9 @@ func main() {
 
 	// Port configuration from environment
 	port := os.Getenv("PORT")
-	if port == "" {
-		port = "8080"
-	}
+if port == "" {
+		port = "8081"
+}
 
 	// WebSocket Middleware
 	app.Use("/ws", func(c *fiber.Ctx) error {
