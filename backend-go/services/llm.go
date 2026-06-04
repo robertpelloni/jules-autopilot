@@ -150,7 +150,7 @@ func generateLLMText(primaryProvider, primaryApiKey, primaryModel, systemPrompt 
 	primaryProvider = normalizeProvider(primaryProvider)
 	primaryModel = resolveModel(primaryProvider, primaryModel)
 
-	// Fallback chain: Primary -> Gemini -> OpenRouter -> LMStudio
+	// Fallback chain: Primary (OpenRouter) -> LocalProxy (localhost:4000) -> LMStudio (localhost:1234)
 	providers := []string{primaryProvider}
 	fallbacks := []string{"localproxy", "lmstudio"}
 	for _, p := range fallbacks {
