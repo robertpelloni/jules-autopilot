@@ -109,7 +109,7 @@ func main() {
 	// Port configuration from environment
 	port := os.Getenv("PORT")
 if port == "" {
-		port = "8081"
+		port = "8082"
 }
 
 	// WebSocket Middleware
