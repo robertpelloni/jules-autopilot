@@ -153,25 +153,11 @@ export class JulesAPIError extends Error {
 }
 
 function getDefaultApiBaseUrl(): string {
-  const viteEnv = (() => {
-    try {
-      return (0, eval)('import.meta.env') as { VITE_JULES_API_BASE_URL?: string } | undefined;
-    } catch {
-      return undefined;
-    }
-  })();
-
-  const processEnv = (() => {
-    try {
-      return process.env as { VITE_JULES_API_BASE_URL?: string } | undefined;
-    } catch {
-      return undefined;
-    }
-  })();
-
-  const viteBaseUrl = viteEnv?.VITE_JULES_API_BASE_URL || processEnv?.VITE_JULES_API_BASE_URL;
+  // @ts-expect-error - import.meta is handled by Vite/Bundler
+  const viteBaseUrl = (typeof import.meta !== 'undefined' && import.meta.env?.VITE_JULES_API_BASE_URL) || 
+                      (typeof process !== 'undefined' && process.env?.VITE_JULES_API_BASE_URL);
+  
   if (viteBaseUrl) return viteBaseUrl;
-
   return '/api';
 }
 
@@ -231,7 +217,7 @@ export class JulesClient {
       if (this.apiKey) {
         headers['X-Goog-Api-Key'] = this.apiKey;
         // Strictly ensure Authorization is NOT present
-        delete (headers as any)['Authorization'];
+        delete headers['Authorization'];
       } else if (this.authToken) {
         headers['Authorization'] = `Bearer ${this.authToken}`;
       }

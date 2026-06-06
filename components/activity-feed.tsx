@@ -408,10 +408,13 @@ export function ActivityFeed({
     return grouped;
   }, [filteredActivities]);
 
+  const getScrollElement = useCallback(() => parentRef.current, []);
+  const estimateSize = useCallback(() => 250, []);
+
   const virtualizer = useVirtualizer({
     count: groupedActivities.length,
-    getScrollElement: () => parentRef.current,
-    estimateSize: () => 250,
+    getScrollElement,
+    estimateSize,
     overscan: 10,
   });
 

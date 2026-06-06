@@ -2,7 +2,16 @@
 
 All notable changes to this project will be documented in this file.
 
-## [3.6.1] - 2026-05-31
+## [3.6.3] - 2026-06-04
+
+### Changed
+- **Enhanced LLM Fallback Chain**: Added Gemini and OpenRouter to the supervisor fallback logic to ensure high availability during primary provider outages.
+- **Smart Credential Reuse**: Enabled the Gemini provider to utilize the `JULES_API_KEY` as a fallback when specifically configured Google keys are missing, provided the key follows the `AQ.A` format.
+
+### Fixed
+- **Residual Codebase Cleanup**: Eliminated leftover 'ghost' files from the legacy `server/` directory and resolved lingering ESLint errors in `lib/jules/client.ts` and `lib/jules/provider.tsx`.
+
+## [3.6.2] - 2026-06-02
 
 ### Added
 - **Activity Caching & Fetch Optimization**: Drastically improved background worker performance by implementing activity history caching in the Go backend. The worker now skips expensive Jules API pagination calls if the session's `LastActivityAt` timestamp hasn't changed since the last check.

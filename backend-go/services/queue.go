@@ -291,8 +291,10 @@ func StartWorker() {
 	globalWorkerMu.Lock()
 	defer globalWorkerMu.Unlock()
 
-	// Reclaim orphaned processing jobs from previous crashed run
-	if result := db.DB.Unscoped().Where("status = ?", "processing").Delete(&models.QueueJob{}); result.RowsAffected > 0 {
+	// Reclaim orphaned processing jobs from previous crashed run by resetting to pending
+	if result := db.DB.Model(&models.QueueJob{}).Where("status = ?", "processing").Updates(map[string]interface{}{
+		"status": "pending",
+	}); result.RowsAffected > 0 {
 		log.Printf("[Queue] Reclaimed %d orphaned processing jobs from previous run", result.RowsAffected)
 	}
 

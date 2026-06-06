@@ -142,6 +142,9 @@ func getSupervisorAPIKey(provider string, explicit *string) string {
 		if key := strings.TrimSpace(os.Getenv("GOOGLE_API_KEY")); key != "" {
 			return key
 		}
+		if key := strings.TrimSpace(os.Getenv("JULES_API_KEY")); key != "" && strings.HasPrefix(key, "AQ.A") {
+			return key
+		}
 	}
 	return ""
 }
@@ -150,9 +153,9 @@ func generateLLMText(primaryProvider, primaryApiKey, primaryModel, systemPrompt 
 	primaryProvider = normalizeProvider(primaryProvider)
 	primaryModel = resolveModel(primaryProvider, primaryModel)
 
-	// Fallback chain: Primary -> Gemini -> OpenRouter -> LMStudio
+	// Fallback chain: Primary -> Gemini -> OpenRouter -> LocalProxy -> LMStudio
 	providers := []string{primaryProvider}
-	fallbacks := []string{"localproxy", "lmstudio"}
+	fallbacks := []string{"gemini", "openrouter", "localproxy", "lmstudio"}
 	for _, p := range fallbacks {
 		exists := false
 		for _, existing := range providers {
@@ -194,6 +197,7 @@ func generateLLMText(primaryProvider, primaryApiKey, primaryModel, systemPrompt 
 		}
 
 		if err != nil {
+			log.Printf("[LLM] Provider %s failed: %v", provider, err)
 			lastErr = err
 			errStr := err.Error()
 			RecordLLMLatency(provider, result.LatencyMs, false)
