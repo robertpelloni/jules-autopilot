@@ -778,6 +778,7 @@ export function ActivityFeed({
       {!isArchived && (
         <ActivityInput onSendMessage={handleSendMessage} disabled={sending} placeholder="Send a message to Jules..." />
       )}
-    </div>
+      </div>
+    </TooltipProvider>
   );
 }
