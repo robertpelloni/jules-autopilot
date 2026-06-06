@@ -208,6 +208,17 @@ export function SessionList({
           </div>
         </div>
         <ScrollArea className="flex-1 min-h-0">
+          {visibleSessions.length === 0 ? (
+            <div className="flex items-center justify-center p-6 h-full">
+              <p className="text-xs text-muted-foreground text-center leading-relaxed">
+                {searchQuery
+                  ? "No sessions match your search."
+                  : sessions.length === 0
+                    ? "No sessions yet. Create one to get started!"
+                    : "All sessions are archived."}
+              </p>
+            </div>
+          ) : (
           <div className="p-2 space-y-1">
             {visibleSessions.map((session) => {
               const daysOld = getDaysOld(session.createdAt);
@@ -300,6 +311,7 @@ export function SessionList({
                </div>
             )}
           </div>
+          )}
         </ScrollArea>
 
         {/* Daily Capacity Indicator */}
