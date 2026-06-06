@@ -2,7 +2,7 @@
 
 import * as React from "react";
 import { type DialogProps } from "@radix-ui/react-dialog";
-import { MagnifyingGlassIcon } from "@radix-ui/react-icons";
+import { MagnifyingGlassIcon, Cross2Icon } from "@radix-ui/react-icons";
 import { Command as CommandPrimitive } from "cmdk";
 
 import { cn } from "@/lib/utils";
@@ -41,19 +41,47 @@ const CommandDialog = ({ children, ...props }: CommandDialogProps) => {
 const CommandInput = React.forwardRef<
   React.ElementRef<typeof CommandPrimitive.Input>,
   React.ComponentPropsWithoutRef<typeof CommandPrimitive.Input>
->(({ className, ...props }, ref) => (
-  <div className="flex items-center border-b px-3" cmdk-input-wrapper="">
-    <MagnifyingGlassIcon className="mr-2 h-4 w-4 shrink-0 opacity-50" />
-    <CommandPrimitive.Input
-      ref={ref}
-      className={cn(
-        "flex h-10 w-full rounded-md bg-transparent py-3 text-sm outline-none placeholder:text-muted-foreground disabled:cursor-not-allowed disabled:opacity-50",
-        className,
-      )}
-      {...props}
-    />
-  </div>
-));
+>(({ className, value, onValueChange, ...props }, ref) => {
+  const [internalValue, setInternalValue] = React.useState(value ?? "");
+  const isControlled = value !== undefined;
+  const currentValue = isControlled ? value : internalValue;
+
+  const handleChange = React.useCallback(
+    (val: string) => {
+      if (!isControlled) {
+        setInternalValue(val);
+      }
+      onValueChange?.(val);
+    },
+    [isControlled, onValueChange]
+  );
+
+  return (
+    <div className="flex items-center border-b px-3 relative" cmdk-input-wrapper="">
+      <MagnifyingGlassIcon className="mr-2 h-4 w-4 shrink-0 opacity-50 pointer-events-none" />
+      <CommandPrimitive.Input
+        ref={ref}
+        value={currentValue}
+        onValueChange={handleChange}
+        className={cn(
+          "flex h-10 w-full rounded-md bg-transparent py-3 pr-8 text-sm outline-none placeholder:text-muted-foreground disabled:cursor-not-allowed disabled:opacity-50",
+          className,
+        )}
+        {...props}
+      />
+      {currentValue ? (
+        <button
+          type="button"
+          onClick={() => handleChange("")}
+          className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground outline-none focus-visible:ring-1 focus-visible:ring-ring rounded-sm z-10"
+          aria-label="Clear search"
+        >
+          <Cross2Icon className="h-4 w-4 pointer-events-none" />
+        </button>
+      ) : null}
+    </div>
+  );
+});
 
 CommandInput.displayName = CommandPrimitive.Input.displayName;
 
