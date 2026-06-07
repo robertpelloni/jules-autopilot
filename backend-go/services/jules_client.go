@@ -150,6 +150,13 @@ type apiSource struct {
 	Raw    map[string]interface{} `json:"-"`
 }
 
+func truncatePageToken(token string) string {
+	if len(token) <= 12 {
+		return token
+	}
+	return token[:8] + "..." + token[len(token)-4:]
+}
+
 func (c *JulesClient) ListSources(filter string) ([]JulesSource, error) {
 	if !c.isConfigured() {
 		return nil, fmt.Errorf("Jules credentials not found")
@@ -163,6 +170,9 @@ func (c *JulesClient) ListSources(filter string) ([]JulesSource, error) {
 		params := make([]string, 0, 2)
 		if pageToken != "" {
 			params = append(params, "pageToken="+pageToken)
+			log.Printf("[Jules] GET sources (pageToken: %s)", truncatePageToken(pageToken))
+		} else {
+			log.Printf("[Jules] GET sources")
 		}
 		if strings.TrimSpace(filter) != "" {
 			params = append(params, "filter="+filter)
@@ -406,8 +416,10 @@ func (c *JulesClient) ListActivitiesWithLimit(sessionId string, maxPages int) ([
 		url := fmt.Sprintf("%s/sessions/%s/activities?pageSize=50", JulesApiBaseUrl, sessionId)
 		if pageToken != "" {
 			url += "&pageToken=" + pageToken
+			log.Printf("[Jules] GET activities (pageToken: %s)", truncatePageToken(pageToken))
+		} else {
+			log.Printf("[Jules] GET activities")
 		}
-		log.Printf("[Jules] GET %s", url)
 		req, err := http.NewRequest("GET", url, nil)
 		if err != nil {
 			return nil, err

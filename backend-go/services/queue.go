@@ -708,6 +708,9 @@ func (w *Worker) handleCheckSession(payload string) (string, error) {
 		return "none", err
 	}
 
+	provider := normalizeProvider(settings.SupervisorProvider)
+	model := resolveModel(provider, settings.SupervisorModel)
+
 	client := NewJulesClient()
 	session, err := client.GetSession(data.Session.ID)
 	if err != nil {
@@ -753,6 +756,9 @@ func (w *Worker) handleCheckSession(payload string) (string, error) {
 
 	if shouldSkipFetch {
 		log.Printf("[Worker] Skipping activity fetch for %s - no new activity since %v", session.ID[:8], lastActivityTime.Format(time.Kitchen))
+		timestamp := lastActivityTime.Format(time.RFC3339)
+		supervisorState.LastProcessedActivityTimestamp = &timestamp
+		_ = saveSupervisorState(supervisorState)
 		return "none", nil
 	}
 
@@ -1020,11 +1026,13 @@ func (w *Worker) handleCheckSession(payload string) (string, error) {
 				return "fail", err
 			}
 			addKeeperLog(
-				fmt.Sprintf("Reactivated %s session %s", session.RawState, session.ID[:8]),
+				fmt.Sprintf("Reactivated %s session %s using %s/%s", session.RawState, session.ID[:8], provider, model),
 				"action", session.ID, map[string]interface{}{
 					"event":        "session_reactivated",
 					"sessionTitle": session.Title,
 					"nudgeMessage": message,
+					"provider":     provider,
+					"model":        model,
 					"usedRAG":      ragContext != "",
 				},
 			)
