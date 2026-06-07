@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file.
 
+## [3.6.4] - 2026-06-06
+
+### Fixed
+- **Critical Build Error**: Resolved a syntax error in `components/activity-feed.tsx` (unterminated regular expression) caused by an extra `</TooltipProvider>` closing tag and an extra `</div>`.
+- **Port Alignment**: Unified the backend port by changing the Go default from `8082` to `8080`, aligning it with `README.md` and `start.bat`.
+- **Proxy Configuration**: Updated `vite.config.ts` to proxy requests to port `8080`, ensuring proper connectivity during frontend development.
+
 ## [3.6.3] - 2026-06-04
 
 ### Changed

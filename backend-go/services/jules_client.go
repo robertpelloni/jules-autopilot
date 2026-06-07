@@ -236,62 +236,118 @@ func (c *JulesClient) ListSources(filter string) ([]JulesSource, error) {
 	return results, nil
 }
 
-// ListSessions fetches all sessions from the Jules API with pagination.
-// Uses pageSize=50 to avoid large single responses that cause timeouts.
-func (c *JulesClient) ListSessions() ([]models.JulesSession, error) {
-	if !c.isConfigured() {
-		return nil, fmt.Errorf("Jules credentials not found")
-	}
-
-	var allSessions []ApiSession
-	pageToken := ""
-
-	for {
-		url := fmt.Sprintf("%s/sessions?pageSize=50", JulesApiBaseUrl)
-		if pageToken != "" {
-			url += "&pageToken=" + pageToken
-		}
-
-		req, err := http.NewRequest("GET", url, nil)
-		if err != nil {
-			return nil, err
-		}
-		c.setAuthHeaders(req)
-
-		resp, err := httpClient.Do(req)
-		if err != nil {
-			return nil, err
-		}
-
-		var payload struct {
-			Sessions      []ApiSession `json:"sessions"`
-			NextPageToken string       `json:"nextPageToken"`
-		}
-		if err := json.NewDecoder(resp.Body).Decode(&payload); err != nil {
-			resp.Body.Close()
-			return nil, err
-		}
-		resp.Body.Close()
-
-		if resp.StatusCode >= 400 {
-			return nil, fmt.Errorf("Jules API request failed with status %d", resp.StatusCode)
-		}
-
-		allSessions = append(allSessions, payload.Sessions...)
-
-		pageToken = payload.NextPageToken
-		if pageToken == "" {
-			break
-		}
-	}
-
-	var results []models.JulesSession
-	for _, s := range allSessions {
-		results = append(results, transformSession(s))
-	}
-
-	return results, nil
-}
+// ListSessions fetches all sessions from the Jules API with pagination.
+
+// Uses pageSize=50 to avoid large single responses that cause timeouts.
+
+func (c *JulesClient) ListSessions() ([]models.JulesSession, error) {
+
+	if !c.isConfigured() {
+
+		return nil, fmt.Errorf("Jules credentials not found")
+
+	}
+
+
+
+	var allSessions []ApiSession
+
+	pageToken := ""
+
+
+
+	for {
+
+		url := fmt.Sprintf("%s/sessions?pageSize=50", JulesApiBaseUrl)
+
+		if pageToken != "" {
+
+			url += "&pageToken=" + pageToken
+
+		}
+
+
+
+		req, err := http.NewRequest("GET", url, nil)
+
+		if err != nil {
+
+			return nil, err
+
+		}
+
+		c.setAuthHeaders(req)
+
+
+
+		resp, err := httpClient.Do(req)
+
+		if err != nil {
+
+			return nil, err
+
+		}
+
+
+
+		var payload struct {
+
+			Sessions      []ApiSession `json:"sessions"`
+
+			NextPageToken string       `json:"nextPageToken"`
+
+		}
+
+		if err := json.NewDecoder(resp.Body).Decode(&payload); err != nil {
+
+			resp.Body.Close()
+
+			return nil, err
+
+		}
+
+		resp.Body.Close()
+
+
+
+		if resp.StatusCode >= 400 {
+
+			return nil, fmt.Errorf("Jules API request failed with status %d", resp.StatusCode)
+
+		}
+
+
+
+		allSessions = append(allSessions, payload.Sessions...)
+
+
+
+		pageToken = payload.NextPageToken
+
+		if pageToken == "" {
+
+			break
+
+		}
+
+	}
+
+
+
+	var results []models.JulesSession
+
+	for _, s := range allSessions {
+
+		results = append(results, transformSession(s))
+
+	}
+
+
+
+	return results, nil
+
+}
+
 
 // GetSession fetches metadata for a single session
 func (c *JulesClient) GetSession(id string) (models.JulesSession, error) {

@@ -109,7 +109,7 @@ debug.SetMemoryLimit(256 * 1024 * 1024)
 	// Port configuration from environment
 	port := os.Getenv("PORT")
 if port == "" {
-		port = "8082"
+		port = "8080"
 }
 
 	// WebSocket Middleware
