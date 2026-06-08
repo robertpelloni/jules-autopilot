@@ -28,11 +28,6 @@
     },
     {
       "type": "file",
-      "name": "hooks/use-terminal-available.ts",
-      "file": "hooks/use-terminal-available.ts"
-    },
-    {
-      "type": "file",
       "name": "lib/diff-utils.ts",
       "file": "lib/diff-utils.ts"
     },
@@ -48,13 +43,13 @@
     },
     {
       "type": "file",
-      "name": "prisma/schema-proposal.prisma",
-      "file": "prisma/schema-proposal.prisma"
+      "name": "hooks/use-terminal-available.ts",
+      "file": "hooks/use-terminal-available.ts"
     },
     {
       "type": "file",
-      "name": "server/index.ts",
-      "file": "server/index.ts"
+      "name": "prisma/schema-proposal.prisma",
+      "file": "prisma/schema-proposal.prisma"
     },
     {
       "type": "file",
@@ -123,13 +118,13 @@
     },
     {
       "type": "file",
-      "name": "lib/jules/request-queue.ts",
-      "file": "lib/jules/request-queue.ts"
+      "name": "lib/rag/embedder.ts",
+      "file": "lib/rag/embedder.ts"
     },
     {
       "type": "file",
-      "name": "lib/rag/embedder.ts",
-      "file": "lib/rag/embedder.ts"
+      "name": "lib/jules/request-queue.ts",
+      "file": "lib/jules/request-queue.ts"
     },
     {
       "type": "file",
@@ -532,13 +527,13 @@
       "type": "export",
       "name": "Command",
       "file": "components/ui/command.tsx",
-      "line": 147
+      "line": 175
     },
     {
       "type": "export",
       "name": "CommandShortcut",
       "file": "components/ui/command.tsx",
-      "line": 155
+      "line": 183
     },
     {
       "type": "export",
@@ -804,13 +799,13 @@
       "type": "export",
       "name": "Command",
       "file": "components/ui/command.tsx",
-      "line": 147
+      "line": 175
     },
     {
       "type": "export",
       "name": "CommandShortcut",
       "file": "components/ui/command.tsx",
-      "line": 155
+      "line": 183
     },
     {
       "type": "export",
@@ -1021,11 +1016,6 @@
     },
     {
       "type": "file",
-      "name": "hooks/use-terminal-available.ts",
-      "file": "hooks/use-terminal-available.ts"
-    },
-    {
-      "type": "file",
       "name": "lib/diff-utils.ts",
       "file": "lib/diff-utils.ts"
     },
@@ -1041,13 +1031,13 @@
     },
     {
       "type": "file",
-      "name": "prisma/schema-proposal.prisma",
-      "file": "prisma/schema-proposal.prisma"
+      "name": "hooks/use-terminal-available.ts",
+      "file": "hooks/use-terminal-available.ts"
     },
     {
       "type": "file",
-      "name": "server/index.ts",
-      "file": "server/index.ts"
+      "name": "prisma/schema-proposal.prisma",
+      "file": "prisma/schema-proposal.prisma"
     },
     {
       "type": "file",
@@ -1116,13 +1106,13 @@
     },
     {
       "type": "file",
-      "name": "lib/jules/request-queue.ts",
-      "file": "lib/jules/request-queue.ts"
+      "name": "lib/rag/embedder.ts",
+      "file": "lib/rag/embedder.ts"
     },
     {
       "type": "file",
-      "name": "lib/rag/embedder.ts",
-      "file": "lib/rag/embedder.ts"
+      "name": "lib/jules/request-queue.ts",
+      "file": "lib/jules/request-queue.ts"
     },
     {
       "type": "file",
@@ -1448,5 +1438,5 @@
       "line": 2
     }
   ],
-  "summary": "Found 127 issues"
+  "summary": "Found 126 issues"
 }

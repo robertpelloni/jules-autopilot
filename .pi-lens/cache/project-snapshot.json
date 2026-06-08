@@ -1,8 +1,8 @@
 {
   "version": 1,
   "projectRoot": "C:/Users/hyper/workspace/jules-autopilot",
-  "generatedAt": "2026-06-04T13:46:41.155Z",
-  "seq": 0,
+  "generatedAt": "2026-06-06T23:39:02.297Z",
+  "seq": 1,
   "files": {},
   "symbols": {},
   "reverseDeps": {},
@@ -14,14 +14,6 @@
     [
       "broadcastToClients",
       "C:\\Users\\hyper\\workspace\\jules-autopilot\\server\\index.ts"
-    ],
-    [
-      "buildSystemPrompt",
-      "C:\\Users\\hyper\\workspace\\jules-autopilot\\server\\supervisor.ts"
-    ],
-    [
-      "buildUserPrompt",
-      "C:\\Users\\hyper\\workspace\\jules-autopilot\\server\\supervisor.ts"
     ],
     [
       "calculateDiffStats",
@@ -54,14 +46,6 @@
     [
       "commandViewLogs",
       "C:\\Users\\hyper\\workspace\\jules-autopilot\\extensions\\vscode\\src\\extension.ts"
-    ],
-    [
-      "computeChecksum",
-      "C:\\Users\\hyper\\workspace\\jules-autopilot\\server\\rag.ts"
-    ],
-    [
-      "cosineSimilarity",
-      "C:\\Users\\hyper\\workspace\\jules-autopilot\\server\\rag.ts"
     ],
     [
       "createDaemonEvent",
@@ -148,10 +132,6 @@
       "C:\\Users\\hyper\\workspace\\jules-autopilot\\lib\\api\\observability.ts"
     ],
     [
-      "fetchEmbedding",
-      "C:\\Users\\hyper\\workspace\\jules-autopilot\\server\\rag.ts"
-    ],
-    [
       "fetchHealth",
       "C:\\Users\\hyper\\workspace\\jules-autopilot\\lib\\api\\health.ts"
     ],
@@ -178,10 +158,6 @@
     [
       "fetchScheduledTasks",
       "C:\\Users\\hyper\\workspace\\jules-autopilot\\lib\\api\\health.ts"
-    ],
-    [
-      "fetchSessionHistory",
-      "C:\\Users\\hyper\\workspace\\jules-autopilot\\server\\supervisor.ts"
     ],
     [
       "fetchSessionTokenUsage",
@@ -224,28 +200,12 @@
       "C:\\Users\\hyper\\workspace\\jules-autopilot\\lib\\api\\notifications.ts"
     ],
     [
-      "forceBump",
-      "C:\\Users\\hyper\\workspace\\jules-autopilot\\server\\daemon.ts"
-    ],
-    [
-      "generateLLMText",
-      "C:\\Users\\hyper\\workspace\\jules-autopilot\\server\\llm.ts"
-    ],
-    [
       "generateText",
       "C:\\Users\\hyper\\workspace\\jules-autopilot\\packages\\shared\\src\\orchestration\\providers\\index.ts"
     ],
     [
-      "getAllSessions",
-      "C:\\Users\\hyper\\workspace\\jules-autopilot\\server\\daemon.ts"
-    ],
-    [
       "getDefaultApiBaseUrl",
       "C:\\Users\\hyper\\workspace\\jules-autopilot\\lib\\jules\\client.ts"
-    ],
-    [
-      "getFreeModels",
-      "C:\\Users\\hyper\\workspace\\jules-autopilot\\server\\supervisor.ts"
     ],
     [
       "getJulesClient",
@@ -260,32 +220,12 @@
       "C:\\Users\\hyper\\workspace\\jules-autopilot\\lib\\session.ts"
     ],
     [
-      "getSupervisorAPIKey",
-      "C:\\Users\\hyper\\workspace\\jules-autopilot\\server\\llm.ts"
-    ],
-    [
       "isInCooldown",
       "C:\\Users\\hyper\\workspace\\jules-autopilot\\lib\\jules\\request-queue.ts"
     ],
     [
       "isLikelyApiKey",
       "C:\\Users\\hyper\\workspace\\jules-autopilot\\lib\\jules\\client.ts"
-    ],
-    [
-      "loadDoc",
-      "C:\\Users\\hyper\\workspace\\jules-autopilot\\server\\supervisor.ts"
-    ],
-    [
-      "loadGitLog",
-      "C:\\Users\\hyper\\workspace\\jules-autopilot\\server\\supervisor.ts"
-    ],
-    [
-      "loadProjectDocs",
-      "C:\\Users\\hyper\\workspace\\jules-autopilot\\server\\supervisor.ts"
-    ],
-    [
-      "main",
-      "C:\\Users\\hyper\\workspace\\jules-autopilot\\reduce-interval.ts"
     ],
     [
       "markAllNotificationsRead",
@@ -296,52 +236,16 @@
       "C:\\Users\\hyper\\workspace\\jules-autopilot\\lib\\api\\notifications.ts"
     ],
     [
-      "normalizeProvider",
-      "C:\\Users\\hyper\\workspace\\jules-autopilot\\server\\llm.ts"
-    ],
-    [
       "proxyToJules",
       "C:\\Users\\hyper\\workspace\\jules-autopilot\\server\\index.ts"
-    ],
-    [
-      "pruneOldLogs",
-      "C:\\Users\\hyper\\workspace\\jules-autopilot\\server\\daemon.ts"
-    ],
-    [
-      "queryCodebase",
-      "C:\\Users\\hyper\\workspace\\jules-autopilot\\server\\rag.ts"
     ],
     [
       "resolveAnomaly",
       "C:\\Users\\hyper\\workspace\\jules-autopilot\\lib\\api\\observability.ts"
     ],
     [
-      "resolveModel",
-      "C:\\Users\\hyper\\workspace\\jules-autopilot\\server\\llm.ts"
-    ],
-    [
-      "resolveProjectFolder",
-      "C:\\Users\\hyper\\workspace\\jules-autopilot\\server\\supervisor.ts"
-    ],
-    [
-      "shuffleArray",
-      "C:\\Users\\hyper\\workspace\\jules-autopilot\\server\\daemon.ts"
-    ],
-    [
-      "sleep",
-      "C:\\Users\\hyper\\workspace\\jules-autopilot\\server\\daemon.ts"
-    ],
-    [
-      "startDaemon",
-      "C:\\Users\\hyper\\workspace\\jules-autopilot\\server\\daemon.ts"
-    ],
-    [
       "startShadowPilot",
       "C:\\Users\\hyper\\workspace\\jules-autopilot\\lib\\api\\observability.ts"
-    ],
-    [
-      "stopDaemon",
-      "C:\\Users\\hyper\\workspace\\jules-autopilot\\server\\daemon.ts"
     ],
     [
       "stopShadowPilot",
@@ -354,10 +258,6 @@
     [
       "summarizeSession",
       "C:\\Users\\hyper\\workspace\\jules-autopilot\\packages\\shared\\src\\orchestration\\summarize.ts"
-    ],
-    [
-      "superviseSession",
-      "C:\\Users\\hyper\\workspace\\jules-autopilot\\server\\supervisor.ts"
     ],
     [
       "triggerScheduledTask",
@@ -410,19 +310,19 @@
     "hasCustomRules": true
   },
   "projectIndex": {
-    "entryCount": 171
+    "entryCount": 170
   },
   "startupScan": {
     "cwd": "C:\\Users\\hyper\\workspace\\jules-autopilot",
     "scanRoot": "C:\\Users\\hyper\\workspace\\jules-autopilot",
     "projectRoot": "C:\\Users\\hyper\\workspace\\jules-autopilot",
     "canWarmCaches": true,
-    "sourceFileCount": 174
+    "sourceFileCount": 168
   },
   "languageProfile": {
     "present": {
       "jsts": true,
-      "python": false,
+      "python": true,
       "go": true,
       "rust": false,
       "cxx": false,
@@ -462,13 +362,59 @@
       "prisma": true
     },
     "counts": {
-      "jsts": 116,
-      "go": 59
+      "jsts": 109,
+      "go": 59,
+      "python": 1
     },
     "detectedKinds": [
       "jsts",
+      "python",
       "go",
       "prisma"
+    ]
+  },
+  "conventions": {
+    "frameworks": [
+      {
+        "id": "react",
+        "confidence": "high",
+        "signals": [
+          "package.json:dependencies.react",
+          "package.json:dependencies.react-dom",
+          "package.json:devDependencies.@types/react"
+        ]
+      },
+      {
+        "id": "vite",
+        "confidence": "high",
+        "signals": [
+          "package.json:devDependencies.vite",
+          "vite.config.ts"
+        ]
+      },
+      {
+        "id": "vitest",
+        "confidence": "high",
+        "signals": [
+          "package.json:devDependencies.vitest"
+        ]
+      }
+    ],
+    "testRunners": [
+      "vitest"
+    ],
+    "buildTools": [
+      "vite"
+    ],
+    "agentDocs": [
+      {
+        "filePath": "AGENTS.md",
+        "lineCount": 31
+      },
+      {
+        "filePath": "CLAUDE.md",
+        "lineCount": 15
+      }
     ]
   }
 }
