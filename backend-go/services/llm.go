@@ -94,7 +94,7 @@ func defaultModelForProvider(provider string) string {
 	case "openrouter":
 		return "nvidia/nemotron-3-nano-omni-30b-a3b-reasoning:free"
 	case "gemini":
-		return "gemini-2.0-flash-exp"
+		return "gemini-2.0-flash"
 	default:
 		return "nvidia/nemotron-3-nano-omni-30b-a3b-reasoning:free"
 	}
@@ -380,7 +380,7 @@ func generateGeminiText(apiKey, model, systemPrompt string, messages []LLMMessag
 }
 
 var llmHttpClient = &http.Client{
-	Timeout: 60 * time.Second,
+	Timeout: 90 * time.Second,
 }
 
 // generateOpenRouterText handles all OpenAI-compatible API calls (openrouter + lmstudio).
