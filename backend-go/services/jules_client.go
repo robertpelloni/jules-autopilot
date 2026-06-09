@@ -446,6 +446,13 @@ func (c *JulesClient) ListActivitiesWithLimit(sessionId string, maxPages int) ([
 		for _, a := range data.Activities {
 			allActivities = append(allActivities, transformActivity(a, sessionId))
 		}
+
+		if len(data.Activities) > 0 {
+			first := data.Activities[0]["createTime"].(string)
+			last := data.Activities[len(data.Activities)-1]["createTime"].(string)
+			log.Printf("[Jules] Fetched %d activities (batch range: %s to %s)", len(data.Activities), first, last)
+		}
+
 		pageToken = data.NextPageToken
 	pagesFetched++
 		if pageToken == "" || pagesFetched >= maxPages {
