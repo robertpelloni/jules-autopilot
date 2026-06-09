@@ -1053,6 +1053,9 @@ func (w *Worker) handleCheckSession(payload string) (string, error) {
 	if session.RawState == "IN_PROGRESS" {
 		thresholdMinutes = settings.ActiveWorkThresholdMinutes
 		if time.Since(lastActivityTime) < recentActivityWindow {
+			// Session is actively being worked on — touch cooldown to prevent
+			// the daemon from re-enqueuing it on every tick.
+			touchSessionCooldown(session.ID)
 			return "none", nil
 		}
 	}
