@@ -2,6 +2,19 @@
 
 All notable changes to this project will be documented in this file.
 
+## [3.6.5] - 2026-06-10
+
+### Added
+- **Full API Pagination**: Refactored the Go backend's `ListSessions` method to support full API pagination. The system can now monitor and manage up to 1,000 active sessions (increased from 100).
+- **Automated LLM Fallback Rotation**: Implemented a sophisticated fallback engine for LLM requests. During OpenRouter rate-limiting events (429), the system now automatically rotates through a priority list of free models (Gemini Flash, Llama 3.1, Mistral, Qwen, Phi-3).
+- **Fast-Fail Circuit Breakers**: Enhanced local provider detection (LM Studio, LocalProxy) with immediate circuit breaking on "Connection Refused" errors, preventing worker queue blocks.
+
+### Changed
+- **WebSocket Connection Hardening**: Increased the default WebSocket ping interval to 60 seconds. This improves connection stability in high-latency environments and eliminates transient "Ping timeout" disconnections.
+
+### Fixed
+- **Project Configuration**: Migrated `pnpm.overrides` to the root `overrides` field in `package.json` to align with pnpm v9+ standards and resolve build-time warnings.
+
 ## [3.6.4] - 2026-06-06
 
 ### Fixed

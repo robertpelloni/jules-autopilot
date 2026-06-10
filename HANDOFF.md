@@ -1,24 +1,24 @@
 # Handoff Documentation
 
-## Date: 2026-04-09
-## Version: 3.5.1
+## Date: 2026-06-10
+## Version: 3.6.5
 
 ### Current State Analysis
-I have conducted a deep analysis of the project across `ROADMAP.md`, `TODO.md`, `README.md`, and the conversation history.
+I have completed a comprehensive repository synchronization and intelligent merge protocol. The repository is now fully synced with upstream and all local improvements have been consolidated.
 
 **Key Achievements:**
-- The transition to a pure Go backend is 100% complete (`server/` directory is deleted).
-- Go version downgraded to `1.26.0` to resolve the Render deployment blocker.
-- Versioning is strictly centralized using `VERSION` and `scripts/update-version.js`.
+- **Full API Pagination**: Refactored `ListSessions` in the Go backend to support full API pagination, enabling discovery of up to 1,000 sessions.
+- **Robust LLM Fallbacks**: Implemented automated rotating fallbacks for OpenRouter rate limits (429), cycling through alternative free models.
+- **WebSocket Stability**: Increased ping interval to 60s to harden connections against high Jules API latency.
+- **Repository Sync**: Successfully merged `upstream/main` and caught up the `recovery_20260607_082839` branch.
+- **Version Bump**: Incremented project version to `3.6.5` and updated all internal references.
 
-**Missing Features Identified for Next Agents:**
-1. **Shadow Pilot Git Diff Monitoring:** The Go backend needs a scheduled job or filesystem watcher to parse `git diff` outputs, evaluate them via an LLM, and log anomalies.
-2. **CI Pipeline Auto-Fix:** Shadow Pilot detects CI failures but the auto-enqueue mechanism to fix them autonomously is missing.
-4. **Submodule Git Status API:** The `/api/system/status` API needs Go parity to read live submodule status (dirty, uninitialized, out-of-sync) and broadcast to the frontend.
+**Handled Conflicts:**
+- Resolved a conflict in `backend-go/services/jules_client.go` between upstream changes and my local pagination/logging improvements.
 
-### Next Steps for Implementing Models (Gemini, Claude, GPT)
-- **Model 1:** Start by wiring up the `GET /api/system/status` endpoint in Go to read submodule git states natively and update the React `SystemDashboard` to consume this dynamic data instead of `app/submodules.json`.
-- **Model 2:** Implement the Git Diff anomaly detector in Go `cmd/index-repo` or as a background cron job in `main.go`.
-- **Model 3:** Complete the CI Pipeline auto-fix loop by hooking incoming webhooks to the session spawn logic.
+### Next Steps for Implementing Models
+1. **Shadow Pilot Git Diff Monitoring:** Implement the scheduled job in Go to parse `git diff` outputs and detect anomalies.
+2. **CI Pipeline Auto-Fix:** Hook incoming CI failure webhooks to the autonomous session spawn logic.
+3. **Submodule Status Go Parity:** Implement `/api/system/status` in Go to provide live submodule git states to the frontend.
 
-Please refer to `MEMORY.md` and `DEPLOY.md` for architectural context. Ensure you update `CHANGELOG.md` and run `pnpm run update-version` after merging new features.
+Please refer to `MEMORY.md` for architectural patterns and `TODO.md` for granular tasks.
