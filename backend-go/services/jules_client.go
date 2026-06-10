@@ -18,7 +18,7 @@ const JulesApiBaseUrl = "https://jules.googleapis.com/v1alpha"
 
 // httpClient with timeout to prevent goroutine leaks from hanging API calls
 var httpClient = &http.Client{
-	Timeout: 120 * time.Second,
+	Timeout: 180 * time.Second,
 }
 
 type JulesClient struct {
@@ -150,13 +150,6 @@ type apiSource struct {
 	Raw    map[string]interface{} `json:"-"`
 }
 
-func truncatePageToken(token string) string {
-	if len(token) <= 12 {
-		return token
-	}
-	return token[:8] + "..." + token[len(token)-4:]
-}
-
 func (c *JulesClient) ListSources(filter string) ([]JulesSource, error) {
 	if !c.isConfigured() {
 		return nil, fmt.Errorf("Jules credentials not found")
@@ -170,9 +163,6 @@ func (c *JulesClient) ListSources(filter string) ([]JulesSource, error) {
 		params := make([]string, 0, 2)
 		if pageToken != "" {
 			params = append(params, "pageToken="+pageToken)
-			log.Printf("[Jules] GET sources (pageToken: %s)", truncatePageToken(pageToken))
-		} else {
-			log.Printf("[Jules] GET sources")
 		}
 		if strings.TrimSpace(filter) != "" {
 			params = append(params, "filter="+filter)
@@ -246,45 +236,118 @@ func (c *JulesClient) ListSources(filter string) ([]JulesSource, error) {
 	return results, nil
 }
 
-// ListSessions fetches all sessions from the Jules API
+// ListSessions fetches all sessions from the Jules API with pagination.
+
+// Uses pageSize=50 to avoid large single responses that cause timeouts.
+
 func (c *JulesClient) ListSessions() ([]models.JulesSession, error) {
+
 	if !c.isConfigured() {
+
 		return nil, fmt.Errorf("Jules credentials not found")
+
 	}
 
-	url := fmt.Sprintf("%s/sessions", JulesApiBaseUrl)
-	req, err := http.NewRequest("GET", url, nil)
-	if err != nil {
-		return nil, err
+
+
+	var allSessions []ApiSession
+
+	pageToken := ""
+
+
+
+	for {
+
+		url := fmt.Sprintf("%s/sessions?pageSize=50", JulesApiBaseUrl)
+
+		if pageToken != "" {
+
+			url += "&pageToken=" + pageToken
+
+		}
+
+
+
+		req, err := http.NewRequest("GET", url, nil)
+
+		if err != nil {
+
+			return nil, err
+
+		}
+
+		c.setAuthHeaders(req)
+
+
+
+		resp, err := httpClient.Do(req)
+
+		if err != nil {
+
+			return nil, err
+
+		}
+
+
+
+		var payload struct {
+
+			Sessions      []ApiSession `json:"sessions"`
+
+			NextPageToken string       `json:"nextPageToken"`
+
+		}
+
+		if err := json.NewDecoder(resp.Body).Decode(&payload); err != nil {
+
+			resp.Body.Close()
+
+			return nil, err
+
+		}
+
+		resp.Body.Close()
+
+
+
+		if resp.StatusCode >= 400 {
+
+			return nil, fmt.Errorf("Jules API request failed with status %d", resp.StatusCode)
+
+		}
+
+
+
+		allSessions = append(allSessions, payload.Sessions...)
+
+
+
+		pageToken = payload.NextPageToken
+
+		if pageToken == "" {
+
+			break
+
+		}
+
 	}
 
-	c.setAuthHeaders(req)
 
-	resp, err := httpClient.Do(req)
-	if err != nil {
-		return nil, err
-	}
-	defer resp.Body.Close()
-
-	if resp.StatusCode != http.StatusOK {
-		body, _ := io.ReadAll(resp.Body)
-		return nil, fmt.Errorf("Jules API request failed with status %d: %s", resp.StatusCode, string(body))
-	}
-
-	var data struct {
-		Sessions []ApiSession `json:"sessions"`
-	}
-	if err := json.NewDecoder(resp.Body).Decode(&data); err != nil {
-		return nil, err
-	}
 
 	var results []models.JulesSession
-	for _, s := range data.Sessions {
+
+	for _, s := range allSessions {
+
 		results = append(results, transformSession(s))
+
 	}
 
+
+
 	return results, nil
+
 }
+
 
 // GetSession fetches metadata for a single session
 func (c *JulesClient) GetSession(id string) (models.JulesSession, error) {
@@ -416,10 +479,8 @@ func (c *JulesClient) ListActivitiesWithLimit(sessionId string, maxPages int) ([
 		url := fmt.Sprintf("%s/sessions/%s/activities?pageSize=50", JulesApiBaseUrl, sessionId)
 		if pageToken != "" {
 			url += "&pageToken=" + pageToken
-			log.Printf("[Jules] GET activities (pageToken: %s)", truncatePageToken(pageToken))
-		} else {
-			log.Printf("[Jules] GET activities")
 		}
+		log.Printf("[Jules] GET %s", url)
 		req, err := http.NewRequest("GET", url, nil)
 		if err != nil {
 			return nil, err
