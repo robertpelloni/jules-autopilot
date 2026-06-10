@@ -17,9 +17,9 @@ import (
 )
 
 type circuitBreaker struct {
-	mu          sync.RWMutex
-	failures    map[string]int
-	openUntil   map[string]time.Time
+	mu           sync.RWMutex
+	failures     map[string]int
+	openUntil    map[string]time.Time
 	failureLimit int
 	openDuration time.Duration
 }
@@ -155,7 +155,16 @@ func generateLLMText(primaryProvider, primaryApiKey, primaryModel, systemPrompt 
 
 	// Fallback chain: Primary -> Gemini -> OpenRouter -> LocalProxy -> LMStudio
 	providers := []string{primaryProvider}
-	fallbacks := []string{"gemini", "openrouter", "localproxy", "lmstudio"}
+	fallbacks := []string{"gemini", "openrouter"} // Focus on cloud fallbacks first
+
+	// Only add local providers if specifically requested or as last resort
+	if primaryProvider == "lmstudio" || primaryProvider == "localproxy" {
+		fallbacks = append(fallbacks, "localproxy", "lmstudio")
+	} else {
+		// Just in case, add them at the very end
+		fallbacks = append(fallbacks, "localproxy", "lmstudio")
+	}
+
 	for _, p := range fallbacks {
 		exists := false
 		for _, existing := range providers {
@@ -178,11 +187,12 @@ func generateLLMText(primaryProvider, primaryApiKey, primaryModel, systemPrompt 
 
 		apiKey := primaryApiKey
 		model := primaryModel
+
 		if i > 0 {
 			// This is a fallback attempt
 			apiKey = getSupervisorAPIKey(provider, nil)
-		if provider != "lmstudio" && provider != "localproxy" && (apiKey == "" || apiKey == "placeholder") {
-				continue // Cannot fallback without an API key (lmstudio is local, no key needed)
+			if provider != "lmstudio" && provider != "localproxy" && (apiKey == "" || apiKey == "placeholder") {
+				continue // Cannot fallback without an API key
 			}
 			model = resolveModel(provider, "")
 		}
@@ -193,7 +203,30 @@ func generateLLMText(primaryProvider, primaryApiKey, primaryModel, systemPrompt 
 		if provider == "gemini" {
 			result, err = generateGeminiText(apiKey, model, systemPrompt, messages)
 		} else {
-			result, err = generateOpenRouterText(apiKey, model, systemPrompt, messages)
+			// If we are falling back to OpenRouter because of a 429,
+			// we should try different free models instead of the same rate-limited one.
+			if provider == "openrouter" && i > 0 {
+				freeModels := []string{
+					"google/gemini-2.0-flash-exp:free",
+					"meta-llama/llama-3.1-8b-instruct:free",
+					"mistralai/mistral-7b-instruct:free",
+					"qwen/qwen-2.5-72b-instruct:free",
+					"microsoft/phi-3-mini-128k-instruct:free",
+				}
+				for _, freeModel := range freeModels {
+					if freeModel == primaryModel {
+						continue
+					}
+					log.Printf("[LLM] Falling back to alternative OpenRouter free model: %s", freeModel)
+					result, err = generateOpenRouterText(apiKey, freeModel, systemPrompt, messages)
+					if err == nil {
+						break
+					}
+					log.Printf("[LLM] Alternative free model %s failed: %v", freeModel, err)
+				}
+			} else {
+				result, err = generateOpenRouterText(apiKey, model, systemPrompt, messages)
+			}
 		}
 
 		if err != nil {
@@ -201,12 +234,23 @@ func generateLLMText(primaryProvider, primaryApiKey, primaryModel, systemPrompt 
 			lastErr = err
 			errStr := err.Error()
 			RecordLLMLatency(provider, result.LatencyMs, false)
+
+			// Detect transient vs permanent failures
+			isRateLimit := strings.Contains(errStr, "429") || strings.Contains(errStr, "RESOURCE_EXHAUSTED")
+			isTimeout := strings.Contains(errStr, "timeout") || strings.Contains(errStr, "deadline exceeded")
+			isConnectionRefused := strings.Contains(errStr, "connection refused") || strings.Contains(errStr, "connectex")
+
 			if strings.TrimSpace(apiKey) != "" && apiKey != "placeholder" {
-				// Record failure for circuit breaker on 429 or 5xx
-				if strings.Contains(errStr, "429") || strings.Contains(errStr, "RESOURCE_EXHAUSTED") || strings.Contains(errStr, "502") || strings.Contains(errStr, "503") || strings.Contains(errStr, "timeout") {
+				if isRateLimit || isTimeout || strings.Contains(errStr, "502") || strings.Contains(errStr, "503") {
 					cb.recordFailure(provider)
 				}
 			}
+
+			// If connection refused, don't even try local fallbacks if we're not already on them
+			if isConnectionRefused && (provider == "lmstudio" || provider == "localproxy") {
+				cb.recordFailure(provider) // Trip it immediately
+			}
+
 			continue
 		}
 
@@ -225,6 +269,7 @@ func generateLLMText(primaryProvider, primaryApiKey, primaryModel, systemPrompt 
 				"event":            "llm_fallback_success",
 				"originalProvider": primaryProvider,
 				"fallbackProvider": provider,
+				"modelUsed":        model,
 			})
 		}
 		return result, nil
@@ -405,10 +450,10 @@ func generateOpenRouterText(apiKey, model, systemPrompt string, messages []LLMMe
 	}
 
 	requestBody, _ := json.Marshal(map[string]interface{}{
-		"model":      model,
-		"messages":   requestMessages,
+		"model":       model,
+		"messages":    requestMessages,
 		"temperature": 0.2,
-		"max_tokens": 512,
+		"max_tokens":  512,
 	})
 
 	req, err := http.NewRequest(http.MethodPost, apiURL, bytes.NewReader(requestBody))
@@ -455,6 +500,10 @@ func generateOpenRouterText(apiKey, model, systemPrompt string, messages []LLMMe
 		resp, err := llmHttpClient.Do(retryReq)
 		if err != nil {
 			lastErr = err
+			// If connection refused, don't retry even if isLMStudio is true
+			if strings.Contains(err.Error(), "connection refused") || strings.Contains(err.Error(), "connectex") {
+				return LLMResult{}, fmt.Errorf("LLM request to %s failed: %w", apiURL, err)
+			}
 			continue
 		}
 
@@ -477,15 +526,15 @@ func generateOpenRouterText(apiKey, model, systemPrompt string, messages []LLMMe
 		var data struct {
 			Choices []struct {
 				Message struct {
-					Content string `json:"content"`
+					Content          string `json:"content"`
 					ReasoningContent string `json:"reasoning_content"`
-					Reasoning string `json:"reasoning"`
+					Reasoning        string `json:"reasoning"`
 				} `json:"message"`
 			} `json:"choices"`
 			Usage struct {
-				PromptTokens int `json:"prompt_tokens"`
+				PromptTokens     int `json:"prompt_tokens"`
 				CompletionTokens int `json:"completion_tokens"`
-				TotalTokens int `json:"total_tokens"`
+				TotalTokens      int `json:"total_tokens"`
 			} `json:"usage"`
 		}
 		if err := json.NewDecoder(resp.Body).Decode(&data); err != nil {
@@ -508,15 +557,15 @@ func generateOpenRouterText(apiKey, model, systemPrompt string, messages []LLMMe
 			return LLMResult{}, fmt.Errorf("LLM returned empty content (finish_reason may be length)")
 		}
 		return LLMResult{
-			Content: resultContent,
+			Content:   resultContent,
 			LatencyMs: float64(time.Since(start).Milliseconds()),
 			Usage: &LLMUsage{
-				PromptTokens: data.Usage.PromptTokens,
+				PromptTokens:     data.Usage.PromptTokens,
 				CompletionTokens: data.Usage.CompletionTokens,
-				TotalTokens: data.Usage.TotalTokens,
+				TotalTokens:      data.Usage.TotalTokens,
 			},
 		}, nil
 	}
 
 	return LLMResult{}, fmt.Errorf("LLM request to %s failed after %d attempts: %w", apiURL, maxRetries+1, lastErr)
-	}
+}

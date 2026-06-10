@@ -48,6 +48,9 @@ This document tracks granular bugs, missing features, and technical debt. For ep
 - [x] **Webhook Event Router (v5.0 Enhanced):** Configurable rule-based routing with 4 action types (log, enqueue, notify, delegate) and 5 providers (borg, github, slack, linear, generic) with CRUD API.
 - [x] **Audit Trail (v4.0):** Implemented immutable append-only audit log in Go with structured metadata, paginated frontend view, and aggregate statistics.
 - [x] **Borg Collective UI:** Implemented the "Collective Signals" feed in the Fleet tab to visualize incoming Borg signals.
+- [x] **Full API Pagination (v3.6.5):** Refactored `ListSessions` in the Go backend to support full API pagination, increasing session discovery capacity from 100 to 1,000 sessions.
+- [x] **Robust LLM Fallbacks (v3.6.5):** Implemented an automated rotation strategy for OpenRouter models, allowing the system to seamlessly cycle through alternative free models during rate-limiting (429) events.
+- [x] **WebSocket Stability (v3.6.5):** Hardened the real-time event layer by increasing the WebSocket ping interval to 60s, resolving transient "Ping timeout" issues in high-latency network conditions.
 
 ## Technical Debt & Refactoring
 - [x] **Auth Protocol Enforcement:** Locked down Jules Portal `AQ.A` tokens to use `x-goog-api-key` and strictly delete `Authorization` headers to prevent gateway blocks.
