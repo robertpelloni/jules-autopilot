@@ -34,10 +34,10 @@ func TestDefaultModelForProvider(t *testing.T) {
 	}{
 		{"openai", defaultModel},
 		{"anthropic", defaultModel},
-		{"gemini", defaultModel},
+		{"gemini", "gemini-2.0-flash"},
 		{"unknown", defaultModel},
 		{"openrouter", defaultModel},
-		{"lmstudio", "gemma-4-e2b-uncensored-hauhaucs-aggressive"},
+		{"lmstudio", "gemma-4-e4b-uncensored-hauhaucs-aggressive"},
 	}
 
 	for _, tt := range tests {

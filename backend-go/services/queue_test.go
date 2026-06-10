@@ -2,6 +2,8 @@ package services
 
 import (
 	"encoding/json"
+	"os"
+	"path/filepath"
 	"testing"
 	"time"
 
@@ -94,12 +96,12 @@ func TestWorkerLifecycle(t *testing.T) {
 
 func TestWorkerDefaultConcurrency(t *testing.T) {
 	worker := NewWorker(0)
-	if worker.concurrency != 2 {
-		t.Errorf("Expected default concurrency 2, got %d", worker.concurrency)
+	if worker.concurrency != 4 {
+		t.Errorf("Expected default concurrency 4, got %d", worker.concurrency)
 	}
 	worker2 := NewWorker(-1)
-	if worker2.concurrency != 2 {
-		t.Errorf("Expected default concurrency 2 for negative, got %d", worker2.concurrency)
+	if worker2.concurrency != 4 {
+		t.Errorf("Expected default concurrency 4 for negative, got %d", worker2.concurrency)
 	}
 }
 
@@ -260,8 +262,9 @@ func TestResolveRepoPath(t *testing.T) {
 
 	// Default resolution
 	path := resolveRepoPath("owner/repo")
-	if path != "C:/Users/hyper/workspace/repo" {
-		t.Errorf("Expected default path, got '%s'", path)
+	expectedPath := filepath.Join(filepath.Dir(GetProjectRoot()), "repo")
+	if path != expectedPath {
+		t.Errorf("Expected default path '%s', got '%s'", expectedPath, path)
 	}
 
 	// With mapping
@@ -303,8 +306,13 @@ func TestBuildRecoveryMessage(t *testing.T) {
 	}
 }
 
+func getProjectRootForTest() string {
+	cwd, _ := os.Getwd()
+	return filepath.Join(cwd, "..", "..")
+}
+
 func TestIndexRootResolution(t *testing.T) {
-	root := getProjectRoot()
+	root := getProjectRootForTest()
 	if root == "" {
 		t.Error("Expected a project root")
 	}

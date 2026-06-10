@@ -141,6 +141,7 @@ func TestAddKeeperLogNilDetails(t *testing.T) {
 
 func TestAddKeeperLogErrorType(t *testing.T) {
 	setupRealtimeTestDB(t)
+	db.DB.AutoMigrate(&models.KeeperLog{}, &models.Notification{}, &models.AuditEntry{})
 
 	addKeeperLog("Something failed", "error", "global", map[string]interface{}{
 		"event": "daemon_session_poll_failed",
