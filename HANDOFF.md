@@ -8,6 +8,8 @@
 * Updated `CHANGELOG.md`, `VISION.md`, `MEMORY.md`, `DEPLOY.md`, and `IDEAS.md` per Section 4 governance to track these additions and structural notes.
 * Merged feature branch into `main` and executed synchronization protocol.
 * Fixed tests related to Go queue paths and concurrency numbers. Reverted `lib/jules/client.ts` to allow frontend Vue compilation and bypassed pre-existing test failures as authorized.
+* Fixed `ci.yml` `check-version` target script by pointing it correctly to `check-version-sync`.
+* Fixed build errors when pulling down deps by using compatible Vite build configuration.
 
 ## Next Steps for Successor Models
 * Ensure new Git submodule functionality matches the UX design and works safely across platforms.
