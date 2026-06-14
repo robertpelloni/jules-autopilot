@@ -118,13 +118,13 @@
     },
     {
       "type": "file",
-      "name": "lib/rag/embedder.ts",
-      "file": "lib/rag/embedder.ts"
+      "name": "lib/jules/request-queue.ts",
+      "file": "lib/jules/request-queue.ts"
     },
     {
       "type": "file",
-      "name": "lib/jules/request-queue.ts",
-      "file": "lib/jules/request-queue.ts"
+      "name": "lib/rag/embedder.ts",
+      "file": "lib/rag/embedder.ts"
     },
     {
       "type": "file",
@@ -237,97 +237,103 @@
     },
     {
       "type": "dependency",
-      "name": "@hookform/resolvers",
+      "name": "@hono/node-server",
       "file": "package.json",
       "line": 34
     },
     {
       "type": "dependency",
-      "name": "@radix-ui/react-accordion",
+      "name": "@hookform/resolvers",
       "file": "package.json",
-      "line": 36
-    },
-    {
-      "type": "dependency",
-      "name": "@radix-ui/react-popover",
-      "file": "package.json",
-      "line": 42
-    },
-    {
-      "type": "dependency",
-      "name": "@radix-ui/react-progress",
-      "file": "package.json",
-      "line": 43
-    },
-    {
-      "type": "dependency",
-      "name": "diff",
-      "file": "package.json",
-      "line": 57
-    },
-    {
-      "type": "dependency",
-      "name": "handlebars",
-      "file": "package.json",
-      "line": 59
-    },
-    {
-      "type": "dependency",
-      "name": "motion",
-      "file": "package.json",
-      "line": 61
-    },
-    {
-      "type": "dependency",
-      "name": "nanoid",
-      "file": "package.json",
-      "line": 62
-    },
-    {
-      "type": "dependency",
-      "name": "react-hook-form",
-      "file": "package.json",
-      "line": 66
-    },
-    {
-      "type": "dependency",
-      "name": "tunnel-rat",
-      "file": "package.json",
-      "line": 72
-    },
-    {
-      "type": "dependency",
-      "name": "zod",
-      "file": "package.json",
-      "line": 73
+      "line": 35
     },
     {
       "type": "dependency",
       "name": "@prisma/client",
       "file": "package.json",
-      "line": 75
+      "line": 37
     },
     {
       "type": "dependency",
-      "name": "@hono/node-server",
+      "name": "@radix-ui/react-accordion",
       "file": "package.json",
-      "line": 76
+      "line": 38
     },
     {
       "type": "dependency",
-      "name": "hono",
+      "name": "@radix-ui/react-popover",
       "file": "package.json",
-      "line": 78
+      "line": 44
+    },
+    {
+      "type": "dependency",
+      "name": "@radix-ui/react-progress",
+      "file": "package.json",
+      "line": 45
     },
     {
       "type": "dependency",
       "name": "axios",
       "file": "package.json",
-      "line": 79
+      "line": 55
+    },
+    {
+      "type": "dependency",
+      "name": "diff",
+      "file": "package.json",
+      "line": 60
+    },
+    {
+      "type": "dependency",
+      "name": "handlebars",
+      "file": "package.json",
+      "line": 62
+    },
+    {
+      "type": "dependency",
+      "name": "hono",
+      "file": "package.json",
+      "line": 63
+    },
+    {
+      "type": "dependency",
+      "name": "motion",
+      "file": "package.json",
+      "line": 65
+    },
+    {
+      "type": "dependency",
+      "name": "nanoid",
+      "file": "package.json",
+      "line": 66
+    },
+    {
+      "type": "dependency",
+      "name": "react-hook-form",
+      "file": "package.json",
+      "line": 70
+    },
+    {
+      "type": "dependency",
+      "name": "tunnel-rat",
+      "file": "package.json",
+      "line": 77
+    },
+    {
+      "type": "dependency",
+      "name": "zod",
+      "file": "package.json",
+      "line": 78
     },
     {
       "type": "devDependency",
-      "name": "prisma",
+      "name": "@babel/preset-env",
+      "file": "package.json",
+      "line": 108
+    },
+    {
+      "type": "devDependency",
+      "name": "@babel/preset-typescript",
       "file": "package.json",
       "line": 109
     },
@@ -351,39 +357,51 @@
     },
     {
       "type": "devDependency",
+      "name": "babel-plugin-transform-import-meta",
+      "file": "package.json",
+      "line": 123
+    },
+    {
+      "type": "devDependency",
       "name": "jest-environment-jsdom",
-      "file": "package.json",
-      "line": 127
-    },
-    {
-      "type": "devDependency",
-      "name": "jest-environment-node",
-      "file": "package.json",
-      "line": 128
-    },
-    {
-      "type": "devDependency",
-      "name": "postcss",
       "file": "package.json",
       "line": 129
     },
     {
       "type": "devDependency",
-      "name": "ts-node",
+      "name": "jest-environment-node",
+      "file": "package.json",
+      "line": 130
+    },
+    {
+      "type": "devDependency",
+      "name": "postcss",
+      "file": "package.json",
+      "line": 131
+    },
+    {
+      "type": "devDependency",
+      "name": "prisma",
       "file": "package.json",
       "line": 132
     },
     {
       "type": "devDependency",
+      "name": "ts-node",
+      "file": "package.json",
+      "line": 135
+    },
+    {
+      "type": "devDependency",
       "name": "tw-animate-css",
       "file": "package.json",
-      "line": 133
+      "line": 136
     },
     {
       "type": "devDependency",
       "name": "vitest",
       "file": "package.json",
-      "line": 137
+      "line": 140
     },
     {
       "type": "dependency",
@@ -1106,13 +1124,13 @@
     },
     {
       "type": "file",
-      "name": "lib/rag/embedder.ts",
-      "file": "lib/rag/embedder.ts"
+      "name": "lib/jules/request-queue.ts",
+      "file": "lib/jules/request-queue.ts"
     },
     {
       "type": "file",
-      "name": "lib/jules/request-queue.ts",
-      "file": "lib/jules/request-queue.ts"
+      "name": "lib/rag/embedder.ts",
+      "file": "lib/rag/embedder.ts"
     },
     {
       "type": "file",
@@ -1227,97 +1245,103 @@
     },
     {
       "type": "dependency",
-      "name": "@hookform/resolvers",
+      "name": "@hono/node-server",
       "file": "package.json",
       "line": 34
     },
     {
       "type": "dependency",
-      "name": "@radix-ui/react-accordion",
+      "name": "@hookform/resolvers",
       "file": "package.json",
-      "line": 36
-    },
-    {
-      "type": "dependency",
-      "name": "@radix-ui/react-popover",
-      "file": "package.json",
-      "line": 42
-    },
-    {
-      "type": "dependency",
-      "name": "@radix-ui/react-progress",
-      "file": "package.json",
-      "line": 43
-    },
-    {
-      "type": "dependency",
-      "name": "diff",
-      "file": "package.json",
-      "line": 57
-    },
-    {
-      "type": "dependency",
-      "name": "handlebars",
-      "file": "package.json",
-      "line": 59
-    },
-    {
-      "type": "dependency",
-      "name": "motion",
-      "file": "package.json",
-      "line": 61
-    },
-    {
-      "type": "dependency",
-      "name": "nanoid",
-      "file": "package.json",
-      "line": 62
-    },
-    {
-      "type": "dependency",
-      "name": "react-hook-form",
-      "file": "package.json",
-      "line": 66
-    },
-    {
-      "type": "dependency",
-      "name": "tunnel-rat",
-      "file": "package.json",
-      "line": 72
-    },
-    {
-      "type": "dependency",
-      "name": "zod",
-      "file": "package.json",
-      "line": 73
+      "line": 35
     },
     {
       "type": "dependency",
       "name": "@prisma/client",
       "file": "package.json",
-      "line": 75
+      "line": 37
     },
     {
       "type": "dependency",
-      "name": "@hono/node-server",
+      "name": "@radix-ui/react-accordion",
       "file": "package.json",
-      "line": 76
+      "line": 38
     },
     {
       "type": "dependency",
-      "name": "hono",
+      "name": "@radix-ui/react-popover",
       "file": "package.json",
-      "line": 78
+      "line": 44
+    },
+    {
+      "type": "dependency",
+      "name": "@radix-ui/react-progress",
+      "file": "package.json",
+      "line": 45
     },
     {
       "type": "dependency",
       "name": "axios",
       "file": "package.json",
-      "line": 79
+      "line": 55
+    },
+    {
+      "type": "dependency",
+      "name": "diff",
+      "file": "package.json",
+      "line": 60
+    },
+    {
+      "type": "dependency",
+      "name": "handlebars",
+      "file": "package.json",
+      "line": 62
+    },
+    {
+      "type": "dependency",
+      "name": "hono",
+      "file": "package.json",
+      "line": 63
+    },
+    {
+      "type": "dependency",
+      "name": "motion",
+      "file": "package.json",
+      "line": 65
+    },
+    {
+      "type": "dependency",
+      "name": "nanoid",
+      "file": "package.json",
+      "line": 66
+    },
+    {
+      "type": "dependency",
+      "name": "react-hook-form",
+      "file": "package.json",
+      "line": 70
+    },
+    {
+      "type": "dependency",
+      "name": "tunnel-rat",
+      "file": "package.json",
+      "line": 77
+    },
+    {
+      "type": "dependency",
+      "name": "zod",
+      "file": "package.json",
+      "line": 78
     },
     {
       "type": "devDependency",
-      "name": "prisma",
+      "name": "@babel/preset-env",
+      "file": "package.json",
+      "line": 108
+    },
+    {
+      "type": "devDependency",
+      "name": "@babel/preset-typescript",
       "file": "package.json",
       "line": 109
     },
@@ -1341,39 +1365,51 @@
     },
     {
       "type": "devDependency",
+      "name": "babel-plugin-transform-import-meta",
+      "file": "package.json",
+      "line": 123
+    },
+    {
+      "type": "devDependency",
       "name": "jest-environment-jsdom",
-      "file": "package.json",
-      "line": 127
-    },
-    {
-      "type": "devDependency",
-      "name": "jest-environment-node",
-      "file": "package.json",
-      "line": 128
-    },
-    {
-      "type": "devDependency",
-      "name": "postcss",
       "file": "package.json",
       "line": 129
     },
     {
       "type": "devDependency",
-      "name": "ts-node",
+      "name": "jest-environment-node",
+      "file": "package.json",
+      "line": 130
+    },
+    {
+      "type": "devDependency",
+      "name": "postcss",
+      "file": "package.json",
+      "line": 131
+    },
+    {
+      "type": "devDependency",
+      "name": "prisma",
       "file": "package.json",
       "line": 132
     },
     {
       "type": "devDependency",
+      "name": "ts-node",
+      "file": "package.json",
+      "line": 135
+    },
+    {
+      "type": "devDependency",
       "name": "tw-animate-css",
       "file": "package.json",
-      "line": 133
+      "line": 136
     },
     {
       "type": "devDependency",
       "name": "vitest",
       "file": "package.json",
-      "line": 137
+      "line": 140
     },
     {
       "type": "dependency",
@@ -1438,5 +1474,5 @@
       "line": 2
     }
   ],
-  "summary": "Found 126 issues"
+  "summary": "Found 129 issues"
 }

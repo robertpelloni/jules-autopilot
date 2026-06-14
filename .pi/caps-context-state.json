@@ -1,6 +1,4 @@
 {
-	"CHANGELOG.md": true,
-	"CONTRIBUTING.md": true,
 	"DEPLOY.md": true,
 	"GEMINI.md": true,
 	"GPT.md": true,
@@ -9,8 +7,6 @@
 	"LLM_INSTRUCTIONS.md": true,
 	"MEMORY.md": true,
 	"RAG_ARCHITECTURE.md": true,
-	"README.md": true,
-	"ROADMAP.md": true,
 	"SUBMODULE_INVENTORY.md": true,
 	"TODO.md": true,
 	"UNIVERSAL_LLM_INSTRUCTIONS.md": true,
