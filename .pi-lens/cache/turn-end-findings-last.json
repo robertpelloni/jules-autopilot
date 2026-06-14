@@ -1,6 +1,0 @@
-{
-  "signature": "monitor.py::ℹ️ Advisory — no action required this turn:\nCode-quality warnings introduced/touched this turn: 50 across 1 file(s).\nTop rules: E741×27, UP031×22, E722×1\nDetails written to .pi-lens/cache/code-quality-warnings.json\nNo action required unless you are already refactoring these areas.",
-  "sessionId": "lens-mq6sqcpz-7d976eef",
-  "projectSeqStart": 4,
-  "projectSeqEnd": 6
-}
