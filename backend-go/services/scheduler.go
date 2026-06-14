@@ -48,6 +48,7 @@ func (s *Scheduler) Start() {
 	// s.ScheduleTask("index_codebase", 24*time.Hour)
 	s.ScheduleTask("cleanup_logs", 5*time.Minute)
 	s.ScheduleTask("ci_monitor", 30*time.Minute)
+	s.ScheduleTask("shadow_scan", 6*time.Hour)
 
 	s.mu.Lock()
 	for name := range s.tasks {
@@ -210,6 +211,9 @@ func (s *Scheduler) executeTask(name string) {
 	db.DB.Where("created_at < ?", time.Now().Add(-7*24*time.Hour)).Delete(&models.Notification{})
 	case "ci_monitor":
 		RunCIMonitor()
+	case "shadow_scan":
+		RunShadowScan()
+		TriggerAutoFix()
 	}
 }
 

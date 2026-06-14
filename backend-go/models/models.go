@@ -443,6 +443,38 @@ type SwarmEvent struct {
 	CreatedAt time.Time `gorm:"index" json:"createdAt"`
 }
 
+// ShadowPilotSettings stores the configuration for the Shadow Pilot scanner
+type ShadowPilotSettings struct {
+	ID            string `gorm:"primaryKey;default:default" json:"id"`
+	IsEnabled     bool   `gorm:"default:false" json:"isEnabled"`
+	ScanIntervalHours int `gorm:"default:6" json:"scanIntervalHours"`
+	AutoFix       bool   `gorm:"default:false" json:"autoFix"`
+	MinSeverity   string `gorm:"default:medium" json:"minSeverity"`
+	UpdatedAt     time.Time `json:"updatedAt"`
+}
+
+// VulnerabilityRecord represents a detected vulnerability or regression
+type VulnerabilityRecord struct {
+	ID           string         `gorm:"primaryKey" json:"id"`
+	SourceID     string         `gorm:"index:idx_vuln_source_status" json:"sourceId"`
+	Type         string         `gorm:"index" json:"type"`          // 'dependency', 'static_analysis', 'secret_scan', 'regression'
+	Severity     string         `gorm:"index" json:"severity"`      // 'critical', 'high', 'medium', 'low', 'info'
+	Title        string         `json:"title"`
+	Description  string         `json:"description"`
+	FilePath     *string        `json:"filePath,omitempty"`
+	CVE          *string        `json:"cve,omitempty"`
+	FixVersion   *string        `json:"fixVersion,omitempty"`
+	Remediation  *string        `json:"remediation,omitempty"`
+	Status       string         `gorm:"default:open;index:idx_vuln_source_status" json:"status"` // 'open', 'in_progress', 'fixed', 'false_positive', 'wontfix'
+	FixSessionID *string        `json:"fixSessionId,omitempty"`
+	Score        float64        `gorm:"default:0" json:"score"`
+	DetectedAt   time.Time      `gorm:"index" json:"detectedAt"`
+	ResolvedAt   *time.Time     `json:"resolvedAt,omitempty"`
+	CreatedAt    time.Time      `json:"createdAt"`
+	UpdatedAt    time.Time      `json:"updatedAt"`
+	DeletedAt    gorm.DeletedAt `gorm:"index" json:"-"`
+}
+
 // Plugin represents an installed plugin
 type Plugin struct {
 	ID           string         `gorm:"primaryKey" json:"id"`
