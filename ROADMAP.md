@@ -56,7 +56,7 @@ For granular tasks and immediate bug fixes, see `TODO.md`.
 
 ## Milestone: v1.5 — "Shadow Pilot"
 * [x] **Background Anomaly Detection:** Shadow Pilot monitors git diffs and CI failures. CI Monitor detects merge conflicts, WIP commits, large uncommitted changes, and test syntax errors. Auto-analyzes failures with LLM and enqueues fix jobs for high-severity issues. Anomalies tracked with notifications and audit entries.
-  * Progress: Go backend now has autonomous anomaly detection for queue backlogs, LLM error spikes, token budget overuse, stuck sessions, and circuit breaker instability. Anomalies are displayed in the Health dashboard with severity badges and one-click resolve. Remaining work includes git diff monitoring and CI pipeline auto-fix.
+  * Progress: Completed Git Diff Monitoring and CI Auto-Fix integration in v3.6.6. Shadow Pilot now detects potential regressions and autonomously spawns fix sessions.
 * [x] **WebAssembly Plugin Isolation:** Pure-Go Wasm sandbox using wazero runtime (zero CGO). Memory ceilings, execution timeouts, controlled I/O host functions. SHA256 signature verification on plugin binaries. Full isolation with audit-tracked execution.
 
 ## Milestone: v2.0 — "Autonomous Fleet"

@@ -3,6 +3,9 @@
 This document tracks granular bugs, missing features, and technical debt. For epic-level milestones, see `ROADMAP.md`.
 
 ## Immediate Actions
+- [x] **Shadow Pilot: Git Diff Monitoring (v3.6.6):** Implemented `monitorGitDiffs` in Go backend to detect significant changes and regressions. Added `git_diff` anomaly type and deduplicated logging.
+- [x] **Shadow Pilot & Submodule UI Restore (v3.6.6):** Restored `ShadowPilotPanel` and `SubmoduleList` components. Integrated into `SettingsDialog` tabs.
+- [x] **Automated CI Fix Loop (v3.6.6):** Verified CI monitoring integration with autonomous session spawning. Failures now trigger `ci_auto_fix` queue jobs.
 - [x] **React 19 / Compiler Health Fix (v3.6.0):** Resolved all 17+ lint errors related to strict purity and effect rules. Refactored data fetching to `useSWR` for better performance and idiomatic usage.
 - [x] **Submodule Dashboard Live Integration:** `SubmoduleList` now uses `useSWR` against `/api/system/submodules` with 30s refresh and manual revalidation.
 - [x] **Daemon API Discovery:** Formally established `/api/manifest` for node capability discovery.

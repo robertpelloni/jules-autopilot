@@ -90,6 +90,9 @@ func (sp *ShadowPilot) runScan() {
 
 // scanRepository runs configured scanners for a single repository.
 func (sp *ShadowPilot) scanRepository(rp models.RepoPath) {
+    // Git Diff Monitoring
+    sp.monitorGitDiffs(rp)
+
     // Dependency scanner – Go for backend-go, npm for frontend if package.json exists
     if strings.Contains(strings.ToLower(rp.LocalPath), "backend-go") {
         sp.runGovulncheck(rp)
@@ -100,6 +103,75 @@ func (sp *ShadowPilot) scanRepository(rp models.RepoPath) {
         sp.runNpmAudit(rp)
     }
     // Additional scanners (static analysis) can be added here.
+}
+
+func (sp *ShadowPilot) monitorGitDiffs(rp models.RepoPath) {
+    cmd := exec.Command("git", "diff", "--stat")
+    cmd.Dir = rp.LocalPath
+    var out bytes.Buffer
+    cmd.Stdout = &out
+    if err := cmd.Run(); err != nil {
+        log.Printf("[ShadowPilot] git diff --stat failed for %s: %v", rp.SourceID, err)
+        return
+    }
+
+    stat := out.String()
+    if strings.TrimSpace(stat) == "" {
+        return
+    }
+
+    insertions := extractStatNumber(stat, "insertion")
+    deletions := extractStatNumber(stat, "deletion")
+
+    if insertions > 50 || deletions > 50 {
+        severity := "low"
+        if insertions > 200 || deletions > 200 {
+            severity = "medium"
+        }
+
+        // Regression detection: large deletions with few insertions
+        isRegression := deletions > 100 && insertions < 10
+        if isRegression {
+            severity = "high"
+        }
+
+        title := fmt.Sprintf("Significant changes in %s", rp.SourceID)
+        if isRegression {
+            title = fmt.Sprintf("Potential regression in %s", rp.SourceID)
+        }
+
+        anomaly := models.AnomalyRecord{
+            ID:          uuid.New().String(),
+            Type:        "git_diff",
+            Severity:    severity,
+            Title:       title,
+            Description: fmt.Sprintf("%d insertions(+), %d deletions(-) detected in %s", insertions, deletions, rp.SourceID),
+            Metadata:    &stat,
+            IsResolved:  false,
+            CreatedAt:   time.Now(),
+        }
+
+        // Dedupe: don't create multiple anomalies for same repo within 1 hour
+        var existing models.AnomalyRecord
+        err := db.DB.Where("type = ? AND title = ? AND is_resolved = ? AND created_at > ?",
+            "git_diff", title, false, time.Now().Add(-1*time.Hour)).First(&existing).Error
+        if err != nil {
+            db.DB.Create(&anomaly)
+
+            // Also notify
+            notif := models.Notification{
+                ID: uuid.New().String(),
+                Type: "warning",
+                Category: "shadow",
+                Title: title,
+                Message: anomaly.Description,
+                SourceID: &rp.SourceID,
+                Priority: 1,
+                CreatedAt: time.Now(),
+            }
+            db.DB.Create(&notif)
+        }
+    }
 }
 
 // runGovulncheck executes `govulncheck ./...` and parses JSON output.

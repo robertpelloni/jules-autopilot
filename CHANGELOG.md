@@ -2,6 +2,14 @@
 
 All notable changes to this project will be documented in this file.
 
+## [3.6.6] - 2026-06-15
+
+### Added
+- **Shadow Pilot: Git Diff Monitoring**: Implemented real-time tracking of repository changes. Shadow Pilot now detects large diffs and potential regressions (>100 lines deleted with minimal insertions) and logs them as anomalies.
+- **Shadow Pilot: UI Dashboard**: Restored and enhanced the Shadow Pilot management panel in the Settings dialog, allowing operators to start/stop scans and resolve detected anomalies.
+- **Submodule Intelligence Dashboard**: Restored the live submodule tracking UI, providing real-time visibility into commit hashes, sync status, and repository health for all integrated submodules (itgmania, borg, etc.).
+- **Automated CI Recovery**: Tightened the integration between CI monitoring and autonomous session spawning. Detected CI failures now automatically trigger specialized "Auto-Fix" sessions with LLM-generated strategies.
+
 ## [3.6.5] - 2026-06-10
 
 ### Added
