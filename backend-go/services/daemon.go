@@ -75,10 +75,21 @@ func (d *Daemon) tick() time.Duration {
 
 	interval := time.Duration(settings.CheckIntervalSeconds) * time.Second
 	if interval <= 0 {
-		interval = 30 * time.Second
+		interval = 120 * time.Second
+	}
+	if interval < 60*time.Second {
+		interval = 60 * time.Second
 	}
 
 	if !settings.IsEnabled {
+		return interval
+	}
+
+	// Safety valve: skip enqueuing if too many pending jobs
+	var pendingCount int64
+	db.DB.Model(&models.QueueJob{}).Where("status = ?", "pending").Count(&pendingCount)
+	if pendingCount > 500 {
+		log.Printf("[Daemon] Too many pending jobs (%d) — skipping tick", pendingCount)
 		return interval
 	}
 

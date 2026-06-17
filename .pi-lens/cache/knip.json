@@ -33,6 +33,11 @@
     },
     {
       "type": "file",
+      "name": "hooks/use-terminal-available.ts",
+      "file": "hooks/use-terminal-available.ts"
+    },
+    {
+      "type": "file",
       "name": "lib/diff-utils.ts",
       "file": "lib/diff-utils.ts"
     },
@@ -45,11 +50,6 @@
       "type": "file",
       "name": "lib/session.ts",
       "file": "lib/session.ts"
-    },
-    {
-      "type": "file",
-      "name": "hooks/use-terminal-available.ts",
-      "file": "hooks/use-terminal-available.ts"
     },
     {
       "type": "file",
@@ -967,6 +967,11 @@
     },
     {
       "type": "file",
+      "name": "hooks/use-terminal-available.ts",
+      "file": "hooks/use-terminal-available.ts"
+    },
+    {
+      "type": "file",
       "name": "lib/diff-utils.ts",
       "file": "lib/diff-utils.ts"
     },
@@ -979,11 +984,6 @@
       "type": "file",
       "name": "lib/session.ts",
       "file": "lib/session.ts"
-    },
-    {
-      "type": "file",
-      "name": "hooks/use-terminal-available.ts",
-      "file": "hooks/use-terminal-available.ts"
     },
     {
       "type": "file",

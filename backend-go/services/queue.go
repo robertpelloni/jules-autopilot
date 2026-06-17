@@ -89,6 +89,25 @@ func (w *Worker) Start() {
 
 	log.Printf("[Queue] SQLite Task Queue worker started (concurrency: %d)", concurrency)
 
+	// Periodic cleanup of old failed jobs
+	go func() {
+		cleanupTicker := time.NewTicker(5 * time.Minute)
+		defer cleanupTicker.Stop()
+		for {
+			select {
+			case <-cleanupTicker.C:
+				result := db.DB.Where("status = ? AND updated_at < ?", "failed", time.Now().Add(-1*time.Hour)).Delete(&models.QueueJob{})
+				if result.Error != nil {
+					log.Printf("[Queue] Cleanup error: %v", result.Error)
+				} else if result.RowsAffected > 0 {
+					log.Printf("[Queue] Cleaned up %d old failed jobs", result.RowsAffected)
+				}
+			case <-stopChan:
+				return
+			}
+		}
+	}()
+
 	go func() {
 		ticker := time.NewTicker(5 * time.Second)
 		defer ticker.Stop()
@@ -130,6 +149,14 @@ func (w *Worker) IsRunning() bool {
 }
 
 func (w *Worker) processJobs() {
+	// Safety valve: if too many pending jobs, stop fetching more
+	var pendingCount int64
+	db.DB.Model(&models.QueueJob{}).Where("status = ?", "pending").Count(&pendingCount)
+	if pendingCount > 500 {
+		log.Printf("[Queue] Too many pending jobs (%d) — skipping fetch cycle", pendingCount)
+		return
+	}
+
 	var jobs []models.QueueJob
 	now := time.Now()
 
@@ -203,13 +230,8 @@ func (w *Worker) executeJob(job models.QueueJob) {
 		return
 	}
 
-	// Mark as completed
-	completedAt := time.Now()
-	db.DB.Model(&job).Updates(map[string]interface{}{
-		"status":       "completed",
-		"completed_at": &completedAt,
-	})
-
+	// Delete completed job to prevent unbounded DB growth
+	db.DB.Delete(&job)
 	log.Printf("[Queue] Job %s (%s) completed: %s", job.ID[:8], job.Type, result)
 }
 
@@ -225,7 +247,7 @@ func StartWorker() {
 	globalWorkerMu.Lock()
 	defer globalWorkerMu.Unlock()
 	if globalWorker == nil {
-		globalWorker = NewWorker(2)
+		globalWorker = NewWorker(10)
 	}
 	globalWorker.Start()
 }
