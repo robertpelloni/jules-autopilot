@@ -271,9 +271,7 @@ func generateOpenAIText(apiKey, model, systemPrompt string, messages []LLMMessag
 
 	requestMessages := make([]map[string]string, 0, len(messages)+1)
 	if strings.TrimSpace(systemPrompt) != "" {
-		// Append instruction encouraging the model to restate the previous task before completing it.
-		enhancedPrompt := systemPrompt + "\n\nBefore responding, restate the previous task to confirm you understand it and ensure it is completed."
-		requestMessages = append(requestMessages, map[string]string{"role": "system", "content": enhancedPrompt})
+		requestMessages = append(requestMessages, map[string]string{"role": "system", "content": systemPrompt})
 	}
 	for _, message := range messages {
 		requestMessages = append(requestMessages, map[string]string{"role": message.Role, "content": message.Content})
@@ -285,7 +283,7 @@ func generateOpenAIText(apiKey, model, systemPrompt string, messages []LLMMessag
 		"temperature": 0.2,
 	})
 
-	req, err := http.NewRequest(http.MethodPost, "http://127.0.0.1:4000/v1/chat/completions", bytes.NewReader(requestBody))
+	req, err := http.NewRequest(http.MethodPost, "https://api.openai.com/v1/chat/completions", bytes.NewReader(requestBody))
 	if err != nil {
 		return LLMResult{}, err
 	}
