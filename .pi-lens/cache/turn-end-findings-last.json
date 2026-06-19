@@ -1,0 +1,6 @@
+{
+  "signature": "backend-go/services/shadow_pilot.go::Unresolved from this turn — backend-go/services/shadow_pilot.go:\n🔴 STOP — 1 issue(s) must be fixed:\n  L247: method ShadowPilot.RunNow already declared at C:\\Users\\hyper\\workspace\\jules-autopilot\\backend-go\\services\\shadow_pilot.go:45:24\n\nℹ️ Advisory — no action required this turn:\nCode-quality warnings introduced/touched this turn: 1 across 1 file(s).\nTop rules: go-ignored-call-result×1\nDetails written to .pi-lens/cache/code-quality-warnings.json\nNo action required unless you are already refactoring these areas.",
+  "sessionId": "lens-mqe2a4g1-5bbf86a3",
+  "projectSeqStart": 33,
+  "projectSeqEnd": 34
+}

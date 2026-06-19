@@ -1,0 +1,11 @@
+{
+  "items": [
+    {
+      "type": "TODO",
+      "message": ".md structural integrity (Enforce Phase X heading presence)",
+      "file": "scripts\\check-doc-drift.js",
+      "line": 31,
+      "column": 15
+    }
+  ]
+}

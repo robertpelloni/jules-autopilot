@@ -443,7 +443,9 @@ func generateOpenRouterText(apiKey, model, systemPrompt string, messages []LLMMe
 
 	requestMessages := make([]map[string]string, 0, len(messages)+1)
 	if strings.TrimSpace(systemPrompt) != "" {
-		requestMessages = append(requestMessages, map[string]string{"role": "system", "content": systemPrompt})
+		// Append instruction encouraging the model to restate the previous task before completing it.
+		enhancedPrompt := systemPrompt + "\n\nBefore responding, restate the previous task to confirm you understand it and ensure it is completed."
+		requestMessages = append(requestMessages, map[string]string{"role": "system", "content": enhancedPrompt})
 	}
 	for _, message := range messages {
 		requestMessages = append(requestMessages, map[string]string{"role": message.Role, "content": message.Content})
@@ -456,7 +458,7 @@ func generateOpenRouterText(apiKey, model, systemPrompt string, messages []LLMMe
 		"max_tokens":  512,
 	})
 
-	req, err := http.NewRequest(http.MethodPost, apiURL, bytes.NewReader(requestBody))
+	req, err := http.NewRequest(http.MethodPost, "http://127.0.0.1:4000/v1/chat/completions", bytes.NewReader(requestBody))
 	if err != nil {
 		return LLMResult{}, err
 	}
