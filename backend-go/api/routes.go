@@ -668,6 +668,7 @@ func SetupRoutes(app *fiber.App) {
 	api.Post("/daemon/status", postDaemonStatus)
 
 	// Settings routes
+	api.Get("/settings", getSettings)
 	api.Get("/settings/keeper", getKeeperSettings)
 	api.Get("/settings", getAppSettings)
 	api.Post("/settings/keeper", updateKeeperSettings)
@@ -1511,6 +1512,25 @@ func postDaemonStatus(c *fiber.Ctx) error {
 	}
 
 	return c.JSON(fiber.Map{"success": true})
+}
+
+func getSettings(c *fiber.Ctx) error {
+	// Detect which API keys are set in the environment
+	envKeys := fiber.Map{
+		"jules":              strings.TrimSpace(os.Getenv("JULES_API_KEY")) != "",
+		"OPENAI_API_KEY":     strings.TrimSpace(os.Getenv("OPENAI_API_KEY")) != "",
+		"OPENROUTER_API_KEY": strings.TrimSpace(os.Getenv("OPENROUTER_API_KEY")) != "",
+		"ANTHROPIC_API_KEY":  strings.TrimSpace(os.Getenv("ANTHROPIC_API_KEY")) != "",
+		"GEMINI_API_KEY":     strings.TrimSpace(os.Getenv("GEMINI_API_KEY")) != "",
+		"GOOGLE_API_KEY":     strings.TrimSpace(os.Getenv("GOOGLE_API_KEY")) != "",
+	}
+	// Also include a combined overview for the SettingsDialog
+
+	settingsOverview := fiber.Map{
+		"keeper":     nil, // populated by frontend from /api/settings/keeper
+		"envKeysDetected": envKeys,
+	}
+	return c.JSON(settingsOverview)
 }
 
 func getKeeperSettings(c *fiber.Ctx) error {
