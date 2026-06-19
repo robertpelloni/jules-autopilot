@@ -10,6 +10,9 @@ import (
 	"strings"
 	"sync"
 	"time"
+
+	"github.com/jules-autopilot/backend/db"
+	"github.com/jules-autopilot/backend/models"
 )
 
 type circuitBreaker struct {
@@ -103,6 +106,14 @@ func resolveModel(provider, model string) string {
 		return value
 	}
 	return defaultModelForProvider(provider)
+}
+
+func getSupervisorProvider() string {
+	var settings models.KeeperSettings
+	if err := db.DB.First(&settings, "id = ?", "default").Error; err != nil {
+		return normalizeProvider("")
+	}
+	return normalizeProvider(settings.SupervisorProvider)
 }
 
 func getSupervisorAPIKey(provider string, explicit *string) string {

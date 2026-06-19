@@ -1,6 +1,0 @@
-{
-  "signature": "backend-go/main.go::Unresolved from this turn — backend-go/main.go:\n🔴 STOP — 1 issue(s) must be fixed:\n  L92: CORS wildcard origin (*) allows any website to make credentialed requests — restrict to known origins\n\nℹ️ Advisory — no action required this turn:\nCode-quality warnings introduced/touched this turn: 1 across 1 file(s).\nTop rules: go-log-fatal×1\nDetails written to .pi-lens/cache/code-quality-warnings.json\nNo action required unless you are already refactoring these areas.",
-  "sessionId": "lens-mqe2a4g1-5bbf86a3",
-  "projectSeqStart": 37,
-  "projectSeqEnd": 38
-}

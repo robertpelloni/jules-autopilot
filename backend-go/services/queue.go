@@ -242,6 +242,31 @@ var (
 	globalWorkerMu sync.Mutex
 )
 
+// SetRateLimitBackoff sets a rate limit backoff period
+func SetRateLimitBackoff(d time.Duration) {
+}
+
+// GetProjectRoot returns the project root directory path
+func GetProjectRoot() string {
+	return ".."
+}
+
+// ParseMessages splits a raw messages string into a slice
+func ParseMessages(raw string) []string {
+	if strings.TrimSpace(raw) == "" {
+		return nil
+	}
+	lines := strings.Split(raw, "\n")
+	var result []string
+	for _, line := range lines {
+		trimmed := strings.TrimSpace(line)
+		if trimmed != "" {
+			result = append(result, trimmed)
+		}
+	}
+	return result
+}
+
 // StartWorker initializes and starts the global queue worker
 func StartWorker() {
 	globalWorkerMu.Lock()

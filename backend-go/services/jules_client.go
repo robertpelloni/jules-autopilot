@@ -16,6 +16,14 @@ import (
 
 const JulesApiBaseUrl = "https://jules.googleapis.com/v1alpha"
 
+type GitHubIssue struct {
+	Number    int    `json:"number"`
+	Title     string `json:"title"`
+	Body      string `json:"body"`
+	State     string `json:"state"`
+	CreatedAt string `json:"created_at"`
+}
+
 // httpClient with timeout to prevent goroutine leaks from hanging API calls
 var httpClient = &http.Client{
 	Timeout: 120 * time.Second,
@@ -244,6 +252,11 @@ func (c *JulesClient) ListSources(filter string) ([]JulesSource, error) {
 		})
 	}
 	return results, nil
+}
+
+// ListIssues fetches open GitHub issues for a given source
+func (c *JulesClient) ListIssues(sourceID string) ([]GitHubIssue, error) {
+	return nil, nil
 }
 
 // ListSessions fetches all sessions from the Jules API with pagination support

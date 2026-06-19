@@ -72,3 +72,7 @@ dev.db-wal
 autopilot-backend.exe~
 backend-go/backend.exe
 .pi-lens/
+
+# Temp scripts
+run.bat
+watchdog.bat
