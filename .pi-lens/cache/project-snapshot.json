@@ -2,12 +2,15 @@
   "version": 1,
   "projectRoot": "C:/Users/hyper/workspace/jules-autopilot",
 <<<<<<< HEAD
+<<<<<<< HEAD
   "generatedAt": "2026-06-06T23:39:02.297Z",
   "seq": 1,
   "files": {},
   "symbols": {},
   "reverseDeps": {},
 =======
+=======
+>>>>>>> main
   "generatedAt": "2026-06-14T17:31:58.666Z",
   "seq": 21,
   "files": {
@@ -1479,7 +1482,10 @@
     "C:/Users/hyper/workspace/jules-autopilot/types/jules.ts": [],
     "C:/Users/hyper/workspace/jules-autopilot/vite.config.ts": []
   },
+<<<<<<< HEAD
 >>>>>>> origin/main
+=======
+>>>>>>> main
   "cachedExports": [
     [
       "activate",
@@ -1487,12 +1493,15 @@
     ],
     [
 <<<<<<< HEAD
+<<<<<<< HEAD
       "broadcastToClients",
       "C:\\Users\\hyper\\workspace\\jules-autopilot\\server\\index.ts"
     ],
     [
 =======
 >>>>>>> origin/main
+=======
+>>>>>>> main
       "calculateDiffStats",
       "C:\\Users\\hyper\\workspace\\jules-autopilot\\lib\\diff-utils.ts"
     ],
@@ -1563,6 +1572,7 @@
     [
       "emitDaemonEvent",
 <<<<<<< HEAD
+<<<<<<< HEAD
       "C:\\Users\\hyper\\workspace\\jules-autopilot\\server\\index.ts"
     ],
     [
@@ -1571,6 +1581,9 @@
 =======
       "C:\\Users\\hyper\\workspace\\jules-autopilot\\lib\\hooks\\use-daemon-events.ts"
 >>>>>>> origin/main
+=======
+      "C:\\Users\\hyper\\workspace\\jules-autopilot\\lib\\hooks\\use-daemon-events.ts"
+>>>>>>> main
     ],
     [
       "evaluatePlanRisk",
@@ -1690,12 +1703,15 @@
     ],
     [
 <<<<<<< HEAD
+<<<<<<< HEAD
       "getJulesClient",
       "C:\\Users\\hyper\\workspace\\jules-autopilot\\server\\index.ts"
     ],
     [
 =======
 >>>>>>> origin/main
+=======
+>>>>>>> main
       "getProvider",
       "C:\\Users\\hyper\\workspace\\jules-autopilot\\packages\\shared\\src\\orchestration\\providers\\index.ts"
     ],
@@ -1721,12 +1737,15 @@
     ],
     [
 <<<<<<< HEAD
+<<<<<<< HEAD
       "proxyToJules",
       "C:\\Users\\hyper\\workspace\\jules-autopilot\\server\\index.ts"
     ],
     [
 =======
 >>>>>>> origin/main
+=======
+>>>>>>> main
       "resolveAnomaly",
       "C:\\Users\\hyper\\workspace\\jules-autopilot\\lib\\api\\observability.ts"
     ],
@@ -1797,11 +1816,14 @@
     "hasCustomRules": true
   },
 <<<<<<< HEAD
+<<<<<<< HEAD
   "projectIndex": {
     "entryCount": 170
   },
 =======
 >>>>>>> origin/main
+=======
+>>>>>>> main
   "startupScan": {
     "cwd": "C:\\Users\\hyper\\workspace\\jules-autopilot",
     "scanRoot": "C:\\Users\\hyper\\workspace\\jules-autopilot",
@@ -1853,6 +1875,7 @@
     },
     "counts": {
 <<<<<<< HEAD
+<<<<<<< HEAD
       "jsts": 109,
       "go": 59,
       "python": 1
@@ -1861,6 +1884,11 @@
       "go": 59,
       "python": 2
 >>>>>>> origin/main
+=======
+      "jsts": 108,
+      "go": 59,
+      "python": 2
+>>>>>>> main
     },
     "detectedKinds": [
       "jsts",

@@ -2,38 +2,20 @@ package db
 
 import (
 	"log"
-	"time"
 
 	"github.com/glebarez/sqlite"
 	"github.com/jules-autopilot/backend/models"
 	"gorm.io/gorm"
-	"gorm.io/gorm/logger"
 )
 
 var DB *gorm.DB
 
 func InitDB() {
 	var err error
-
-	// Open SQLite with WAL mode for concurrent read/write performance
-	dsn := "dev.db?_journal_mode=WAL&_busy_timeout=5000&_synchronous=NORMAL&_cache_size=-64000&_foreign_keys=1"
-	DB, err = gorm.Open(sqlite.Open(dsn), &gorm.Config{
-		Logger: logger.Default.LogMode(logger.Silent),
-	})
+	DB, err = gorm.Open(sqlite.Open("dev.db"), &gorm.Config{})
 	if err != nil {
 		log.Fatalf("failed to connect database: %v", err)
 	}
-
-	// Configure connection pool for SQLite
-	sqlDB, err := DB.DB()
-	if err != nil {
-		log.Fatalf("failed to get underlying DB: %v", err)
-	}
-
-	sqlDB.SetMaxOpenConns(1) // SQLite single-writer
-	sqlDB.SetMaxIdleConns(1)
-	sqlDB.SetConnMaxLifetime(0)
-	sqlDB.SetConnMaxIdleTime(30 * time.Minute)
 
 	// AutoMigrate models
 	err = DB.AutoMigrate(
@@ -59,11 +41,6 @@ func InitDB() {
 		&models.HealthSnapshot{},
 		&models.TokenUsage{},
 		&models.AnomalyRecord{},
-		&models.ScheduledTask{},
-		&models.Swarm{},
-		&models.SwarmAgent{},
-		&models.SwarmEvent{},
-		&models.Plugin{},
 	)
 	if err != nil {
 		log.Fatalf("failed to auto-migrate models: %v", err)
@@ -72,50 +49,6 @@ func InitDB() {
 	log.Println("Database initialized and migrated successfully")
 
 	seedDefaultSettings()
-	purgeStaleData()
-}
-
-// purgeStaleData cleans up stale jobs and caps table sizes to prevent OOM
-func purgeStaleData() {
-	// Purge deprecated check_issues jobs
-	DB.Unscoped().Where("type = ?", "check_issues").Delete(&models.QueueJob{})
-
-	// Reset ALL processing jobs to pending on startup (they were likely interrupted)
-	reset := DB.Model(&models.QueueJob{}).Where("status = ?", "processing").Update("status", "pending")
-	if reset.RowsAffected > 0 {
-		log.Printf("[DB] Reset %d processing jobs to pending for retry", reset.RowsAffected)
-	}
-
-	// Purge stale jobs (older than 30 minutes)
-	cutoff := time.Now().Add(-30 * time.Minute)
-	stale := DB.Unscoped().Where("created_at < ?", cutoff).Delete(&models.QueueJob{})
-	if stale.RowsAffected > 0 {
-		log.Printf("[DB] Purged %d stale jobs", stale.RowsAffected)
-	}
-
-	// Cap audit entries to last 1000
-	var auditCount int64
-	DB.Model(&models.AuditEntry{}).Count(&auditCount)
-	if auditCount > 1000 {
-		DB.Exec("DELETE FROM audit_entries WHERE id NOT IN (SELECT id FROM audit_entries ORDER BY id DESC LIMIT 500)")
-		log.Printf("[DB] Trimmed audit_entries from %d to 500", auditCount)
-	}
-
-	// Cap keeper_logs to last 500
-	var logCount int64
-	DB.Model(&models.KeeperLog{}).Count(&logCount)
-	if logCount > 500 {
-		DB.Exec("DELETE FROM keeper_logs WHERE id NOT IN (SELECT id FROM keeper_logs ORDER BY id DESC LIMIT 200)")
-		log.Printf("[DB] Trimmed keeper_logs from %d to 200", logCount)
-	}
-
-	// Cap notifications to last 200
-	var notifCount int64
-	DB.Model(&models.Notification{}).Count(&notifCount)
-	if notifCount > 200 {
-		DB.Exec("DELETE FROM notifications WHERE id NOT IN (SELECT id FROM notifications ORDER BY id DESC LIMIT 50)")
-		log.Printf("[DB] Trimmed notifications from %d to 50", notifCount)
-	}
 }
 
 // InitTestDB creates an in-memory SQLite database for testing
@@ -149,11 +82,6 @@ func InitTestDB() (*gorm.DB, error) {
 		&models.HealthSnapshot{},
 		&models.TokenUsage{},
 		&models.AnomalyRecord{},
-		&models.ScheduledTask{},
-		&models.Swarm{},
-		&models.SwarmAgent{},
-		&models.SwarmEvent{},
-		&models.Plugin{},
 	)
 	if err != nil {
 		return nil, err
@@ -162,14 +90,14 @@ func InitTestDB() (*gorm.DB, error) {
 	// Seed default settings for tests
 	settings := models.KeeperSettings{
 		ID:                         "default",
-		IsEnabled:                  true,
-		CheckIntervalSeconds:       900,
+		IsEnabled:                  false,
+		CheckIntervalSeconds:       30,
 		InactivityThresholdMinutes: 10,
 		ActiveWorkThresholdMinutes: 5,
 		Messages:                   "[]",
 		CustomMessages:             "[]",
 		SupervisorProvider:         "openrouter",
-		SupervisorModel:            "free",
+		SupervisorModel:            "nvidia/nemotron-3-nano-omni-30b-a3b-reasoning:free",
 	}
 	DB.Create(&settings)
 
@@ -182,29 +110,20 @@ func seedDefaultSettings() {
 		log.Println("Seeding default keeper settings...")
 		settings = models.KeeperSettings{
 			ID:                         "default",
-			IsEnabled:                  true,
+			IsEnabled:                  false,
 			AutoSwitch:                 true,
-			CheckIntervalSeconds:       900,
+			CheckIntervalSeconds:       30,
 			InactivityThresholdMinutes: 1,
 			ActiveWorkThresholdMinutes: 30,
 			Messages:                   "Great! Please keep going as you advise!\nYes! Please continue to proceed as you recommend!\nThis looks correct. Please proceed.\nExcellent plan. Go ahead.\nLooks good to me. Continue.",
 			CustomMessages:             "[]",
-			SmartPilotEnabled:          true,
+			SmartPilotEnabled:          false,
 			SupervisorProvider:         "openrouter",
-			SupervisorModel:            "free",
+			SupervisorModel:            "nvidia/nemotron-3-nano-omni-30b-a3b-reasoning:free",
 			ContextMessageCount:        20,
 		}
 		if err := DB.Create(&settings).Error; err != nil {
 			log.Printf("failed to seed default settings: %v", err)
-		}
-	} else {
-		// Force critical booleans ON for existing rows
-		if !settings.IsEnabled || !settings.SmartPilotEnabled {
-			DB.Model(&settings).Updates(map[string]interface{}{
-				"is_enabled":          true,
-				"smart_pilot_enabled":  true,
-			})
-			log.Println("[DB] Forced isEnabled + smartPilotEnabled = true")
 		}
 	}
 }

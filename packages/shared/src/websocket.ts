@@ -108,5 +108,5 @@ export function createDaemonEvent<T>(type: DaemonEventType, data?: T): DaemonEve
 export const WS_DEFAULTS = {
   RECONNECT_DELAY: 3000,
   MAX_RECONNECT_ATTEMPTS: 10,
-  PING_INTERVAL: 30000,
+  PING_INTERVAL: 60000,
 } as const;

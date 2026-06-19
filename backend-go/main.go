@@ -6,7 +6,6 @@ import (
 	"os"
 	"os/signal"
 	"path/filepath"
-	"runtime/debug"
 	"strings"
 	"syscall"
 
@@ -63,9 +62,6 @@ func loadRootEnv() {
 }
 
 func main() {
-// Cap memory usage to 256MB — Go GC target ceiling. Keeps HeapAlloc tight
-debug.SetMemoryLimit(256 * 1024 * 1024)
-
 	// Load environment variables from .env in project root for runtime parity with the Bun server.
 	loadRootEnv()
 
@@ -92,25 +88,14 @@ debug.SetMemoryLimit(256 * 1024 * 1024)
 		},
 	})
 
-	allowOrigins := os.Getenv("CORS_ALLOWED_ORIGINS")
-	if allowOrigins == "" {
-		allowOrigins = "*"
-	}
-
 	app.Use(corsmiddleware.New(corsmiddleware.Config{
-		AllowOrigins: allowOrigins,
+		AllowOrigins: "*",
 		AllowMethods: "GET,POST,PUT,DELETE,OPTIONS,PATCH",
 		AllowHeaders: "Content-Type, Authorization, X-Jules-Api-Key, X-Jules-Auth-Token, X-Goog-Api-Key",
 	}))
 
 	// Setup API Routes
 	api.SetupRoutes(app)
-
-	// Port configuration from environment
-	port := os.Getenv("PORT")
-if port == "" {
-		port = "8080"
-}
 
 	// WebSocket Middleware
 	app.Use("/ws", func(c *fiber.Ctx) error {
@@ -191,6 +176,9 @@ if port == "" {
 	}()
 
 	// Match the TypeScript daemon default port for smoother drop-in parity.
-	log.Printf("[Main] Server starting on port %s", port)
+	port := os.Getenv("PORT")
+	if port == "" {
+		port = "8080"
+	}
 	log.Fatal(app.Listen(":" + port))
 }

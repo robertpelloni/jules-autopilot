@@ -6,8 +6,10 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Github, Brain, Database, Download, Upload, Loader2, Key, ShieldCheck } from 'lucide-react';
+import { Github, Brain, Database, Download, Upload, Loader2, Key, ShieldCheck, GitBranch, Shield } from 'lucide-react';
 import { SessionKeeperSettingsContent } from './session-keeper-settings-content';
+import { SubmoduleList } from './submodule-list';
+import { ShadowPilotPanel } from './shadow-pilot-panel';
 import { useSessionKeeperStore } from '@/lib/stores/session-keeper';
 import { toast } from 'sonner';
 
@@ -125,6 +127,14 @@ export function SettingsDialog({ open: propOpen, onOpenChange: propOnOpenChange,
                 <Brain className="h-3.5 w-3.5" />
                 Supervisor
               </TabsTrigger>
+              <TabsTrigger value="shadow" className="text-xs flex items-center gap-2">
+                <Shield className="h-3.5 w-3.5" />
+                Shadow Pilot
+              </TabsTrigger>
+              <TabsTrigger value="submodules" className="text-xs flex items-center gap-2">
+                <GitBranch className="h-3.5 w-3.5" />
+                Submodules
+              </TabsTrigger>
               <TabsTrigger value="data" className="text-xs flex items-center gap-2">
                 <Database className="h-3.5 w-3.5" />
                 Data
@@ -216,6 +226,12 @@ export function SettingsDialog({ open: propOpen, onOpenChange: propOnOpenChange,
           </TabsContent>
           <TabsContent value="supervisor" className="flex-1 min-h-0 overflow-hidden">
             <SessionKeeperSettingsContent config={config} onConfigChange={saveConfig} />
+          </TabsContent>
+          <TabsContent value="shadow" className="flex-1 p-6 overflow-y-auto">
+            <ShadowPilotPanel />
+          </TabsContent>
+          <TabsContent value="submodules" className="flex-1 p-6 overflow-y-auto">
+            <SubmoduleList />
           </TabsContent>
           <TabsContent value="data" className="flex-1 p-6 overflow-y-auto">
             <div className="space-y-6 max-w-md">

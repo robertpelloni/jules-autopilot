@@ -668,6 +668,7 @@ func SetupRoutes(app *fiber.App) {
 	api.Post("/daemon/status", postDaemonStatus)
 
 	// Settings routes
+	api.Get("/settings", getSettings)
 	api.Get("/settings/keeper", getKeeperSettings)
 	api.Get("/settings", getAppSettings)
 	api.Post("/settings/keeper", updateKeeperSettings)
@@ -736,6 +737,17 @@ func SetupRoutes(app *fiber.App) {
 	api.Get("/shadow-pilot/status", getShadowPilotStatus)
 	api.Post("/shadow-pilot/start", startShadowPilotAPI)
 	api.Post("/shadow-pilot/stop", stopShadowPilotAPI)
+
+	// Shadow Pilot manual scan trigger (shorthand)
+	api.Post("/shadow/scan", startShadowPilotAPI)
+
+	// Shadow Pilot data endpoints
+	api.Get("/shadow/issues", listVulnerabilitiesAPI)
+	api.Get("/shadow/issues/:id", getVulnerabilityAPI)
+	api.Patch("/shadow/issues/:id", updateVulnerabilityAPI)
+
+	// Architecture graph
+	api.Get("/architecture/graph", getArchitectureGraphAPI)
 
 	// Dependency checks
 	api.Get("/health/dependencies", getDependencyChecks)
@@ -1502,6 +1514,25 @@ func postDaemonStatus(c *fiber.Ctx) error {
 	return c.JSON(fiber.Map{"success": true})
 }
 
+func getSettings(c *fiber.Ctx) error {
+	// Detect which API keys are set in the environment
+	envKeys := fiber.Map{
+		"jules":              strings.TrimSpace(os.Getenv("JULES_API_KEY")) != "",
+		"OPENAI_API_KEY":     strings.TrimSpace(os.Getenv("OPENAI_API_KEY")) != "",
+		"OPENROUTER_API_KEY": strings.TrimSpace(os.Getenv("OPENROUTER_API_KEY")) != "",
+		"ANTHROPIC_API_KEY":  strings.TrimSpace(os.Getenv("ANTHROPIC_API_KEY")) != "",
+		"GEMINI_API_KEY":     strings.TrimSpace(os.Getenv("GEMINI_API_KEY")) != "",
+		"GOOGLE_API_KEY":     strings.TrimSpace(os.Getenv("GOOGLE_API_KEY")) != "",
+	}
+	// Also include a combined overview for the SettingsDialog
+
+	settingsOverview := fiber.Map{
+		"keeper":     nil, // populated by frontend from /api/settings/keeper
+		"envKeysDetected": envKeys,
+	}
+	return c.JSON(settingsOverview)
+}
+
 func getKeeperSettings(c *fiber.Ctx) error {
 	var settings models.KeeperSettings
 	if err := db.DB.First(&settings, "id = ?", "default").Error; err != nil {
@@ -2017,16 +2048,67 @@ func getShadowPilotStatus(c *fiber.Ctx) error {
 	return c.JSON(services.GetShadowPilotStatus())
 }
 
-// Shadow Pilot: Start
+// Shadow Pilot: Start (also used by POST /api/shadow/scan)
 func startShadowPilotAPI(c *fiber.Ctx) error {
+	if services.IsShadowPilotRunning() {
+		return c.JSON(fiber.Map{
+			"status":    "already_running",
+			"message":  "Shadow Pilot scan is already in progress",
+			"startedAt": time.Now().Format(time.RFC3339),
+		})
+	}
 	services.StartShadowPilot()
-	return c.JSON(fiber.Map{"status": "started"})
+	return c.JSON(fiber.Map{
+		"status":    "scanning",
+		"message":  "Shadow Pilot scan initiated",
+		"startedAt": time.Now().Format(time.RFC3339),
+	})
 }
 
 // Shadow Pilot: Stop
 func stopShadowPilotAPI(c *fiber.Ctx) error {
 	services.StopShadowPilot()
 	return c.JSON(fiber.Map{"status": "stopped"})
+}
+
+// Shadow Pilot data endpoints
+func listVulnerabilitiesAPI(c *fiber.Ctx) error {
+	var vulns []models.VulnerabilityRecord
+	query := db.DB.Model(&models.VulnerabilityRecord{})
+	if sev := c.Query("severity"); sev != "" {
+		query = query.Where("severity = ?", sev)
+	}
+	if typ := c.Query("type"); typ != "" {
+		query = query.Where("type = ?", typ)
+	}
+	if st := c.Query("status"); st != "" {
+		query = query.Where("status = ?", st)
+	}
+	if err := query.Order("detected_at desc").Find(&vulns).Error; err != nil {
+		return c.Status(500).JSON(fiber.Map{"error": err.Error()})
+	}
+	return c.JSON(vulns)
+}
+
+func getVulnerabilityAPI(c *fiber.Ctx) error {
+	id := c.Params("id")
+	var vuln models.VulnerabilityRecord
+	if err := db.DB.First(&vuln, "id = ?", id).Error; err != nil {
+		return c.Status(404).JSON(fiber.Map{"error": "Not found"})
+	}
+	return c.JSON(vuln)
+}
+
+func updateVulnerabilityAPI(c *fiber.Ctx) error {
+	id := c.Params("id")
+	var updates map[string]interface{}
+	if err := c.BodyParser(&updates); err != nil {
+		return c.Status(400).JSON(fiber.Map{"error": "Invalid JSON"})
+	}
+	if err := db.DB.Model(&models.VulnerabilityRecord{}).Where("id = ?", id).Updates(updates).Error; err != nil {
+		return c.Status(500).JSON(fiber.Map{"error": err.Error()})
+	}
+	return c.JSON(fiber.Map{"status": "updated"})
 }
 
 func getDependencyChecks(c *fiber.Ctx) error {

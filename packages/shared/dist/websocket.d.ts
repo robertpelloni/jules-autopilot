@@ -67,6 +67,6 @@ export declare function createDaemonEvent<T>(type: DaemonEventType, data?: T): D
 export declare const WS_DEFAULTS: {
     readonly RECONNECT_DELAY: 3000;
     readonly MAX_RECONNECT_ATTEMPTS: 10;
-    readonly PING_INTERVAL: 30000;
+    readonly PING_INTERVAL: 60000;
 };
 //# sourceMappingURL=websocket.d.ts.map

@@ -1,5 +1,6 @@
 {
 <<<<<<< HEAD
+<<<<<<< HEAD
   "generatedAt": "2026-06-08T00:23:28.158Z",
   "scope": "turn_delta",
   "sessionId": "lens-mq2zvhnu-2b34405d",
@@ -14,6 +15,14 @@
   "projectSeqStart": 36,
   "projectSeqEnd": 37,
 >>>>>>> origin/main
+=======
+  "generatedAt": "2026-06-17T17:27:37.587Z",
+  "scope": "turn_delta",
+  "sessionId": "d6686ef8-961b-4f51-a0af-a839d485174c",
+  "turnIndex": 52,
+  "projectSeqStart": 44,
+  "projectSeqEnd": 45,
+>>>>>>> main
   "deltaOnly": true,
   "files": [],
   "summary": {
