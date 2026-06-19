@@ -2,6 +2,177 @@
 
 All notable changes to this project will be documented in this file.
 
+## [3.6.6] - 2026-06-15
+
+### Added
+- **Shadow Pilot: Git Diff Monitoring**: Implemented real-time tracking of repository changes. Shadow Pilot now detects large diffs and potential regressions (>100 lines deleted with minimal insertions) and logs them as anomalies.
+- **Shadow Pilot: UI Dashboard**: Restored and enhanced the Shadow Pilot management panel in the Settings dialog, allowing operators to start/stop scans and resolve detected anomalies.
+- **Submodule Intelligence Dashboard**: Restored the live submodule tracking UI, providing real-time visibility into commit hashes, sync status, and repository health for all integrated submodules (itgmania, borg, etc.).
+- **Automated CI Recovery**: Tightened the integration between CI monitoring and autonomous session spawning. Detected CI failures now automatically trigger specialized "Auto-Fix" sessions with LLM-generated strategies.
+
+## [3.6.5] - 2026-06-10
+
+### Added
+- **Full API Pagination**: Refactored the Go backend's `ListSessions` method to support full API pagination. The system can now monitor and manage up to 1,000 active sessions (increased from 100).
+- **Automated LLM Fallback Rotation**: Implemented a sophisticated fallback engine for LLM requests. During OpenRouter rate-limiting events (429), the system now automatically rotates through a priority list of free models (Gemini Flash, Llama 3.1, Mistral, Qwen, Phi-3).
+- **Fast-Fail Circuit Breakers**: Enhanced local provider detection (LM Studio, LocalProxy) with immediate circuit breaking on "Connection Refused" errors, preventing worker queue blocks.
+
+### Changed
+- **WebSocket Connection Hardening**: Increased the default WebSocket ping interval to 60 seconds. This improves connection stability in high-latency environments and eliminates transient "Ping timeout" disconnections.
+
+### Fixed
+- **Project Configuration**: Migrated `pnpm.overrides` to the root `overrides` field in `package.json` to align with pnpm v9+ standards and resolve build-time warnings.
+
+## [3.6.4] - 2026-06-06
+
+### Fixed
+- **Critical Build Error**: Resolved a syntax error in `components/activity-feed.tsx` (unterminated regular expression) caused by an extra `</TooltipProvider>` closing tag and an extra `</div>`.
+- **Port Alignment**: Unified the backend port by changing the Go default from `8082` to `8080`, aligning it with `README.md` and `start.bat`.
+- **Proxy Configuration**: Updated `vite.config.ts` to proxy requests to port `8080`, ensuring proper connectivity during frontend development.
+
+## [3.6.3] - 2026-06-04
+
+### Changed
+- **Enhanced LLM Fallback Chain**: Added Gemini and OpenRouter to the supervisor fallback logic to ensure high availability during primary provider outages.
+- **Smart Credential Reuse**: Enabled the Gemini provider to utilize the `JULES_API_KEY` as a fallback when specifically configured Google keys are missing, provided the key follows the `AQ.A` format.
+
+### Fixed
+- **Residual Codebase Cleanup**: Eliminated leftover 'ghost' files from the legacy `server/` directory and resolved lingering ESLint errors in `lib/jules/client.ts` and `lib/jules/provider.tsx`.
+
+## [3.6.2] - 2026-06-02
+
+### Added
+- **Activity Caching & Fetch Optimization**: Drastically improved background worker performance by implementing activity history caching in the Go backend. The worker now skips expensive Jules API pagination calls if the session's `LastActivityAt` timestamp hasn't changed since the last check.
+- **Enhanced API Observability**: Added detailed logging for Jules API and LLM requests, including batch ranges, timestamps, and provider details. This provides much better visibility into background automation behavior.
+- **LLM Client Timeouts**: Replaced the timeout-less `http.DefaultClient` with a dedicated `llmHttpClient` (60s timeout) to prevent worker hangs during slow provider responses.
+
+### Fixed
+- **Critical Compilation Errors**: Resolved multiple `undefined: os` and `undefined: log` errors in the Go backend (`daemon.go`, `llm.go`, `jules_client.go`).
+- **Jules Client Resource Leak**: Fixed a leak where HTTP response bodies were not being closed inside pagination loops in `ListActivities`.
+- **Database Migration Conflict**: Resolved a SQL logic error (`idx_workspaces_deleted_at already exists`) by removing redundant GORM index tags from the `Workspace` model.
+- **Pagination Resume Bug**: Fixed a bug where reaching the end of an activity list would reset the page token, causing the next check to re-fetch the entire history.
+
+## [3.6.0] - 2026-05-30
+
+### Added
+- **Concurrent Queue Worker (Go)**: Refactored the Go queue worker to support concurrent job processing using a semaphore-based goroutine pool. Improved polling frequency from 10s to 2s, significantly increasing responsiveness for background monitoring and automation tasks.
+- **Queue Startup Recovery**: Added database initialization logic to reset 'processing' jobs to 'pending' on startup, ensuring that jobs interrupted by a backend crash or restart are correctly retried.
+- **Enhanced Codebase Indexing**: Enabled codebase reindexing in the Go daemon and API. The system now supports periodic indexing every 4 hours if an API key is available, ensuring the semantic RAG memory stays in sync with the source code.
+
+### Fixed
+- **Indexing Job Skip**: Fixed a regression where the `index_codebase` job was hardcoded to skip even when a valid API key was present.
+- **Indexing API Parity**: Fully enabled the `POST /api/rag/reindex` endpoint in the Go backend.
+
+## [3.5.6] - 2026-05-25
+
+### Fixed
+- **Auth Protocol Enforcement (Go & TS)**: Hardened Jules API authentication by strictly enforcing `x-goog-api-key` for `AQ.A` tokens and removing `Authorization` headers to prevent gateway blocks and timeouts.
+- **Go Jules Client**: Added `AQ.A` token detection and smarter credential resolution from `JULES_AUTH_TOKEN`.
+- **Bun Backend**: Aligned Jules client initialization with Go backend parity.
+
+## [2.1.0] - 2026-04-08
+
+### Added
+- **Predictive Cost Optimizer**: LLM-aware cost prediction engine that estimates token usage and cost per task type using historical data with heuristic fallback. Provider cost efficiency profiling with composite scoring. Monthly budget tracking with utilization, projection, and trend analysis. 14-day spending trend visualization.
+  - `GET /api/cost/predict` - Cost prediction per task type
+  - `GET /api/cost/providers` - Provider efficiency profiles
+  - `GET /api/cost/budget` - Monthly budget report
+  - `GET /api/cost/trend` - Daily spending trend
+  - `GET /api/cost/optimize/:taskType` - Optimal provider recommendation
+
+- **Swarm Dashboard UI**: Full visual dashboard for managing agent swarms. Create new swarms with strategy selection (parallel/sequential/pipeline), view agent status cards with role icons and color coding, event timeline, and budget tracking panel with utilization bar and spending trend chart. Integrated into sidebar navigation.
+
+- **15 New Cost Optimizer Tests**: Prediction with/without data, heuristic fallbacks, provider profiling, budget reporting, spending trends, provider selection optimization.
+
+### Changed
+- **Total Go tests**: 167 passing (up from 154)
+- **Total API routes**: ~95 unique handlers
+- **Frontend components**: 37 (added swarm-dashboard.tsx, lib/api/swarm.ts)
+- **Frontend bundle**: 672KB main + 7 vendor chunks
+
+## [2.0.0] - 2026-04-08 — "Autonomous Fleet" Milestone
+
+### Added
+- **Multi-Agent Swarm Orchestration (v2.0 Milestone)**: Full parallel and sequential agent swarm system with LLM-powered task decomposition, dependency management, and automatic agent lifecycle. Swarms decompose root tasks into subtasks, create specialized agents (architect, engineer, auditor, coordinator), and execute them in parallel, sequentially, or as a pipeline.
+  - `POST /api/swarms` - Create a new swarm with root task
+  - `GET /api/swarms` - List swarms with status filter
+  - `GET /api/swarms/:id` - Get swarm details
+  - `GET /api/swarms/:id/agents` - Get swarm agents
+  - `GET /api/swarms/:id/events` - Get swarm event timeline
+  - `POST /api/swarms/:id/cancel` - Cancel running swarm
+  - `POST /api/swarms/:id/decompose` - Manual decomposition trigger
+  - Queue job `decompose_task` handles async decomposition
+  - Agents execute via Jules sessions or fallback to direct LLM calls
+  - Swarm events emitted via WebSocket for real-time UI updates
+
+- **Webhook Event Router (Enhanced)**: Configurable rule-based routing engine with 4 action types (log, enqueue, notify, delegate) and 5 provider types (borg, github, slack, linear, generic).
+  - Provider-specific endpoints: GitHub, Slack, Linear, Generic
+  - CRUD API for rule management: create, delete, toggle enable/disable
+
+- **Deep Dependency Health Checks**: 7 system dependency checks (database, disk, memory, git, queue, scheduler, websocket) with per-check status/latency/details, system runtime info, and health trend analysis.
+
+- **15 New Swarm Tests**: Creation, retrieval, listing, cancellation, heuristic decomposition, role prompts, constants validation.
+- **21 New Webhook Router Tests**: Rule CRUD, event processing, provider normalization, filtering.
+- **13 New Dependency Check Tests**: Database, memory, git, disk, scheduler, queue, broadcaster, system info, trends.
+
+### Changed
+- **Total Go tests**: 147 passing (up from 132)
+- **Total API routes**: ~109 handlers (up from ~98)
+- **Frontend code-split**: 7 vendor chunks, main chunk 659KB (down from 1054KB)
+- **ESLint**: All rules at `error` level, zero violations
+
+### Validation
+- All Go tests pass: 147 test cases
+- All frontend tests pass: 36 tests
+- Typecheck, lint, build: All clean
+- Version sync: ✅ (2.0.0)
+
+## [1.6.0] - 2026-04-08
+
+### Added
+- **Deep Dependency Health Checks**: New `/api/health/dependencies` endpoint that runs comprehensive checks across 7 system dependencies: database (ping + pool stats), disk space, memory pressure (heap/GC), git availability, queue worker (backlog/failed count), scheduler (task registration), and websocket broadcaster status. Each check reports status (ok/degraded/down), latency, and structured details.
+- **Health Trend Analysis**: New `GET /api/health/trend` endpoint for querying historical health snapshots by check name and time range, enabling trend visualization and alerting.
+- **System Runtime Info**: New `GET /api/system/info` endpoint exposing Go version, OS, architecture, CPU count, goroutine count, heap/stack memory, uptime, PID, and working directory.
+- **Dependency Check UI**: New panel in the Health dashboard showing all 7 dependency checks as color-coded cards with per-check status, latency, and messages. Includes runtime info footer with Go version, CPU, heap, goroutines, stack, and uptime.
+- **Comprehensive Go Test Suite**: Added 42 new test cases across 5 new test files (daemon_test.go, debate_test.go, realtime_test.go, review_test.go, scheduler_test.go) and 13 tests for dependency checks. Total: **117 passing Go tests** (up from 60).
+
+### Changed
+- **Frontend bundle code-split**: Split monolithic 1054KB bundle into 7 vendor chunks (react, data, icons, utils, radix, markdown) reducing main chunk to 659KB.
+- **ESLint rules tightened**: `no-explicit-any`, `no-unused-vars`, `no-empty` all promoted from `warn` to `error` with zero violations.
+- **HealthSnapshot model extended**: Added `CheckName`, `Message`, `Latency` fields for per-check dependency tracking.
+
+### Validation
+- All Go tests pass: `cd backend-go && go test ./...` (117 test cases)
+- All frontend tests pass: `pnpm run test` (36 tests)
+- Frontend typecheck passes: `pnpm run typecheck`
+- Frontend lint clean: `pnpm run lint` (0 errors, 0 warnings)
+- Build succeeds: `pnpm run build` (7 vendor chunks + 1 app chunk)
+- Version sync check: `node scripts/check-version-sync.js` ✅ (1.6.0)
+
+## [1.5.0] - 2026-04-08
+
+### Added
+- **Shadow Pilot (v1.5 Milestone)**: Background git diff monitoring service that autonomously watches tracked repositories for changes. Detects significant modifications (>50 lines), potential regressions (large deletions with few insertions), and creates notifications and anomaly records automatically.
+  - `GET /api/shadow-pilot/status` - Current status with repo count and diff event history
+  - `POST /api/shadow-pilot/start` - Enable background monitoring
+  - `POST /api/shadow-pilot/stop` - Disable background monitoring
+  - Runs on a 5-minute polling interval, monitors all known repo paths
+  - Health dashboard includes Shadow Pilot control panel with enable/disable toggle
+- **Regression Detection**: Shadow Pilot flags large deletions (>100 lines with <10 insertions) as potential regression anomalies, creating medium-severity anomaly records for operator review.
+- **Shadow Pilot UI**: New panel in the System Health dashboard showing monitored repo count, diff events, check interval, and enable/disable toggle.
+
+### Changed
+- **Anomaly detection now includes regression detection**: The anomaly engine covers queue backlogs, LLM error spikes, token budget overuse, stuck sessions, circuit breaker instability, and potential code regressions.
+- **Token recording is automatic**: Every `generateLLMText()` call now records token usage in a fire-and-forget goroutine, enabling cost attribution without any code changes.
+
+### Validation
+- All Go tests pass: `cd backend-go && go test ./...` (65+ test cases)
+- All frontend tests pass: `pnpm run test` (36 tests)
+- Frontend typecheck passes: `pnpm run typecheck`
+- Frontend lint clean: `pnpm run lint` (0 errors, 0 warnings)
+- Build succeeds: `pnpm run build`
+- Version sync check: `node scripts/check-version-sync.js` ✅ (1.5.0)
+
 ## [1.4.0] - 2026-04-08
 
 ### Added

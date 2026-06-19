@@ -100,7 +100,7 @@ export interface SessionKeeperConfig {
     activeWorkThresholdMinutes: number;
     messages: string[];
     smartPilotEnabled: boolean;
-    supervisorProvider: 'openai' | 'anthropic' | 'gemini';
+    supervisorProvider: string;
     supervisorApiKey: string;
     supervisorModel: string;
     contextMessageCount: number;

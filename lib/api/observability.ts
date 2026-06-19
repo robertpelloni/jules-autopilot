@@ -94,3 +94,70 @@ export async function fetchSessionTokenUsage(sessionId: string): Promise<TokenUs
   if (!response.ok) throw new Error('Failed to load session token usage');
   return response.json();
 }
+
+export async function fetchShadowPilotStatus(): Promise<Record<string, unknown>> {
+  const response = await fetch('/api/shadow-pilot/status');
+  if (!response.ok) throw new Error('Failed to load shadow pilot status');
+  return response.json();
+}
+
+export async function startShadowPilot(): Promise<void> {
+  const response = await fetch('/api/shadow-pilot/start', { method: 'POST' });
+  if (!response.ok) throw new Error('Failed to start shadow pilot');
+}
+
+export async function stopShadowPilot(): Promise<void> {
+  const response = await fetch('/api/shadow-pilot/stop', { method: 'POST' });
+  if (!response.ok) throw new Error('Failed to stop shadow pilot');
+}
+
+export interface DependencyCheck {
+  name: string;
+  status: 'ok' | 'degraded' | 'down' | 'unknown';
+  latencyMs: number;
+  message: string;
+  details?: Record<string, unknown>;
+  checkedAt: string;
+}
+
+export interface DependencyReport {
+  checks: DependencyCheck[];
+  overall: string;
+  checkedAt: string;
+  systemInfo: SystemInfo;
+}
+
+export interface SystemInfo {
+  goVersion: string;
+  os: string;
+  arch: string;
+  numCPU: number;
+  numGoroutine: number;
+  heapAllocMB: number;
+  heapSysMB: number;
+  stackInUseMB: number;
+  uptimeSeconds: number;
+  pid: number;
+  workingDir: string;
+}
+
+export async function fetchDependencyReport(): Promise<DependencyReport> {
+  const response = await fetch('/api/health/dependencies');
+  if (!response.ok) throw new Error('Failed to load dependency report');
+  return response.json();
+}
+
+export async function fetchHealthTrend(check?: string, hours?: number): Promise<{ snapshots: HealthSnapshot[]; count: number }> {
+  const params = new URLSearchParams();
+  if (check) params.set('check', check);
+  if (hours) params.set('hours', String(hours));
+  const response = await fetch(`/api/health/trend?${params}`);
+  if (!response.ok) throw new Error('Failed to load health trend');
+  return response.json();
+}
+
+export async function fetchSystemInfo(): Promise<SystemInfo> {
+  const response = await fetch('/api/system/info');
+  if (!response.ok) throw new Error('Failed to load system info');
+  return response.json();
+}

@@ -1,4 +1,4 @@
-export type DaemonEventType = 'connected' | 'daemon_status' | 'log_added' | 'sessions_interrupted' | 'sessions_continued' | 'session_updated' | 'session_nudged' | 'session_approved' | 'session_debate_escalated' | 'session_debate_resolved' | 'session_recovery_started' | 'session_recovery_completed' | 'codebase_index_started' | 'codebase_index_completed' | 'issue_check_started' | 'issue_evaluated' | 'issue_session_spawned' | 'activities_updated' | 'sessions_list_updated' | 'borg_signal_received' | 'ping' | 'pong';
+export type DaemonEventType = 'connected' | 'daemon_status' | 'log_added' | 'sessions_interrupted' | 'sessions_continued' | 'session_updated' | 'session_nudged' | 'session_approved' | 'session_recovery_started' | 'session_recovery_completed' | 'codebase_index_started' | 'codebase_index_completed' | 'activities_updated' | 'sessions_list_updated' | 'borg_signal_received' | 'ping' | 'pong';
 export interface DaemonEvent<T = unknown> {
     type: DaemonEventType;
     timestamp?: number;
@@ -32,18 +32,6 @@ export interface SessionApprovedPayload {
     sessionId: string;
     sessionTitle?: string;
 }
-export interface SessionDebateEscalatedPayload {
-    sessionId: string;
-    sessionTitle?: string;
-    riskScore: number;
-}
-export interface SessionDebateResolvedPayload {
-    sessionId: string;
-    sessionTitle?: string;
-    riskScore: number;
-    approvalStatus?: 'approved' | 'rejected' | 'pending';
-    summary?: string;
-}
 export interface SessionRecoveryStartedPayload {
     sessionId: string;
     sessionTitle?: string;
@@ -59,23 +47,6 @@ export interface CodebaseIndexStartedPayload {
 export interface CodebaseIndexCompletedPayload {
     newChunks: number;
     totalFilesScanned?: number;
-}
-export interface IssueCheckStartedPayload {
-    sourceId: string;
-}
-export interface IssueEvaluatedPayload {
-    sourceId: string;
-    issueNumber: number;
-    issueTitle?: string;
-    confidence: number;
-    isFixable: boolean;
-}
-export interface IssueSessionSpawnedPayload {
-    sourceId: string;
-    issueNumber: number;
-    issueTitle?: string;
-    sessionId: string;
-    sessionTitle?: string;
 }
 export interface ActivitiesUpdatedPayload {
     sessionId: string;
@@ -96,6 +67,6 @@ export declare function createDaemonEvent<T>(type: DaemonEventType, data?: T): D
 export declare const WS_DEFAULTS: {
     readonly RECONNECT_DELAY: 3000;
     readonly MAX_RECONNECT_ATTEMPTS: 10;
-    readonly PING_INTERVAL: 30000;
+    readonly PING_INTERVAL: 60000;
 };
 //# sourceMappingURL=websocket.d.ts.map

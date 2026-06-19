@@ -1,20 +1,21 @@
 import { Button } from "@/components/ui/button";
-import { 
-  Search, 
-  Plus, 
-  Settings as SettingsIcon, 
+import {
+  Plus,
+  Settings as SettingsIcon,
   Terminal,
-  User,
-  Brain,
-  RefreshCw
+  RefreshCw,
 } from "lucide-react";
 import { useState, useEffect } from "react";
 import { SettingsDialog } from "@/components/settings-dialog";
 import { BroadcastDialog } from "@/components/broadcast-dialog";
 import { NotificationCenter } from "@/components/notification-center";
 import { useJules } from "@/lib/jules/provider";
+import { useSessionKeeperStore } from "@/lib/stores/session-keeper";
 import { Badge } from "@/components/ui/badge";
+import { Switch } from "@/components/ui/switch";
 import { toast } from "sonner";
+import { cn } from "@/lib/utils";
+import { Zap, Sparkles } from "lucide-react";
 import type { Session } from "@jules/shared";
 import {
   DropdownMenu,
@@ -28,15 +29,26 @@ import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { APP_VERSION } from "@/lib/version";
 
 interface AppHeaderProps {
-  onSearchClick: () => void;
   onNewSession: () => void;
 }
 
-export function AppHeader({ onSearchClick, onNewSession }: AppHeaderProps) {
+export function AppHeader({ onNewSession }: AppHeaderProps) {
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
   const [isSyncing, setIsSyncing] = useState(false);
-  const { client, refreshTrigger } = useJules();
+  const { client } = useJules();
+  const { config, saveConfig } = useSessionKeeperStore();
+  const { isEnabled, smartPilotEnabled } = config;
   const [sessions, setSessions] = useState<Session[]>([]);
+
+  const handleToggleAutopilot = (checked: boolean) => {
+    saveConfig({ ...config, isEnabled: checked });
+    toast.success(`Auto-Pilot ${checked ? 'enabled' : 'disabled'}`);
+  };
+
+  const handleToggleSupervisor = (checked: boolean) => {
+    saveConfig({ ...config, smartPilotEnabled: checked });
+    toast.success(`Smart Supervisor ${checked ? 'enabled' : 'disabled'}`);
+  };
 
   useEffect(() => {
     const fetchSessions = async () => {
@@ -49,21 +61,17 @@ export function AppHeader({ onSearchClick, onNewSession }: AppHeaderProps) {
       }
     };
     fetchSessions();
-  }, [client, refreshTrigger]);
+  }, [client]);
 
-  const handleFleetSync = async () => {
+  const handleSync = async () => {
     try {
       setIsSyncing(true);
-      const response = await fetch('/api/fleet/sync', { method: 'POST' });
-      const result = await response.json();
+      const response = await fetch('/api/sessions', { method: 'GET' });
       if (response.ok) {
-        toast.success(`Fleet sync started: ${result.message}`);
-      } else {
-        toast.error(`Fleet sync failed: ${result.error}`);
+        setSessions(await response.json());
       }
     } catch (err) {
-      console.error("Fleet sync request failed:", err);
-      toast.error("Fleet sync failed");
+      console.error("Sync failed:", err);
     } finally {
       setIsSyncing(false);
     }
@@ -86,18 +94,26 @@ export function AppHeader({ onSearchClick, onNewSession }: AppHeaderProps) {
       </div>
 
       <div className="flex items-center gap-2">
-        <Button
-          variant="ghost"
-          size="sm"
-          className="h-8 text-white/40 hover:text-white hover:bg-white/5 gap-2 px-3"
-          onClick={onSearchClick}
-        >
-          <Search className="w-3.5 h-3.5" />
-          <span className="text-[10px] font-medium uppercase tracking-wider hidden sm:inline">Search</span>
-          <kbd className="hidden md:inline-flex h-4 items-center gap-1 rounded border border-white/10 bg-white/5 px-1.5 font-mono text-[8px] font-medium text-white/20">
-            <span>⌘</span>K
-          </kbd>
-        </Button>
+        <div className="flex items-center gap-4 px-2">
+          <div className="flex items-center gap-2">
+            <Zap className={cn("w-3.5 h-3.5", isEnabled ? "text-purple-400" : "text-white/20")} />
+            <span className="text-[10px] font-bold uppercase tracking-widest text-white/40 hidden xl:inline">Auto-Pilot</span>
+            <Switch
+              checked={isEnabled}
+              onCheckedChange={handleToggleAutopilot}
+              className="h-4 w-7 data-[state=checked]:bg-purple-600 scale-75"
+            />
+          </div>
+          <div className="flex items-center gap-2">
+            <Sparkles className={cn("w-3.5 h-3.5", smartPilotEnabled ? "text-blue-400" : "text-white/20")} />
+            <span className="text-[10px] font-bold uppercase tracking-widest text-white/40 hidden xl:inline">Supervisor</span>
+            <Switch
+              checked={smartPilotEnabled}
+              onCheckedChange={handleToggleSupervisor}
+              className="h-4 w-7 data-[state=checked]:bg-blue-600 scale-75"
+            />
+          </div>
+        </div>
 
         <div className="h-4 w-[1px] bg-white/10 mx-1" />
 
@@ -105,12 +121,12 @@ export function AppHeader({ onSearchClick, onNewSession }: AppHeaderProps) {
           variant="ghost"
           size="sm"
           className={`h-8 gap-2 px-3 ${isSyncing ? 'text-primary' : 'text-white/40 hover:text-white hover:bg-white/5'}`}
-          onClick={handleFleetSync}
+          onClick={handleSync}
           disabled={isSyncing}
-          title="Sync All Repo Memories & Sessions"
+          title="Refresh sessions"
         >
-          {isSyncing ? <RefreshCw className="w-3.5 h-3.5 animate-spin" /> : <Brain className="w-3.5 h-3.5" />}
-          <span className="text-[10px] font-medium uppercase tracking-wider hidden lg:inline">Sync All</span>
+          {isSyncing ? <RefreshCw className="w-3.5 h-3.5 animate-spin" /> : <RefreshCw className="w-3.5 h-3.5" />}
+          <span className="text-[10px] font-medium uppercase tracking-wider hidden lg:inline">Refresh</span>
         </Button>
 
         <BroadcastDialog sessions={sessions} />
@@ -151,11 +167,10 @@ export function AppHeader({ onSearchClick, onNewSession }: AppHeaderProps) {
               </div>
             </DropdownMenuLabel>
             <DropdownMenuSeparator className="bg-white/10" />
-            <DropdownMenuItem className="text-[10px] uppercase tracking-wider focus:bg-white/5 focus:text-white cursor-pointer">
-              <User className="mr-2 h-3.5 w-3.5" />
-              <span>Profile</span>
-            </DropdownMenuItem>
-            <DropdownMenuItem className="text-[10px] uppercase tracking-wider focus:bg-white/5 focus:text-white cursor-pointer" onClick={() => setIsSettingsOpen(true)}>
+            <DropdownMenuItem
+              className="text-[10px] uppercase tracking-wider focus:bg-white/5 focus:text-white cursor-pointer"
+              onClick={() => setIsSettingsOpen(true)}
+            >
               <SettingsIcon className="mr-2 h-3.5 w-3.5" />
               <span>Settings</span>
             </DropdownMenuItem>

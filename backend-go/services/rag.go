@@ -109,6 +109,29 @@ func QueryCodebase(query, apiKey string, topK int) ([]RAGQueryResult, error) {
 		return nil, err
 	}
 
+	// Try vector index first (optimized path)
+	index := GetVectorIndex()
+	if index.IsBuilt() && index.Size() > 0 {
+		results := index.Search(queryEmbedding, topK)
+		if len(results) > 0 {
+			return results, nil
+		}
+	}
+
+	// Fallback: rebuild index and search
+	if err := index.Rebuild(); err == nil {
+		results := index.Search(queryEmbedding, topK)
+		if len(results) > 0 {
+			return results, nil
+		}
+	}
+
+	// Final fallback: brute force scan
+	return queryCodebaseBruteForce(queryEmbedding, topK)
+}
+
+func queryCodebaseBruteForce(queryEmbedding []float32, topK int) ([]RAGQueryResult, error) {
+
 	var codeChunks []models.CodeChunk
 	var memoryChunks []models.MemoryChunk
 	if err := db.DB.Find(&codeChunks).Error; err != nil {

@@ -1,6 +1,7 @@
 "use client";
 
-import { useEffect, useState, useCallback, useMemo } from "react";
+import { useEffect, useState, useMemo } from "react";
+import useSWR from "swr";
 import { useJules } from "@/lib/jules/provider";
 import { useDaemonEvent } from "@/lib/hooks/use-daemon-events";
 import type { SessionsListUpdatedPayload } from "@jules/shared";
@@ -8,7 +9,7 @@ import type { Session } from '@jules/shared';
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Search, Loader2, Sparkles, RefreshCw, History } from "lucide-react";
+import { Search, Loader2, Sparkles, RefreshCw, History, X } from "lucide-react";
 import {
   Tooltip,
   TooltipContent,
@@ -16,7 +17,7 @@ import {
   TooltipTrigger,
 } from "@/components/ui/tooltip";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { formatDistanceToNow, parseISO, isValid, isToday, differenceInDays } from "date-fns";
+import { formatDistanceToNow, format, parseISO, isValid, isToday, differenceInDays } from "date-fns";
 import { cn } from "@/lib/utils";
 import { SessionReplayDialog } from "./session-replay-dialog";
 
@@ -32,57 +33,28 @@ export function SessionList({
   className,
 }: SessionListProps) {
   const { client, refreshTrigger } = useJules();
-  
-  const [sessions, setSessions] = useState<Session[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState("");
   const [replaySessionId, setReplaySessionId] = useState<string | null>(null);
 
-  const formatDate = (dateString: string) => {
-    if (!dateString) return "Unknown date";
-    try {
-      const date = parseISO(dateString);
-      if (!isValid(date)) return "Unknown date";
-      return formatDistanceToNow(date, { addSuffix: true });
-    } catch {
-      return "Unknown date";
+  const { 
+    data: sessions = [], 
+    error, 
+    isLoading: loading, 
+    mutate: loadSessions 
+  } = useSWR(
+    client ? "sessions" : null,
+    () => client!.listSessions(),
+    { 
+      refreshInterval: 30000,
+      revalidateOnFocus: true
     }
-  };
-
-  const loadSessions = useCallback(async () => {
-    console.log(`[SessionList] loadSessions called (Client ready: ${!!client})`);
-    if (!client) {
-      setLoading(false);
-      return;
-    }
-
-    try {
-      setLoading(true);
-      setError(null);
-      console.log("[SessionList] Fetching sessions from API...");
-      const data = await client.listSessions();
-      console.log(`[SessionList] Received ${data.length} sessions:`, JSON.stringify(data));
-      
-      const sorted = [...data].sort((a, b) => {
-        const timeA = new Date(a.updatedAt || a.createdAt || 0).getTime();
-        const timeB = new Date(b.updatedAt || b.createdAt || 0).getTime();
-        return timeB - timeA;
-      });
-      
-      setSessions(sorted);
-    } catch (err) {
-      console.error("Failed to load sessions:", err);
-      setError(err instanceof Error ? err.message : "Failed to load sessions");
-      setSessions([]); 
-    } finally {
-      setLoading(false);
-    }
-  }, [client]);
+  );
 
   useEffect(() => {
-    loadSessions();
-  }, [loadSessions, refreshTrigger]);
+    if (refreshTrigger) {
+      loadSessions();
+    }
+  }, [refreshTrigger, loadSessions]);
 
   useDaemonEvent<SessionsListUpdatedPayload>(
     'sessions_list_updated',
@@ -99,6 +71,17 @@ export function SessionList({
     },
     [loadSessions]
   );
+
+  const formatDate = (dateString?: string) => {
+    if (!dateString) return "Unknown date";
+    try {
+      const date = parseISO(dateString);
+      if (!isValid(date)) return "Unknown date";
+      return formatDistanceToNow(date, { addSuffix: true });
+    } catch {
+      return "Unknown date";
+    }
+  };
 
   const getStatusColor = (status: string) => {
     switch (status) {
@@ -166,7 +149,7 @@ export function SessionList({
     return (
       <div className={cn("flex flex-col items-center justify-center gap-3 p-6", className)}>
         <p className="text-xs text-destructive text-center">{error}</p>
-        <Button variant="outline" size="sm" onClick={loadSessions} className="h-7 text-[10px] font-mono uppercase tracking-widest">
+        <Button variant="outline" size="sm" onClick={() => loadSessions()} className="h-7 text-[10px] font-mono uppercase tracking-widest">
           Retry
         </Button>
       </div>
@@ -187,33 +170,55 @@ export function SessionList({
   return (
     <TooltipProvider>
       <div className={cn("h-full flex flex-col bg-zinc-950 overflow-hidden border-r border-white/[0.08]", className)}>
-        <SessionReplayDialog 
-          sessionId={replaySessionId} 
-          open={!!replaySessionId} 
-          onOpenChange={(open) => !open && setReplaySessionId(null)} 
+        <SessionReplayDialog
+          sessionId={replaySessionId}
+          open={!!replaySessionId}
+          onOpenChange={(open) => !open && setReplaySessionId(null)}
         />
-        
+
         <div className="px-3 py-2 border-b border-white/[0.08] shrink-0 space-y-2">
           <div className="flex items-center justify-between mb-1">
              <span className="text-[10px] font-bold text-white/40 uppercase tracking-widest">Navigation</span>
              <div className="flex items-center gap-1">
-                <Button variant="ghost" size="icon" onClick={loadSessions} className="h-5 w-5 text-white/20 hover:text-white hover:bg-white/5">
+                <Button variant="ghost" size="icon" onClick={() => loadSessions()} className="h-5 w-5 text-white/20 hover:text-white hover:bg-white/5">
                     <RefreshCw className="h-3 w-3" />
                 </Button>
              </div>
           </div>
           <div className="relative">
-            <Search className="absolute left-2 top-1/2 h-3 w-3 -translate-y-1/2 text-muted-foreground" />
+            <Search className="absolute left-2 top-1/2 h-3 w-3 -translate-y-1/2 text-muted-foreground pointer-events-none" />
             <Input
               placeholder="Filter sessions..."
               aria-label="Filter sessions"
-              className="h-7 w-full bg-black/50 pl-7 text-[10px] border-white/10 focus-visible:ring-purple-500/50 placeholder:text-muted-foreground/50"
+              className="h-7 w-full bg-black/50 pl-7 pr-7 text-[10px] border-white/10 focus-visible:ring-purple-500/50 placeholder:text-muted-foreground/50"
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
             />
+              {searchQuery && (
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="absolute right-1 top-1/2 -translate-y-1/2 h-5 w-5 text-white/30 hover:text-white hover:bg-white/5"
+                  onClick={() => setSearchQuery("")}
+                  aria-label="Clear search"
+                >
+                  <X className="h-3 w-3" />
+                </Button>
+              )}
           </div>
         </div>
         <ScrollArea className="flex-1 min-h-0">
+          {visibleSessions.length === 0 ? (
+            <div className="flex items-center justify-center p-6 h-full">
+              <p className="text-xs text-muted-foreground text-center leading-relaxed">
+                {searchQuery
+                  ? "No sessions match your search."
+                  : sessions.length === 0
+                    ? "No sessions yet. Create one to get started!"
+                    : "All sessions are archived."}
+              </p>
+            </div>
+          ) : (
           <div className="p-2 space-y-1">
             {visibleSessions.map((session) => {
               const daysOld = getDaysOld(session.createdAt);
@@ -268,7 +273,14 @@ export function SessionList({
                   
                   <div className="flex items-center justify-between gap-2">
                     <div className="flex items-center gap-2 text-[9px] text-white/30 font-mono tracking-tight truncate">
+                      <Tooltip>
+                    <TooltipTrigger asChild>
                       <span>{formatDate(displayDate)}</span>
+                    </TooltipTrigger>
+                    <TooltipContent side="bottom" className="bg-zinc-900 border-white/10 text-white text-[9px] font-mono">
+                      {displayDate ? format(parseISO(displayDate), "MMM d, yyyy h:mm a") : "Unknown"}
+                    </TooltipContent>
+                  </Tooltip>
                       {daysOld !== null && daysOld > 0 && <span>({daysOld}d)</span>}
                     </div>
                     {session.sourceId && (
@@ -299,6 +311,7 @@ export function SessionList({
                </div>
             )}
           </div>
+          )}
         </ScrollArea>
 
         {/* Daily Capacity Indicator */}

@@ -55,18 +55,17 @@ For granular tasks and immediate bug fixes, see `TODO.md`.
 * [x] **Phase 2: Lock the Pivot**: Completely deleted the legacy `server/` directory and backend-only JS dependencies, finalizing the transition to a Go-only architecture.
 
 ## Milestone: v1.5 — "Shadow Pilot"
-* [ ] **Background Anomaly Detection:** Agents silently monitoring `git diffs` background tasks, fixing failing CI pipelines before human review.
-  * Progress: Go backend now has autonomous anomaly detection for queue backlogs, LLM error spikes, token budget overuse, stuck sessions, and circuit breaker instability. Anomalies are displayed in the Health dashboard with severity badges and one-click resolve. Remaining work includes git diff monitoring and CI pipeline auto-fix.
-* [ ] **WebAssembly Plugin Isolation:** Absolute zero-trust security architecture enforcing memory ceilings on external MCP tool capabilities locally.
+* [x] **Background Anomaly Detection:** Shadow Pilot monitors git diffs and CI failures. CI Monitor detects merge conflicts, WIP commits, large uncommitted changes, and test syntax errors. Auto-analyzes failures with LLM and enqueues fix jobs for high-severity issues. Anomalies tracked with notifications and audit entries.
+  * Progress: Completed Git Diff Monitoring and CI Auto-Fix integration in v3.6.6. Shadow Pilot now detects potential regressions and autonomously spawns fix sessions.
+* [x] **WebAssembly Plugin Isolation:** Pure-Go Wasm sandbox using wazero runtime (zero CGO). Memory ceilings, execution timeouts, controlled I/O host functions. SHA256 signature verification on plugin binaries. Full isolation with audit-tracked execution.
 
 ## Milestone: v2.0 — "Autonomous Fleet"
-* [ ] **Multi-Agent Collaboration:** Orchestrate parallel agent swarms working on decomposed sub-tasks with shared context via the RAG mesh and real-time coordination events.
-* [ ] **Plugin Marketplace:** Browseable registry of community Wasm plugins with install-from-URL, version management, and signature verification in the dashboard UI.
-* [ ] **Predictive Cost Optimizer:** Machine learning model trained on provider telemetry to predict optimal routing decisions, token budgets, and session timing for minimum cost per task.
+* [x] **Multi-Agent Collaboration:** Orchestrate parallel agent swarms working on decomposed sub-tasks with shared context via the RAG mesh and real-time coordination events. Swarms support parallel, sequential, and pipeline strategies with LLM-powered task decomposition and automatic agent lifecycle management.
+* [x] **Plugin Marketplace:** Plugin registry with install-from-URL, version management, signature verification, enable/disable lifecycle, and configuration management. Full CRUD API with 8 endpoints. Plugins fetched from remote URLs with SHA256 verification.
+* [x] **Predictive Cost Optimizer:** Token budget prediction engine with historical analysis, provider efficiency profiling, monthly budget tracking with utilization/projection, and optimal provider routing recommendations.
 
 ## Milestone: v3.0 — "Neural Autonomy"
-* [ ] **Observability & Health Checks:** Prometheus-compatible `/metrics` endpoint, structured health checks for daemon/Redis/DB, and a live `/dashboard/health` status page.
-  * Progress: Go backend now serves `GET /metrics`, `GET /healthz`, and `GET /api/health` with database/daemon/queue/runtime/notification/audit visibility. The app includes a dedicated Health dashboard view and an immutable Audit Trail view. Remaining work includes broader dependency coverage (if/when Redis exists) and richer health drill-downs/history.
+* [x] **Observability & Health Checks:** Prometheus-compatible `/metrics` endpoint, structured health checks for 7 dependencies (database, disk, memory, git, queue, scheduler, websocket), trend analysis API, system runtime info, and a dedicated Health dashboard with dependency check cards, anomaly alerts, token budget tracker, and Shadow Pilot control panel.
 * [x] **Self-Healing Circuit Breakers:** Provider-level circuit breakers automatically reroute to fallback models when error rates (5xx, 429) spike, with configurable thresholds and recovery windows in the Go runtime.
 * [x] **Multi-Tenant API Keys:** Added scoped API key generation and revocation in the Go runtime with a dedicated management UI.
 
@@ -76,6 +75,6 @@ For granular tasks and immediate bug fixes, see `TODO.md`.
 * [x] **Scheduled Automation Engine:** Added a Go-native cron-based task scheduler that enqueues background maintenance jobs (indexing, issue checks, log cleanup).
 
 ## Milestone: v5.0 — "Sovereign Intelligence"
-* [x] **Webhook Event Router:** Configurable inbound webhook router that maps external service events (Slack, Linear, Jira, Borg) to orchestrator actions.
+* [x] **Webhook Event Router:** Configurable inbound webhook router with rule-based routing engine supporting 4 action types (log, enqueue, notify, delegate) and 5 providers (Slack, GitHub, Linear, Borg, Generic) with full CRUD management API.
 * [x] **Session Templates & Presets:** Reusable session configuration templates with pre-filled prompts, repos, and settings — launchable from the dashboard with one click.
 * [x] **Notification Center:** Unified notification hub aggregating alerts from CI fixes, swarm completions, circuit breaker trips, and scheduled job results with read/dismiss state.

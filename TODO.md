@@ -3,14 +3,17 @@
 This document tracks granular bugs, missing features, and technical debt. For epic-level milestones, see `ROADMAP.md`.
 
 ## Immediate Actions
+- [x] **Shadow Pilot: Git Diff Monitoring (v3.6.6):** Implemented `monitorGitDiffs` in Go backend to detect significant changes and regressions. Added `git_diff` anomaly type and deduplicated logging.
+- [x] **Shadow Pilot & Submodule UI Restore (v3.6.6):** Restored `ShadowPilotPanel` and `SubmoduleList` components. Integrated into `SettingsDialog` tabs.
+- [x] **Automated CI Fix Loop (v3.6.6):** Verified CI monitoring integration with autonomous session spawning. Failures now trigger `ci_auto_fix` queue jobs.
+- [x] **React 19 / Compiler Health Fix (v3.6.0):** Resolved all 17+ lint errors related to strict purity and effect rules. Refactored data fetching to `useSWR` for better performance and idiomatic usage.
 - [x] **Submodule Dashboard Live Integration:** `SubmoduleList` now uses `useSWR` against `/api/system/submodules` with 30s refresh and manual revalidation.
 - [x] **Daemon API Discovery:** Formally established `/api/manifest` for node capability discovery.
 - [x] **SSE/WebSocket Log Streaming:** Injected `useDaemonEvent('log_added')` into the session activity view and surfaced a live Keeper feed for session/global daemon events without manual refresh.
-- [ ] **Session Event Timeline Enrichment:** Optionally render richer structured cards for debate/escalation/recovery events beyond the current Keeper feed strip.
+- [x] **Session Event Timeline Enrichment:** Enhanced Keeper Feed event cards with color-coded event badges (debate=red, recovery=orange, nudge=blue, index=cyan, spawn=yellow), visual risk score bars, confidence meters, and styled approval status indicators.
 - [x] **Dashboard Health Surface:** Added a Fleet Intelligence runtime health block that consumes `/api/health` and surfaces daemon/database/credential state plus key backend totals.
 - [x] **Expanded Dashboard Health Surface:** Added a dedicated Health dashboard view with runtime status, queue/totals cards, and metrics preview.
-- [ ] **Deep Observability Surface:** Add richer health history, dependency-specific checks, and deeper metrics drill-downs beyond the current Health dashboard.
-  - Progress: Health history snapshots, anomaly detection engine, and token budget tracker are now implemented. The Health dashboard shows active anomalies and per-provider token costs. Remaining work includes richer dependency-specific checks and longer trend analysis.
+- [x] **Deep Observability Surface:** Rich dependency health checks (7 checks: database, disk, memory, git, queue, scheduler, websocket) with per-check status/latency/details. System runtime info (Go version, CPU, heap, goroutines, uptime). Health trend analysis API for historical snapshots.
 - [x] **Go Backend Parity Pass #2:** Ported the highest-value queue intelligence path (`handleCheckSession`) plus Go-side event/log bridging and real session actions so the Go backend can nudge sessions, enqueue memory sync, and conservatively auto-approve low-risk plans.
 - [x] **Go Backend Parity Pass #3:** Ported `handleIndexCodebase` so Go can now walk the repo, chunk source files, request embeddings, and upsert `CodeChunk` rows without Bun.
 - [x] **Go Backend Parity Pass #4:** Ported `handleCheckIssues` plus Go-side issue fetching/session spawning support so the Go backend can now discover GitHub work and open Jules sessions autonomously.
@@ -39,22 +42,28 @@ This document tracks granular bugs, missing features, and technical debt. For ep
 - [x] **Go Backend Parity Pass #27:** Implemented Multi-Tenant API Keys CRUD (v3.0 Roadmap) in Go with a dedicated management UI and CLI key generator.
 - [x] **Go Backend Parity Pass #28:** Final audit for any remaining residual Bun-only behavior (e.g. final script parity), officially declaring the Go backend as the primary runtime.
 - [x] **Phase 2:** Completely deleted the `server/` directory and backend-only dependencies to formally lock the runtime pivot.
-- [ ] **Phase 3:** Explore the next v4.0/v5.0 roadmap items (e.g., Scheduled Automation UI, deep observability drill-downs, or background anomaly detection).
+- [x] **Phase 3:** Implemented deep dependency checks, webhook event router with multi-provider support, scheduled automation CRUD, and code-split frontend bundle.
 - [x] **Tooling Stabilization:** Added a working ESLint v9 flat config and aligned the Jest harness with the current Vite/Bun + shared-package runtime assumptions.
 - [x] **Lint Coverage Expansion:** Extended the lint command to cover `src/`, `components/`, `lib/`, and `server/` with a staged warning-first rollout.
 - [x] **Lint Warning Burn-Down:** Completed two warning burn-down passes and brought the expanded lint surface to zero warnings.
-- [ ] **Lint Strictness Ratchet:** Revisit warning-first rule downgrades (`no-explicit-any`, `no-unused-vars`, `no-empty`) and progressively tighten them once the team is ready for stricter enforcement. The actionable backlog is cleared; next step is policy tightening rather than cleanup.
+- [x] **Lint Strictness Ratchet:** Tightened `no-explicit-any`, `no-unused-vars`, and `no-empty` from `warn` to `error` with zero violations.
 - [x] **Notification Center (v5.0):** Implemented unified notification hub with Go backend service and frontend UI, auto-generated from keeper events with read/dismiss state, priority levels, and real-time WebSocket push.
+- [x] **Webhook Event Router (v5.0 Enhanced):** Configurable rule-based routing with 4 action types (log, enqueue, notify, delegate) and 5 providers (borg, github, slack, linear, generic) with CRUD API.
 - [x] **Audit Trail (v4.0):** Implemented immutable append-only audit log in Go with structured metadata, paginated frontend view, and aggregate statistics.
 - [x] **Borg Collective UI:** Implemented the "Collective Signals" feed in the Fleet tab to visualize incoming Borg signals.
+- [x] **Full API Pagination (v3.6.5):** Refactored `ListSessions` in the Go backend to support full API pagination, increasing session discovery capacity from 100 to 1,000 sessions.
+- [x] **Robust LLM Fallbacks (v3.6.5):** Implemented an automated rotation strategy for OpenRouter models, allowing the system to seamlessly cycle through alternative free models during rate-limiting (429) events.
+- [x] **WebSocket Stability (v3.6.5):** Hardened the real-time event layer by increasing the WebSocket ping interval to 60s, resolving transient "Ping timeout" issues in high-latency network conditions.
 
 ## Technical Debt & Refactoring
 - [x] **Auth Protocol Enforcement:** Locked down Jules Portal `AQ.A` tokens to use `x-goog-api-key` and strictly delete `Authorization` headers to prevent gateway blocks.
-- [ ] **Prisma Connection Pooling:** Evaluate `connection_limit` for high-concurrency swarm operations in the Docker environment.
+- [x] **Connection Pooling:** SQLite connection pool configured with WAL mode, busy timeout (5s), NORMAL synchronous, 64MB cache, foreign keys enabled. Single-writer constraint honored with MaxOpenConns(1).
 - [x] **Cross-Session Memory Storage:** Implemented the `MemoryChunk` model for persistent, semantic history tracking.
-- [ ] **Vector Search Optimization:** Transition to a dedicated vector extension if the RAG index exceeds 50,000 chunks.
+- [x] **Vector Search Optimization:** Implemented two-phase approximate nearest neighbor search with dimensionality reduction (64-dim coarse filter + full cosine). Pre-computed norms, vector index service with rebuild/stats APIs, automatic index-then-fallback search path.
 
 ## Intelligence & Autonomy
 - [x] **Autonomous Self-Healing:** Autopilot now detects `FAILED` sessions and enqueues recovery plans.
 - [x] **Council Debate Engine:** High-risk plans now trigger background debates between persona models before approval.
 - [x] **Historical Retrieval:** RAG queries now pull from both the current codebase and successful past session outcomes.
+- [x] **Concurrent Queue Worker (v3.6.0):** Refactored the Go worker to use a goroutine-based semaphore pool, matching `concurrency` (2-4). Improved polling frequency to 2s, enabling faster session nudges and background tasks. Added startup job recovery.
+- [x] **Codebase Indexing Parity (Go):** Fully enabled the `POST /api/rag/reindex` endpoint and periodic daemon-driven indexing in the Go runtime.

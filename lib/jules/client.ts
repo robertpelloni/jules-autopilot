@@ -153,25 +153,20 @@ export class JulesAPIError extends Error {
 }
 
 function getDefaultApiBaseUrl(): string {
-  const viteEnv = (() => {
-    try {
-      return (0, eval)('import.meta.env') as { VITE_JULES_API_BASE_URL?: string } | undefined;
-    } catch {
-      return undefined;
-    }
-  })();
+  // @ts-expect-error - import.meta is handled by Vite/Bundler
+  const viteBaseUrl = (typeof import.meta !== 'undefined' && import.meta.env?.VITE_JULES_API_BASE_URL) || 
+                      (typeof process !== 'undefined' && process.env?.VITE_JULES_API_BASE_URL);
+  
+  if (viteBaseUrl) return viteBaseUrl;
+  return '/api';
+}
 
-  const processEnv = (() => {
-    try {
-      return process.env as { VITE_JULES_API_BASE_URL?: string } | undefined;
-    } catch {
-      return undefined;
-    }
-  })();
-
-  return viteEnv?.VITE_JULES_API_BASE_URL
-    || processEnv?.VITE_JULES_API_BASE_URL
-    || '/api';
+function isLikelyApiKey(val: string): boolean {
+  const v = val.trim();
+  if (v.startsWith('AQ.A')) return true;
+  if (v.startsWith('AIza')) return true;
+  if (v.length < 100 && !v.startsWith('ya29.')) return true;
+  return false;
 }
 
 export class JulesClient {
@@ -183,6 +178,17 @@ export class JulesClient {
     this.apiKey = apiKey;
     this.authToken = authToken;
     this.baseUrl = baseUrl;
+
+    // Normalize: if authToken is actually an API key, move it
+    if (this.authToken && isLikelyApiKey(this.authToken)) {
+      this.apiKey = this.authToken;
+      this.authToken = undefined;
+    }
+    // If apiKey is actually an OAuth token, move it (unlikely but for symmetry)
+    if (this.apiKey && !isLikelyApiKey(this.apiKey)) {
+      this.authToken = this.apiKey;
+      this.apiKey = undefined;
+    }
   }
 
   private normalizeSessionId(sessionId: string): string {
@@ -208,10 +214,12 @@ export class JulesClient {
 
     // Google Jules API v1alpha Auth Logic:
     if (isGoogleApi) {
-      if (this.authToken) {
-        headers['Authorization'] = `Bearer ${this.authToken}`;
-      } else if (this.apiKey) {
+      if (this.apiKey) {
         headers['X-Goog-Api-Key'] = this.apiKey;
+        // Strictly ensure Authorization is NOT present
+        delete headers['Authorization'];
+      } else if (this.authToken) {
+        headers['Authorization'] = `Bearer ${this.authToken}`;
       }
       
       // LOG THE CLEAN HEADERS
@@ -453,7 +461,7 @@ export class JulesClient {
     }
   }
 
-  async listActivities(sessionId: string, limit: number = 1000): Promise<Activity[]> {
+  async listActivities(sessionId: string, limit: number = 50): Promise<Activity[]> {
     const normalizedSessionId = this.normalizeSessionId(sessionId);
     let allActivities: ApiActivity[] = [];
     let pageToken: string | undefined;
@@ -468,7 +476,7 @@ export class JulesClient {
 
         const endpoint = `/sessions/${normalizedSessionId}/activities?${params.toString()}`;
         const response = await this.request<{ activities?: ApiActivity[]; nextPageToken?: string } | ApiActivity[]>(endpoint);
-        
+
         if (Array.isArray(response)) {
           allActivities = response;
           break;
@@ -479,7 +487,7 @@ export class JulesClient {
           pageToken = response.nextPageToken;
         }
       } while (pageToken);
-      
+
       return allActivities.map(a => this.transformActivity(a, normalizedSessionId));
     } catch (error) {
       console.error('[JulesClient] Failed to list activities:', error);

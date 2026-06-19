@@ -4,17 +4,22 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
+	"log"
 	"net/http"
 	"os"
 	"strings"
 	"time"
 
-	"github.com/joho/godotenv"
 	"github.com/jules-autopilot/backend/db"
 	"github.com/jules-autopilot/backend/models"
 )
 
 const JulesApiBaseUrl = "https://jules.googleapis.com/v1alpha"
+
+// httpClient with timeout to prevent goroutine leaks from hanging API calls
+var httpClient = &http.Client{
+	Timeout: 120 * time.Second,
+}
 
 type JulesClient struct {
 	apiKey    string
@@ -28,13 +33,33 @@ type JulesSource struct {
 	Metadata map[string]interface{} `json:"metadata,omitempty"`
 }
 
+func isLikelyApiKey(val string) bool {
+	val = strings.TrimSpace(val)
+	// Jules Portal keys start with AQ.A
+	if strings.HasPrefix(val, "AQ.A") {
+		return true
+	}
+	// Google API keys typically start with AIza
+	if strings.HasPrefix(val, "AIza") {
+		return true
+	}
+	// If it's short and doesn't have the ya29 prefix, it's likely an API key
+	if len(val) < 100 && !strings.HasPrefix(val, "ya29.") {
+		return true
+	}
+	return false
+}
+
 func resolveJulesCredentials() (string, string) {
-	// 1. Try JULES_AUTH_TOKEN
-	if token := strings.TrimSpace(os.Getenv("JULES_AUTH_TOKEN")); token != "" && token != "placeholder" {
-		return "", token
+	// 1. Try JULES_AUTH_TOKEN - but check if it's actually an API key
+	if val := strings.TrimSpace(os.Getenv("JULES_AUTH_TOKEN")); val != "" && val != "placeholder" {
+		if isLikelyApiKey(val) {
+			return val, ""
+		}
+		return "", val
 	}
 
-	// 2. Try API Keys
+	// 2. Try explicit API Keys
 	for _, envKey := range []string{"JULES_API_KEY", "GOOGLE_API_KEY"} {
 		if key := strings.TrimSpace(os.Getenv(envKey)); key != "" && key != "placeholder" {
 			return key, ""
@@ -47,11 +72,10 @@ func resolveJulesCredentials() (string, string) {
 		if settings.JulesApiKey != nil {
 			val := strings.TrimSpace(*settings.JulesApiKey)
 			if val != "" && val != "placeholder" {
-				// Detect if it's likely a token or key
-				if strings.HasPrefix(val, "ya29.") || len(val) > 100 {
-					return "", val
+				if isLikelyApiKey(val) {
+					return val, ""
 				}
-				return val, ""
+				return "", val
 			}
 		}
 	}
@@ -65,12 +89,12 @@ func NewJulesClient(explicit ...string) *JulesClient {
 
 	if len(explicit) > 0 && strings.TrimSpace(explicit[0]) != "" && explicit[0] != "placeholder" {
 		val := strings.TrimSpace(explicit[0])
-		if strings.HasPrefix(val, "ya29.") || len(val) > 100 {
-			authToken = val
-			apiKey = ""
-		} else {
+		if isLikelyApiKey(val) {
 			apiKey = val
 			authToken = ""
+		} else {
+			authToken = val
+			apiKey = ""
 		}
 	}
 
@@ -81,10 +105,12 @@ func NewJulesClient(explicit ...string) *JulesClient {
 }
 
 func (c *JulesClient) setAuthHeaders(req *http.Request) {
-	if c.authToken != "" {
-		req.Header.Set("Authorization", "Bearer "+c.authToken)
-	} else if c.apiKey != "" {
+	// STRICT ENFORCEMENT: Never send both, and prefer x-goog-api-key for AQ.A tokens
+	if c.apiKey != "" {
 		req.Header.Set("X-Goog-Api-Key", c.apiKey)
+		req.Header.Del("Authorization") // Strictly delete to prevent gateway blocks
+	} else if c.authToken != "" {
+		req.Header.Set("Authorization", "Bearer "+c.authToken)
 	}
 	req.Header.Set("Content-Type", "application/json")
 }
@@ -118,18 +144,17 @@ type ApiSessionOutput struct {
 	} `json:"pullRequest"`
 }
 
-type GitHubIssue struct {
-	Number      int         `json:"number"`
-	Title       string      `json:"title"`
-	Body        string      `json:"body"`
-	HTMLURL     string      `json:"html_url"`
-	PullRequest interface{} `json:"pull_request,omitempty"`
-}
-
 type apiSource struct {
 	Source string                 `json:"source"`
 	Name   string                 `json:"name"`
 	Raw    map[string]interface{} `json:"-"`
+}
+
+func truncatePageToken(token string) string {
+	if len(token) <= 12 {
+		return token
+	}
+	return token[:8] + "..." + token[len(token)-4:]
 }
 
 func (c *JulesClient) ListSources(filter string) ([]JulesSource, error) {
@@ -145,6 +170,9 @@ func (c *JulesClient) ListSources(filter string) ([]JulesSource, error) {
 		params := make([]string, 0, 2)
 		if pageToken != "" {
 			params = append(params, "pageToken="+pageToken)
+			log.Printf("[Jules] GET sources (pageToken: %s)", truncatePageToken(pageToken))
+		} else {
+			log.Printf("[Jules] GET sources")
 		}
 		if strings.TrimSpace(filter) != "" {
 			params = append(params, "filter="+filter)
@@ -159,7 +187,7 @@ func (c *JulesClient) ListSources(filter string) ([]JulesSource, error) {
 		}
 		c.setAuthHeaders(req)
 
-		resp, err := http.DefaultClient.Do(req)
+		resp, err := httpClient.Do(req)
 		if err != nil {
 			return nil, err
 		}
@@ -218,40 +246,69 @@ func (c *JulesClient) ListSources(filter string) ([]JulesSource, error) {
 	return results, nil
 }
 
-// ListSessions fetches all sessions from the Jules API
+// ListSessions fetches all sessions from the Jules API with pagination support
 func (c *JulesClient) ListSessions() ([]models.JulesSession, error) {
 	if !c.isConfigured() {
 		return nil, fmt.Errorf("Jules credentials not found")
 	}
 
-	url := fmt.Sprintf("%s/sessions", JulesApiBaseUrl)
-	req, err := http.NewRequest("GET", url, nil)
-	if err != nil {
-		return nil, err
-	}
+	var allSessions []ApiSession
+	pageToken := ""
+	maxPages := 10 // Safety cap: 10 pages * 100 = 1000 sessions
 
-	c.setAuthHeaders(req)
+	for {
+		url := fmt.Sprintf("%s/sessions?pageSize=100", JulesApiBaseUrl)
+		if pageToken != "" {
+			url += "&pageToken=" + pageToken
+			log.Printf("[Jules] GET sessions (pageToken: %s)", truncatePageToken(pageToken))
+		} else {
+			log.Printf("[Jules] GET sessions")
+		}
 
-	resp, err := http.DefaultClient.Do(req)
-	if err != nil {
-		return nil, err
-	}
-	defer resp.Body.Close()
+		req, err := http.NewRequest("GET", url, nil)
+		if err != nil {
+			return nil, err
+		}
 
-	if resp.StatusCode != http.StatusOK {
-		body, _ := io.ReadAll(resp.Body)
-		return nil, fmt.Errorf("Jules API request failed with status %d: %s", resp.StatusCode, string(body))
-	}
+		c.setAuthHeaders(req)
 
-	var data struct {
-		Sessions []ApiSession `json:"sessions"`
-	}
-	if err := json.NewDecoder(resp.Body).Decode(&data); err != nil {
-		return nil, err
+		resp, err := httpClient.Do(req)
+		if err != nil {
+			return nil, err
+		}
+
+		if resp.StatusCode != http.StatusOK {
+			body, _ := io.ReadAll(resp.Body)
+			resp.Body.Close()
+			return nil, fmt.Errorf("Jules API sessions request failed with status %d: %s", resp.StatusCode, string(body))
+		}
+
+		var data struct {
+			Sessions      []ApiSession `json:"sessions"`
+			NextPageToken string       `json:"nextPageToken"`
+		}
+		if err := json.NewDecoder(resp.Body).Decode(&data); err != nil {
+			resp.Body.Close()
+			return nil, err
+		}
+		resp.Body.Close()
+
+		allSessions = append(allSessions, data.Sessions...)
+		
+		pageToken = data.NextPageToken
+		if pageToken == "" {
+			break
+		}
+
+		maxPages--
+		if maxPages <= 0 {
+			log.Printf("[Jules] ListSessions reached safety cap of 1000 sessions, stopping.")
+			break
+		}
 	}
 
 	var results []models.JulesSession
-	for _, s := range data.Sessions {
+	for _, s := range allSessions {
 		results = append(results, transformSession(s))
 	}
 
@@ -272,7 +329,7 @@ func (c *JulesClient) GetSession(id string) (models.JulesSession, error) {
 
 	c.setAuthHeaders(req)
 
-	resp, err := http.DefaultClient.Do(req)
+	resp, err := httpClient.Do(req)
 	if err != nil {
 		return models.JulesSession{}, err
 	}
@@ -371,66 +428,68 @@ func transformActivity(a map[string]interface{}, sessionId string) models.JulesA
 
 // ListActivities fetches all activities for a session from the Jules API
 func (c *JulesClient) ListActivities(sessionId string) ([]models.JulesActivity, error) {
+	return c.ListActivitiesWithLimit(sessionId, 2) // max 2 pages = ~100 most recent activities
+}
+
+// ListActivitiesWithLimit fetches up to maxPages pages of recent activities.
+// The supervisor only needs the last ~10 activities for nudge context,
+// so fetching all pages is wasteful and slow for long-running sessions.
+func (c *JulesClient) ListActivitiesWithLimit(sessionId string, maxPages int) ([]models.JulesActivity, error) {
 	if !c.isConfigured() {
 		return nil, fmt.Errorf("Jules credentials not found")
 	}
-
 	var allActivities []models.JulesActivity
 	pageToken := ""
-
+	pagesFetched := 0
 	for {
-		url := fmt.Sprintf("%s/sessions/%s/activities?pageSize=1000", JulesApiBaseUrl, sessionId)
+		url := fmt.Sprintf("%s/sessions/%s/activities?pageSize=50", JulesApiBaseUrl, sessionId)
 		if pageToken != "" {
 			url += "&pageToken=" + pageToken
+			log.Printf("[Jules] GET activities (pageToken: %s)", truncatePageToken(pageToken))
+		} else {
+			log.Printf("[Jules] GET activities")
 		}
-
 		req, err := http.NewRequest("GET", url, nil)
 		if err != nil {
 			return nil, err
 		}
-
 		c.setAuthHeaders(req)
-
-		resp, err := http.DefaultClient.Do(req)
+		resp, err := httpClient.Do(req)
 		if err != nil {
 			return nil, err
 		}
-		defer resp.Body.Close()
-
 		if resp.StatusCode != http.StatusOK {
 			body, _ := io.ReadAll(resp.Body)
+			resp.Body.Close()
 			return nil, fmt.Errorf("Jules API activities request failed with status %d: %s", resp.StatusCode, string(body))
 		}
-
 		var data struct {
-			Activities    []map[string]interface{} `json:"activities"`
-			NextPageToken string                   `json:"nextPageToken"`
+			Activities []map[string]interface{} `json:"activities"`
+			NextPageToken string `json:"nextPageToken"`
 		}
-		if err := json.NewDecoder(resp.Body).Decode(&data); err != nil {
+		err = json.NewDecoder(resp.Body).Decode(&data)
+		resp.Body.Close()
+		if err != nil {
 			return nil, err
 		}
-
 		for _, a := range data.Activities {
 			allActivities = append(allActivities, transformActivity(a, sessionId))
 		}
 
+		if len(data.Activities) > 0 {
+			first := data.Activities[0]["createTime"].(string)
+			last := data.Activities[len(data.Activities)-1]["createTime"].(string)
+			log.Printf("[Jules] Fetched %d activities (batch range: %s to %s)", len(data.Activities), first, last)
+		}
+
 		pageToken = data.NextPageToken
-		if pageToken == "" {
+	pagesFetched++
+		if pageToken == "" || pagesFetched >= maxPages {
 			break
 		}
 	}
 
 	return allActivities, nil
-}
-
-func normalizeGitHubRepo(sourceID string) (string, error) {
-	trimmed := strings.TrimSpace(sourceID)
-	trimmed = strings.TrimPrefix(trimmed, "sources/github/")
-	trimmed = strings.TrimPrefix(trimmed, "github/")
-	if strings.Count(trimmed, "/") < 1 {
-		return "", fmt.Errorf("invalid GitHub source id: %s", sourceID)
-	}
-	return trimmed, nil
 }
 
 func normalizeSourceForCreate(sourceID string) string {
@@ -475,7 +534,7 @@ func (c *JulesClient) CreateActivity(sessionId string, params CreateActivityRequ
 
 	c.setAuthHeaders(req)
 
-	resp, err := http.DefaultClient.Do(req)
+	resp, err := httpClient.Do(req)
 	if err != nil {
 		return nil, err
 	}
@@ -491,61 +550,6 @@ func (c *JulesClient) CreateActivity(sessionId string, params CreateActivityRequ
 	return result, nil
 }
 
-func (c *JulesClient) ListIssues(sourceID string) ([]GitHubIssue, error) {
-	githubToken := os.Getenv("GITHUB_PAT")
-	if githubToken == "" {
-		githubToken = os.Getenv("GITHUB_TOKEN")
-	}
-	if githubToken == "" {
-		_ = godotenv.Load("../.env")
-		if githubToken = os.Getenv("GITHUB_PAT"); githubToken == "" {
-			githubToken = os.Getenv("GITHUB_TOKEN")
-		}
-	}
-	if githubToken == "" {
-		return []GitHubIssue{}, nil
-	}
-
-	repo, err := normalizeGitHubRepo(sourceID)
-	if err != nil {
-		return nil, err
-	}
-
-	url := fmt.Sprintf("https://api.github.com/repos/%s/issues?state=open&sort=updated", repo)
-	req, err := http.NewRequest(http.MethodGet, url, nil)
-	if err != nil {
-		return nil, err
-	}
-	req.Header.Set("Authorization", "token "+githubToken)
-	req.Header.Set("Accept", "application/vnd.github.v3+json")
-	req.Header.Set("User-Agent", "Jules-Autopilot-Go")
-
-	resp, err := http.DefaultClient.Do(req)
-	if err != nil {
-		return nil, err
-	}
-	defer resp.Body.Close()
-
-	if resp.StatusCode >= 400 {
-		body, _ := io.ReadAll(resp.Body)
-		return nil, fmt.Errorf("GitHub issues request failed (%d): %s", resp.StatusCode, string(body))
-	}
-
-	var issues []GitHubIssue
-	if err := json.NewDecoder(resp.Body).Decode(&issues); err != nil {
-		return nil, err
-	}
-
-	filtered := make([]GitHubIssue, 0, len(issues))
-	for _, issue := range issues {
-		if issue.PullRequest != nil {
-			continue
-		}
-		filtered = append(filtered, issue)
-	}
-	return filtered, nil
-}
-
 func (c *JulesClient) UpdateSession(sessionID string, updates map[string]interface{}, updateMask string) (models.JulesSession, error) {
 	if !c.isConfigured() {
 		return models.JulesSession{}, fmt.Errorf("Jules credentials not found")
@@ -559,7 +563,7 @@ func (c *JulesClient) UpdateSession(sessionID string, updates map[string]interfa
 	}
 	c.setAuthHeaders(req)
 
-	resp, err := http.DefaultClient.Do(req)
+	resp, err := httpClient.Do(req)
 	if err != nil {
 		return models.JulesSession{}, err
 	}
@@ -601,7 +605,7 @@ func (c *JulesClient) CreateSession(sourceID, prompt, title string) (models.Jule
 	}
 	c.setAuthHeaders(req)
 
-	resp, err := http.DefaultClient.Do(req)
+	resp, err := httpClient.Do(req)
 	if err != nil {
 		return models.JulesSession{}, err
 	}
@@ -632,7 +636,7 @@ func (c *JulesClient) ApprovePlan(sessionId string) error {
 
 	c.setAuthHeaders(req)
 
-	resp, err := http.DefaultClient.Do(req)
+	resp, err := httpClient.Do(req)
 	if err != nil {
 		return err
 	}

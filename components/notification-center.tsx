@@ -34,11 +34,8 @@ const typeConfig: Record<string, { icon: typeof Bell; color: string; bgColor: st
 
 const categoryLabels: Record<string, string> = {
   session: 'Session',
-  debate: 'Debate',
   recovery: 'Recovery',
   indexing: 'Indexing',
-  issues: 'Issues',
-  circuit_breaker: 'Circuit Breaker',
   scheduler: 'Scheduler',
   webhook: 'Webhook',
   system: 'System',
@@ -136,13 +133,13 @@ export function NotificationCenter() {
   );
 
   const unreadCount = countData || 0;
-  const notifications = data?.notifications || [];
+  const notifications = data || [];
 
   const filteredNotifications = filter === 'all'
     ? notifications
     : filter === 'unread'
-    ? notifications.filter(n => !n.isRead)
-    : notifications.filter(n => n.type === filter);
+    ? notifications.filter((n: Notification) => !n.isRead)
+    : notifications.filter((n: Notification) => n.type === filter);
 
   const handleRead = useCallback(async (id: string) => {
     await markNotificationRead(id);

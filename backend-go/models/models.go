@@ -86,10 +86,10 @@ type KeeperSettings struct {
 	Messages                   string         `json:"messages"`
 	CustomMessages             string         `json:"customMessages"`
 	SmartPilotEnabled          bool           `gorm:"default:false" json:"smartPilotEnabled"`
-	SupervisorProvider         string         `gorm:"default:openai" json:"supervisorProvider"`
+	SupervisorProvider         string         `gorm:"default:openrouter" json:"supervisorProvider"`
 	SupervisorApiKey           *string        `json:"supervisorApiKey"`
 	JulesApiKey                *string        `json:"julesApiKey"`
-	SupervisorModel            string         `gorm:"default:gpt-4o" json:"supervisorModel"`
+	SupervisorModel            string         `gorm:"default:free" json:"supervisorModel"`
 	ContextMessageCount        int            `gorm:"default:10" json:"contextMessageCount"`
 	ResumePaused               bool           `gorm:"default:false" json:"resumePaused"`
 	UserID                     *string        `json:"userId"`
@@ -129,6 +129,7 @@ type SessionTemplate struct {
 type SupervisorState struct {
 	SessionID                      string    `gorm:"primaryKey" json:"sessionId"`
 	LastProcessedActivityTimestamp *string   `json:"lastProcessedActivityTimestamp"`
+	LastPleaseContinueAt              *string `json:"lastPleaseContinueAt"`
 	History                        *string   `json:"history"`
 	OpenaiThreadID                 *string   `json:"openaiThreadId"`
 	OpenaiAssistantID              *string   `json:"openaiAssistantId"`
@@ -169,7 +170,7 @@ type Workspace struct {
 	Debates                   []Debate          `gorm:"foreignKey:WorkspaceID" json:"debates"`
 	Templates                 []SessionTemplate `gorm:"foreignKey:WorkspaceID" json:"templates"`
 	Members                   []WorkspaceMember `gorm:"foreignKey:WorkspaceID" json:"members"`
-	DeletedAt                 gorm.DeletedAt    `gorm:"index" json:"-"`
+	DeletedAt                 gorm.DeletedAt    `json:"-"`
 }
 
 // WorkspaceMember represents the WorkspaceMember model from Prisma
@@ -326,6 +327,9 @@ type HealthSnapshot struct {
 	ResponseTimeMs    int            `json:"responseTimeMs"`
 	MemoryUsageMB     float64        `json:"memoryUsageMB"`
 	GoroutineCount    int            `json:"goroutineCount"`
+	CheckName         string         `json:"checkName,omitempty"` // Per-check dependency name
+	Message           string         `json:"message,omitempty"`   // Per-check message
+	Latency           int64          `json:"latency"`             // Per-check latency in ms
 	CreatedAt         time.Time      `gorm:"index" json:"createdAt"`
 	DeletedAt         gorm.DeletedAt `gorm:"index" json:"-"`
 }
@@ -363,6 +367,20 @@ type AnomalyRecord struct {
 }
 
 // QueueJob represents the QueueJob model from Prisma
+
+type ScheduledTask struct {
+	ID         string      `gorm:"primaryKey" json:"id"`
+	Name       string      `gorm:"uniqueIndex" json:"name"`
+	IntervalMs int64       `json:"intervalMs"`
+	JobType    string      `json:"jobType"`
+	Payload    interface{} `gorm:"type:text" json:"payload"`
+	IsEnabled  bool        `gorm:"default:true" json:"isEnabled"`
+	LastRunAt  *time.Time  `json:"lastRunAt,omitempty"`
+	NextRunAt  *time.Time  `json:"nextRunAt,omitempty"`
+	CreatedAt  time.Time   `json:"createdAt"`
+	UpdatedAt  time.Time   `json:"updatedAt"`
+}
+
 type QueueJob struct {
 	ID          string         `gorm:"primaryKey" json:"id"`
 	Type        string         `json:"type"`
@@ -377,4 +395,100 @@ type QueueJob struct {
 	CreatedAt   time.Time      `json:"createdAt"`
 	UpdatedAt   time.Time      `json:"updatedAt"`
 	DeletedAt   gorm.DeletedAt `gorm:"index" json:"-"`
+}
+
+// Swarm represents a coordinated group of agents
+type Swarm struct {
+	ID            string     `gorm:"primaryKey" json:"id"`
+	Title         string     `json:"title"`
+	Description   string     `json:"description"`
+	SourceRepo    string     `json:"sourceRepo,omitempty"`
+	Strategy      string     `json:"strategy"`
+	Status        string     `gorm:"index" json:"status"`
+	ParentSwarmID *string    `json:"parentSwarmId,omitempty"`
+	RootTask      string     `json:"rootTask"`
+	Decomposition string     `json:"decomposition,omitempty"`
+	SharedContext string     `json:"sharedContext,omitempty"`
+	Metadata      string     `json:"metadata,omitempty"`
+	CreatedAt     time.Time  `gorm:"index" json:"createdAt"`
+	UpdatedAt     time.Time  `json:"updatedAt"`
+	CompletedAt   *time.Time `json:"completedAt,omitempty"`
+}
+
+// SwarmAgent represents a single agent in a swarm
+type SwarmAgent struct {
+	ID          string     `gorm:"primaryKey" json:"id"`
+	SwarmID     string     `gorm:"index" json:"swarmId"`
+	Role        string     `json:"role"`
+	SessionID   *string    `json:"sessionId,omitempty"`
+	Task        string     `json:"task"`
+	Status      string     `gorm:"index" json:"status"`
+	Output      string     `json:"output,omitempty"`
+	Provider    string     `json:"provider,omitempty"`
+	Model       string     `json:"model,omitempty"`
+	DependsOn   string     `json:"dependsOn,omitempty"`
+	CreatedAt   time.Time  `json:"createdAt"`
+	StartedAt   *time.Time `json:"startedAt,omitempty"`
+	CompletedAt *time.Time `json:"completedAt,omitempty"`
+}
+
+// SwarmEvent records state changes in a swarm
+type SwarmEvent struct {
+	ID        string    `gorm:"primaryKey" json:"id"`
+	SwarmID   string    `gorm:"index" json:"swarmId"`
+	AgentID   string    `json:"agentId,omitempty"`
+	EventType string    `json:"eventType"`
+	Message   string    `json:"message"`
+	Data      string    `json:"data,omitempty"`
+	CreatedAt time.Time `gorm:"index" json:"createdAt"`
+}
+
+// ShadowPilotSettings stores the configuration for the Shadow Pilot scanner
+type ShadowPilotSettings struct {
+	ID            string `gorm:"primaryKey;default:default" json:"id"`
+	IsEnabled     bool   `gorm:"default:false" json:"isEnabled"`
+	ScanIntervalHours int `gorm:"default:6" json:"scanIntervalHours"`
+	AutoFix       bool   `gorm:"default:false" json:"autoFix"`
+	MinSeverity   string `gorm:"default:medium" json:"minSeverity"`
+	UpdatedAt     time.Time `json:"updatedAt"`
+}
+
+// VulnerabilityRecord represents a detected vulnerability or regression
+type VulnerabilityRecord struct {
+	ID           string         `gorm:"primaryKey" json:"id"`
+	SourceID     string         `gorm:"index:idx_vuln_source_status" json:"sourceId"`
+	Type         string         `gorm:"index" json:"type"`          // 'dependency', 'static_analysis', 'secret_scan', 'regression'
+	Severity     string         `gorm:"index" json:"severity"`      // 'critical', 'high', 'medium', 'low', 'info'
+	Title        string         `json:"title"`
+	Description  string         `json:"description"`
+	FilePath     *string        `json:"filePath,omitempty"`
+	CVE          *string        `json:"cve,omitempty"`
+	FixVersion   *string        `json:"fixVersion,omitempty"`
+	Remediation  *string        `json:"remediation,omitempty"`
+	Status       string         `gorm:"default:open;index:idx_vuln_source_status" json:"status"` // 'open', 'in_progress', 'fixed', 'false_positive', 'wontfix'
+	FixSessionID *string        `json:"fixSessionId,omitempty"`
+	Score        float64        `gorm:"default:0" json:"score"`
+	DetectedAt   time.Time      `gorm:"index" json:"detectedAt"`
+	ResolvedAt   *time.Time     `json:"resolvedAt,omitempty"`
+	CreatedAt    time.Time      `json:"createdAt"`
+	UpdatedAt    time.Time      `json:"updatedAt"`
+	DeletedAt    gorm.DeletedAt `gorm:"index" json:"-"`
+}
+
+// Plugin represents an installed plugin
+type Plugin struct {
+	ID           string         `gorm:"primaryKey" json:"id"`
+	Name         string         `gorm:"uniqueIndex:idx_plugin_name_version" json:"name"`
+	Version      string         `gorm:"uniqueIndex:idx_plugin_name_version" json:"version"`
+	Author       string         `json:"author,omitempty"`
+	Description  string         `json:"description,omitempty"`
+	SourceURL    string         `json:"sourceUrl"`
+	Signature    string         `json:"signature,omitempty"`
+	Status       string         `gorm:"index" json:"status"`
+	Capabilities string         `json:"capabilities,omitempty"` // JSON array
+	Config       string         `json:"config,omitempty"`
+	Size         int            `json:"size"`
+	InstalledAt  time.Time      `gorm:"index" json:"installedAt"`
+	UpdatedAt    time.Time      `json:"updatedAt"`
+	DeletedAt    gorm.DeletedAt `gorm:"index" json:"-"`
 }

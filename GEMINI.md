@@ -1,6 +1,6 @@
 # Gemini 1.5 Pro / Flash / 2.0 Instructions
 
-> **MANDATORY:** Always read `UNIVERSAL_LLM_INSTRUCTIONS.md` first. This file contains only Gemini-specific overrides and strategies.
+> **MANDATORY:** Always read `LLM_INSTRUCTIONS.md` first. This file contains only Gemini-specific overrides and strategies.
 
 ## Agent-Specific Strategies: Gemini
 

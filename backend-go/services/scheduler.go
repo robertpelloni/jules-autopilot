@@ -44,9 +44,11 @@ func GetScheduler() *Scheduler {
 func (s *Scheduler) Start() {
 	log.Println("[Scheduler] Starting scheduled task engine...")
 
-	s.ScheduleTask("index_codebase", 24*time.Hour)
-	s.ScheduleTask("check_issues", 1*time.Hour)
-	s.ScheduleTask("cleanup_logs", 7*24*time.Hour)
+	// index_codebase disabled :  no free embedding model available on OpenRouter
+	// s.ScheduleTask("index_codebase", 24*time.Hour)
+	s.ScheduleTask("cleanup_logs", 5*time.Minute)
+	s.ScheduleTask("ci_monitor", 30*time.Minute)
+	s.ScheduleTask("shadow_scan", 6*time.Hour)
 
 	s.mu.Lock()
 	for name := range s.tasks {
@@ -163,30 +165,55 @@ func (s *Scheduler) executeTask(name string) {
 
 	switch name {
 	case "index_codebase":
-		if _, err := AddJob("index_codebase", map[string]string{}); err != nil {
-			log.Printf("[Scheduler] Failed to enqueue index_codebase: %v", err)
-		}
-	case "check_issues":
-		if settings.SmartPilotEnabled {
-			client := NewJulesClient()
-			sources, err := client.ListSources("")
-			if err == nil {
-				for _, source := range sources {
-					_, _ = AddJob("check_issues", map[string]interface{}{"sourceId": source.ID})
-				}
-			}
-		}
+		// Disabled: no free embedding model on OpenRouter
+		log.Printf("[Scheduler] Skipping index_codebase: no embedding model")
 	case "cleanup_logs":
+		// Purge stale processing jobs (stuck > 30 min) - hard delete
+		staleCutoff := time.Now().Add(-30 * time.Minute)
+		if result := db.DB.Unscoped().Where("status = ? AND created_at < ?", "processing", staleCutoff).Delete(&models.QueueJob{}); result.RowsAffected > 0 {
+			log.Printf("[Scheduler] Purged %d stale processing jobs", result.RowsAffected)
+		}
+		// Purge deprecated job types
+		db.DB.Unscoped().Where("type = ?", "check_issues").Delete(&models.QueueJob{})
 		// Simple retention policy: delete logs older than 30 days
 		cutoff := time.Now().Add(-30 * 24 * time.Hour)
 		result := db.DB.Where("created_at < ?", cutoff).Delete(&models.KeeperLog{})
 		if result.Error == nil && result.RowsAffected > 0 {
 			log.Printf("[Scheduler] Cleaned up %d old keeper logs", result.RowsAffected)
 		}
+		// Cap audit entries to 500
+		db.DB.Exec("DELETE FROM audit_entries WHERE id NOT IN (SELECT id FROM audit_entries ORDER BY id DESC LIMIT 500)")
+		// Cap notifications to 50
+		db.DB.Exec("DELETE FROM notifications WHERE id NOT IN (SELECT id FROM notifications ORDER BY id DESC LIMIT 50)")
+		// Cap keeper_logs to 200
+		db.DB.Exec("DELETE FROM keeper_logs WHERE id NOT IN (SELECT id FROM keeper_logs ORDER BY id DESC LIMIT 200)")
 		// Cleanup old dismissed notifications
 		if count, err := CleanupOldNotifications(90); err == nil && count > 0 {
 			log.Printf("[Scheduler] Cleaned up %d old notifications", count)
 		}
+		// Auto-read rate-limit error notifications older than 10 minutes
+		if result := db.DB.Model(&models.Notification{}).Where("is_read = 0 AND type = 'error' AND message LIKE '%429%' AND created_at < ?", time.Now().Add(-10*time.Minute)).Updates(map[string]interface{}{"is_read": true}); result.RowsAffected > 0 {
+			log.Printf("[Scheduler] Auto-read %d old 429 notifications", result.RowsAffected)
+		}
+		// Auto-read all error notifications older than 1 hour
+		if result := db.DB.Model(&models.Notification{}).Where("is_read = 0 AND type = 'error' AND created_at < ?", time.Now().Add(-1*time.Hour)).Updates(map[string]interface{}{"is_read": true}); result.RowsAffected > 0 {
+			log.Printf("[Scheduler] Auto-read %d old error notifications", result.RowsAffected)
+		}
+	// Auto-purge old failed 429 queue jobs (>1 hour old)
+	db.DB.Unscoped().Where("status = ? AND last_error LIKE ? AND created_at < ?", "failed", "%429%", time.Now().Add(-1*time.Hour)).Delete(&models.QueueJob{})
+	// Auto-purge old completed queue jobs (>5 min old)
+	db.DB.Unscoped().Where("status = ? AND created_at < ?", "completed", time.Now().Add(-5*time.Minute)).Delete(&models.QueueJob{})
+	// Auto-purge stale pending queue jobs (>1 hour)
+	db.DB.Unscoped().Where("status = ? AND created_at < ?", "pending", time.Now().Add(-1*time.Hour)).Delete(&models.QueueJob{})
+	// Auto-read session recovery notifications (>5 min old, not actionable as unread)
+	db.DB.Model(&models.Notification{}).Where("is_read = ? AND type = ? AND title = ? AND created_at < ?", false, "success", "Session Recovery", time.Now().Add(-5*time.Minute)).Update("is_read", true)
+	// Auto-purge very old notifications (>7 days)
+	db.DB.Where("created_at < ?", time.Now().Add(-7*24*time.Hour)).Delete(&models.Notification{})
+	case "ci_monitor":
+		RunCIMonitor()
+	case "shadow_scan":
+		RunShadowScan()
+		TriggerAutoFix()
 	}
 }
 
@@ -198,4 +225,99 @@ func StartScheduler() {
 func StopScheduler() {
 	s := GetScheduler()
 	s.Stop()
+}
+
+// CreateCustomTask adds a new custom scheduled task
+func CreateCustomTask(name string, intervalMs int64, jobType string, payload interface{}) error {
+	s := GetScheduler()
+	s.mu.Lock()
+	defer s.mu.Unlock()
+
+	if _, exists := s.tasks[name]; exists {
+		return fmt.Errorf("task %s already exists", name)
+	}
+
+	// Store in DB for persistence
+	task := models.ScheduledTask{
+		ID:         fmt.Sprintf("task-%d", time.Now().UnixNano()),
+		Name:       name,
+		IntervalMs: intervalMs,
+		JobType:    jobType,
+		Payload:    payload,
+		IsEnabled:  true,
+		CreatedAt:  time.Now(),
+		UpdatedAt:  time.Now(),
+	}
+	if db.DB != nil {
+		if err := db.DB.Create(&task).Error; err != nil {
+			return fmt.Errorf("failed to persist task: %w", err)
+		}
+	}
+
+	s.ScheduleTask(name, time.Duration(intervalMs)*time.Millisecond)
+	s.wg.Add(1)
+	go s.runCustomTaskLoop(name, intervalMs, jobType, payload)
+
+	return nil
+}
+
+// DeleteCustomTask removes a scheduled task
+func DeleteCustomTask(name string) error {
+	s := GetScheduler()
+	s.mu.Lock()
+	defer s.mu.Unlock()
+
+	if _, exists := s.tasks[name]; !exists {
+		return fmt.Errorf("task %s not found", name)
+	}
+
+	delete(s.tasks, name)
+	delete(s.triggers, name)
+
+	if db.DB != nil {
+		db.DB.Where("name = ?", name).Delete(&models.ScheduledTask{})
+	}
+
+	return nil
+}
+
+// GetCustomTasks returns all custom persisted tasks
+func GetCustomTasks() []models.ScheduledTask {
+	if db.DB == nil {
+		return nil
+	}
+	var tasks []models.ScheduledTask
+	db.DB.Find(&tasks)
+	return tasks
+}
+
+func (s *Scheduler) runCustomTaskLoop(name string, intervalMs int64, jobType string, payload interface{}) {
+	defer s.wg.Done()
+
+	interval := time.Duration(intervalMs) * time.Millisecond
+	if interval <= 0 {
+		interval = 5 * time.Minute
+	}
+
+	timer := time.NewTimer(1 * time.Minute) // Initial delay
+
+	for {
+		select {
+		case <-timer.C:
+			if _, err := AddJob(jobType, payload); err != nil {
+				log.Printf("[Scheduler] Custom task %s failed: %v", name, err)
+			} else {
+				log.Printf("[Scheduler] Custom task %s enqueued %s job", name, jobType)
+			}
+			timer.Reset(interval)
+		case <-s.stopChan:
+			if !timer.Stop() {
+				select {
+				case <-timer.C:
+				default:
+				}
+			}
+			return
+		}
+	}
 }

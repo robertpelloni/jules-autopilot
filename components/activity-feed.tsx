@@ -25,8 +25,7 @@ import {
   Copy, 
   Check, 
   Loader2, 
-  Users, 
-  LayoutTemplate, 
+   
   Sparkles,
   ArrowUp,
   ArrowDown,
@@ -36,7 +35,6 @@ import {
 } from 'lucide-react';
 import { useVirtualizer } from '@tanstack/react-virtual';
 import { ActivityInput } from './activity-input';
-import { SessionHealthBadge } from './session-health-badge';
 import { ActivityContent } from './activity-content';
 import {
   DropdownMenu,
@@ -56,8 +54,6 @@ interface ActivityFeedProps {
   showCodeDiffs: boolean;
   onToggleCodeDiffs: (show: boolean) => void;
   onActivitiesChange: (activities: Activity[]) => void;
-  onStartDebate?: () => void;
-  onSaveTemplate?: () => void;
   refreshTrigger?: number;
 }
 
@@ -84,8 +80,6 @@ export function ActivityFeed({
   showCodeDiffs, 
   onToggleCodeDiffs, 
   onActivitiesChange, 
-  onStartDebate, 
-  onSaveTemplate,
   refreshTrigger = 0 
 }: ActivityFeedProps) {
   const { client } = useJules();
@@ -200,29 +194,6 @@ export function ActivityFeed({
 
   useEffect(() => {
     onActivitiesChange(activities);
-
-    // Auto-sync memory if [PROJECT_MEMORY] is detected
-    const lastActivity = activities[activities.length - 1];
-    if (lastActivity && lastActivity.role === 'agent' && lastActivity.content.includes('[PROJECT_MEMORY]')) {
-      const content = lastActivity.content.replace('[PROJECT_MEMORY]', '').trim();
-      if (content) {
-        const syncMemory = async () => {
-          try {
-            const res = await fetch(`/api/sessions/${session.id}/save-memory`, {
-              method: 'POST',
-              headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({ content })
-            });
-            if (res.ok) {
-              toast.success("Project memory automatically synced to repo!");
-            }
-          } catch (err) {
-            console.error("Auto-sync memory failed:", err);
-          }
-        };
-        syncMemory();
-      }
-    }
   }, [activities, onActivitiesChange, session.id]);
 
   const handleApprovePlan = async () => {
@@ -283,9 +254,9 @@ export function ActivityFeed({
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
                 codeContext,
-                provider: 'openai', 
-                model: 'gpt-4o',
-                apiKey: localStorage.getItem('openai_api_key') || '',
+                provider: 'openrouter',
+                model: 'free',
+                apiKey: localStorage.getItem('openrouter_api_key') || '',
                 reviewType: 'comprehensive'
             })
         });
@@ -437,10 +408,13 @@ export function ActivityFeed({
     return grouped;
   }, [filteredActivities]);
 
+  const getScrollElement = useCallback(() => parentRef.current, []);
+  const estimateSize = useCallback(() => 250, []);
+
   const virtualizer = useVirtualizer({
     count: groupedActivities.length,
-    getScrollElement: () => parentRef.current,
-    estimateSize: () => 250,
+    getScrollElement,
+    estimateSize,
     overscan: 10,
   });
 
@@ -474,6 +448,18 @@ export function ActivityFeed({
       .replace(/^issue_/, 'issue:')
       .replace(/^codebase_/, 'index:')
       .replaceAll('_', ' ');
+  };
+
+  const getEventBadgeStyles = (eventName: string) => {
+    if (eventName.includes('debate') || eventName.includes('escalat')) return 'bg-pink-500/10 text-pink-300 border-pink-500/20';
+    if (eventName.includes('recovery')) return 'bg-orange-500/10 text-orange-300 border-orange-500/20';
+    if (eventName.includes('circuit_breaker')) return 'bg-red-500/10 text-red-300 border-red-500/20';
+    if (eventName.includes('approved')) return 'bg-green-500/10 text-green-300 border-green-500/20';
+    if (eventName.includes('rejected')) return 'bg-red-500/10 text-red-300 border-red-500/20';
+    if (eventName.includes('nudged')) return 'bg-blue-500/10 text-blue-300 border-blue-500/20';
+    if (eventName.includes('index')) return 'bg-cyan-500/10 text-cyan-300 border-cyan-500/20';
+    if (eventName.includes('spawned') || eventName.includes('issue')) return 'bg-yellow-500/10 text-yellow-300 border-yellow-500/20';
+    return 'bg-purple-500/10 text-purple-300 border-purple-500/20';
   };
 
   const getActivityIcon = (activity: Activity) => {
@@ -522,7 +508,7 @@ export function ActivityFeed({
                 <Sparkles className="h-3 w-3" />
                 <span>Jules</span>
               </div>
-              <SessionHealthBadge session={session} />
+              <span className="text-[8px] text-white/30">{session.rawState}</span>
             </div>
             <div className="flex items-center gap-3 text-[9px] font-mono text-muted-foreground uppercase tracking-wide">
               <span>Started {formatDate(session.createdAt)}</span>
@@ -584,16 +570,6 @@ export function ActivityFeed({
                       <Play className="mr-2 h-3.5 w-3.5" />
                       <span>Start Code Review</span>
                     </DropdownMenuItem>
-                    <DropdownMenuItem onSelect={(e) => { e.preventDefault(); onStartDebate?.(); }} className="focus:bg-accent focus:text-accent-foreground text-xs cursor-pointer">
-                      <Users className="mr-2 h-3.5 w-3.5" />
-                      <span>Start Debate</span>
-                    </DropdownMenuItem>
-                    {onSaveTemplate && (
-                      <DropdownMenuItem onSelect={(e) => { e.preventDefault(); onSaveTemplate(); }} className="focus:bg-accent focus:text-accent-foreground text-xs cursor-pointer text-primary focus:text-primary">
-                        <LayoutTemplate className="mr-2 h-3.5 w-3.5" />
-                        <span>Save as Template</span>
-                      </DropdownMenuItem>
-                    )}
                   </>
                 )}
 
@@ -642,11 +618,13 @@ export function ActivityFeed({
                     </div>
                     <div className="flex items-center gap-2">
                       {eventDetails?.event && (
-                        <Badge variant="outline" className="h-4 border-purple-500/20 bg-purple-500/10 px-1.5 text-[8px] uppercase tracking-widest text-purple-300">
+                        <Badge variant="outline" className={`h-4 px-1.5 text-[8px] uppercase tracking-widest ${getEventBadgeStyles(eventDetails.event)}`}>
                           {getEventBadgeLabel(eventDetails.event)}
                         </Badge>
                       )}
-                      <span className="uppercase tracking-widest text-zinc-500">{log.type}</span>
+                      <Badge variant="outline" className={`h-4 px-1.5 text-[8px] uppercase tracking-widest ${log.type === 'error' ? 'bg-red-500/10 text-red-300 border-red-500/20' : log.type === 'action' ? 'bg-blue-500/10 text-blue-300 border-blue-500/20' : 'border-white/10 text-zinc-500'}`}>
+                        {log.type}
+                      </Badge>
                     </div>
                   </div>
                   <p className="mt-1.5 leading-relaxed">{log.message}</p>
@@ -662,16 +640,30 @@ export function ActivityFeed({
                         <p className="uppercase tracking-wide">Issue: #{eventDetails.issueNumber}</p>
                       )}
                       {typeof eventDetails.confidence === 'number' && (
-                        <p className="uppercase tracking-wide">Confidence: {eventDetails.confidence}%</p>
+                        <div className="flex items-center gap-2">
+                          <span className="uppercase tracking-wide">Confidence:</span>
+                          <div className="flex-1 h-1 bg-zinc-800 rounded-full overflow-hidden">
+                            <div className={`h-full rounded-full ${eventDetails.confidence >= 80 ? 'bg-green-500' : eventDetails.confidence >= 50 ? 'bg-yellow-500' : 'bg-red-500'}`} style={{ width: `${eventDetails.confidence}%` }} />
+                          </div>
+                          <span>{eventDetails.confidence}%</span>
+                        </div>
                       )}
                       {typeof eventDetails.isFixable === 'boolean' && (
                         <p className="uppercase tracking-wide">Fixable: {eventDetails.isFixable ? 'yes' : 'no'}</p>
                       )}
                       {typeof eventDetails.riskScore === 'number' && (
-                        <p className="uppercase tracking-wide">Risk Score: {eventDetails.riskScore}/100</p>
+                        <div className="flex items-center gap-2">
+                          <span className="uppercase tracking-wide">Risk:</span>
+                          <div className="flex-1 h-1.5 bg-zinc-800 rounded-full overflow-hidden">
+                            <div className={`h-full rounded-full transition-all ${eventDetails.riskScore >= 70 ? 'bg-red-500' : eventDetails.riskScore >= 40 ? 'bg-yellow-500' : 'bg-green-500'}`} style={{ width: `${eventDetails.riskScore}%` }} />
+                          </div>
+                          <span className={`font-bold ${eventDetails.riskScore >= 70 ? 'text-red-400' : eventDetails.riskScore >= 40 ? 'text-yellow-400' : 'text-green-400'}`}>{eventDetails.riskScore}/100</span>
+                        </div>
                       )}
                       {eventDetails.approvalStatus && (
-                        <p className="uppercase tracking-wide">Decision: {eventDetails.approvalStatus}</p>
+                        <p className={`uppercase tracking-wide font-bold ${eventDetails.approvalStatus === 'approved' ? 'text-green-400' : eventDetails.approvalStatus === 'rejected' ? 'text-red-400' : 'text-yellow-400'}`}>
+                          Decision: {eventDetails.approvalStatus}
+                        </p>
                       )}
                       {typeof eventDetails.newChunks === 'number' && (
                         <p className="uppercase tracking-wide">New Chunks: {eventDetails.newChunks}</p>
@@ -789,6 +781,6 @@ export function ActivityFeed({
       {!isArchived && (
         <ActivityInput onSendMessage={handleSendMessage} disabled={sending} placeholder="Send a message to Jules..." />
       )}
-    </div>
+      </div>
   );
 }

@@ -93,7 +93,7 @@ interface SessionKeeperState {
 }
 
 const DEFAULT_CONFIG: SessionKeeperConfig = {
-  isEnabled: false,
+  isEnabled: true,
   autoSwitch: true,
   checkIntervalSeconds: 30,
   inactivityThresholdMinutes: 1,
@@ -105,10 +105,10 @@ const DEFAULT_CONFIG: SessionKeeperConfig = {
     "Excellent plan. Go ahead.",
     "Looks good to me. Continue.",
   ],
-  smartPilotEnabled: false,
-  supervisorProvider: 'openai',
+  smartPilotEnabled: true,
+supervisorProvider: 'openrouter',
   supervisorApiKey: '',
-  supervisorModel: '',
+  supervisorModel: 'gpt-4o',
   contextMessageCount: 20,
   debateEnabled: false,
   debateParticipants: [],
@@ -134,8 +134,8 @@ export const useSessionKeeperStore = create<SessionKeeperState>()(
         try {
           const res = await fetch('/api/settings/keeper');
           if (res.ok) {
-            const config = await res.json();
-            set({ config });
+            const data = await res.json();
+            set({ config: { ...DEFAULT_CONFIG, ...data } });
 
             const statusRes = await fetch('/api/daemon/status');
             if (statusRes.ok) {

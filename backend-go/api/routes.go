@@ -511,7 +511,7 @@ func postBorgWebhook(c *fiber.Ctx) error {
 	}})
 
 	if payload.Type == "repo_updated" {
-		_, _ = services.AddJob("index_codebase", map[string]string{})
+		// index_codebase disabled: no free embedding model
 	}
 	if payload.Type == "dependency_alert" {
 		log.Printf("[Webhooks] Borg Dependency Alert: %v", payload.Data)
@@ -519,7 +519,7 @@ func postBorgWebhook(c *fiber.Ctx) error {
 	if payload.Type == "fleet_command" {
 		if action, ok := payload.Data["action"].(string); ok {
 			if action == "reindex_all" {
-				_, _ = services.AddJob("index_codebase", map[string]string{})
+				services.AddJob("index_codebase", map[string]interface{}{})
 			} else if action == "clear_logs" {
 				db.DB.Where("1 = 1").Delete(&models.KeeperLog{})
 			}
@@ -535,8 +535,9 @@ func postBorgWebhook(c *fiber.Ctx) error {
 }
 
 func postRAGReindex(c *fiber.Ctx) error {
-	if _, err := services.AddJob("index_codebase", map[string]string{}); err != nil {
-		return c.Status(500).JSON(fiber.Map{"error": err.Error()})
+	_, err := services.AddJob("index_codebase", map[string]interface{}{})
+	if err != nil {
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": err.Error()})
 	}
 	return c.JSON(fiber.Map{"success": true, "message": "Codebase indexing job enqueued"})
 }
@@ -570,6 +571,97 @@ func SetupRoutes(app *fiber.App) {
 	api.Post("/rag/reindex", postRAGReindex)
 	api.Post("/webhooks/borg", postBorgWebhook)
 	api.Post("/webhooks/hypercode", postBorgWebhook)
+	api.Post("/webhooks/github", postGitHubWebhook)
+	api.Post("/webhooks/slack", postSlackWebhook)
+	api.Post("/webhooks/linear", postLinearWebhook)
+	api.Post("/webhooks/generic", postGenericWebhook)
+
+	// Webhook rule management
+	api.Get("/webhooks/rules", getWebhookRulesAPI)
+	api.Post("/webhooks/rules", addWebhookRuleAPI)
+	api.Delete("/webhooks/rules/:id", deleteWebhookRuleAPI)
+	api.Patch("/webhooks/rules/:id/toggle", toggleWebhookRuleAPI)
+
+	// Swarm orchestration
+	api.Post("/swarms", createSwarmAPI)
+	api.Get("/swarms", listSwarmsAPI)
+	api.Get("/swarms/:id", getSwarmAPI)
+	api.Get("/swarms/:id/agents", getSwarmAgentsAPI)
+	api.Get("/swarms/:id/events", getSwarmEventsAPI)
+	api.Post("/swarms/:id/cancel", cancelSwarmAPI)
+	api.Post("/swarms/:id/decompose", decomposeSwarmAPI)
+
+	// Predictive cost optimizer
+	api.Get("/cost/predict", predictCostAPI)
+	api.Get("/cost/providers", getProviderProfilesAPI)
+	api.Get("/cost/budget", getBudgetReportAPI)
+	api.Get("/cost/trend", getSpendingTrendAPI)
+	api.Get("/cost/optimize/:taskType", optimizeProviderAPI)
+
+	// CI monitoring
+	api.Post("/ci/monitor", runCIMonitorAPI)
+	api.Get("/ci/failures", getCIFailuresAPI)
+
+	// Plugin management
+	api.Get("/plugins", listPluginsAPI)
+	api.Get("/plugins/stats", getPluginStatsAPI)
+	api.Get("/plugins/:id", getPluginAPI)
+	api.Post("/plugins/install", installPluginAPI)
+	api.Post("/plugins/:id/enable", enablePluginAPI)
+	api.Post("/plugins/:id/disable", disablePluginAPI)
+	api.Delete("/plugins/:id", uninstallPluginAPI)
+	api.Patch("/plugins/:id/config", updatePluginConfigAPI)
+
+	// Wasm sandbox
+	api.Get("/sandbox/status", getSandboxStatusAPI)
+	api.Post("/sandbox/warmup", warmupSandboxAPI)
+	api.Post("/sandbox/execute/:pluginId", executePluginAPI)
+	api.Post("/sandbox/validate", validateWasmAPI)
+
+	// Workspace budget enforcement
+	api.Get("/budget/status", getBudgetStatusesAPI)
+	api.Get("/budget/stats", getBudgetStatsAPI)
+	api.Get("/budget/:workspaceId", getBudgetStatusAPI)
+	api.Post("/budget/:workspaceId", setBudgetAPI)
+	api.Post("/budget/:workspaceId/check", checkBudgetAPI)
+	api.Delete("/budget/:workspaceId", removeBudgetAPI)
+
+	// Vector index
+	api.Get("/rag/index/stats", getVectorIndexStatsAPI)
+	api.Post("/rag/index/rebuild", rebuildVectorIndexAPI)
+
+	// Metrics & SLA monitoring
+	api.Get("/metrics/dashboard", getMetricsDashboardAPI)
+	api.Get("/metrics/names", getMetricNamesAPI)
+	api.Get("/metrics/:name", getMetricSummaryAPI)
+	api.Get("/metrics/sla/targets", getSLATargetsAPI)
+	api.Post("/metrics/sla/targets", registerSLATargetAPI)
+
+	// Agent performance scoring
+	api.Get("/agents/scores", getAgentScoresAPI)
+	api.Get("/agents/leaderboard/:role", getAgentLeaderboardAPI)
+	api.Get("/agents/leaderboards", getAllAgentLeaderboardsAPI)
+	api.Get("/agents/stats", getAgentStatsAPI)
+	api.Get("/agents/recommend/:role", recommendProviderAPI)
+	api.Get("/agents/provider-efficiency", getProviderEfficiencyAPI)
+	api.Post("/agents/record", recordAgentTaskAPI)
+	api.Delete("/agents/:agentId", resetAgentScoreAPI)
+
+	// AST modification tracking
+	api.Post("/ast/analyze", analyzeASTAPI)
+	api.Get("/ast/modifications", getASTModificationsAPI)
+	api.Get("/ast/stats", getASTStatsAPI)
+
+	// Workflow tracing
+	api.Post("/traces", startTraceAPI)
+	api.Get("/traces", listTracesAPI)
+	api.Get("/traces/active", getActiveTracesAPI)
+	api.Get("/traces/stats", getTraceStatsAPI)
+	api.Get("/traces/:traceId", getTraceAPI)
+	api.Post("/traces/:traceId/steps", addTraceStepAPI)
+	api.Post("/traces/:traceId/steps/:stepId/complete", completeStepAPI)
+	api.Post("/traces/:traceId/finish", finishTraceAPI)
+	api.Post("/traces/:traceId/cancel", cancelTraceAPI)
 
 	// Daemon routes
 	api.Get("/daemon/status", getDaemonStatus)
@@ -578,6 +670,7 @@ func SetupRoutes(app *fiber.App) {
 	// Settings routes
 	api.Get("/settings", getSettings)
 	api.Get("/settings/keeper", getKeeperSettings)
+	api.Get("/settings", getAppSettings)
 	api.Post("/settings/keeper", updateKeeperSettings)
 
 	// Session routes
@@ -639,6 +732,32 @@ func SetupRoutes(app *fiber.App) {
 	// Token usage routes
 	api.Get("/tokens/usage", getTokenUsageStats)
 	api.Get("/tokens/session/:id", getSessionTokenUsage)
+
+	// Shadow Pilot routes
+	api.Get("/shadow-pilot/status", getShadowPilotStatus)
+	api.Post("/shadow-pilot/start", startShadowPilotAPI)
+	api.Post("/shadow-pilot/stop", stopShadowPilotAPI)
+
+	// Shadow Pilot manual scan trigger (shorthand)
+	api.Post("/shadow/scan", startShadowPilotAPI)
+
+	// Shadow Pilot data endpoints
+	api.Get("/shadow/issues", listVulnerabilitiesAPI)
+	api.Get("/shadow/issues/:id", getVulnerabilityAPI)
+	api.Patch("/shadow/issues/:id", updateVulnerabilityAPI)
+
+	// Architecture graph
+	api.Get("/architecture/graph", getArchitectureGraphAPI)
+
+	// Dependency checks
+	api.Get("/health/dependencies", getDependencyChecks)
+	api.Get("/health/trend", getHealthTrend)
+	api.Get("/system/info", getSystemInfoAPI)
+
+	// Scheduled tasks CRUD
+	api.Get("/scheduler/tasks", getScheduledTasks)
+	api.Post("/scheduler/tasks", createScheduledTask)
+	api.Delete("/scheduler/tasks/:name", deleteScheduledTask)
 }
 
 func triggerFleetSync(c *fiber.Ctx) error {
@@ -684,7 +803,7 @@ func triggerFleetSync(c *fiber.Ctx) error {
 		}
 	}
 
-	_, _ = services.AddJob("index_codebase", map[string]string{})
+	// index_codebase disabled: no free embedding model
 
 	return c.JSON(fiber.Map{
 		"success":            true,
@@ -913,7 +1032,13 @@ func handleSessionAction(c *fiber.Ctx) error {
 			Type:    "message",
 		})
 		if err != nil {
-			return c.Status(500).JSON(fiber.Map{"error": err.Error()})
+			errStr := err.Error()
+			if strings.Contains(errStr, "429") || strings.Contains(errStr, "RESOURCE_EXHAUSTED") {
+				// Set global backoff so daemon stops hammering the API too
+				services.SetRateLimitBackoff(15 * time.Second)
+				return c.Status(429).JSON(fiber.Map{"error": "Rate limited by Jules API. Please wait a moment and try again."})
+			}
+			return c.Status(500).JSON(fiber.Map{"error": errStr})
 		}
 		return c.JSON(result)
 	}
@@ -982,7 +1107,12 @@ func createActivity(c *fiber.Ctx) error {
 	client := getJulesClientForRequest(c)
 	result, err := client.CreateActivity(id, req)
 	if err != nil {
-		return c.Status(500).JSON(fiber.Map{"error": err.Error()})
+		errStr := err.Error()
+		if strings.Contains(errStr, "429") || strings.Contains(errStr, "RESOURCE_EXHAUSTED") {
+			services.SetRateLimitBackoff(15 * time.Second)
+			return c.Status(429).JSON(fiber.Map{"error": "Rate limited by Jules API. Please wait a moment and try again."})
+		}
+		return c.Status(500).JSON(fiber.Map{"error": errStr})
 	}
 	return c.JSON(result)
 }
@@ -994,14 +1124,16 @@ func resolveRepoPath(sourceId string) string {
 		return mapping.LocalPath
 	}
 
-	// Default to C:/Users/hyper/workspace/[reponame]
+	// Dynamic resolution from project root instead of hardcoded C:/Users/hyper/
 	repoName := sourceId
 	if strings.Contains(sourceId, "/") {
 		parts := strings.Split(sourceId, "/")
 		repoName = parts[len(parts)-1]
 	}
 
-	return "C:/Users/hyper/workspace/" + repoName
+	projectRoot := services.GetProjectRoot()
+	workspaceRoot := filepath.Dir(projectRoot)
+	return filepath.Join(workspaceRoot, repoName)
 }
 
 func exportSessionToRepo(c *fiber.Ctx) error {
@@ -1404,32 +1536,174 @@ func getSettings(c *fiber.Ctx) error {
 func getKeeperSettings(c *fiber.Ctx) error {
 	var settings models.KeeperSettings
 	if err := db.DB.First(&settings, "id = ?", "default").Error; err != nil {
-		return c.Status(404).JSON(fiber.Map{"error": "Settings not found"})
+		settings = models.KeeperSettings{
+			ID:                         "default",
+			IsEnabled:                  true,
+			AutoSwitch:                 true,
+			SmartPilotEnabled:          true,
+			SupervisorProvider:         "openrouter",
+			SupervisorModel:            "free",
+			CheckIntervalSeconds:       900,
+			InactivityThresholdMinutes: 1,
+			ActiveWorkThresholdMinutes: 30,
+			ContextMessageCount:        20,
+			Messages:                   "[]",
+			CustomMessages:             "[]",
+		}
 	}
-	return c.JSON(settings)
+
+	// Transform DB model into frontend-compatible SessionKeeperConfig format.
+	// The frontend expects messages as string[], supervisorApiKey as string (not *string),
+	// and does not use internal fields like customMessages, userId, user, julesApiKey, etc.
+	supervisorApiKey := ""
+	if settings.SupervisorApiKey != nil {
+		supervisorApiKey = *settings.SupervisorApiKey
+	}
+
+	// Parse messages: DB stores as newline-joined string or JSON array
+	messages := services.ParseMessages(settings.Messages)
+
+	frontendConfig := fiber.Map{
+		"isEnabled":                settings.IsEnabled,
+		"autoSwitch":               settings.AutoSwitch,
+		"checkIntervalSeconds":     settings.CheckIntervalSeconds,
+		"inactivityThresholdMinutes": settings.InactivityThresholdMinutes,
+		"activeWorkThresholdMinutes": settings.ActiveWorkThresholdMinutes,
+		"messages":                 messages,
+		"smartPilotEnabled":        settings.SmartPilotEnabled,
+		"supervisorProvider":       settings.SupervisorProvider,
+		"supervisorApiKey":         supervisorApiKey,
+		"supervisorModel":          settings.SupervisorModel,
+		"contextMessageCount":      settings.ContextMessageCount,
+		"debateEnabled":            false,
+		"debateParticipants":       []interface{}{},
+	}
+	return c.JSON(frontendConfig)
+}
+
+func getAppSettings(c *fiber.Ctx) error {
+	var settings models.KeeperSettings
+	isEnabled := true
+	smartPilotEnabled := true
+	if err := db.DB.First(&settings, "id = ?", "default").Error; err == nil {
+		isEnabled = settings.IsEnabled
+		smartPilotEnabled = settings.SmartPilotEnabled
+	}
+	return c.JSON(fiber.Map{
+		"isEnabled":         isEnabled,
+		"smartPilotEnabled": smartPilotEnabled,
+		"envKeysDetected":   detectEnvKeys(),
+	})
+}
+
+func detectEnvKeys() fiber.Map {
+	julesKey := strings.TrimSpace(os.Getenv("JULES_API_KEY")) != "" || strings.TrimSpace(os.Getenv("GOOGLE_API_KEY")) != ""
+	supervisorKey := strings.TrimSpace(os.Getenv("OPENROUTER_API_KEY")) != "" || strings.TrimSpace(os.Getenv("SUPERVISOR_API_KEY")) != ""
+	return fiber.Map{
+		"jules":      julesKey,
+		"supervisor": supervisorKey,
+	}
 }
 
 func updateKeeperSettings(c *fiber.Ctx) error {
+	// Parse the frontend SessionKeeperConfig format (messages as array, supervisorApiKey as string)
+	var input struct {
+		IsEnabled *bool `json:"isEnabled"`
+		AutoSwitch *bool `json:"autoSwitch"`
+		CheckIntervalSeconds     int      `json:"checkIntervalSeconds"`
+		InactivityThresholdMin   int      `json:"inactivityThresholdMinutes"`
+		ActiveWorkThresholdMin   int      `json:"activeWorkThresholdMinutes"`
+		Messages                 []string `json:"messages"`
+		SmartPilotEnabled *bool `json:"smartPilotEnabled"`
+		SupervisorProvider       string   `json:"supervisorProvider"`
+		SupervisorApiKey         string   `json:"supervisorApiKey"`
+		SupervisorModel          string   `json:"supervisorModel"`
+		ContextMessageCount      int      `json:"contextMessageCount"`
+	}
+	if err := c.BodyParser(&input); err != nil {
+		return c.Status(400).JSON(fiber.Map{"error": "Invalid request body: " + err.Error()})
+	}
+
+	// Convert messages array to newline-joined string for DB storage
+	messagesStr := strings.Join(input.Messages, "\n")
+	apiKey := input.SupervisorApiKey
+
 	var settings models.KeeperSettings
 	if err := db.DB.First(&settings, "id = ?", "default").Error; err != nil {
-		// If not found, create new one
-		settings.ID = "default"
-		if err := c.BodyParser(&settings); err != nil {
-			return c.Status(400).JSON(fiber.Map{"error": "Invalid request body"})
+		// Create new record
+		settings = models.KeeperSettings{
+			ID:                         "default",
+			IsEnabled: func() bool { if input.IsEnabled != nil { return *input.IsEnabled }; return false }(),
+			AutoSwitch: func() bool { if input.AutoSwitch != nil { return *input.AutoSwitch }; return false }(),
+			CheckIntervalSeconds:       input.CheckIntervalSeconds,
+			InactivityThresholdMinutes: input.InactivityThresholdMin,
+			ActiveWorkThresholdMinutes: input.ActiveWorkThresholdMin,
+			Messages:                   messagesStr,
+			SmartPilotEnabled: func() bool { if input.SmartPilotEnabled != nil { return *input.SmartPilotEnabled }; return false }(),
+			SupervisorProvider:         input.SupervisorProvider,
+			SupervisorApiKey:           &apiKey,
+			SupervisorModel:            input.SupervisorModel,
+			ContextMessageCount:        input.ContextMessageCount,
 		}
 		if err := db.DB.Create(&settings).Error; err != nil {
 			return c.Status(500).JSON(fiber.Map{"error": err.Error()})
 		}
 	} else {
-		if err := c.BodyParser(&settings); err != nil {
-			return c.Status(400).JSON(fiber.Map{"error": "Invalid request body"})
+		// Partial update: only overwrite fields that were explicitly provided
+		updates := map[string]interface{}{}
+		if input.IsEnabled != nil {
+			updates["is_enabled"] = *input.IsEnabled
 		}
-		settings.UpdatedAt = time.Now()
-		if err := db.DB.Save(&settings).Error; err != nil {
+		if input.AutoSwitch != nil {
+			updates["auto_switch"] = *input.AutoSwitch
+		}
+		if input.SmartPilotEnabled != nil {
+			updates["smart_pilot_enabled"] = *input.SmartPilotEnabled
+		}
+		if input.CheckIntervalSeconds > 0 {
+			updates["check_interval_seconds"] = input.CheckIntervalSeconds
+		}
+		if input.InactivityThresholdMin > 0 {
+			updates["inactivity_threshold_minutes"] = input.InactivityThresholdMin
+		}
+		if input.ActiveWorkThresholdMin > 0 {
+			updates["active_work_threshold_minutes"] = input.ActiveWorkThresholdMin
+		}
+		if len(input.Messages) > 0 {
+			updates["messages"] = messagesStr
+		}
+		if input.SupervisorProvider != "" {
+			updates["supervisor_provider"] = input.SupervisorProvider
+		}
+		if input.SupervisorModel != "" {
+			updates["supervisor_model"] = input.SupervisorModel
+		}
+		if apiKey != "" {
+			updates["supervisor_api_key"] = apiKey
+		}
+		if input.ContextMessageCount > 0 {
+			updates["context_message_count"] = input.ContextMessageCount
+		}
+		updates["updated_at"] = time.Now()
+		if err := db.DB.Model(&settings).Updates(updates).Error; err != nil {
 			return c.Status(500).JSON(fiber.Map{"error": err.Error()})
 		}
 	}
-	return c.JSON(settings)
+
+	// Return the saved settings in frontend-compatible format
+	return c.JSON(fiber.Map{
+		"isEnabled":                settings.IsEnabled,
+		"autoSwitch":               settings.AutoSwitch,
+		"checkIntervalSeconds":     settings.CheckIntervalSeconds,
+		"inactivityThresholdMinutes": settings.InactivityThresholdMinutes,
+		"activeWorkThresholdMinutes": settings.ActiveWorkThresholdMinutes,
+		"messages":                 input.Messages,
+		"smartPilotEnabled":        settings.SmartPilotEnabled,
+		"supervisorProvider":       settings.SupervisorProvider,
+		"supervisorApiKey":         input.SupervisorApiKey,
+		"supervisorModel":          settings.SupervisorModel,
+		"contextMessageCount":      settings.ContextMessageCount,
+	})
 }
 
 func getMockSessions() []models.JulesSession {
@@ -1767,4 +2041,750 @@ func getSessionTokenUsage(c *fiber.Ctx) error {
 		return c.Status(500).JSON(fiber.Map{"error": err.Error()})
 	}
 	return c.JSON(report)
+}
+
+// Shadow Pilot: Status
+func getShadowPilotStatus(c *fiber.Ctx) error {
+	return c.JSON(services.GetShadowPilotStatus())
+}
+
+// Shadow Pilot: Start (also used by POST /api/shadow/scan)
+func startShadowPilotAPI(c *fiber.Ctx) error {
+	if services.IsShadowPilotRunning() {
+		return c.JSON(fiber.Map{
+			"status":    "already_running",
+			"message":  "Shadow Pilot scan is already in progress",
+			"startedAt": time.Now().Format(time.RFC3339),
+		})
+	}
+	services.StartShadowPilot()
+	return c.JSON(fiber.Map{
+		"status":    "scanning",
+		"message":  "Shadow Pilot scan initiated",
+		"startedAt": time.Now().Format(time.RFC3339),
+	})
+}
+
+// Shadow Pilot: Stop
+func stopShadowPilotAPI(c *fiber.Ctx) error {
+	services.StopShadowPilot()
+	return c.JSON(fiber.Map{"status": "stopped"})
+}
+
+// Shadow Pilot data endpoints
+func listVulnerabilitiesAPI(c *fiber.Ctx) error {
+	var vulns []models.VulnerabilityRecord
+	query := db.DB.Model(&models.VulnerabilityRecord{})
+	if sev := c.Query("severity"); sev != "" {
+		query = query.Where("severity = ?", sev)
+	}
+	if typ := c.Query("type"); typ != "" {
+		query = query.Where("type = ?", typ)
+	}
+	if st := c.Query("status"); st != "" {
+		query = query.Where("status = ?", st)
+	}
+	if err := query.Order("detected_at desc").Find(&vulns).Error; err != nil {
+		return c.Status(500).JSON(fiber.Map{"error": err.Error()})
+	}
+	return c.JSON(vulns)
+}
+
+func getVulnerabilityAPI(c *fiber.Ctx) error {
+	id := c.Params("id")
+	var vuln models.VulnerabilityRecord
+	if err := db.DB.First(&vuln, "id = ?", id).Error; err != nil {
+		return c.Status(404).JSON(fiber.Map{"error": "Not found"})
+	}
+	return c.JSON(vuln)
+}
+
+func updateVulnerabilityAPI(c *fiber.Ctx) error {
+	id := c.Params("id")
+	var updates map[string]interface{}
+	if err := c.BodyParser(&updates); err != nil {
+		return c.Status(400).JSON(fiber.Map{"error": "Invalid JSON"})
+	}
+	if err := db.DB.Model(&models.VulnerabilityRecord{}).Where("id = ?", id).Updates(updates).Error; err != nil {
+		return c.Status(500).JSON(fiber.Map{"error": err.Error()})
+	}
+	return c.JSON(fiber.Map{"status": "updated"})
+}
+
+func getDependencyChecks(c *fiber.Ctx) error {
+	report := services.RunDependencyChecks()
+	return c.JSON(report)
+}
+
+func getHealthTrend(c *fiber.Ctx) error {
+	checkName := c.Query("check", "")
+	hours := c.QueryInt("hours", 24)
+	limit := c.QueryInt("limit", 100)
+
+	since := time.Now().Add(-time.Duration(hours) * time.Hour)
+	snapshots, err := services.GetHealthTrend(checkName, since, limit)
+	if err != nil {
+		return c.Status(500).JSON(fiber.Map{"error": err.Error()})
+	}
+	return c.JSON(fiber.Map{
+		"check":      checkName,
+		"since":      since,
+		"snapshots":  snapshots,
+		"count":      len(snapshots),
+	})
+}
+
+func getSystemInfoAPI(c *fiber.Ctx) error {
+	info := services.GetSystemInfo()
+	return c.JSON(info)
+}
+
+func getScheduledTasks(c *fiber.Ctx) error {
+	tasks := services.GetScheduler().GetTasks()
+	customTasks := services.GetCustomTasks()
+	return c.JSON(fiber.Map{
+		"builtInTasks": tasks,
+		"customTasks":  customTasks,
+	})
+}
+
+func createScheduledTask(c *fiber.Ctx) error {
+	var req struct {
+		Name       string                 `json:"name"`
+		IntervalMs int64                  `json:"intervalMs"`
+		JobType    string                 `json:"jobType"`
+		Payload    map[string]interface{} `json:"payload"`
+	}
+	if err := c.BodyParser(&req); err != nil {
+		return c.Status(400).JSON(fiber.Map{"error": "Invalid request body"})
+	}
+	if req.Name == "" || req.JobType == "" || req.IntervalMs <= 0 {
+		return c.Status(400).JSON(fiber.Map{"error": "name, jobType, and intervalMs are required"})
+	}
+	if err := services.CreateCustomTask(req.Name, req.IntervalMs, req.JobType, req.Payload); err != nil {
+		return c.Status(409).JSON(fiber.Map{"error": err.Error()})
+	}
+	return c.Status(201).JSON(fiber.Map{"status": "created", "name": req.Name})
+}
+
+func deleteScheduledTask(c *fiber.Ctx) error {
+	name := c.Params("name")
+	if err := services.DeleteCustomTask(name); err != nil {
+		return c.Status(404).JSON(fiber.Map{"error": err.Error()})
+	}
+	return c.JSON(fiber.Map{"status": "deleted", "name": name})
+}
+
+func postGitHubWebhook(c *fiber.Ctx) error {
+	eventType := c.Get("X-GitHub-Event", "push")
+	var body map[string]interface{}
+	if err := c.BodyParser(&body); err != nil {
+		return c.Status(400).JSON(fiber.Map{"error": "Invalid JSON"})
+	}
+	event := services.ProcessGitHubWebhook(eventType, body)
+	if err := services.ProcessWebhook(event); err != nil {
+		return c.Status(500).JSON(fiber.Map{"error": err.Error()})
+	}
+	return c.JSON(fiber.Map{"status": "processed", "event": eventType})
+}
+
+func postSlackWebhook(c *fiber.Ctx) error {
+	var body map[string]interface{}
+	if err := c.BodyParser(&body); err != nil {
+		return c.Status(400).JSON(fiber.Map{"error": "Invalid JSON"})
+	}
+	event := services.ProcessSlackWebhook(body)
+	if err := services.ProcessWebhook(event); err != nil {
+		return c.Status(500).JSON(fiber.Map{"error": err.Error()})
+	}
+	return c.JSON(fiber.Map{"status": "processed"})
+}
+
+func postLinearWebhook(c *fiber.Ctx) error {
+	var body map[string]interface{}
+	if err := c.BodyParser(&body); err != nil {
+		return c.Status(400).JSON(fiber.Map{"error": "Invalid JSON"})
+	}
+	event := services.ProcessLinearWebhook(body)
+	if err := services.ProcessWebhook(event); err != nil {
+		return c.Status(500).JSON(fiber.Map{"error": err.Error()})
+	}
+	return c.JSON(fiber.Map{"status": "processed"})
+}
+
+func postGenericWebhook(c *fiber.Ctx) error {
+	var body struct {
+		Provider  string                 `json:"provider"`
+		EventType string                 `json:"eventType"`
+		Data      map[string]interface{} `json:"data"`
+	}
+	if err := c.BodyParser(&body); err != nil {
+		return c.Status(400).JSON(fiber.Map{"error": "Invalid JSON"})
+	}
+	provider := services.WebhookProviderGeneric
+	if body.Provider != "" {
+		provider = services.WebhookProvider(body.Provider)
+	}
+	event := services.WebhookEvent{
+		Provider:  provider,
+		EventType: body.EventType,
+		RawBody:   body.Data,
+	}
+	if err := services.ProcessWebhook(event); err != nil {
+		return c.Status(500).JSON(fiber.Map{"error": err.Error()})
+	}
+	return c.JSON(fiber.Map{"status": "processed"})
+}
+
+func getWebhookRulesAPI(c *fiber.Ctx) error {
+	return c.JSON(services.GetWebhookRules())
+}
+
+func addWebhookRuleAPI(c *fiber.Ctx) error {
+	var rule services.WebhookRule
+	if err := c.BodyParser(&rule); err != nil {
+		return c.Status(400).JSON(fiber.Map{"error": "Invalid request"})
+	}
+	if rule.Name == "" || rule.Action == "" {
+		return c.Status(400).JSON(fiber.Map{"error": "name and action are required"})
+	}
+	if err := services.AddWebhookRule(rule); err != nil {
+		return c.Status(400).JSON(fiber.Map{"error": err.Error()})
+	}
+	return c.Status(201).JSON(fiber.Map{"status": "created"})
+}
+
+func deleteWebhookRuleAPI(c *fiber.Ctx) error {
+	id := c.Params("id")
+	if err := services.RemoveWebhookRule(id); err != nil {
+		return c.Status(404).JSON(fiber.Map{"error": err.Error()})
+	}
+	return c.JSON(fiber.Map{"status": "deleted"})
+}
+
+func toggleWebhookRuleAPI(c *fiber.Ctx) error {
+	id := c.Params("id")
+	var req struct {
+		Enabled bool `json:"enabled"`
+	}
+	if err := c.BodyParser(&req); err != nil {
+		return c.Status(400).JSON(fiber.Map{"error": "Invalid request"})
+	}
+	if err := services.ToggleWebhookRule(id, req.Enabled); err != nil {
+		return c.Status(404).JSON(fiber.Map{"error": err.Error()})
+	}
+	return c.JSON(fiber.Map{"status": "updated"})
+}
+
+func createSwarmAPI(c *fiber.Ctx) error {
+	var req services.CreateSwarmRequest
+	if err := c.BodyParser(&req); err != nil {
+		return c.Status(400).JSON(fiber.Map{"error": "Invalid request"})
+	}
+	if req.RootTask == "" {
+		return c.Status(400).JSON(fiber.Map{"error": "rootTask is required"})
+	}
+	swarm, err := services.CreateSwarm(req)
+	if err != nil {
+		return c.Status(500).JSON(fiber.Map{"error": err.Error()})
+	}
+	return c.Status(201).JSON(swarm)
+}
+
+func listSwarmsAPI(c *fiber.Ctx) error {
+	status := c.Query("status", "")
+	limit := c.QueryInt("limit", 50)
+	swarms, err := services.ListSwarms(status, limit)
+	if err != nil {
+		return c.Status(500).JSON(fiber.Map{"error": err.Error()})
+	}
+	return c.JSON(swarms)
+}
+
+func getSwarmAPI(c *fiber.Ctx) error {
+	id := c.Params("id")
+	swarm, err := services.GetSwarm(id)
+	if err != nil {
+		return c.Status(404).JSON(fiber.Map{"error": "Swarm not found"})
+	}
+	return c.JSON(swarm)
+}
+
+func getSwarmAgentsAPI(c *fiber.Ctx) error {
+	id := c.Params("id")
+	agents, err := services.GetSwarmAgents(id)
+	if err != nil {
+		return c.Status(500).JSON(fiber.Map{"error": err.Error()})
+	}
+	return c.JSON(agents)
+}
+
+func getSwarmEventsAPI(c *fiber.Ctx) error {
+	id := c.Params("id")
+	events, err := services.GetSwarmEvents(id)
+	if err != nil {
+		return c.Status(500).JSON(fiber.Map{"error": err.Error()})
+	}
+	return c.JSON(events)
+}
+
+func cancelSwarmAPI(c *fiber.Ctx) error {
+	id := c.Params("id")
+	if err := services.CancelSwarm(id); err != nil {
+		return c.Status(404).JSON(fiber.Map{"error": err.Error()})
+	}
+	return c.JSON(fiber.Map{"status": "cancelled"})
+}
+
+func decomposeSwarmAPI(c *fiber.Ctx) error {
+	id := c.Params("id")
+	var req struct {
+		Task    string `json:"task"`
+		Context string `json:"context"`
+	}
+	c.BodyParser(&req)
+	swarm, err := services.GetSwarm(id)
+	if err != nil {
+		return c.Status(404).JSON(fiber.Map{"error": "Swarm not found"})
+	}
+	result, err := services.DecomposeTask(services.DecomposeTaskRequest{
+		Task:    req.Task,
+		Context: req.Context,
+	})
+	if err != nil {
+		return c.Status(500).JSON(fiber.Map{"error": err.Error()})
+	}
+	if err := services.AssignSwarmAgents(swarm.ID, result); err != nil {
+		return c.Status(500).JSON(fiber.Map{"error": err.Error()})
+	}
+	return c.JSON(result)
+}
+
+func predictCostAPI(c *fiber.Ctx) error {
+	taskType := c.Query("task", "check_session")
+	prediction := services.PredictCost(taskType)
+	return c.JSON(prediction)
+}
+
+func getProviderProfilesAPI(c *fiber.Ctx) error {
+	profiles := services.GetProviderCostProfiles()
+	return c.JSON(profiles)
+}
+
+func getBudgetReportAPI(c *fiber.Ctx) error {
+	dailyBudget := float64(c.QueryInt("dailyBudgetCents", 100))
+	report := services.GetBudgetReport(dailyBudget)
+	return c.JSON(report)
+}
+
+func getSpendingTrendAPI(c *fiber.Ctx) error {
+	days := c.QueryInt("days", 30)
+	trend, err := services.GetSpendingTrend(days)
+	if err != nil {
+		return c.Status(500).JSON(fiber.Map{"error": err.Error()})
+	}
+	return c.JSON(trend)
+}
+
+func optimizeProviderAPI(c *fiber.Ctx) error {
+	taskType := c.Params("taskType")
+	provider, model, strategy := services.OptimizeProviderSelection(taskType)
+	return c.JSON(fiber.Map{
+		"taskType": taskType,
+		"provider": provider,
+		"model":    model,
+		"strategy": strategy,
+	})
+}
+
+func runCIMonitorAPI(c *fiber.Ctx) error {
+	services.RunCIMonitor()
+	return c.JSON(fiber.Map{"status": "monitoring_complete"})
+}
+
+func getCIFailuresAPI(c *fiber.Ctx) error {
+	if db.DB == nil {
+		return c.JSON([]interface{}{})
+	}
+	var anomalies []models.AnomalyRecord
+	db.DB.Where("type LIKE ?", "ci_failure_%").Order("created_at DESC").Limit(50).Find(&anomalies)
+	return c.JSON(anomalies)
+}
+
+func listPluginsAPI(c *fiber.Ctx) error {
+	status := c.Query("status", "")
+	plugins, err := services.ListPlugins(status)
+	if err != nil {
+		return c.Status(500).JSON(fiber.Map{"error": err.Error()})
+	}
+	return c.JSON(plugins)
+}
+
+func getPluginStatsAPI(c *fiber.Ctx) error {
+	return c.JSON(services.GetPluginStats())
+}
+
+func getPluginAPI(c *fiber.Ctx) error {
+	id := c.Params("id")
+	plugin, err := services.GetPlugin(id)
+	if err != nil {
+		return c.Status(404).JSON(fiber.Map{"error": "Plugin not found"})
+	}
+	return c.JSON(plugin)
+}
+
+func installPluginAPI(c *fiber.Ctx) error {
+	var req services.InstallPluginRequest
+	if err := c.BodyParser(&req); err != nil {
+		return c.Status(400).JSON(fiber.Map{"error": "Invalid request"})
+	}
+	plugin, err := services.InstallPluginFromURL(req)
+	if err != nil {
+		return c.Status(400).JSON(fiber.Map{"error": err.Error()})
+	}
+	return c.Status(201).JSON(plugin)
+}
+
+func enablePluginAPI(c *fiber.Ctx) error {
+	id := c.Params("id")
+	if err := services.EnablePlugin(id); err != nil {
+		return c.Status(404).JSON(fiber.Map{"error": err.Error()})
+	}
+	return c.JSON(fiber.Map{"status": "enabled"})
+}
+
+func disablePluginAPI(c *fiber.Ctx) error {
+	id := c.Params("id")
+	if err := services.DisablePlugin(id); err != nil {
+		return c.Status(404).JSON(fiber.Map{"error": err.Error()})
+	}
+	return c.JSON(fiber.Map{"status": "disabled"})
+}
+
+func uninstallPluginAPI(c *fiber.Ctx) error {
+	id := c.Params("id")
+	if err := services.UninstallPlugin(id); err != nil {
+		return c.Status(404).JSON(fiber.Map{"error": err.Error()})
+	}
+	return c.JSON(fiber.Map{"status": "uninstalled"})
+}
+
+func updatePluginConfigAPI(c *fiber.Ctx) error {
+	id := c.Params("id")
+	var req struct {
+		Config string `json:"config"`
+	}
+	if err := c.BodyParser(&req); err != nil {
+		return c.Status(400).JSON(fiber.Map{"error": "Invalid request"})
+	}
+	if err := services.UpdatePluginConfig(id, req.Config); err != nil {
+		return c.Status(404).JSON(fiber.Map{"error": err.Error()})
+	}
+	return c.JSON(fiber.Map{"status": "updated"})
+}
+
+func getSandboxStatusAPI(c *fiber.Ctx) error {
+	return c.JSON(services.GetSandboxStatus())
+}
+
+func warmupSandboxAPI(c *fiber.Ctx) error {
+	services.WarmupSandbox()
+	return c.JSON(fiber.Map{"status": "warmed_up"})
+}
+
+func executePluginAPI(c *fiber.Ctx) error {
+	pluginID := c.Params("pluginId")
+	result, err := services.GetWasmSandbox().ExecutePlugin(pluginID, c.Body())
+	if err != nil {
+		return c.Status(500).JSON(fiber.Map{"error": err.Error(), "result": result})
+	}
+	return c.JSON(result)
+}
+
+func validateWasmAPI(c *fiber.Ctx) error {
+	if err := services.ValidateWasmBinary(c.Body()); err != nil {
+		return c.Status(400).JSON(fiber.Map{"valid": false, "error": err.Error()})
+	}
+	return c.JSON(fiber.Map{"valid": true})
+}
+
+func getBudgetStatusesAPI(c *fiber.Ctx) error {
+	return c.JSON(services.GetAllBudgetStatuses())
+}
+
+func getBudgetStatsAPI(c *fiber.Ctx) error {
+	return c.JSON(services.GetBudgetStats())
+}
+
+func getBudgetStatusAPI(c *fiber.Ctx) error {
+	workspaceID := c.Params("workspaceId")
+	return c.JSON(services.GetBudgetStatus(workspaceID))
+}
+
+func setBudgetAPI(c *fiber.Ctx) error {
+	workspaceID := c.Params("workspaceId")
+	var budget services.WorkspaceBudget
+	if err := c.BodyParser(&budget); err != nil {
+		return c.Status(400).JSON(fiber.Map{"error": "Invalid request"})
+	}
+	budget.WorkspaceID = workspaceID
+	if err := services.SetWorkspaceBudget(budget); err != nil {
+		return c.Status(400).JSON(fiber.Map{"error": err.Error()})
+	}
+	return c.JSON(fiber.Map{"status": "set"})
+}
+
+func checkBudgetAPI(c *fiber.Ctx) error {
+	workspaceID := c.Params("workspaceId")
+	var req struct {
+		EstimatedCostCents float64 `json:"estimatedCostCents"`
+	}
+	c.BodyParser(&req)
+	allowed, reason := services.CheckBudgetAllowance(workspaceID, req.EstimatedCostCents)
+	return c.JSON(fiber.Map{"allowed": allowed, "reason": reason})
+}
+
+func removeBudgetAPI(c *fiber.Ctx) error {
+	workspaceID := c.Params("workspaceId")
+	services.RemoveWorkspaceBudget(workspaceID)
+	return c.JSON(fiber.Map{"status": "removed"})
+}
+
+func getVectorIndexStatsAPI(c *fiber.Ctx) error {
+	return c.JSON(services.GetVectorIndex().Stats())
+}
+
+func rebuildVectorIndexAPI(c *fiber.Ctx) error {
+	if err := services.GetVectorIndex().Rebuild(); err != nil {
+		return c.Status(500).JSON(fiber.Map{"error": err.Error()})
+	}
+	return c.JSON(services.GetVectorIndex().Stats())
+}
+
+func getMetricsDashboardAPI(c *fiber.Ctx) error {
+	return c.JSON(services.GetMetricsDashboard())
+}
+
+func getMetricNamesAPI(c *fiber.Ctx) error {
+	return c.JSON(services.GetMetricsCollector().GetMetricNames())
+}
+
+func getMetricSummaryAPI(c *fiber.Ctx) error {
+	name := c.Params("name")
+	windowMin := c.QueryFloat("window", 15)
+	summary := services.GetMetricsCollector().GetSummary(name, time.Duration(windowMin)*time.Minute)
+	return c.JSON(summary)
+}
+
+func getSLATargetsAPI(c *fiber.Ctx) error {
+	return c.JSON(services.GetMetricsCollector().GetSLATargets())
+}
+
+func registerSLATargetAPI(c *fiber.Ctx) error {
+	var target services.SLATarget
+	if err := c.BodyParser(&target); err != nil {
+		return c.Status(400).JSON(fiber.Map{"error": "Invalid request"})
+	}
+	services.GetMetricsCollector().RegisterSLA(target)
+	return c.JSON(fiber.Map{"status": "registered"})
+}
+
+func getAgentScoresAPI(c *fiber.Ctx) error {
+	agentID := c.Query("agentId")
+	if agentID != "" {
+		score, found := services.GetAgentPerformanceTracker().GetAgentScore(agentID)
+		if !found {
+			return c.Status(404).JSON(fiber.Map{"error": "Agent not found"})
+		}
+		return c.JSON(score)
+	}
+	// Return all scores
+	stats := services.GetAgentPerformanceTracker().GetAgentStats()
+	return c.JSON(stats)
+}
+
+func getAgentLeaderboardAPI(c *fiber.Ctx) error {
+	role := services.AgentRole(c.Params("role"))
+	return c.JSON(services.GetAgentPerformanceTracker().GetLeaderboard(role))
+}
+
+func getAllAgentLeaderboardsAPI(c *fiber.Ctx) error {
+	return c.JSON(services.GetAgentPerformanceTracker().GetAllLeaderboards())
+}
+
+func getAgentStatsAPI(c *fiber.Ctx) error {
+	return c.JSON(services.GetAgentPerformanceTracker().GetAgentStats())
+}
+
+func recommendProviderAPI(c *fiber.Ctx) error {
+	role := services.AgentRole(c.Params("role"))
+	provider := services.GetAgentPerformanceTracker().RecommendProvider(role)
+	return c.JSON(fiber.Map{"role": role, "recommendedProvider": provider})
+}
+
+func getProviderEfficiencyAPI(c *fiber.Ctx) error {
+	return c.JSON(services.GetAgentPerformanceTracker().GetProviderEfficiency())
+}
+
+func recordAgentTaskAPI(c *fiber.Ctx) error {
+	var task struct {
+		AgentID    string  `json:"agentId"`
+		Role       string  `json:"role"`
+		Provider   string  `json:"provider"`
+		TaskType   string  `json:"taskType"`
+		Success    bool    `json:"success"`
+		LatencyMs  float64 `json:"latencyMs"`
+		TokensUsed int     `json:"tokensUsed"`
+		CostCents  float64 `json:"costCents"`
+	}
+	if err := c.BodyParser(&task); err != nil {
+		return c.Status(400).JSON(fiber.Map{"error": "Invalid request"})
+	}
+
+	services.RecordSwarmAgentTask(task.AgentID, services.AgentRole(task.Role), task.Provider, task.TaskType, task.Success, task.LatencyMs, task.TokensUsed, task.CostCents)
+	return c.JSON(fiber.Map{"status": "recorded"})
+}
+
+func resetAgentScoreAPI(c *fiber.Ctx) error {
+	agentID := c.Params("agentId")
+	services.GetAgentPerformanceTracker().ResetAgentScore(agentID)
+	return c.JSON(fiber.Map{"status": "reset"})
+}
+
+func analyzeASTAPI(c *fiber.Ctx) error {
+	var req struct {
+		FilePath   string `json:"filePath"`
+		SessionID  string `json:"sessionId"`
+		OldContent string `json:"oldContent"`
+		NewContent string `json:"newContent"`
+	}
+	if err := c.BodyParser(&req); err != nil {
+		return c.Status(400).JSON(fiber.Map{"error": "Invalid request"})
+	}
+	if req.FilePath == "" {
+		return c.Status(400).JSON(fiber.Map{"error": "filePath is required"})
+	}
+	diff := services.AnalyzeDiff(req.FilePath, req.SessionID, req.OldContent, req.NewContent)
+	return c.JSON(diff)
+}
+
+func getASTModificationsAPI(c *fiber.Ctx) error {
+	sessionID := c.Query("sessionId")
+	limit := c.QueryInt("limit", 50)
+	return c.JSON(services.GetASTModifications(sessionID, limit))
+}
+
+func getASTStatsAPI(c *fiber.Ctx) error {
+	return c.JSON(services.GetASTModificationStats())
+}
+
+func startTraceAPI(c *fiber.Ctx) error {
+	var req struct {
+		SessionID string   `json:"sessionId"`
+		Name      string   `json:"name"`
+		Tags      []string `json:"tags"`
+	}
+	if err := c.BodyParser(&req); err != nil {
+		return c.Status(400).JSON(fiber.Map{"error": "Invalid request"})
+	}
+	if req.Name == "" {
+		return c.Status(400).JSON(fiber.Map{"error": "name is required"})
+	}
+	trace := services.GetWorkflowTracer().StartTrace(req.SessionID, req.Name, req.Tags)
+	return c.JSON(trace)
+}
+
+func listTracesAPI(c *fiber.Ctx) error {
+	limit := c.QueryInt("limit", 50)
+	sessionID := c.Query("sessionId")
+	if sessionID != "" {
+		return c.JSON(services.GetWorkflowTracer().GetTracesForSession(sessionID))
+	}
+	return c.JSON(services.GetWorkflowTracer().GetAllTraces(limit))
+}
+
+func getActiveTracesAPI(c *fiber.Ctx) error {
+	return c.JSON(services.GetWorkflowTracer().GetActiveTraces())
+}
+
+func getTraceStatsAPI(c *fiber.Ctx) error {
+	return c.JSON(services.GetWorkflowTracer().GetTraceStats())
+}
+
+func getTraceAPI(c *fiber.Ctx) error {
+	traceID := c.Params("traceId")
+	trace, err := services.GetWorkflowTracer().GetTrace(traceID)
+	if err != nil {
+		return c.Status(404).JSON(fiber.Map{"error": err.Error()})
+	}
+	return c.JSON(trace)
+}
+
+func addTraceStepAPI(c *fiber.Ctx) error {
+	traceID := c.Params("traceId")
+	var req struct {
+		Name     string                 `json:"name"`
+		Type     string                 `json:"type"`
+		ParentID string                 `json:"parentId"`
+		Input    map[string]interface{} `json:"input"`
+	}
+	if err := c.BodyParser(&req); err != nil {
+		return c.Status(400).JSON(fiber.Map{"error": "Invalid request"})
+	}
+	step, err := services.GetWorkflowTracer().AddStep(traceID, req.Name, req.Type, req.ParentID, req.Input)
+	if err != nil {
+		return c.Status(404).JSON(fiber.Map{"error": err.Error()})
+	}
+	return c.JSON(step)
+}
+
+func completeStepAPI(c *fiber.Ctx) error {
+	traceID := c.Params("traceId")
+	stepID := c.Params("stepId")
+	var req struct {
+		Output map[string]interface{} `json:"output"`
+		Error  string                 `json:"error"`
+	}
+	c.BodyParser(&req)
+	var stepErr error
+	if req.Error != "" {
+		stepErr = fmt.Errorf("%s", req.Error)
+	}
+	if err := services.GetWorkflowTracer().CompleteStep(traceID, stepID, req.Output, stepErr); err != nil {
+		return c.Status(404).JSON(fiber.Map{"error": err.Error()})
+	}
+	return c.JSON(fiber.Map{"status": "completed"})
+}
+
+func finishTraceAPI(c *fiber.Ctx) error {
+	traceID := c.Params("traceId")
+	var req struct {
+		Error string `json:"error"`
+	}
+	c.BodyParser(&req)
+	var traceErr error
+	if req.Error != "" {
+		traceErr = fmt.Errorf("%s", req.Error)
+	}
+	if err := services.GetWorkflowTracer().FinishTrace(traceID, traceErr); err != nil {
+		return c.Status(404).JSON(fiber.Map{"error": err.Error()})
+	}
+	return c.JSON(fiber.Map{"status": "finished"})
+}
+
+func cancelTraceAPI(c *fiber.Ctx) error {
+	traceID := c.Params("traceId")
+	if err := services.GetWorkflowTracer().CancelTrace(traceID); err != nil {
+		return c.Status(404).JSON(fiber.Map{"error": err.Error()})
+	}
+	return c.JSON(fiber.Map{"status": "cancelled"})
+}
+
+func getArchitectureGraphAPI(c *fiber.Ctx) error {
+	workspaceID := c.Query("workspaceId", "global")
+	graph, err := services.GenerateArchitectureGraph(workspaceID)
+	if err != nil {
+		return c.Status(500).JSON(fiber.Map{"error": err.Error()})
+	}
+	return c.JSON(graph)
 }

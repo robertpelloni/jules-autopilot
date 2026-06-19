@@ -8,7 +8,13 @@ import { cn } from '@/lib/utils';
 
 export function SystemLogs() {
   const logs = useSessionKeeperStore((state) => state.logs);
+  const loadConfig = useSessionKeeperStore((state) => state.loadConfig);
   const scrollRef = useRef<HTMLDivElement>(null);
+
+  // Load logs on mount
+  useEffect(() => {
+    loadConfig();
+  }, [loadConfig]);
 
   // Auto-scroll to bottom on new logs
   useEffect(() => {
