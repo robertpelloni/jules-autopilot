@@ -1,5 +1,9 @@
 {
+<<<<<<< HEAD
   "success": false,
+=======
+  "success": true,
+>>>>>>> origin/main
   "clones": [],
   "duplicatedLines": 0,
   "totalLines": 0,

@@ -287,6 +287,145 @@ func generateRiskScore(provider, apiKey, model, topic, summary string, fallback 
 	return extractRiskScoreFromText(result.Content)
 }
 
+func generateOpenAIText(apiKey, model, systemPrompt string, messages []LLMMessage) (LLMResult, error) {
+
+	requestMessages := make([]map[string]string, 0, len(messages)+1)
+	if strings.TrimSpace(systemPrompt) != "" {
+		// Append instruction encouraging the model to restate the previous task before completing it.
+		enhancedPrompt := systemPrompt + "\n\nBefore responding, restate the previous task to confirm you understand it and ensure it is completed."
+		requestMessages = append(requestMessages, map[string]string{"role": "system", "content": enhancedPrompt})
+	}
+	for _, message := range messages {
+		requestMessages = append(requestMessages, map[string]string{"role": message.Role, "content": message.Content})
+	}
+
+	requestBody, _ := json.Marshal(map[string]interface{}{
+		"model":       model,
+		"messages":    requestMessages,
+		"temperature": 0.2,
+	})
+
+	req, err := http.NewRequest(http.MethodPost, "http://127.0.0.1:4000/v1/chat/completions", bytes.NewReader(requestBody))
+	if err != nil {
+		return LLMResult{}, err
+	}
+	req.Header.Set("Authorization", "Bearer "+apiKey)
+	req.Header.Set("Content-Type", "application/json")
+
+	resp, err := http.DefaultClient.Do(req)
+	if err != nil {
+		return LLMResult{}, err
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode >= 400 {
+		body, _ := io.ReadAll(resp.Body)
+		return LLMResult{}, fmt.Errorf("openai request failed (%d): %s", resp.StatusCode, string(body))
+	}
+
+	var data struct {
+		Choices []struct {
+			Message struct {
+				Content string `json:"content"`
+			} `json:"message"`
+		} `json:"choices"`
+		Usage struct {
+			PromptTokens     int `json:"prompt_tokens"`
+			CompletionTokens int `json:"completion_tokens"`
+			TotalTokens      int `json:"total_tokens"`
+		} `json:"usage"`
+	}
+	if err := json.NewDecoder(resp.Body).Decode(&data); err != nil {
+		return LLMResult{}, err
+	}
+	if len(data.Choices) == 0 {
+		return LLMResult{}, fmt.Errorf("openai response contained no choices")
+	}
+
+	return LLMResult{
+		Content: strings.TrimSpace(data.Choices[0].Message.Content),
+		Usage: &LLMUsage{
+			PromptTokens:     data.Usage.PromptTokens,
+			CompletionTokens: data.Usage.CompletionTokens,
+			TotalTokens:      data.Usage.TotalTokens,
+		},
+	}, nil
+}
+
+func generateAnthropicText(apiKey, model, systemPrompt string, messages []LLMMessage) (LLMResult, error) {
+
+	anthropicMessages := make([]map[string]string, 0, len(messages))
+	for _, message := range messages {
+		role := message.Role
+		if role == "system" {
+			role = "user"
+		}
+		anthropicMessages = append(anthropicMessages, map[string]string{
+			"role":    role,
+			"content": message.Content,
+		})
+	}
+
+	requestBody, _ := json.Marshal(map[string]interface{}{
+		"model":      model,
+		"system":     systemPrompt,
+		"max_tokens": 1200,
+		"messages":   anthropicMessages,
+	})
+
+	req, err := http.NewRequest(http.MethodPost, "https://api.anthropic.com/v1/messages", bytes.NewReader(requestBody))
+	if err != nil {
+		return LLMResult{}, err
+	}
+	req.Header.Set("x-api-key", apiKey)
+	req.Header.Set("anthropic-version", "2023-06-01")
+	req.Header.Set("content-type", "application/json")
+
+	resp, err := http.DefaultClient.Do(req)
+	if err != nil {
+		return LLMResult{}, err
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode >= 400 {
+		body, _ := io.ReadAll(resp.Body)
+		return LLMResult{}, fmt.Errorf("anthropic request failed (%d): %s", resp.StatusCode, string(body))
+	}
+
+	var data struct {
+		Content []struct {
+			Type string `json:"type"`
+			Text string `json:"text"`
+		} `json:"content"`
+		Usage struct {
+			InputTokens  int `json:"input_tokens"`
+			OutputTokens int `json:"output_tokens"`
+		} `json:"usage"`
+	}
+	if err := json.NewDecoder(resp.Body).Decode(&data); err != nil {
+		return LLMResult{}, err
+	}
+	if len(data.Content) == 0 {
+		return LLMResult{}, fmt.Errorf("anthropic response contained no content")
+	}
+
+	contentParts := make([]string, 0, len(data.Content))
+	for _, part := range data.Content {
+		if strings.TrimSpace(part.Text) != "" {
+			contentParts = append(contentParts, part.Text)
+		}
+	}
+
+	return LLMResult{
+		Content: strings.TrimSpace(strings.Join(contentParts, "\n")),
+		Usage: &LLMUsage{
+			PromptTokens:     data.Usage.InputTokens,
+			CompletionTokens: data.Usage.OutputTokens,
+			TotalTokens:      data.Usage.InputTokens + data.Usage.OutputTokens,
+		},
+	}, nil
+}
+
 func generateGeminiText(apiKey, model, systemPrompt string, messages []LLMMessage) (LLMResult, error) {
 	start := time.Now()
 

@@ -28,6 +28,14 @@
     },
     {
       "type": "file",
+<<<<<<< HEAD
+=======
+      "name": "components/session-column.tsx",
+      "file": "components/session-column.tsx"
+    },
+    {
+      "type": "file",
+>>>>>>> origin/main
       "name": "lib/diff-utils.ts",
       "file": "lib/diff-utils.ts"
     },
@@ -48,11 +56,14 @@
     },
     {
       "type": "file",
+<<<<<<< HEAD
       "name": "prisma/schema-proposal.prisma",
       "file": "prisma/schema-proposal.prisma"
     },
     {
       "type": "file",
+=======
+>>>>>>> origin/main
       "name": "scripts/check-doc-drift.js",
       "file": "scripts/check-doc-drift.js"
     },
@@ -73,6 +84,14 @@
     },
     {
       "type": "file",
+<<<<<<< HEAD
+=======
+      "name": "components/review/review-scorecard.tsx",
+      "file": "components/review/review-scorecard.tsx"
+    },
+    {
+      "type": "file",
+>>>>>>> origin/main
       "name": "components/ui/bash-output.tsx",
       "file": "components/ui/bash-output.tsx"
     },
@@ -88,6 +107,7 @@
     },
     {
       "type": "file",
+<<<<<<< HEAD
       "name": "components/ui/kanban.tsx",
       "file": "components/ui/kanban.tsx"
     },
@@ -98,11 +118,14 @@
     },
     {
       "type": "file",
+=======
+>>>>>>> origin/main
       "name": "components/ui/sonner.tsx",
       "file": "components/ui/sonner.tsx"
     },
     {
       "type": "file",
+<<<<<<< HEAD
       "name": "lib/api/health.ts",
       "file": "lib/api/health.ts"
     },
@@ -118,11 +141,14 @@
     },
     {
       "type": "file",
+=======
+>>>>>>> origin/main
       "name": "lib/rag/embedder.ts",
       "file": "lib/rag/embedder.ts"
     },
     {
       "type": "file",
+<<<<<<< HEAD
       "name": "lib/jules/request-queue.ts",
       "file": "lib/jules/request-queue.ts"
     },
@@ -153,6 +179,8 @@
     },
     {
       "type": "file",
+=======
+>>>>>>> origin/main
       "name": "extensions/vscode/src/daemon-client.ts",
       "file": "extensions/vscode/src/daemon-client.ts"
     },
@@ -178,11 +206,27 @@
     },
     {
       "type": "file",
+<<<<<<< HEAD
+=======
+      "name": "packages/shared/dist/orchestration/debate.js",
+      "file": "packages/shared/dist/orchestration/debate.js"
+    },
+    {
+      "type": "file",
+>>>>>>> origin/main
       "name": "packages/shared/dist/orchestration/index.js",
       "file": "packages/shared/dist/orchestration/index.js"
     },
     {
       "type": "file",
+<<<<<<< HEAD
+=======
+      "name": "packages/shared/dist/orchestration/review.js",
+      "file": "packages/shared/dist/orchestration/review.js"
+    },
+    {
+      "type": "file",
+>>>>>>> origin/main
       "name": "packages/shared/dist/orchestration/summarize.js",
       "file": "packages/shared/dist/orchestration/summarize.js"
     },
@@ -203,6 +247,14 @@
     },
     {
       "type": "file",
+<<<<<<< HEAD
+=======
+      "name": "packages/shared/dist/orchestration/providers/anthropic.js",
+      "file": "packages/shared/dist/orchestration/providers/anthropic.js"
+    },
+    {
+      "type": "file",
+>>>>>>> origin/main
       "name": "packages/shared/dist/orchestration/providers/gemini.js",
       "file": "packages/shared/dist/orchestration/providers/gemini.js"
     },
@@ -212,10 +264,16 @@
       "file": "packages/shared/dist/orchestration/providers/index.js"
     },
     {
+<<<<<<< HEAD
       "type": "dependency",
       "name": "@dnd-kit/core",
       "file": "package.json",
       "line": 30
+=======
+      "type": "file",
+      "name": "packages/shared/dist/orchestration/providers/openai.js",
+      "file": "packages/shared/dist/orchestration/providers/openai.js"
+>>>>>>> origin/main
     },
     {
       "type": "dependency",
@@ -225,6 +283,7 @@
     },
     {
       "type": "dependency",
+<<<<<<< HEAD
       "name": "@dnd-kit/sortable",
       "file": "package.json",
       "line": 32
@@ -237,6 +296,8 @@
     },
     {
       "type": "dependency",
+=======
+>>>>>>> origin/main
       "name": "@hookform/resolvers",
       "file": "package.json",
       "line": 34
@@ -255,6 +316,7 @@
     },
     {
       "type": "dependency",
+<<<<<<< HEAD
       "name": "@radix-ui/react-progress",
       "file": "package.json",
       "line": 43
@@ -268,11 +330,15 @@
     {
       "type": "dependency",
       "name": "handlebars",
+=======
+      "name": "motion",
+>>>>>>> origin/main
       "file": "package.json",
       "line": 59
     },
     {
       "type": "dependency",
+<<<<<<< HEAD
       "name": "motion",
       "file": "package.json",
       "line": 61
@@ -282,11 +348,17 @@
       "name": "nanoid",
       "file": "package.json",
       "line": 62
+=======
+      "name": "nanoid",
+      "file": "package.json",
+      "line": 60
+>>>>>>> origin/main
     },
     {
       "type": "dependency",
       "name": "react-hook-form",
       "file": "package.json",
+<<<<<<< HEAD
       "line": 66
     },
     {
@@ -294,11 +366,15 @@
       "name": "tunnel-rat",
       "file": "package.json",
       "line": 72
+=======
+      "line": 64
+>>>>>>> origin/main
     },
     {
       "type": "dependency",
       "name": "zod",
       "file": "package.json",
+<<<<<<< HEAD
       "line": 73
     },
     {
@@ -330,60 +406,99 @@
       "name": "prisma",
       "file": "package.json",
       "line": 109
+=======
+      "line": 71
+>>>>>>> origin/main
     },
     {
       "type": "devDependency",
       "name": "@testing-library/react",
       "file": "package.json",
+<<<<<<< HEAD
       "line": 114
+=======
+      "line": 85
+>>>>>>> origin/main
     },
     {
       "type": "devDependency",
       "name": "@testing-library/user-event",
       "file": "package.json",
+<<<<<<< HEAD
       "line": 115
+=======
+      "line": 86
+>>>>>>> origin/main
     },
     {
       "type": "devDependency",
       "name": "autoprefixer",
       "file": "package.json",
+<<<<<<< HEAD
       "line": 121
+=======
+      "line": 92
+>>>>>>> origin/main
     },
     {
       "type": "devDependency",
       "name": "jest-environment-jsdom",
       "file": "package.json",
+<<<<<<< HEAD
       "line": 127
+=======
+      "line": 98
+>>>>>>> origin/main
     },
     {
       "type": "devDependency",
       "name": "jest-environment-node",
       "file": "package.json",
+<<<<<<< HEAD
       "line": 128
+=======
+      "line": 99
+>>>>>>> origin/main
     },
     {
       "type": "devDependency",
       "name": "postcss",
       "file": "package.json",
+<<<<<<< HEAD
       "line": 129
+=======
+      "line": 100
+>>>>>>> origin/main
     },
     {
       "type": "devDependency",
       "name": "ts-node",
       "file": "package.json",
+<<<<<<< HEAD
       "line": 132
+=======
+      "line": 103
+>>>>>>> origin/main
     },
     {
       "type": "devDependency",
       "name": "tw-animate-css",
       "file": "package.json",
+<<<<<<< HEAD
       "line": 133
+=======
+      "line": 104
+>>>>>>> origin/main
     },
     {
       "type": "devDependency",
       "name": "vitest",
       "file": "package.json",
+<<<<<<< HEAD
       "line": 137
+=======
+      "line": 108
+>>>>>>> origin/main
     },
     {
       "type": "dependency",
@@ -467,7 +582,11 @@
       "type": "export",
       "name": "DAEMON_HTTP_BASE_URL",
       "file": "lib/config/daemon.ts",
+<<<<<<< HEAD
       "line": 5
+=======
+      "line": 4
+>>>>>>> origin/main
     },
     {
       "type": "export",
@@ -477,6 +596,63 @@
     },
     {
       "type": "export",
+<<<<<<< HEAD
+=======
+      "name": "DialogClose",
+      "file": "components/ui/dialog.tsx",
+      "line": 134
+    },
+    {
+      "type": "export",
+      "name": "DialogOverlay",
+      "file": "components/ui/dialog.tsx",
+      "line": 139
+    },
+    {
+      "type": "export",
+      "name": "DialogPortal",
+      "file": "components/ui/dialog.tsx",
+      "line": 140
+    },
+    {
+      "type": "export",
+      "name": "SelectGroup",
+      "file": "components/ui/select.tsx",
+      "line": 179
+    },
+    {
+      "type": "export",
+      "name": "SelectLabel",
+      "file": "components/ui/select.tsx",
+      "line": 181
+    },
+    {
+      "type": "export",
+      "name": "SelectScrollDownButton",
+      "file": "components/ui/select.tsx",
+      "line": 182
+    },
+    {
+      "type": "export",
+      "name": "SelectScrollUpButton",
+      "file": "components/ui/select.tsx",
+      "line": 183
+    },
+    {
+      "type": "export",
+      "name": "SelectSeparator",
+      "file": "components/ui/select.tsx",
+      "line": 184
+    },
+    {
+      "type": "export",
+      "name": "CardAction",
+      "file": "components/ui/card.tsx",
+      "line": 89
+    },
+    {
+      "type": "export",
+>>>>>>> origin/main
       "name": "badgeVariants",
       "file": "components/ui/badge.tsx",
       "line": 46
@@ -527,12 +703,17 @@
       "type": "export",
       "name": "Command",
       "file": "components/ui/command.tsx",
+<<<<<<< HEAD
       "line": 175
+=======
+      "line": 147
+>>>>>>> origin/main
     },
     {
       "type": "export",
       "name": "CommandShortcut",
       "file": "components/ui/command.tsx",
+<<<<<<< HEAD
       "line": 183
     },
     {
@@ -618,6 +799,33 @@
       "name": "SelectSeparator",
       "file": "components/ui/select.tsx",
       "line": 184
+=======
+      "line": 155
+    },
+    {
+      "type": "export",
+      "name": "fetchHealthHistory",
+      "file": "lib/api/observability.ts",
+      "line": 56
+    },
+    {
+      "type": "export",
+      "name": "fetchAnomalyHistory",
+      "file": "lib/api/observability.ts",
+      "line": 72
+    },
+    {
+      "type": "export",
+      "name": "fetchSessionTokenUsage",
+      "file": "lib/api/observability.ts",
+      "line": 92
+    },
+    {
+      "type": "export",
+      "name": "HealthSnapshot",
+      "file": "lib/api/observability.ts",
+      "line": 1
+>>>>>>> origin/main
     },
     {
       "type": "export",
@@ -639,6 +847,7 @@
     },
     {
       "type": "export",
+<<<<<<< HEAD
       "name": "fetchAuditEntries",
       "file": "lib/api/notifications.ts",
       "line": 109
@@ -675,12 +884,29 @@
     },
     {
       "type": "export",
+=======
+>>>>>>> origin/main
       "name": "AppLayoutProps",
       "file": "components/app-layout.tsx",
       "line": 10
     },
     {
       "type": "export",
+<<<<<<< HEAD
+=======
+      "name": "DebateDialogProps",
+      "file": "components/debate-dialog.tsx",
+      "line": 33
+    },
+    {
+      "type": "export",
+      "name": "UIParticipant",
+      "file": "components/debate-dialog.tsx",
+      "line": 45
+    },
+    {
+      "type": "export",
+>>>>>>> origin/main
       "name": "DebateOpinion",
       "file": "lib/stores/session-keeper.ts",
       "line": 15
@@ -714,6 +940,63 @@
       "name": "BorgSignal",
       "file": "lib/stores/session-keeper.ts",
       "line": 52
+<<<<<<< HEAD
+=======
+    },
+    {
+      "type": "export",
+      "name": "DragEndEvent",
+      "file": "components/ui/kanban.tsx",
+      "line": 39
+    },
+    {
+      "type": "export",
+      "name": "KanbanBoardProps",
+      "file": "components/ui/kanban.tsx",
+      "line": 67
+    },
+    {
+      "type": "export",
+      "name": "KanbanCardProps",
+      "file": "components/ui/kanban.tsx",
+      "line": 91
+    },
+    {
+      "type": "export",
+      "name": "KanbanCardsProps",
+      "file": "components/ui/kanban.tsx",
+      "line": 156
+    },
+    {
+      "type": "export",
+      "name": "KanbanHeaderProps",
+      "file": "components/ui/kanban.tsx",
+      "line": 192
+    },
+    {
+      "type": "export",
+      "name": "KanbanProviderProps",
+      "file": "components/ui/kanban.tsx",
+      "line": 198
+    },
+    {
+      "type": "export",
+      "name": "NotificationsResponse",
+      "file": "lib/api/notifications.ts",
+      "line": 18
+    },
+    {
+      "type": "export",
+      "name": "AuditResponse",
+      "file": "lib/api/notifications.ts",
+      "line": 39
+    },
+    {
+      "type": "export",
+      "name": "AuditStats",
+      "file": "lib/api/notifications.ts",
+      "line": 44
+>>>>>>> origin/main
     }
   ],
   "unusedExports": [
@@ -739,7 +1022,11 @@
       "type": "export",
       "name": "DAEMON_HTTP_BASE_URL",
       "file": "lib/config/daemon.ts",
+<<<<<<< HEAD
       "line": 5
+=======
+      "line": 4
+>>>>>>> origin/main
     },
     {
       "type": "export",
@@ -749,6 +1036,63 @@
     },
     {
       "type": "export",
+<<<<<<< HEAD
+=======
+      "name": "DialogClose",
+      "file": "components/ui/dialog.tsx",
+      "line": 134
+    },
+    {
+      "type": "export",
+      "name": "DialogOverlay",
+      "file": "components/ui/dialog.tsx",
+      "line": 139
+    },
+    {
+      "type": "export",
+      "name": "DialogPortal",
+      "file": "components/ui/dialog.tsx",
+      "line": 140
+    },
+    {
+      "type": "export",
+      "name": "SelectGroup",
+      "file": "components/ui/select.tsx",
+      "line": 179
+    },
+    {
+      "type": "export",
+      "name": "SelectLabel",
+      "file": "components/ui/select.tsx",
+      "line": 181
+    },
+    {
+      "type": "export",
+      "name": "SelectScrollDownButton",
+      "file": "components/ui/select.tsx",
+      "line": 182
+    },
+    {
+      "type": "export",
+      "name": "SelectScrollUpButton",
+      "file": "components/ui/select.tsx",
+      "line": 183
+    },
+    {
+      "type": "export",
+      "name": "SelectSeparator",
+      "file": "components/ui/select.tsx",
+      "line": 184
+    },
+    {
+      "type": "export",
+      "name": "CardAction",
+      "file": "components/ui/card.tsx",
+      "line": 89
+    },
+    {
+      "type": "export",
+>>>>>>> origin/main
       "name": "badgeVariants",
       "file": "components/ui/badge.tsx",
       "line": 46
@@ -799,12 +1143,17 @@
       "type": "export",
       "name": "Command",
       "file": "components/ui/command.tsx",
+<<<<<<< HEAD
       "line": 175
+=======
+      "line": 147
+>>>>>>> origin/main
     },
     {
       "type": "export",
       "name": "CommandShortcut",
       "file": "components/ui/command.tsx",
+<<<<<<< HEAD
       "line": 183
     },
     {
@@ -890,6 +1239,33 @@
       "name": "SelectSeparator",
       "file": "components/ui/select.tsx",
       "line": 184
+=======
+      "line": 155
+    },
+    {
+      "type": "export",
+      "name": "fetchHealthHistory",
+      "file": "lib/api/observability.ts",
+      "line": 56
+    },
+    {
+      "type": "export",
+      "name": "fetchAnomalyHistory",
+      "file": "lib/api/observability.ts",
+      "line": 72
+    },
+    {
+      "type": "export",
+      "name": "fetchSessionTokenUsage",
+      "file": "lib/api/observability.ts",
+      "line": 92
+    },
+    {
+      "type": "export",
+      "name": "HealthSnapshot",
+      "file": "lib/api/observability.ts",
+      "line": 1
+>>>>>>> origin/main
     },
     {
       "type": "export",
@@ -911,6 +1287,7 @@
     },
     {
       "type": "export",
+<<<<<<< HEAD
       "name": "fetchAuditEntries",
       "file": "lib/api/notifications.ts",
       "line": 109
@@ -947,12 +1324,29 @@
     },
     {
       "type": "export",
+=======
+>>>>>>> origin/main
       "name": "AppLayoutProps",
       "file": "components/app-layout.tsx",
       "line": 10
     },
     {
       "type": "export",
+<<<<<<< HEAD
+=======
+      "name": "DebateDialogProps",
+      "file": "components/debate-dialog.tsx",
+      "line": 33
+    },
+    {
+      "type": "export",
+      "name": "UIParticipant",
+      "file": "components/debate-dialog.tsx",
+      "line": 45
+    },
+    {
+      "type": "export",
+>>>>>>> origin/main
       "name": "DebateOpinion",
       "file": "lib/stores/session-keeper.ts",
       "line": 15
@@ -986,6 +1380,63 @@
       "name": "BorgSignal",
       "file": "lib/stores/session-keeper.ts",
       "line": 52
+<<<<<<< HEAD
+=======
+    },
+    {
+      "type": "export",
+      "name": "DragEndEvent",
+      "file": "components/ui/kanban.tsx",
+      "line": 39
+    },
+    {
+      "type": "export",
+      "name": "KanbanBoardProps",
+      "file": "components/ui/kanban.tsx",
+      "line": 67
+    },
+    {
+      "type": "export",
+      "name": "KanbanCardProps",
+      "file": "components/ui/kanban.tsx",
+      "line": 91
+    },
+    {
+      "type": "export",
+      "name": "KanbanCardsProps",
+      "file": "components/ui/kanban.tsx",
+      "line": 156
+    },
+    {
+      "type": "export",
+      "name": "KanbanHeaderProps",
+      "file": "components/ui/kanban.tsx",
+      "line": 192
+    },
+    {
+      "type": "export",
+      "name": "KanbanProviderProps",
+      "file": "components/ui/kanban.tsx",
+      "line": 198
+    },
+    {
+      "type": "export",
+      "name": "NotificationsResponse",
+      "file": "lib/api/notifications.ts",
+      "line": 18
+    },
+    {
+      "type": "export",
+      "name": "AuditResponse",
+      "file": "lib/api/notifications.ts",
+      "line": 39
+    },
+    {
+      "type": "export",
+      "name": "AuditStats",
+      "file": "lib/api/notifications.ts",
+      "line": 44
+>>>>>>> origin/main
     }
   ],
   "unusedFiles": [
@@ -1016,6 +1467,14 @@
     },
     {
       "type": "file",
+<<<<<<< HEAD
+=======
+      "name": "components/session-column.tsx",
+      "file": "components/session-column.tsx"
+    },
+    {
+      "type": "file",
+>>>>>>> origin/main
       "name": "lib/diff-utils.ts",
       "file": "lib/diff-utils.ts"
     },
@@ -1036,11 +1495,14 @@
     },
     {
       "type": "file",
+<<<<<<< HEAD
       "name": "prisma/schema-proposal.prisma",
       "file": "prisma/schema-proposal.prisma"
     },
     {
       "type": "file",
+=======
+>>>>>>> origin/main
       "name": "scripts/check-doc-drift.js",
       "file": "scripts/check-doc-drift.js"
     },
@@ -1061,6 +1523,14 @@
     },
     {
       "type": "file",
+<<<<<<< HEAD
+=======
+      "name": "components/review/review-scorecard.tsx",
+      "file": "components/review/review-scorecard.tsx"
+    },
+    {
+      "type": "file",
+>>>>>>> origin/main
       "name": "components/ui/bash-output.tsx",
       "file": "components/ui/bash-output.tsx"
     },
@@ -1076,6 +1546,7 @@
     },
     {
       "type": "file",
+<<<<<<< HEAD
       "name": "components/ui/kanban.tsx",
       "file": "components/ui/kanban.tsx"
     },
@@ -1086,11 +1557,14 @@
     },
     {
       "type": "file",
+=======
+>>>>>>> origin/main
       "name": "components/ui/sonner.tsx",
       "file": "components/ui/sonner.tsx"
     },
     {
       "type": "file",
+<<<<<<< HEAD
       "name": "lib/api/health.ts",
       "file": "lib/api/health.ts"
     },
@@ -1106,11 +1580,14 @@
     },
     {
       "type": "file",
+=======
+>>>>>>> origin/main
       "name": "lib/rag/embedder.ts",
       "file": "lib/rag/embedder.ts"
     },
     {
       "type": "file",
+<<<<<<< HEAD
       "name": "lib/jules/request-queue.ts",
       "file": "lib/jules/request-queue.ts"
     },
@@ -1141,6 +1618,8 @@
     },
     {
       "type": "file",
+=======
+>>>>>>> origin/main
       "name": "extensions/vscode/src/daemon-client.ts",
       "file": "extensions/vscode/src/daemon-client.ts"
     },
@@ -1166,11 +1645,27 @@
     },
     {
       "type": "file",
+<<<<<<< HEAD
+=======
+      "name": "packages/shared/dist/orchestration/debate.js",
+      "file": "packages/shared/dist/orchestration/debate.js"
+    },
+    {
+      "type": "file",
+>>>>>>> origin/main
       "name": "packages/shared/dist/orchestration/index.js",
       "file": "packages/shared/dist/orchestration/index.js"
     },
     {
       "type": "file",
+<<<<<<< HEAD
+=======
+      "name": "packages/shared/dist/orchestration/review.js",
+      "file": "packages/shared/dist/orchestration/review.js"
+    },
+    {
+      "type": "file",
+>>>>>>> origin/main
       "name": "packages/shared/dist/orchestration/summarize.js",
       "file": "packages/shared/dist/orchestration/summarize.js"
     },
@@ -1191,6 +1686,14 @@
     },
     {
       "type": "file",
+<<<<<<< HEAD
+=======
+      "name": "packages/shared/dist/orchestration/providers/anthropic.js",
+      "file": "packages/shared/dist/orchestration/providers/anthropic.js"
+    },
+    {
+      "type": "file",
+>>>>>>> origin/main
       "name": "packages/shared/dist/orchestration/providers/gemini.js",
       "file": "packages/shared/dist/orchestration/providers/gemini.js"
     },
@@ -1198,23 +1701,35 @@
       "type": "file",
       "name": "packages/shared/dist/orchestration/providers/index.js",
       "file": "packages/shared/dist/orchestration/providers/index.js"
+<<<<<<< HEAD
+=======
+    },
+    {
+      "type": "file",
+      "name": "packages/shared/dist/orchestration/providers/openai.js",
+      "file": "packages/shared/dist/orchestration/providers/openai.js"
+>>>>>>> origin/main
     }
   ],
   "unusedDeps": [
     {
       "type": "dependency",
+<<<<<<< HEAD
       "name": "@dnd-kit/core",
       "file": "package.json",
       "line": 30
     },
     {
       "type": "dependency",
+=======
+>>>>>>> origin/main
       "name": "@dnd-kit/modifiers",
       "file": "package.json",
       "line": 31
     },
     {
       "type": "dependency",
+<<<<<<< HEAD
       "name": "@dnd-kit/sortable",
       "file": "package.json",
       "line": 32
@@ -1227,6 +1742,8 @@
     },
     {
       "type": "dependency",
+=======
+>>>>>>> origin/main
       "name": "@hookform/resolvers",
       "file": "package.json",
       "line": 34
@@ -1245,6 +1762,7 @@
     },
     {
       "type": "dependency",
+<<<<<<< HEAD
       "name": "@radix-ui/react-progress",
       "file": "package.json",
       "line": 43
@@ -1258,11 +1776,15 @@
     {
       "type": "dependency",
       "name": "handlebars",
+=======
+      "name": "motion",
+>>>>>>> origin/main
       "file": "package.json",
       "line": 59
     },
     {
       "type": "dependency",
+<<<<<<< HEAD
       "name": "motion",
       "file": "package.json",
       "line": 61
@@ -1272,11 +1794,17 @@
       "name": "nanoid",
       "file": "package.json",
       "line": 62
+=======
+      "name": "nanoid",
+      "file": "package.json",
+      "line": 60
+>>>>>>> origin/main
     },
     {
       "type": "dependency",
       "name": "react-hook-form",
       "file": "package.json",
+<<<<<<< HEAD
       "line": 66
     },
     {
@@ -1284,11 +1812,15 @@
       "name": "tunnel-rat",
       "file": "package.json",
       "line": 72
+=======
+      "line": 64
+>>>>>>> origin/main
     },
     {
       "type": "dependency",
       "name": "zod",
       "file": "package.json",
+<<<<<<< HEAD
       "line": 73
     },
     {
@@ -1320,60 +1852,99 @@
       "name": "prisma",
       "file": "package.json",
       "line": 109
+=======
+      "line": 71
+>>>>>>> origin/main
     },
     {
       "type": "devDependency",
       "name": "@testing-library/react",
       "file": "package.json",
+<<<<<<< HEAD
       "line": 114
+=======
+      "line": 85
+>>>>>>> origin/main
     },
     {
       "type": "devDependency",
       "name": "@testing-library/user-event",
       "file": "package.json",
+<<<<<<< HEAD
       "line": 115
+=======
+      "line": 86
+>>>>>>> origin/main
     },
     {
       "type": "devDependency",
       "name": "autoprefixer",
       "file": "package.json",
+<<<<<<< HEAD
       "line": 121
+=======
+      "line": 92
+>>>>>>> origin/main
     },
     {
       "type": "devDependency",
       "name": "jest-environment-jsdom",
       "file": "package.json",
+<<<<<<< HEAD
       "line": 127
+=======
+      "line": 98
+>>>>>>> origin/main
     },
     {
       "type": "devDependency",
       "name": "jest-environment-node",
       "file": "package.json",
+<<<<<<< HEAD
       "line": 128
+=======
+      "line": 99
+>>>>>>> origin/main
     },
     {
       "type": "devDependency",
       "name": "postcss",
       "file": "package.json",
+<<<<<<< HEAD
       "line": 129
+=======
+      "line": 100
+>>>>>>> origin/main
     },
     {
       "type": "devDependency",
       "name": "ts-node",
       "file": "package.json",
+<<<<<<< HEAD
       "line": 132
+=======
+      "line": 103
+>>>>>>> origin/main
     },
     {
       "type": "devDependency",
       "name": "tw-animate-css",
       "file": "package.json",
+<<<<<<< HEAD
       "line": 133
+=======
+      "line": 104
+>>>>>>> origin/main
     },
     {
       "type": "devDependency",
       "name": "vitest",
       "file": "package.json",
+<<<<<<< HEAD
       "line": 137
+=======
+      "line": 108
+>>>>>>> origin/main
     },
     {
       "type": "dependency",
@@ -1438,5 +2009,9 @@
       "line": 2
     }
   ],
+<<<<<<< HEAD
   "summary": "Found 126 issues"
+=======
+  "summary": "Found 112 issues"
+>>>>>>> origin/main
 }

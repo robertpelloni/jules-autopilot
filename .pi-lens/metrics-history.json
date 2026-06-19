@@ -1,0 +1,106 @@
+{
+  "version": 1,
+  "files": {
+    "components\\settings-dialog.tsx": {
+      "latest": {
+        "commit": "3aa549c",
+        "timestamp": "2026-06-18T18:26:28.929Z",
+        "mi": 17.1,
+        "cognitive": 66,
+        "nesting": 4,
+        "lines": 356,
+        "maxCyclomatic": 29,
+        "entropy": 6.39
+      },
+      "history": [
+        {
+          "commit": "3aa549c",
+          "timestamp": "2026-06-18T18:26:28.929Z",
+          "mi": 17.1,
+          "cognitive": 66,
+          "nesting": 4,
+          "lines": 356,
+          "maxCyclomatic": 29,
+          "entropy": 6.39
+        }
+      ],
+      "trend": "stable"
+    },
+    "lib\\jules\\provider.tsx": {
+      "latest": {
+        "commit": "e5316e6",
+        "timestamp": "2026-06-18T18:31:59.072Z",
+        "mi": 37.9,
+        "cognitive": 20,
+        "nesting": 4,
+        "lines": 82,
+        "maxCyclomatic": 10,
+        "entropy": 5.73
+      },
+      "history": [
+        {
+          "commit": "e5316e6",
+          "timestamp": "2026-06-18T18:31:59.072Z",
+          "mi": 37.9,
+          "cognitive": 20,
+          "nesting": 4,
+          "lines": 82,
+          "maxCyclomatic": 10,
+          "entropy": 5.73
+        }
+      ],
+      "trend": "stable"
+    },
+    "lib\\jules\\client.ts": {
+      "latest": {
+        "commit": "e5316e6",
+        "timestamp": "2026-06-18T18:32:02.403Z",
+        "mi": 8.6,
+        "cognitive": 408,
+        "nesting": 9,
+        "lines": 720,
+        "maxCyclomatic": 76,
+        "entropy": 7.28
+      },
+      "history": [
+        {
+          "commit": "e5316e6",
+          "timestamp": "2026-06-18T18:32:02.403Z",
+          "mi": 8.6,
+          "cognitive": 408,
+          "nesting": 9,
+          "lines": 720,
+          "maxCyclomatic": 76,
+          "entropy": 7.28
+        }
+      ],
+      "trend": "stable"
+    },
+    "vite.config.ts": {
+      "latest": {
+        "commit": "e5316e6",
+        "timestamp": "2026-06-18T18:35:28.318Z",
+        "mi": 55.7,
+        "cognitive": 0,
+        "nesting": 0,
+        "lines": 31,
+        "maxCyclomatic": 1,
+        "entropy": 3.88
+      },
+      "history": [
+        {
+          "commit": "e5316e6",
+          "timestamp": "2026-06-18T18:35:28.318Z",
+          "mi": 55.7,
+          "cognitive": 0,
+          "nesting": 0,
+          "lines": 31,
+          "maxCyclomatic": 1,
+          "entropy": 3.88
+        }
+      ],
+      "trend": "stable"
+    }
+  },
+  "capturedAt": "2026-06-18T18:35:33.329Z"
+}
