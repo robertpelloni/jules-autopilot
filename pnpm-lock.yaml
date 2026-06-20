@@ -117,9 +117,15 @@ importers:
       hono:
         specifier: '>=4.12.21'
         version: 4.12.25
+      js-yaml:
+        specifier: ^4.2.0
+        version: 4.2.0
       lucide-react:
         specifier: ^0.555.0
         version: 0.555.0(react@19.2.7)
+      minimatch:
+        specifier: ^9.0.9
+        version: 9.0.9
       motion:
         specifier: ^12.23.25
         version: 12.40.0(react-dom@19.2.7(react@19.2.7))(react@19.2.7)

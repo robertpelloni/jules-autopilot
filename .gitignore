@@ -76,3 +76,6 @@ backend-go/backend.exe
 # Temp scripts
 run.bat
 watchdog.bat
+
+# Built outputs
+packages/shared/dist/
