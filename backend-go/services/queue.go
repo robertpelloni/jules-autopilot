@@ -87,6 +87,12 @@ func (w *Worker) Start() {
 	concurrency := w.concurrency
 	w.mu.Unlock()
 
+	// Clear all existing queue jobs on startup so sessions are freshly reloaded
+	clearResult := db.DB.Unscoped().Where("1 = 1").Delete(&models.QueueJob{})
+	if clearResult.Error == nil {
+		log.Printf("[Queue] Cleared %d stale jobs from queue", clearResult.RowsAffected)
+	}
+
 	log.Printf("[Queue] SQLite Task Queue worker started (concurrency: %d)", concurrency)
 
 	// Periodic cleanup of old failed jobs
