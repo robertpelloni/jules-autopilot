@@ -229,10 +229,18 @@ func (w *Worker) executeJob(job models.QueueJob) {
 			status = "failed"
 		}
 
-		db.DB.Model(&job).Updates(map[string]interface{}{
+		updates := map[string]interface{}{
 			"status":     status,
 			"last_error": &errMsg,
-		})
+		}
+
+		// 429 rate-limit: add 30s backoff before retry
+		if strings.Contains(errMsg, "429") || strings.Contains(errMsg, "RESOURCE_EXHAUSTED") {
+			backoffTime := time.Now().Add(30 * time.Second)
+			updates["run_at"] = &backoffTime
+		}
+
+		db.DB.Model(&job).Updates(updates)
 		return
 	}
 
@@ -278,7 +286,7 @@ func StartWorker() {
 	globalWorkerMu.Lock()
 	defer globalWorkerMu.Unlock()
 	if globalWorker == nil {
-		globalWorker = NewWorker(10)
+		globalWorker = NewWorker(50)
 	}
 	globalWorker.Start()
 }

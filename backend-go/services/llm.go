@@ -71,8 +71,9 @@ type LLMUsage struct {
 }
 
 type LLMResult struct {
-	Content string
-	Usage   *LLMUsage
+	Content   string
+	Usage     *LLMUsage
+	LatencyMs float64
 }
 
 func normalizeProvider(provider string) string {
@@ -304,7 +305,18 @@ func generateRiskScore(provider, apiKey, model, topic, summary string, fallback 
 	return extractRiskScoreFromText(result.Content)
 }
 
+var llmHttpClient = &http.Client{
+	Timeout: 90 * time.Second,
+}
+
+var freellmHttpClient = &http.Client{
+	Timeout: 10 * time.Minute,
+}
+
+var freellmSem = make(chan struct{}, 1)
+
 func generateOpenRouterText(apiKey, model, systemPrompt string, messages []LLMMessage) (LLMResult, error) {
+	start := time.Now()
 
 	requestMessages := make([]map[string]string, 0, len(messages)+1)
 	if strings.TrimSpace(systemPrompt) != "" {
@@ -330,6 +342,29 @@ func generateOpenRouterText(apiKey, model, systemPrompt string, messages []LLMMe
 		apiURL = "http://localhost:4000/v1/chat/completions"
 	}
 
+	// FreeLLM: serialized (1 at a time), 10min timeout, no retries
+	isFreeLLM := strings.Contains(apiURL, "localhost:4000")
+	if isFreeLLM {
+		retryReq, err := http.NewRequest(http.MethodPost, apiURL, bytes.NewReader(requestBody))
+		if err != nil {
+			return LLMResult{}, err
+		}
+		retryReq.Header.Set("Authorization", "Bearer "+apiKey)
+		retryReq.Header.Set("Content-Type", "application/json")
+		freellmSem <- struct{}{}
+		defer func() { <-freellmSem }()
+		resp, err := freellmHttpClient.Do(retryReq)
+		if err != nil {
+			return LLMResult{}, fmt.Errorf("FreeLLM request failed: %w", err)
+		}
+		defer resp.Body.Close()
+		if resp.StatusCode >= 400 {
+			body, _ := io.ReadAll(resp.Body)
+			return LLMResult{}, fmt.Errorf("FreeLLM request failed (%d): %s", resp.StatusCode, string(body))
+		}
+		return decodeOpenRouterResponse(resp, start)
+	}
+
 	// Retry logic: LM Studio may need model reload time
 	maxRetries := 0
 	if isLMStudio {
@@ -353,7 +388,7 @@ func generateOpenRouterText(apiKey, model, systemPrompt string, messages []LLMMe
 			retryReq.Header.Set("X-Title", "Jules Autopilot")
 		}
 
-		resp, err := http.DefaultClient.Do(retryReq)
+		resp, err := llmHttpClient.Do(retryReq)
 		if err != nil {
 			lastErr = err
 			continue
@@ -580,6 +615,51 @@ func generateGeminiText(apiKey, model, systemPrompt string, messages []LLMMessag
 			PromptTokens:     data.UsageMetadata.PromptTokenCount,
 			CompletionTokens: data.UsageMetadata.CandidatesTokenCount,
 			TotalTokens:      data.UsageMetadata.TotalTokenCount,
+		},
+	}, nil
+}
+
+
+func decodeOpenRouterResponse(resp *http.Response, start time.Time) (LLMResult, error) {
+	var data struct {
+		Choices []struct {
+			Message struct {
+				Content          string `json:"content"`
+				ReasoningContent string `json:"reasoning_content"`
+				Reasoning        string `json:"reasoning"`
+			} `json:"message"`
+		} `json:"choices"`
+		Usage struct {
+			PromptTokens     int `json:"prompt_tokens"`
+			CompletionTokens int `json:"completion_tokens"`
+			TotalTokens      int `json:"total_tokens"`
+		} `json:"usage"`
+	}
+	if err := json.NewDecoder(resp.Body).Decode(&data); err != nil {
+		resp.Body.Close()
+		return LLMResult{}, err
+	}
+	resp.Body.Close()
+	if len(data.Choices) == 0 {
+		return LLMResult{}, fmt.Errorf("LLM response contained no choices")
+	}
+	resultContent := strings.TrimSpace(data.Choices[0].Message.Content)
+	if resultContent == "" {
+		resultContent = strings.TrimSpace(data.Choices[0].Message.ReasoningContent)
+	}
+	if resultContent == "" {
+		resultContent = strings.TrimSpace(data.Choices[0].Message.Reasoning)
+	}
+	if resultContent == "" {
+		return LLMResult{}, fmt.Errorf("LLM returned empty content")
+	}
+	return LLMResult{
+		Content:   resultContent,
+		LatencyMs: float64(time.Since(start).Milliseconds()),
+		Usage: &LLMUsage{
+			PromptTokens:     data.Usage.PromptTokens,
+			CompletionTokens: data.Usage.CompletionTokens,
+			TotalTokens:      data.Usage.TotalTokens,
 		},
 	}, nil
 }
