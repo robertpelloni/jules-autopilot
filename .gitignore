@@ -79,3 +79,4 @@ watchdog.bat
 
 # Built outputs
 packages/shared/dist/
+.suno_new_session/
