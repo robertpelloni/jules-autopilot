@@ -91,7 +91,7 @@ func InitTestDB() (*gorm.DB, error) {
 	settings := models.KeeperSettings{
 		ID:                         "default",
 		IsEnabled:                  false,
-		CheckIntervalSeconds:       30,
+		CheckIntervalSeconds:       300,
 		InactivityThresholdMinutes: 10,
 		ActiveWorkThresholdMinutes: 5,
 		Messages:                   "[]",
@@ -112,7 +112,7 @@ func seedDefaultSettings() {
 			ID:                         "default",
 			IsEnabled:                  false,
 			AutoSwitch:                 true,
-			CheckIntervalSeconds:       30,
+			CheckIntervalSeconds:       300,
 			InactivityThresholdMinutes: 1,
 			ActiveWorkThresholdMinutes: 30,
 			Messages:                   "Great! Please keep going as you advise!\nYes! Please continue to proceed as you recommend!\nThis looks correct. Please proceed.\nExcellent plan. Go ahead.\nLooks good to me. Continue.",

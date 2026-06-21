@@ -77,8 +77,8 @@ func (d *Daemon) tick() time.Duration {
 	if interval <= 0 {
 		interval = 120 * time.Second
 	}
-	if interval < 60*time.Second {
-		interval = 60 * time.Second
+	if interval < 5*time.Minute {
+		interval = 5 * time.Minute
 	}
 
 	if !settings.IsEnabled {
@@ -113,6 +113,23 @@ func (d *Daemon) tick() time.Duration {
 
 	queuedSessions := 0
 	for _, session := range sessions {
+		thirtyMinAgo := time.Now().Add(-30 * time.Minute)
+		hourAgo := time.Now().Add(-1 * time.Hour)
+
+		// Skip if recently completed (30min cooldown) or recently failed (1h cooldown to stop hammering bad sessions)
+		var existing models.QueueJob
+		found := db.DB.Where(
+			"type = ? AND ((status IN ?) OR (status = ? AND updated_at > ?) OR (status = ? AND updated_at > ?)) AND payload LIKE ?",
+			"check_session",
+			[]string{"pending", "processing"},
+			"completed", thirtyMinAgo,
+			"failed", hourAgo,
+			"%"+session.ID+"%",
+		).First(&existing).Error == nil
+		if found {
+			continue
+		}
+
 		payload := map[string]interface{}{
 			"session": session,
 		}
@@ -135,6 +152,18 @@ func (d *Daemon) tick() time.Duration {
 		} else {
 			for _, source := range sources {
 				if strings.TrimSpace(source.ID) == "" {
+					continue
+				}
+				thirtyMinAgo := time.Now().Add(-30 * time.Minute)
+				var existing models.QueueJob
+				found := db.DB.Where(
+					"type = ? AND (status IN ? OR (status = ? AND updated_at > ?)) AND payload LIKE ?",
+					"check_issues",
+					[]string{"pending", "processing"},
+					"completed", thirtyMinAgo,
+					"%"+source.ID+"%",
+				).First(&existing).Error == nil
+				if found {
 					continue
 				}
 				payload := map[string]interface{}{"sourceId": source.ID}

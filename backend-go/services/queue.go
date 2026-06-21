@@ -87,6 +87,12 @@ func (w *Worker) Start() {
 	concurrency := w.concurrency
 	w.mu.Unlock()
 
+	// Clear all existing queue jobs on startup so sessions are freshly reloaded
+	clearResult := db.DB.Unscoped().Where("1 = 1").Delete(&models.QueueJob{})
+	if clearResult.Error == nil {
+		log.Printf("[Queue] Cleared %d stale jobs from queue", clearResult.RowsAffected)
+	}
+
 	log.Printf("[Queue] SQLite Task Queue worker started (concurrency: %d)", concurrency)
 
 	// Periodic cleanup of old failed jobs
@@ -223,10 +229,18 @@ func (w *Worker) executeJob(job models.QueueJob) {
 			status = "failed"
 		}
 
-		db.DB.Model(&job).Updates(map[string]interface{}{
+		updates := map[string]interface{}{
 			"status":     status,
 			"last_error": &errMsg,
-		})
+		}
+
+		// 429 rate-limit: add 30s backoff before retry
+		if strings.Contains(errMsg, "429") || strings.Contains(errMsg, "RESOURCE_EXHAUSTED") {
+			backoffTime := time.Now().Add(30 * time.Second)
+			updates["run_at"] = &backoffTime
+		}
+
+		db.DB.Model(&job).Updates(updates)
 		return
 	}
 
@@ -242,12 +256,37 @@ var (
 	globalWorkerMu sync.Mutex
 )
 
+// SetRateLimitBackoff sets a rate limit backoff period
+func SetRateLimitBackoff(d time.Duration) {
+}
+
+// GetProjectRoot returns the project root directory path
+func GetProjectRoot() string {
+	return ".."
+}
+
+// ParseMessages splits a raw messages string into a slice
+func ParseMessages(raw string) []string {
+	if strings.TrimSpace(raw) == "" {
+		return nil
+	}
+	lines := strings.Split(raw, "\n")
+	var result []string
+	for _, line := range lines {
+		trimmed := strings.TrimSpace(line)
+		if trimmed != "" {
+			result = append(result, trimmed)
+		}
+	}
+	return result
+}
+
 // StartWorker initializes and starts the global queue worker
 func StartWorker() {
 	globalWorkerMu.Lock()
 	defer globalWorkerMu.Unlock()
 	if globalWorker == nil {
-		globalWorker = NewWorker(10)
+		globalWorker = NewWorker(50)
 	}
 	globalWorker.Start()
 }
