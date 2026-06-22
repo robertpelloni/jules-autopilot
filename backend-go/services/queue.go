@@ -712,9 +712,10 @@ func (w *Worker) handleCheckSession(payload string) (string, error) {
 		instructions := "Please instruct Google Jules agent to continue autonomously working on this project. Infer the next step based on the progress history and conversation."
 
 		// Resolve project name from the session's sourceID for workspace mirrored docs
+		// Workspace root is ../.. from backend-go/ (where all project mirrors live)
 		projectName := extractProjectName(session.SourceID)
-		projectRoot := getProjectRoot()
-		projectDir := filepath.Join(projectRoot, projectName)
+		workspaceRoot := filepath.Join(getProjectRoot(), "..")
+		projectDir := filepath.Join(workspaceRoot, projectName)
 
 		// Documentation context from the session's project in ../workspace/<project-name>/
 		docContext := ""

@@ -628,7 +628,6 @@ func generateGeminiText(apiKey, model, systemPrompt string, messages []LLMMessag
 	}, nil
 }
 
-
 func decodeOpenRouterResponse(resp *http.Response, start time.Time) (LLMResult, error) {
 	var data struct {
 		Choices []struct {
