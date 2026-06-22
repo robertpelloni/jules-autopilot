@@ -3912,3 +3912,191 @@ Let me now build and restart.
 **Action**: bash(command: "powershell -Command "Stop-Process -Name 'backend' -Force -ErrorAction SilentlyContinue; Write-Output 'Killed'" && sleep 18 && curl -s http://localhost:8082/api/health | python3 -c "import sys,json;d=json.load(sys.stdin);print(f'OK daemon={d['checks']['daemon']['running']} sched={d['checks']['scheduler']['running']} worker={d['checks']['worker']['running']}')" 2>&1 && echo "" && tail -3 backend-go/watchdog.log", timeout: 30)
 **Observation**: bash: success
 
+## Turn 11 | 2026-06-22T17:58:13.427Z | deepseek/deepseek-v4-flash
+
+**Thought**: 
+**Thinking**: Good, watchdog restarted and healthy. Let me commit, push, and verify the final state.
+**Action**: bash(command: "cd backend-go && git add -A && git commit -m "fix: resolve project docs/commits from correct workspace path
+
+Previous code used getProjectRoot() (jules-autopilot/) as the base
+for projectDir, producing jules-autopilot/<projectName/ — WRONG.
+Now resolves workspace root as ../.. from backend-go/ CWD, giving
+workspace/<projectName/ (e.g., workspace/turntUpToddler/)." && git push 2>&1", timeout: 15)
+**Observation**: bash: success
+
+## Turn 12 | 2026-06-22T17:58:21.423Z | deepseek/deepseek-v4-flash
+
+**Thought**: 
+**Thinking**: Let me do a final check that everything is running smoothly and summarize.
+**Action**: bash(command: "echo "=== FINAL ===" && curl -s http://localhost:8082/api/health | python3 -c "import sys,json;d=json.load(sys.stdin);print(f'OK  daemon={d[\"checks\"][\"daemon\"][\"running\"]}  sched={d[\"checks\"][\"scheduler\"][\"running\"]}  worker={d[\"checks\"][\"worker\"][\"running\"]}  db={d[\"checks\"][\"database\"][\"status\"]}')" && echo "" && tail -2 backend-go/watchdog.log", timeout: 10)
+**Observation**: bash: success
+
+## Turn 13 | 2026-06-22T17:58:25.103Z | deepseek/deepseek-v4-flash
+
+**Thought**: All fixed and running. Here's the path resolution now:
+
+### Path Resolution
+```
+From backend-go/ CWD:
+  ..           → jules-autopilot/        (autopilot's own root)
+  ../..        → workspace/              (where all project mirrors live)
+
+projectDir = workspace/<projectName>/
+  Example for session on "hyper/turntUpToddler":
+    → workspace/TurntUpToddler/
+  Example for session on "hyper/jules-autopilot":
+    → workspace/jules-autopilot/
+```
+
+### What uses the correct project path
+| Data source | Path | Correct? |
+|-------------|------|----------|
+| **README.md, ARCHITECTURE.md** etc. | `projectDir/docFile` | ✅ Workspace mirror |
+| **Recent git commits** | `git -C projectDir log -5` | ✅ Per-project repo |
+| **Last 5 agent messages** | `ListActivities(session.ID)` via Jules API | ✅ Per-session, no path needed |
+
+Running PID 31672, watchdog healthy, all pushed to `main`.
+
+## Turn 1 | 2026-06-22T18:07:33.980Z | deepseek/deepseek-v4-flash
+
+**Thought**: 
+**Thinking**: The brain skill has been loaded. It wants me to run the brain init script first. Let me do that.
+**Action**: bash(command: "bash "C:\Users\hyper\.pi\agent\npm\node_modules\pi-brain\skills\brain\scripts\brain-init.sh"", timeout: 15)
+**Observation**: bash: success
+
+## Turn 2 | 2026-06-22T18:07:37.828Z | deepseek/deepseek-v4-flash
+
+**Thought**: Let me orient myself by scanning the project state before writing the roadmap.
+**Thinking**: Brain is initialized. Let me now write the `.memory/main.md` with the current state of the project, since this is an existing project and I need to capture the roadmap.
+
+Let me first scan the project to understand it better before writing the roadmap.
+**Action**: bash(command: "cd backend-go && git log --oneline -15", timeout: 5), read(path: "backend-go/services/queue.go", limit: 30)
+**Observation**: bash: success; read: success
+
+## Turn 3 | 2026-06-22T18:07:42.715Z | deepseek/deepseek-v4-flash
+
+**Thought**: 
+**Thinking**: Let me write the `.memory/main.md` with the current project state based on everything I've learned in this session.
+**Action**: write(path: "backend-go/.memory/main.md", content: "# Jules Autopilot — Project Roadmap
+
+## Project Purpose
+
+Jules Autopilot is an autonomous AI coding command center that monitors Google
+Jules AI coding sessions, nudges inactive sessions, manages GitHub issues, and
+provides oversight — all running as a Go backend with a React frontend.
+
+## Current State (June 22, 2026)
+
+The Go backend (`backend-go/`) is the primary runtime. It runs on **port 8082**
+and connects to the Jules API, manages a queue of background jobs, and uses
+**LM Studio** (localhost:1234) as the LLM provider.
+
+### Running Services
+
+| Service | Port | Tech |
+|---------|------|------|
+| Jules Backend | 8082 | Go (Fiber v2) |
+| LM Studio | 1234 | Local LLM (gemma-4-26b) |
+| FreeLLM | 4000 | LLM proxy |
+
+### Nudge System (latest behavior)
+
+**Recovery messages are removed.** The nudge system bumps ALL inactive sessions
+with no exceptions — FAILED, PAUSED, COMPLETED all get bumped.
+
+**Flow:**
+1. Daemon polls Jules API for active sessions every ~5 min
+2. For each session past its inactivity threshold, builds a prompt:
+   - Instructions + project docs + last 5 agent messages + last 5 git commits + instructions again
+3. Prompt sent to **LM Studio** (30 min timeout via `lmStudioHttpClient`)
+4. Only LM Studio's **response** is sent to the Jules session — never raw context
+5. If LM Studio fails, the nudge fails (no fallback to raw prompt)
+
+**Dedup logic:** If last message is from "user" (us) and the one before it is from
+"agent", the agent was actively working when we nudged and hasn't replied yet — wait.
+If last message is from user and the one before is also user, the agent never saw
+our nudge — bump again.
+
+**Thresholds:**
+- FAILED / PAUSED → 1 min (bump ASAP)
+- IN_PROGRESS → ActiveWorkThresholdMinutes
+- COMPLETED → InactivityThresholdMinutes
+
+### Path Resolution
+
+Project docs and git commits are read from `../workspace/<projectName>/` relative
+to the backend CWD (`backend-go/`). This resolves to the workspace mirror of the
+session's GitHub repo.
+
+### LM Studio Timeout
+
+A dedicated `lmStudioHttpClient` with **30 minute timeout** routes LM Studio
+requests through `generateOpenRouterText` when the model name contains "lmstudio"
+or starts with "gemma-4".
+
+## Key Decisions
+
+- **2026-06-22:** Removed recovery messages entirely. All sessions (FAILED/PAUSED/COMPLETED) get the same nudge treatment.
+- **2026-06-22:** Nudge prompt goes to LM Studio; only LM Studio's response goes to Jules. Raw prompt never sent.
+- **2026-06-22:** Project docs/commits resolved from `../workspace/<projectName>/` (workspace mirrors), not the autopilot's own root.
+- **2026-06-22:** LM Studio gets a dedicated 30-min timeout client.
+- **2026-06-22:** Nudge dedup: only block if `[..., agent, user]` pattern (agent active before our nudge, pending reply). `[..., user, user]` resends.
+
+## Milestones
+
+- [x] Go backend running on port 8082 with Fiber
+- [x] Daemon polls Jules API for sessions
+- [x] Queue worker with 50 concurrent goroutines
+- [x] Nudge system sending context through LM Studio
+- [x] Recovery messages removed
+- [x] Per-project workspace path resolution
+- [x] LM Studio long timeout (30 min)
+- [x] Smart dedup for nudge messages
+
+## Local Repo Paths
+
+- Backend binary: `backend-go/backend.exe`
+- CWD at runtime: `C:\Users\hyper\workspace\jules-autopilot\backend-go\`
+- Workspace mirrors: `C:\Users\hyper\workspace\`
+- DB: `backend-go/dev.db`
+- Watchdog log: `backend-go/watchdog.log`
+")
+**Observation**: write: success
+
+## Turn 4 | 2026-06-22T18:09:44.905Z | deepseek/deepseek-v4-flash
+
+**Thought**: Brain initialized and `.memory/main.md` written with the full project roadmap and current state. Let me confirm everything's still running.
+**Thinking**: Wait, `103569ms` for markdown clean? That seems odd. Anyway, the file is written. Now I should make a Brain commit to record the session's work. But actually, looking at the AGENTS.md files in the project, it says to use `memory_commit` or `memory_branch` tools. These are specialized tools. Let me check if any such tools are available.
+
+Looking at the tools I have available: bash, read, edit, write, grep, find, ls. No memory_commit or memory_branch tools. 
+
+The brain skill says "Tools: memory_commit, memory_branch (create/switch/merge)" but these aren't in my available tool list. Let me just proceed with what I can do. The `.memory/main.md` is written.
+
+Let me do the final memory_commit via bash if there's a CLI for it, or just proceed.
+
+Actually, looking at the AGENTS.md from the project:
+```
+## Brain — Agent Memory
+
+This project uses Brain for agent memory management.
+
+**Start here when orienting:** Read `.memory/main.md` for the project roadmap, key decisions, and open problems.
+Read `.memory/AGENTS.md` for the full Brain protocol reference.
+Tools: memory_commit, memory_branch (create/switch/merge)
+```
+
+These are custom tools that I don't have access to. The `.memory/main.md` is written. Let me just confirm everything is still running and provide the user with a summary.
+**Action**: bash(command: "curl -s http://localhost:8082/api/health | python3 -c "import sys,json;d=json.load(sys.stdin);print(f'OK  daemon={d[\"checks\"][\"daemon\"][\"running\"]}  sched={d[\"checks\"][\"scheduler\"][\"running\"]}  worker={d[\"checks\"][\"worker\"][\"running\"]}  db={d[\"checks\"][\"database\"][\"status\"]}')" && echo "" && tail -2 backend-go/watchdog.log", timeout: 10)
+**Observation**: bash: success
+
+## Turn 5 | 2026-06-22T18:09:52.286Z | deepseek/deepseek-v4-flash
+
+**Thought**: Smooth sailing. Same PID 31672 since the deploy, zero crashes, all green. Also wrote `.memory/main.md` so future sessions have the full project state.
+
+## Turn 1 | 2026-06-22T18:20:05.453Z | deepseek/deepseek-v4-flash
+
+**Thought**: Same port as the backend — **8082**. The Go Fiber server serves both the API (`/api/*`) and the SPA dashboard (everything else). Hit `http://localhost:8082` in a browser.
+**Thinking**: The user is asking about the dashboard port. Let me check - the health endpoint is on port 8082, which serves the SPA (React frontend) as well. The health check was returning HTML (the React index.html) at the root path earlier.
+
+So the dashboard IS on port 8082 - it's served by the Go backend as a single-page application.
+

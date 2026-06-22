@@ -28,3 +28,11 @@ When an agent reaches its context limit or finishes its domain tasks, it MUST wr
 2. Add your summarized changes to `CHANGELOG.md` under the new version header.
 3. Commit and push your changes to git with a message referencing the new version (e.g., `feat: completed X (v1.0.0)`).
 4. Update `ROADMAP.md`, `TODO.md`, and `IDEAS.md` to reflect the new state of the project.
+
+## Brain — Agent Memory
+
+This project uses Brain for agent memory management.
+
+**Start here when orienting:** Read `.memory/main.md` for the project roadmap, key decisions, and open problems.
+Read `.memory/AGENTS.md` for the full Brain protocol reference.
+Tools: memory_commit, memory_branch (create/switch/merge)
