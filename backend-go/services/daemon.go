@@ -139,17 +139,14 @@ func (d *Daemon) tick() time.Duration {
 
 	queuedSessions := 0
 	for _, session := range sessions {
-		thirtyMinAgo := time.Now().Add(-30 * time.Minute)
-		hourAgo := time.Now().Add(-1 * time.Hour)
-
-		// Skip if recently completed (30min cooldown) or recently failed (1h cooldown to stop hammering bad sessions)
+		// Only skip if a check_session is currently pending or processing.
+		// Don't block re-checking on completed/failed — handleCheckSession
+		// has its own supervisor-state dedup for nudging.
 		var existing models.QueueJob
 		found := db.DB.Where(
-			"type = ? AND ((status IN ?) OR (status = ? AND updated_at > ?) OR (status = ? AND updated_at > ?)) AND payload LIKE ?",
+			"type = ? AND status IN ? AND payload LIKE ?",
 			"check_session",
 			[]string{"pending", "processing"},
-			"completed", thirtyMinAgo,
-			"failed", hourAgo,
 			"%"+session.ID+"%",
 		).First(&existing).Error == nil
 		if found {

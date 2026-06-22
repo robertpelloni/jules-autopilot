@@ -314,6 +314,9 @@ var lmStudioHttpClient = &http.Client{
 	Timeout: 30 * time.Minute,
 }
 
+// Local hardware can only handle one LM Studio inference at a time.
+var lmStudioSem = make(chan struct{}, 1)
+
 var freellmHttpClient = &http.Client{
 	Timeout: 10 * time.Minute,
 }
@@ -374,6 +377,12 @@ func generateOpenRouterText(apiKey, model, systemPrompt string, messages []LLMMe
 	maxRetries := 0
 	if isLMStudio {
 		maxRetries = 3
+	}
+
+	// Local hardware: only one LM Studio inference at a time
+	if isLMStudio {
+		lmStudioSem <- struct{}{}
+		defer func() { <-lmStudioSem }()
 	}
 
 	var lastErr error
