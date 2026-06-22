@@ -686,20 +686,21 @@ func (w *Worker) handleCheckSession(payload string) (string, error) {
 		}
 	}
 
+	// Bump ALL sessions when inactive — no exceptions for failed/paused/completed.
+	// Failed/paused get bumped ASAP (1 min threshold), completed uses normal threshold.
 	thresholdMinutes := settings.InactivityThresholdMinutes
-	if session.RawState == "IN_PROGRESS" {
+	switch session.RawState {
+	case "FAILED", "PAUSED":
+		thresholdMinutes = 1 // bump ASAP
+	case "IN_PROGRESS":
 		thresholdMinutes = settings.ActiveWorkThresholdMinutes
 		if time.Since(lastActivityTime) < recentActivityWindow {
 			return "none", nil
 		}
 	}
 
-	// Check last message: if it's from us (user), skip nudging
 	if time.Since(lastActivityTime) > time.Duration(thresholdMinutes)*time.Minute && session.RawState != "AWAITING_PLAN_APPROVAL" {
 		lastActivities, _ := client.ListActivities(session.ID)
-		if len(lastActivities) > 0 && lastActivities[len(lastActivities)-1].Role == "user" {
-			return "none", nil
-		}
 		instructions := "Please instruct Google Jules agent to continue autonomously working on this project. Infer the next step based on the progress history and conversation."
 
 		// Resolve project name from the session's sourceID for workspace mirrored docs
@@ -744,31 +745,17 @@ func (w *Worker) handleCheckSession(payload string) (string, error) {
 			"INSTRUCTIONS:\n%s\n\nDOCUMENTATION:\n%s\n\nJULES AGENT LAST 5 MESSAGES:\n%s\n%s\n\nINSTRUCTIONS AGAIN:\n%s",
 			instructions, docContext, lastAgentMessages.String(), commitContext, instructions)
 
-		// Send prompt to LM Studio, then send its response to the Jules session
-		provider := strings.TrimSpace(settings.SupervisorProvider)
-		if provider == "" {
-			provider = "lmstudio"
-		}
-		apiKey := getSupervisorAPIKey(provider, settings.SupervisorApiKey)
-
-		var nudgeContent string
-		if strings.TrimSpace(apiKey) != "" {
-			result, err := generateLLMText(provider, apiKey, settings.SupervisorModel, "You are a coding supervisor. Follow the INSTRUCTIONS.", []LLMMessage{{
-				Role:    "user",
-				Content: prompt,
-			}})
-			if err == nil && strings.TrimSpace(result.Content) != "" {
-				nudgeContent = result.Content
-			} else {
-				// Fallback: send the raw prompt if LLM fails
-				nudgeContent = prompt
-			}
-		} else {
-			nudgeContent = prompt
+		// ALWAYS send prompt to LM Studio — the RESPONSE is what goes to Jules, never raw context
+		result, err := generateLLMText("lmstudio", "placeholder", settings.SupervisorModel, "You are a coding supervisor. Follow the INSTRUCTIONS.", []LLMMessage{{
+			Role:    "user",
+			Content: prompt,
+		}})
+		if err != nil || strings.TrimSpace(result.Content) == "" {
+			return "fail", fmt.Errorf("lmstudio nudge failed: %w", err)
 		}
 
 		if _, err := client.CreateActivity(session.ID, CreateActivityRequest{
-			Content: nudgeContent,
+			Content: result.Content,
 			Type:    "message",
 			Role:    "user",
 		}); err != nil {

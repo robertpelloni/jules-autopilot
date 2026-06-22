@@ -61,7 +61,7 @@ func TestAddJobWithScheduledTime(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Failed to add scheduled job: %v", err)
 	}
-	if job.RunAt.After(futureTime.Add(1 * time.Second)) || job.RunAt.Before(futureTime.Add(-1*time.Second)) {
+	if job.RunAt.After(futureTime.Add(1*time.Second)) || job.RunAt.Before(futureTime.Add(-1*time.Second)) {
 		t.Errorf("Expected RunAt to be approximately %v, got %v", futureTime, job.RunAt)
 	}
 }
