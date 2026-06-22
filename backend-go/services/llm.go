@@ -87,7 +87,7 @@ func normalizeProvider(provider string) string {
 func defaultModelForProvider(provider string) string {
 	switch normalizeProvider(provider) {
 	case "lmstudio":
-		return "gemma-4-e4b-uncensored-hauhaucs-aggressive"
+		return "gemma-4-26b-a4b-it-qat-heretic"
 	case "localproxy":
 		return "free-llm"
 	case "openrouter":
