@@ -75,6 +75,10 @@ func main() {
 	}
 	services.StartScheduler()
 
+	// On startup, broadcast "continue" to all sessions so they don't sit idle
+	// until the daemon's first tick (up to 5 min).
+	go services.BroadcastContinue()
+
 	app := fiber.New(fiber.Config{
 		ErrorHandler: func(c *fiber.Ctx, err error) error {
 			code := fiber.StatusInternalServerError

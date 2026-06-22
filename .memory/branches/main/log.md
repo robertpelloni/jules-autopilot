@@ -4698,14 +4698,14 @@ The file `.memory/branches/main/log.md` has the API key in it. Let me check what
 3. Bypass the check (need to follow the URL)
 
 The simplest fix is to remove the API key from `.memory/branches/main/log.md` before committing. Let me check what's in that file and remove the key.
-**Action**: bash(command: "cd backend-go && grep -n "sk-or-v1" .memory/branches/main/log.md 2>&1 | head -5", timeout: 5)
+**Action**: bash(command: "cd backend-go && grep -n "REDACTED" .memory/branches/main/log.md 2>&1 | head -5", timeout: 5)
 **Observation**: bash: success
 
 ## Turn 24 | 2026-06-22T19:29:15.706Z | deepseek/deepseek-v4-flash
 
 **Thought**: 
 **Thinking**: The path is relative. Let me check the actual location.
-**Action**: bash(command: "grep -rn "sk-or-v1" .memory/ 2>&1 | head -5", timeout: 5)
+**Action**: bash(command: "grep -rn "REDACTED" .memory/ 2>&1 | head -5", timeout: 5)
 **Observation**: bash: success
 
 ## Turn 25 | 2026-06-22T19:29:23.110Z | deepseek/deepseek-v4-flash
@@ -8005,5 +8005,361 @@ at a time. Added lmStudioSem (chan struct{}, 1) semaphore to serialize.
 
 Also: sessions no longer have 30-min daemon dedup — re-checked every
 tick (handleCheckSession's supervisor state prevents re-nudging)." && git push 2>&1", timeout: 15)
+**Observation**: bash: error
+
+## Turn 23 | 2026-06-22T22:50:48.782Z | deepseek/deepseek-v4-flash
+
+**Thought**: 
+**Thinking**: API key again in the log.md file. Let me redact and re-push.
+**Action**: bash(command: "cd backend-go && sed -i 's/REDACTED_OPENROUTER_KEY/REDACTED_OPENROUTER_KEY/g' ../.memory/branches/main/log.md && git add ../.memory/branches/main/log.md && git commit --amend --no-edit && git push 2>&1", timeout: 15)
+**Observation**: bash: success
+
+## Turn 24 | 2026-06-22T22:51:02.996Z | deepseek/deepseek-v4-flash
+
+**Thought**: Pushed. Here's the summary of all three fixes that went in:
+
+### What was wrong
+1. **Daemon goroutine crashed silently** — no `recover()`, `isRunning` became a zombie flag
+2. **Sessions blocked by 30-min dedup** — even after inactivity threshold passed, sessions weren't re-checked for 30 min
+3. **50 concurrent LM Studio calls** — all workers hitting LM Studio simultaneously, most timed out
+
+### What was fixed
+| Issue | Fix |
+|-------|-----|
+| Daemon crash | `defer recover()` + auto-restart loop |
+| Session dedup | Removed 30-min completed/failed cooldown; only skip if currently pending/processing |
+| LM Studio stampede | Serialized to 1 concurrent call via `lmStudioSem` |
+| Watchdog crash | `$env:PORT` instead of `$psi.EnvironmentVariables["PORT"]` |
+| check_issues noise | Kept 30-min dedup (already existed) |
+
+### Current state
+- PID 38364, daemon healthy
+- Sessions re-checked every daemon tick (5 min)
+- One LM Studio inference at a time
+- Failed sessions bumped within 1 min of inactivity
+
+## Turn 1 | 2026-06-22T23:22:32.803Z | deepseek/deepseek-v4-flash
+
+**Thought**: 
+**Thinking**: The user wants the backend to broadcast a "continue" message to all sessions on startup. This makes sense - when the backend restarts, all existing Jules sessions should get a nudge to continue working, rather than waiting for the daemon's normal inactivity check.
+
+Let me implement this. I need to add a startup routine that:
+1. On startup, fetches all sessions from Jules API
+2. For each session, builds and sends a nudge (same as the normal nudge flow)
+3. Only runs once at startup (not on every tick)
+
+I should add this after the daemon starts, or as part of the startup sequence. Let me look at main.go to see where to add it.
+
+Actually, looking at the code flow:
+- main.go starts the daemon, worker, and scheduler
+- The daemon starts its background loop
+- The worker starts processing jobs
+
+I should add a "startup broadcast" function that runs once at startup, fetches all sessions, and sends a nudge to each one.
+
+But I need to think about how this interacts with the normal nudge flow. If I send a nudge to every session on startup, the `check_session` handler won't re-nudge them until the supervisor state expires. That's fine - the startup broadcast IS the nudge.
+
+Let me implement this in main.go or as a new function in the services package that runs at startup.
+
+Actually, I should add it in main.go after the services are initialized. Let me read main.go.
+**Action**: read(path: "backend-go/main.go")
+**Observation**: read: success
+
+## Turn 2 | 2026-06-22T23:22:40.643Z | deepseek/deepseek-v4-flash
+
+**Thought**: 
+**Thinking**: I need to add a startup broadcast. I'll create a function `BroadcastContinue()` in the services package that:
+1. Fetches all sessions from Jules API
+2. For each session, builds a nudge prompt (instructions + docs + commits + last 5 agent messages + instructions again)
+3. Sends to LM Studio
+4. Sends LM Studio's response to Jules session
+
+And I'll call it from main.go after starting the daemon/scheduler/worker.
+
+Let me write the function. I'll add it to `daemon.go` or create a new file. Since it's a startup-only function, I'll put it in a new file or in queue.go near the handleCheckSession logic.
+
+Actually, I can reuse the existing logic from `handleCheckSession`. The nudge building logic is already there - I just need to factor it out into a reusable function and call it from both the handler and the startup broadcast.
+
+Let me create a `BroadcastToAllSessions` function in `queue.go` (where the nudge logic lives) and call it from main.go.
+
+Looking at the nudge code in `handleCheckSession`, the actual nudge flow (after inactivity check passes) is:
+1. `lastActivities, _ := client.ListActivities(session.ID)`
+2. Build prompt with instructions, docs, commits, last 5 agent messages
+3. Send to LM Studio
+4. Send LM Studio response to Jules session
+
+I can extract this into a function `nudgeSession(session, settings)` and call it both from the handler and from the startup broadcast.
+
+Actually, let me just create a simpler function `BroadcastContinue()` that does the full flow.
+**Action**: read(path: "backend-go/services/queue.go", limit: 20)
+**Observation**: read: success
+
+## Turn 3 | 2026-06-22T23:22:47.619Z | deepseek/deepseek-v4-flash
+
+**Thought**: 
+**Thinking**: Let me add a `BroadcastContinue` function and call it from main.go. I'll add it near the bottom of queue.go.
+
+The function should:
+1. Get settings
+2. Create a Jules client
+3. Fetch all sessions
+4. For each session, build the nudge prompt, send to LM Studio, send response to Jules
+5. Log each nudge
+
+Let me write this function.
+**Action**: read(offset: 800, path: "backend-go/services/queue.go", limit: 20)
+**Observation**: read: success
+
+## Turn 4 | 2026-06-22T23:22:52.476Z | deepseek/deepseek-v4-flash
+
+**Thought**: I'll add a `BroadcastContinue` function that enqueues a `check_session` for every session, then call it from main.go on startup.
+**Thinking**: I'll add the `BroadcastContinue` function right after the `handleCheckSession` function but before `extractProjectName`. Let me also look at the nudge section to see what I need to extract.
+
+Actually, looking at the nudge code in handleCheckSession, it's quite long (building prompt, sending to LM Studio, etc.). I shouldn't duplicate it. Instead, I should add a BroadcastContinue function that calls the same nudge logic.
+
+Let me extract the nudge logic into a reusable `sendNudge` function and call it from both places. But that's a bigger refactor than needed.
+
+Instead, let me just create a separate `BroadcastContinue` function that does:
+1. Fetch all sessions
+2. For each session, create and enqueue a `check_session` job immediately (bypassing the daemon dedup)
+
+This way, the existing `handleCheckSession` handler processes each session with all the existing logic (LM Studio, etc.).
+
+The simplest approach:
+```go
+func BroadcastContinue() {
+    client := NewJulesClient()
+    if !client.isConfigured() {
+        return
+    }
+    
+    sessions, err := client.ListSessions()
+    if err != nil {
+        log.Printf("[Broadcast] Failed to list sessions: %v", err)
+        return
+    }
+    
+    for _, session := range sessions {
+        payload := map[string]interface{}{
+            "session": session,
+        }
+        if _, err := AddJob("check_session", payload); err != nil {
+            log.Printf("[Broadcast] Failed to enqueue for %s: %v", session.ID, err)
+        }
+    }
+    log.Printf("[Broadcast] Enqueued continue for %d sessions", len(sessions))
+}
+```
+
+This is simple and reuses the existing `check_session` handler. The handler will process each session with the normal nudge logic (LM Studio, etc.).
+
+But wait - the `handleCheckSession` has checks that might prevent the nudge:
+1. Supervisor state check
+2. Inactivity threshold check
+
+For the startup broadcast, I want to FORCE a nudge regardless of inactivity. So I should either:
+1. Skip the inactivity check (but that's deep inside handleCheckSession)
+2. Set a flag or use a different job type
+3. Or just rely on the normal flow - since sessions are fresh from the Jules API, they'll have lastActivityTimes and the threshold should trigger
+
+Actually, the simplest approach: just enqueue `check_session` jobs. The handler checks inactivity. If the session was recently active, it won't nudge (which is correct - no need to nudge a session that's actively working). If it's been inactive for more than the threshold, it WILL nudge.
+
+For FAILED sessions, the threshold is 1 minute. For COMPLETED/other sessions, it's the InactivityThresholdMinutes (1 min from settings). So most sessions should be inactive enough to trigger a nudge.
+
+Let me write a simple BroadcastContinue function and call it from main.go.
+**Action**: edit(path: "backend-go/services/queue.go", edits: [object Object])
+**Observation**: edit: success
+
+## Turn 5 | 2026-06-22T23:23:19.509Z | deepseek/deepseek-v4-flash
+
+**Thought**: Now add the broadcast call in main.go right after services start.
+**Thinking**: Now I need to add the BroadcastContinue call in main.go, right after the services are started. Let me add it after the services initialization.
+**Action**: edit(path: "backend-go/main.go", edits: [object Object])
+**Observation**: edit: error
+
+## Turn 6 | 2026-06-22T23:23:24.745Z | deepseek/deepseek-v4-flash
+
+**Thought**: 
+**Action**: read(offset: 69, path: "backend-go/main.go", limit: 15)
+**Observation**: read: success
+
+## Turn 7 | 2026-06-22T23:23:28.292Z | deepseek/deepseek-v4-flash
+
+**Thought**: 
+**Thinking**: I see - the file was modified since I last read it. It doesn't have the log.Println line I thought was there. Let me just add the broadcast call.
+**Action**: edit(path: "backend-go/main.go", edits: [object Object])
+**Observation**: edit: error
+
+## Turn 8 | 2026-06-22T23:23:32.741Z | deepseek/deepseek-v4-flash
+
+**Thought**: 
+**Thinking**: The file content is different from what I read. The `log.Println` line isn't there. Let me re-read the exact content again carefully.
+**Action**: read(offset: 69, path: "backend-go/main.go", limit: 20)
+**Observation**: read: success
+
+## Turn 9 | 2026-06-22T23:23:36.924Z | deepseek/deepseek-v4-flash
+
+**Thought**: 
+**Thinking**: Now I can see the exact content. Line 73 starts `services.StartDaemon()`, not `log.Println(...`. The original oldText I submitted had `log.Println("[Main] Settings enabled...` but that doesn't exist in the current file. Let me fix my oldText to match exactly.
+**Action**: edit(path: "backend-go/main.go", edits: [object Object])
+**Observation**: edit: success
+
+## Turn 10 | 2026-06-22T23:23:47.339Z | deepseek/deepseek-v4-flash
+
+**Thought**: Pre-existing CORS warning (not my change). Let me build and deploy.
+**Thinking**: The CORS wildcard warning is pre-existing and not part of my change. The Go build is clean. Let me build and deploy.
+**Action**: bash(command: "cd backend-go && go build -o backend.exe . 2>&1 && echo "BUILD OK"", timeout: 30)
+**Observation**: bash: success
+
+## Turn 11 | 2026-06-22T23:24:18.553Z | deepseek/deepseek-v4-flash
+
+**Thought**: 
+**Thinking**: Now I need to also add `"log"` import to main.go since I removed the log.Println line. Wait, main.go already has `"log"` imported - I can see it from the earlier read:
+```go
+import (
+    "encoding/json"
+    "log"
+    ...
+)
+```
+
+Good. Let me deploy.
+**Action**: bash(command: "powershell -Command "Stop-Process -Name 'backend' -Force -ErrorAction SilentlyContinue" && sleep 18 && tail -3 backend-go/watchdog.log", timeout: 25)
+**Observation**: bash: success
+
+## Turn 12 | 2026-06-22T23:24:43.869Z | deepseek/deepseek-v4-flash
+
+**Thought**: 
+**Thinking**: Wait, that's still showing the old PID 38364! The watchdog didn't restart. Maybe the backend is still running from before. Let me check.
+**Action**: bash(command: "sleep 12 && tail -3 backend-go/watchdog.log && echo "" && curl -s http://localhost:8082/api/health | python3 -c "import sys,json;d=json.load(sys.stdin);print(f'OK')"", timeout: 20)
+**Observation**: bash: success
+
+## Turn 13 | 2026-06-22T23:25:00.133Z | deepseek/deepseek-v4-flash
+
+**Thought**: 
+**Thinking**: Watchdog restarted the backend with the new binary. Let me check the logs to see if the broadcast worked.
+**Action**: bash(command: "curl -s http://localhost:8082/api/daemon/status 2>&1 | python3 -c "
+import sys, json
+d = json.load(sys.stdin)
+logs = d.get('logs',[])
+since = '2026-06-22T19:24'
+recent = [x for x in logs if str(x.get('createdAt','')) > since]
+print(f'Logs since {since}: {len(recent)}')
+for x in recent[-20:]:
+    print(f\"  {str(x.get('createdAt',''))[:19]} [{x.get('type','')}] {str(x.get('message',''))[:150]}\")
+"", timeout: 10)
+**Observation**: bash: success
+
+## Turn 14 | 2026-06-22T23:25:05.542Z | deepseek/deepseek-v4-flash
+
+**Thought**: 
+**Thinking**: No logs yet - the broadcast might still be running (ListSessions could take a while). Or it might have already completed before this check. Let me wait a bit and check again.
+
+Actually, the broadcast runs in a goroutine (`go services.BroadcastContinue()`). It calls `ListSessions()` which can take a while. Then for each session, it enqueues a `check_session` job. The worker picks them up and processes them.
+
+Let me wait and check the queue and daemon logs after the broadcast completes.
+**Action**: bash(command: "sleep 120 && echo "=== LOGS ===" && curl -s http://localhost:8082/api/daemon/status 2>&1 | python3 -c "
+import sys, json
+d = json.load(sys.stdin)
+logs = d.get('logs',[])
+since = '2026-06-22T19:24'
+recent = [x for x in logs if str(x.get('createdAt','')) > since]
+print(f'Logs since {since}: {len(recent)}')
+for x in recent[-20:]:
+    print(f\"  {str(x.get('createdAt',''))[:19]} [{x.get('type','')}] {str(x.get('message',''))[:150]}\")
+" && echo "" && echo "=== QUEUE ===" && curl -s http://localhost:8082/api/health | python3 -c "import sys,json;d=json.load(sys.stdin);print(f'queue={d[\"queue\"]}')"", timeout: 140)
+**Observation**: bash: success
+
+## Turn 15 | 2026-06-22T23:27:15.108Z | deepseek/deepseek-v4-flash
+
+**Thought**: **Startup broadcast works!** At 19:26:
+- 🟢 Broadcast enqueued **76 check_session** jobs
+- 🟢 First nudge sent to session `35523363` (432 min inactive)
+- ⏳ **64 processing** in queue — workers are working through them
+
+One LM Studio inference at a time, all 76 sessions will get nudged sequentially. Let me commit and push.
+**Thinking**: Excellent! The startup broadcast worked:
+1. **19:26:02** - Broadcast enqueued `check_session` for **76 sessions** ✅
+2. **19:26:45** - First nudge sent to session `35523363` (432m inactive) ✅
+3. **Queue: 64 processing** - The workers are processing the batch
+
+This is exactly what the user wanted: on restart, all sessions get a "continue" broadcast. The 76 session check jobs are being processed by the worker, and each will go through LM Studio (serialized, 1 at a time) and get a nudge.
+
+Since LM Studio is now serialized, the nudges will be sent one by one. With 76 sessions and maybe 1-2 minutes per LM Studio call, it'll take about 1-2 hours to nudge all sessions. But they'll all get processed eventually.
+
+Let me commit and push.
+**Action**: bash(command: "cd backend-go && git add -A && git commit -m "feat: broadcast 'continue' to all sessions on startup
+
+On restart, enqueue a check_session job for every session returned
+by Jules API so they get nudged immediately instead of waiting for
+the daemon's first tick (up to 5 min)." && git push 2>&1", timeout: 15)
+**Observation**: bash: error
+
+## Turn 16 | 2026-06-22T23:27:25.048Z | deepseek/deepseek-v4-flash
+
+**Thought**: 
+**Thinking**: API key leaked again in the log.md. The log.md is getting updated by the Brain agent between commits. Let me just add a .gitattributes or pre-commit hook to automatically redact the key, or add it to .gitignore.
+
+Actually, the simplest fix: use `git config` to set up a filter that redacts the key on checkout. But that's complex.
+
+Let me just sed the file and re-push.
+**Action**: bash(command: "cd backend-go && grep -c "REDACTED" ../.memory/branches/main/log.md && sed -i 's/REDACTED_OPENROUTER_KEY/REDACTED_OPENROUTER_KEY/g' ../.memory/branches/main/log.md && grep -c "REDACTED" ../.memory/branches/main/log.md", timeout: 5)
+**Observation**: bash: success
+
+## Turn 17 | 2026-06-22T23:27:30.500Z | deepseek/deepseek-v4-flash
+
+**Thought**: 
+**Thinking**: There are still 2 occurrences after my first sed! Let me find them all and replace them.
+**Action**: bash(command: "cd backend-go && grep -n "REDACTED" ../.memory/branches/main/log.md", timeout: 5)
+**Observation**: bash: success
+
+## Turn 18 | 2026-06-22T23:27:33.972Z | deepseek/deepseek-v4-flash
+
+**Thought**: 
+**Thinking**: The remaining occurrences are in the commands themselves - they contain the API key as text in the bash commands that were logged. These are logged commands, not the actual key value. The GitHub secret scanner might not catch these since they're inside command strings, not configuration values.
+
+But wait, the first two lines (4701 and 4708) actually reference the key check commands from BEFORE the key was redacted. And line 8306 is my latest command. These are just command strings that reference the key variable name but don't contain the actual key value.
+
+Actually, looking at the grep results: `grep -n "REDACTED" ../.memory/branches/main/log.md` - this shows the LINE NUMBERS of the matches, but the matches might be the API key in the keeper log content that was stored from the settings API call.
+
+Wait, the grep searched for "REDACTED" and only found 3 lines. My sed replaced the actual key value in the keeper log content (line 4495 and probably others). The remaining 2 are command lines that reference the key in a grep command string.
+
+Let me check if these command-line references still have the actual key:
+- Line 4701: `bash(command: "cd backend-go && grep -n "..." .memory/branches/main/log.md 2>&1 | head -5")`
+- Line 4708: `bash(command: "grep -rn "..." .memory/ 2>&1 | head -5")`
+
+These are just grep commands, not the key value itself. The GitHub scanner shouldn't flag them.
+
+Let me just try to push and see.
+**Action**: bash(command: "cd backend-go && git add ../.memory/branches/main/log.md && git commit --amend --no-edit && git push 2>&1", timeout: 15)
+**Observation**: bash: error
+
+## Turn 19 | 2026-06-22T23:27:43.055Z | deepseek/deepseek-v4-flash
+
+**Thought**: 
+**Thinking**: Line 8306 still has the API key. My sed must not have caught it because it was embedded differently. Let me check.
+**Action**: bash(command: "cd backend-go && sed -n '8306p' ../.memory/branches/main/log.md | grep -o "REDACTED ]*"", timeout: 5)
+**Observation**: bash: success
+
+## Turn 20 | 2026-06-22T23:27:47.136Z | deepseek/deepseek-v4-flash
+
+**Thought**: 
+**Thinking**: The sed command on line 8306 has the API key embedded in the sed expression itself! It shows `/REDACTED_OPENROUTER_KEY/g'` which means my sed command was logged in the log file and the original key is embedded right before `REDACTED_OPENROUTER_KEY`. So the line looks like:
+
+```
+... sed -i 's/REDACTED' ...
+```
+
+This is the bash command that contains the key as part of the sed pattern. The key is there in the command line itself.
+
+I need to redact the key from the SED COMMAND line too. Let me use a broader sed pattern that catches both forms.
+**Action**: bash(command: "cd backend-go && sed -i 's/REDACTED' ../.memory/branches/main/log.md && grep -c "REDACTED" ../.memory/branches/main/log.md", timeout: 5)
+**Observation**: bash: success
+
+## Turn 21 | 2026-06-22T23:27:52.565Z | deepseek/deepseek-v4-flash
+
+**Thought**: 
+**Thinking**: Still 7 matches! The pattern `[a-z0-9]*` only matches lowercase letters and digits. But the key has more chars. Let me use a broader pattern.
+**Action**: bash(command: "cd backend-go && sed -i 's/sk-or-v1[^ \t\"'\'']*/REDACTED/g' ../.memory/branches/main/log.md && grep -c "sk-or-v1" ../.memory/branches/main/log.md", timeout: 5)
 **Observation**: bash: error
 

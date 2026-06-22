@@ -802,6 +802,40 @@ func (w *Worker) handleCheckSession(payload string) (string, error) {
 	return "none", nil
 }
 
+// BroadcastContinue enqueues a check_session job for every known session at startup.
+// This triggers a one-time nudge to all sessions, bypassing the daemon's tick delay.
+func BroadcastContinue() {
+	client := NewJulesClient()
+	if !client.isConfigured() {
+		log.Println("[Broadcast] Jules not configured, skipping startup broadcast")
+		return
+	}
+
+	sessions, err := client.ListSessions()
+	if err != nil {
+		log.Printf("[Broadcast] Failed to list sessions: %v", err)
+		return
+	}
+
+	queued := 0
+	for _, session := range sessions {
+		payload := map[string]interface{}{
+			"session": session,
+		}
+		if _, err := AddJob("check_session", payload); err != nil {
+			log.Printf("[Broadcast] Failed to enqueue for %s: %v", session.ID[:8], err)
+			continue
+		}
+		queued++
+	}
+	log.Printf("[Broadcast] Enqueued continue for %d/%d sessions", queued, len(sessions))
+	addKeeperLog(fmt.Sprintf("Startup broadcast: enqueued continue for %d sessions", queued), "info", "global", map[string]interface{}{
+		"event":  "startup_broadcast",
+		"queued": queued,
+		"total":  len(sessions),
+	})
+}
+
 // extractProjectName extracts the repo/project name from a Jules sourceID.
 // sourceID looks like "hyper/jules-autopilot", returns "jules-autopilot".
 func extractProjectName(sourceID string) string {
