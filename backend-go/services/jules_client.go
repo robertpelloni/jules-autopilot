@@ -26,7 +26,7 @@ type GitHubIssue struct {
 
 // httpClient with timeout to prevent goroutine leaks from hanging API calls
 var httpClient = &http.Client{
-	Timeout: 120 * time.Second,
+	Timeout: 300 * time.Second,
 }
 
 type JulesClient struct {
