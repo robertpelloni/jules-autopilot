@@ -9,6 +9,7 @@ import (
 	"log"
 	"net/http"
 	"os"
+	"os/exec"
 	"path/filepath"
 	"strings"
 	"sync"
@@ -753,7 +754,12 @@ func (w *Worker) handleCheckSession(payload string) (string, error) {
 		}
 	}
 
+	// Check last message: if it's from us (user), skip nudging
 	if time.Since(lastActivityTime) > time.Duration(thresholdMinutes)*time.Minute && session.RawState != "AWAITING_PLAN_APPROVAL" {
+		lastActivities, _ := client.ListActivities(session.ID)
+		if len(lastActivities) > 0 && lastActivities[len(lastActivities)-1].Role == "user" {
+			return "none", nil
+		}
 		message := chooseNudgeMessage(settings)
 		ragContext := ""
 		if settings.SmartPilotEnabled {
@@ -833,11 +839,24 @@ func buildRecoveryMessage(session models.JulesSession, activities []models.Jules
 	}
 	apiKey := getSupervisorAPIKey(provider, settings.SupervisorApiKey)
 
+	// Last 5 agent messages
+	var lastAgentMessages strings.Builder
+	agentCount := 0
+	for i := len(activities) - 1; i >= 0 && agentCount < 5; i-- {
+		if activities[i].Role == "agent" {
+			if agentCount > 0 {
+				lastAgentMessages.WriteString("\n---\n")
+			}
+			lastAgentMessages.WriteString(activities[i].Content)
+			agentCount++
+		}
+	}
+
+	// Recent activity context (last 6 activities)
 	recentActivities := activities
 	if len(recentActivities) > 6 {
 		recentActivities = recentActivities[len(recentActivities)-6:]
 	}
-
 	var activityContext strings.Builder
 	for _, activity := range recentActivities {
 		role := strings.ToUpper(activity.Role)
@@ -847,7 +866,32 @@ func buildRecoveryMessage(session models.JulesSession, activities []models.Jules
 		activityContext.WriteString(fmt.Sprintf("%s [%s]: %s\n\n", role, activity.Type, activity.Content))
 	}
 
-	basePrompt := fmt.Sprintf("A Jules session has entered the FAILED state.\nSession: %s\nTitle: %s\n\nRecent activity:\n%s\nProvide a concise recovery plan and direct next-step instruction for the coding agent. Keep it practical and actionable.", session.ID, session.Title, activityContext.String())
+	// Documentation context from repo
+	docContext := ""
+	projectRoot := getProjectRoot()
+	for _, docFile := range []string{"README.md", "ARCHITECTURE.md", "DEPLOY.md", "VISION.md", "ROADMAP.md", "MEMORY.md"} {
+		path := filepath.Join(projectRoot, docFile)
+		if content, err := os.ReadFile(path); err == nil && len(content) > 0 {
+			maxLen := 2000
+			if len(content) > maxLen {
+				content = content[:maxLen]
+			}
+			docContext += fmt.Sprintf("\n=== %s ===\n%s\n", docFile, string(content))
+		}
+	}
+
+	// GitHub recent commits
+	commitContext := ""
+	if output, err := exec.Command("git", "-C", projectRoot, "log", "--oneline", "-10").Output(); err == nil {
+		commitContext = fmt.Sprintf("\n=== Recent Commits ===\n%s", string(output))
+	}
+
+	basePrompt := fmt.Sprintf(
+		"A Jules session has entered the FAILED state.\nSession: %s\nTitle: %s\n\n=== Last 5 Agent Messages ===\n%s\n\n=== Recent Activity ===\n%s\n\n=== Documentation ===\n%s\n%s\n\nProvide a concise recovery plan and direct next-step instruction for the coding agent. Keep it practical and actionable.",
+		session.ID, session.Title,
+		lastAgentMessages.String(),
+		activityContext.String(),
+		docContext, commitContext)
 
 	if strings.TrimSpace(apiKey) != "" && apiKey != "placeholder" {
 		result, err := generateLLMText(provider, apiKey, settings.SupervisorModel, "You are a recovery supervisor helping an AI coding agent recover from a failed execution. Be concise, practical, and specific.", []LLMMessage{{
