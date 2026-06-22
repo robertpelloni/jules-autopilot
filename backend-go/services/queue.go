@@ -701,6 +701,14 @@ func (w *Worker) handleCheckSession(payload string) (string, error) {
 
 	if time.Since(lastActivityTime) > time.Duration(thresholdMinutes)*time.Minute && session.RawState != "AWAITING_PLAN_APPROVAL" {
 		lastActivities, _ := client.ListActivities(session.ID)
+
+		// If the last message is from user and the message before it is from agent,
+		// the agent was actively working when we nudged and hasn't replied yet — wait.
+		// If the message before it is also from user, the agent never saw our nudge — bump again.
+		if len(lastActivities) >= 2 && lastActivities[len(lastActivities)-1].Role == "user" && lastActivities[len(lastActivities)-2].Role == "agent" {
+			return "none", nil
+		}
+
 		instructions := "Please instruct Google Jules agent to continue autonomously working on this project. Infer the next step based on the progress history and conversation."
 
 		// Resolve project name from the session's sourceID for workspace mirrored docs

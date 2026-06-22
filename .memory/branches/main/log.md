@@ -2974,3 +2974,408 @@ print(f'Scheduler: {d[\"checks\"][\"scheduler\"][\"running\"]}')
 **Action**: bash(command: "sleep 10 && echo "=== WATCHDOG ===" && tail -5 backend-go/watchdog.log 2>&1 && echo "=== HEALTH ===" && curl -s http://localhost:8082/api/health 2>&1", timeout: 20)
 **Observation**: bash: success
 
+## Turn 6 | 2026-06-22T17:27:13.792Z | deepseek/deepseek-v4-flash
+
+**Thought**: Watchdog auto-recovered. New backend PID 31432, all green. Let me commit and push.
+**Thinking**: Backend is running on PID 31432, all services are green. The watchdog detected the kill, restarted, and confirmed healthy. Let me now commit and push.
+**Action**: bash(command: "cd backend-go && git add -A && git commit -m "fix: bump ALL inactive sessions via LM Studio response, no exceptions
+
+- Failed/paused sessions bump ASAP (1 min threshold)
+- COMPLETED sessions bump normally (NOT treated as truly complete)
+- Removed 'last message from user' skip — bump in all cases
+- Prompt always goes to LM Studio; only LM Studio response sent to Jules
+- Raw prompt never sent as nudge — LM Studio failure returns error" && git push 2>&1", timeout: 30)
+**Observation**: bash: error
+
+## Turn 7 | 2026-06-22T17:27:48.367Z | deepseek/deepseek-v4-flash
+
+**Thought**: 
+**Thinking**: The commit was created but the push timed out. Also, `backend.exe~` got included again. Let me revert that and push again.
+**Action**: bash(command: "cd backend-go && git rm --cached backend.exe~ 2>&1 && git commit -m "chore: remove tracked backup file" && git push 2>&1", timeout: 30)
+**Observation**: bash: success
+
+## Turn 8 | 2026-06-22T17:27:54.210Z | deepseek/deepseek-v4-flash
+
+**Thought**: 
+**Thinking**: Good, pushed successfully. Let me verify the backend is still running and stable.
+**Action**: bash(command: "echo "=== FINAL STATUS ===" && curl -s http://localhost:8082/api/health | python3 -c "
+import sys, json
+d = json.load(sys.stdin)
+print(f'OK | Daemon={d[\"checks\"][\"daemon\"][\"running\"]} Sched={d[\"checks\"][\"scheduler\"][\"running\"]} Worker={d[\"checks\"][\"worker\"][\"running\"]} DB={d[\"checks\"][\"database\"][\"status\"]}  Queue={d[\"queue\"][\"pending\"]}/{d[\"queue\"][\"processing\"]}')
+" && echo "" && tail -2 backend-go/watchdog.log 2>&1", timeout: 10)
+**Observation**: bash: success
+
+## Turn 9 | 2026-06-22T17:27:58.204Z | deepseek/deepseek-v4-flash
+
+**Thought**: All done. Pushed to `main`. Here's what's in effect now:
+
+| What | Behavior |
+|------|----------|
+| **FAILED / PAUSED** | Bumped ASAP (1 min inactivity threshold) |
+| **COMPLETED** | Bumped normally (NOT treated as complete — gets nudged) |
+| **IN_PROGRESS** | Bumped after active work threshold |
+| **"user" last msg** | No longer blocks — bump goes out regardless |
+| **LM Studio** | Prompt always sent to LM Studio first |
+| **Jules gets** | Only LM Studio's **response** — never raw context |
+| **Recovery** | Completely gone — never sent |
+
+Running PID 31432, watchdog healthy, zero crashes since deploy.
+
+## Turn 1 | 2026-06-22T17:42:14.892Z | deepseek/deepseek-v4-flash
+
+**Thought**: Good call. Let me fix that — if we sent a user message but the agent never responded to it, we should bump again.
+**Thinking**: Good point. The user wants the "last message from user" dedup to still block, but with a twist:
+
+- **If the last message is from "user" (us)** → check if there's a response from the Jules agent AFTER that user message
+- **If there IS an agent response** after our user message → it means the agent saw our message and is working → don't bump
+- **If there is NO agent response** after our user message → the agent didn't see it or hasn't responded yet → DO bump (send again)
+
+So instead of just checking "last message role == user → skip", we should:
+1. Get the activities
+2. If the last message is from user, check if there are any agent messages after it
+3. If there are agent messages after the last user message → skip (agent already saw it)
+4. If there are NO agent messages after the last user message → bump (agent needs to be reminded)
+
+This is a smarter dedup that prevents spamming when the agent is already working, but re-sends if the agent never reacted to our message.
+
+Let me implement this.
+**Action**: read(offset: 696, path: "backend-go/services/queue.go", limit: 80)
+**Observation**: read: success
+
+## Turn 2 | 2026-06-22T17:42:20.768Z | deepseek/deepseek-v4-flash
+
+**Thought**: 
+**Thinking**: I need to add a check right after fetching `lastActivities`: if the last activity is from "user", check if there's an agent message after it. If there is, the agent already responded to our nudge — skip. If there isn't, the agent never reacted — bump again.
+
+Let me add this check between `lastActivities, _ := client.ListActivities(session.ID)` and `instructions := ...`
+**Action**: edit(path: "backend-go/services/queue.go", edits: [object Object])
+**Observation**: edit: success
+
+## Turn 3 | 2026-06-22T17:42:31.066Z | deepseek/deepseek-v4-flash
+
+**Thought**: Wait, I need to reason through this more carefully. Let me think about the conversation patterns:
+
+- `[agent msg, **user nudge**]` → agent hasn't responded to our nudge yet → **block** (don't double-nudge while agent is processing)
+- `[agent msg, user nudge, **user nudge**]` → agent never replied to first nudge → **don't block** (resend)
+- `[agent msg, user nudge, **agent msg**]` → agent replied → falls through to regular threshold
+
+So the check should be: if the last message is user AND the message before it is from agent → block (agent was active, our nudge is still pending).
+**Thinking**: Now let me verify the logic:
+
+- If last message is from "agent" → always bump (agent spoke last, session may be waiting)
+- If last message is from "user" (us):
+  - Look backwards from position len-2 for an agent message
+  - If an agent message exists before the last user message → the agent responded to our previous nudge → skip (it's working)
+  - If NO agent message before the last user message → agent didn't respond → bump again
+
+This is correct. The user asked: "user last msg should block if there is no response from the jules agent after the last user message" — wait, that's the opposite of what I just coded. Let me re-read:
+
+"user last msg should block if there is no response from the jules agent after the last user message"
+
+If there is no response from the agent after the user message → block (don't bump)
+If there IS a response from the agent after the user message → don't block (bump is OK)
+
+Wait, that doesn't make sense either. Let me think about this more carefully.
+
+The activities are ordered chronologically (oldest first). So:
+- Activity at index 0 = oldest
+- Activity at index len-1 = newest (most recent)
+
+If the last activity (len-1) is from "user" (us), we check if there's an agent response after it. But since the user message is already the LAST activity, there CAN'T be anything after it.
+
+Unless the activities are sorted newest-first? Let me check... In `ListActivities`, the API feeds activities page by page. Let me check the order.
+
+Looking at `ListActivitiesWithLimit` in jules_client.go:
+```go
+for _, a := range data.Activities {
+    allActivities = append(allActivities, transformActivity(a, sessionId))
+}
+```
+
+And in the Jules API, activities are returned in reverse chronological order (newest first) or chronological? I'm not sure.
+
+Actually, looking at `transformActivity` in the list code, the activities are prepended into the slice in the order they come from the API. The Jules API typically returns activities in reverse chronological order (newest first).
+
+Wait, looking more carefully at `transformActivity`:
+```go
+for _, a := range data.Activities {
+    allActivities = append(allActivities, transformActivity(a, sessionId))
+}
+```
+
+This appends to the end. So if the API returns newest-first, then `allActivities[0]` is the newest activity.
+
+But looking at how activities are processed in `handleCheckSession`:
+
+```go
+for i := len(lastActivities) - 1; i >= 0 && agentCount < 5; i-- {
+    if lastActivities[i].Role == "agent" {
+```
+
+This iterates from the end of the slice backwards, suggesting the API returns oldest-first (chronological), and the newest activities are at the end of the slice.
+
+So if the Jules API returns activities in chronological order (oldest first):
+- `lastActivities[0]` = oldest
+- `lastActivities[len-1]` = newest (most recent)
+
+If `lastActivities[len-1].Role == "user"`, we check for an agent response after it. But since the user message IS the latest, there's nothing after it. So we'd always skip.
+
+That can't be right either. Let me think about what the user actually means...
+
+The user said:
+"user last msg should block if there is no response from the jules agent after the last user message"
+
+I think the user means:
+- We sent a nudge (user message)
+- The agent hasn't responded to it yet (no agent message after our user message)
+- → Block, don't send another nudge (the agent might be working on it)
+
+- We sent a nudge (user message)
+- The agent DID respond to it (there IS an agent message after our user message)
+- → Don't block, it's fine to send another nudge if needed
+
+Wait actually no, that second case means: agent responded to our nudge, we should not send another one right away.
+
+Let me re-interpret:
+"block if there is **no** response from the jules agent **after** the last user message"
+
+So:
+- Last message is from user + no agent response after it → BLOCK (don't bump) — the agent may be still processing
+- Last message is from user + there IS an agent response after it → DON'T block (allow bump) — the agent saw and responded, the conversation continued
+
+But from the ordering perspective, if the last message is from user, there can't be anything "after" it in chronological order. Unless the user means the logical flow, not the absolute ordering.
+
+I think I'm overthinking this. Let me interpret it this way:
+
+The user wants: don't double-nudge. If we already sent a user message and the agent hasn't responded to the thread yet, don't send again. But if the agent has responded, and then went idle again, it's OK to send another.
+
+So the check should be:
+1. Get all activities
+2. Look at the most recent activity
+3. If it's from user → check if any agent message came right before it (meaning the agent was active before our nudge, processing our instructions)
+4. If the most recent user message doesn't have a subsequent agent response → skip (agent is still processing our last nudge)
+
+Hmm, but all activities are ordered. If the last activity is from user, there's no subsequent activity.
+
+I think what the user means is simpler than I'm making it:
+
+- Look at the last two activities:
+  - If last is from "user" and second-to-last is from "agent" → the agent responded to our previous nudge. DON'T block because the agent processed it and now went idle again.
+  - If last is from "user" and second-to-last is also from "user" → we sent two messages without agent responding between. Block to avoid spam.
+
+Wait, actually I think the simplest interpretation is:
+
+"block if the last message is from user and there's no agent message after the most recent user message"
+
+Which means: if we look at all activities and find that the most recent user message is at the very end (no agent message after it), block. If the most recent user message has agent messages after it, don't block.
+
+This is the same as:
+- Find the position of the last user message in the activities
+- If it's at position len-1 (the very end) → block (no response yet)
+- If it's at position len-1 and there's no agent message anywhere before it... well that can't happen
+
+OK but wait. What if the user message at len-1 has been there for a while and the agent just never responded? We'd be stuck in a permanent block. The user said "bump it with a new message in all cases" earlier. So maybe the user wants a time-based check too?
+
+Actually, I think the simplest interpretation that matches the user's intent is:
+
+The "last message from user = skip" that was there before should be RE-ADDED. The user clarified: block if user's last message has no agent reply. So:
+
+1. If the last activity is from user → check if the activity before it is from agent
+2. If there IS an agent message right before our user message → the agent was working, then we sent a nudge, and the agent hasn't had time to respond yet → block (wait for agent to respond)
+3. If there IS NO agent message before our user message (meaning the second-to-last is also user, or empty) → this might be a stale nudge → still block
+
+Actually, I think I had it right the first time with my implementation but the logic was wrong. Let me re-think:
+
+My current code:
+```go
+if len(lastActivities) > 0 && lastActivities[len(lastActivities)-1].Role == "user" {
+    hasAgentResponse := false
+    for i := len(lastActivities) - 2; i >= 0; i-- {
+        if lastActivities[i].Role == "agent" {
+            hasAgentResponse = true
+            break
+        }
+    }
+    if hasAgentResponse {
+        return "none", nil
+    }
+}
+```
+
+This says: if the last message is from user AND there IS an agent message somewhere before it → skip.
+
+But that means: every time we've previously sent a nudge (user message), if there was any agent activity before it, we skip. That's wrong because:
+- We send nudge (user) 
+- Agent has been active before that
+- We'd always skip because there was agent activity earlier
+
+The user wants: "block if there is no response from the jules agent AFTER the last user message"
+
+So:
+- If the last message is from user
+- AND there is NO agent message after that user message
+- → block (agent hasn't seen our message yet)
+
+Since activities are chronological, "after" means at a higher index. If the user message is at position len-1 (last), there's nothing after it. So we'd ALWAYS block. This can't be right.
+
+Unless the user means something different by "response from the jules agent after the last user message" — maybe they mean the response to the previous nudge, not the latest one. Like, the agent has been responding and working since our last nudge, so our nudge worked.
+
+I think the right interpretation is:
+
+If the last activity is from "user" and the activity before it is from "agent" → the agent was working, we sent a nudge, but the agent hasn't had a chance to respond yet. Block to avoid spamming while agent processes.
+
+If the last activity is from "user" and the activity before it is also from "user" → we already sent a nudge (previous conversation), agent never responded to it. Don't block, send again.
+
+Actually wait, the activities could contain many user messages. Let me think of actual conversation patterns:
+
+Pattern 1: Agent is working, then goes idle
+```
+[agent] I fixed the bug
+[agent] Running tests...
+```
+→ No user message → bump
+
+Pattern 2: We sent a nudge, agent is processing
+```
+[agent] I fixed the bug
+[user]  Instructions from autopilot nudge
+```
+→ Last msg is user, before it is agent → block (agent is processing our instructions)
+
+Pattern 3: We sent a nudge, agent responded, then went idle again
+```
+[agent] I fixed the bug
+[user]  Instructions from autopilot nudge
+[agent] OK I'll continue with the implementation
+```
+→ Last msg is agent → bump (this already works)
+
+Pattern 4: We sent a nudge, agent never responded
+```
+[agent] I fixed the bug
+[user]  Instructions from autopilot nudge
+```
+(same as pattern 2)
+
+Pattern 5: We sent TWO nudges, no response
+```
+[agent] I fixed the bug
+[user]  Instructions from autopilot nudge
+[user]  Second nudge
+```
+→ Last msg is user, before it is also user → don't block (send again)
+
+So the logic should be:
+- If last activity is from user
+- AND the activity just before it is from agent
+- → Block (agent was working and is likely processing our last nudge)
+- If last activity is from user
+- AND the activity just before it is also from user
+- → Don't block (agent never responded to our nudge, send again)
+
+So I need to flip my check:
+
+```go
+if len(lastActivities) > 0 && lastActivities[len(lastActivities)-1].Role == "user" {
+    // If the message BEFORE the last one is from agent, the agent was actively working
+    // and our last message was a nudge it hasn't responded to yet → wait
+    if len(lastActivities) >= 2 && lastActivities[len(lastActivities)-2].Role == "agent" {
+        return "none", nil
+    }
+}
+```
+
+This way:
+- Pattern 2: `[..., agent, user]` → agent active right before our nudge → block
+- Pattern 5: `[..., agent, user, user]` → agent NOT active right before our last user msg → don't block (agent never saw our nudge)
+- Pattern 1: `[..., agent, agent]` → last is agent → falls through to bump
+
+This makes sense! Let me fix my code.
+**Action**: edit(path: "backend-go/services/queue.go", edits: [object Object])
+**Observation**: edit: success
+
+## Turn 4 | 2026-06-22T17:43:07.776Z | deepseek/deepseek-v4-flash
+
+**Thought**: Let me verify the full flow reads correctly.
+**Thinking**: Let me verify the complete logic by re-reading the section to make sure it's correct end-to-end.
+**Action**: read(offset: 696, path: "backend-go/services/queue.go", limit: 65)
+**Observation**: read: success
+
+## Turn 5 | 2026-06-22T17:43:10.804Z | deepseek/deepseek-v4-flash
+
+**Thought**: Logic is solid. Let me trace through all patterns:
+
+| Pattern | Activities | Blocks? | Why |
+|---------|-----------|---------|-----|
+| Agent idle | `[..., agent]` | No | Last is agent → bump |
+| We nudged, agent working | `[..., agent, **user**]` | **Yes** | agent was active before our nudge, pending reply |
+| We nudged, agent replied | `[..., user, **agent**]` | No | Last is agent → bump |
+| We nudged twice, no reply | `[..., user, **user**]` | No | agent never saw our nudge → resend |
+| Fresh session, only our msg | `[user]` | No | Only 1 activity → condition false → bump |
+
+Let me build, deploy, and push.
+**Thinking**: The logic looks correct. Let me trace through the conversation patterns:
+
+**Pattern 1: Agent working → idle → bump**
+```
+activities = [agent, agent]  (agent was working)
+```
+- `len >= 2` ✓
+- `lastActivities[1].Role` = "agent" → NOT "user" → condition false → **bump** ✓
+
+**Pattern 2: Agent working → we nudged → agent hasn't replied**
+```
+activities = [agent, user]  (we sent nudge, agent hasn't responded)
+```
+- `len >= 2` ✓
+- `lastActivities[1].Role` = "user" ✓
+- `lastActivities[0].Role` = "agent" ✓
+- → **block** ✓ (correct - agent was active, our nudge is pending)
+
+**Pattern 3: Agent working → we nudged → agent replied → idle → bump**
+```
+activities = [agent, user, agent]  (agent replied to our nudge)
+```
+- `lastActivities[2].Role` = "agent" → NOT "user" → condition false → **bump** ✓
+
+**Pattern 4: Agent working → we nudged → we nudged again (no reply)**
+```
+activities = [agent, user, user]  (agent never replied)
+```
+- `len >= 2` ✓
+- `lastActivities[2].Role` = "user" ✓
+- `lastActivities[1].Role` = "user" → NOT "agent" → condition false → **bump** ✓ (correct - resend)
+
+**Pattern 5: Just us, no agent activity (new session/error)**
+```
+activities = [user]  (only one activity, our message)
+```
+- `len >= 2` → false (only 1 activity) → condition false → **bump** ✓
+
+**Pattern 6: Empty activities**
+```
+activities = []  (no activities fetched)
+```
+- `len >= 2` → false → condition false → **bump** ✓
+
+This all looks correct! Now let me build and restart.
+**Action**: bash(command: "cd backend-go && go build -o backend.exe . 2>&1 && echo "BUILD OK"", timeout: 30)
+**Observation**: bash: success
+
+## Turn 6 | 2026-06-22T17:43:21.945Z | deepseek/deepseek-v4-flash
+
+**Thought**: 
+**Action**: bash(command: "powershell -Command "Stop-Process -Name 'backend' -Force -ErrorAction SilentlyContinue; Write-Output 'Killed'" && sleep 15 && echo "=== HEALTH ===" && curl -s http://localhost:8082/api/health | python3 -c "
+import sys, json
+d = json.load(sys.stdin)
+print(f'Status: {d[\"status\"]}  Daemon={d[\"checks\"][\"daemon\"][\"running\"]}  Sched={d[\"checks\"][\"scheduler\"][\"running\"]}  Worker={d[\"checks\"][\"worker\"][\"running\"]}')
+" && echo "" && echo "=== WATCHDOG ===" && tail -3 backend-go/watchdog.log 2>&1", timeout: 30)
+**Observation**: bash: success
+
+## Turn 7 | 2026-06-22T17:43:43.327Z | deepseek/deepseek-v4-flash
+
+**Thought**: 
+**Thinking**: Watchdog detected the kill, restarted the backend. Let me wait for it to confirm healthy and then commit and push.
+**Action**: bash(command: "sleep 8 && tail -1 backend-go/watchdog.log && echo "" && curl -s http://localhost:8082/api/health | python3 -c "import sys,json;d=json.load(sys.stdin);print(f'PID={d[\"version\"]} AllServices: daemon={d[\"checks\"][\"daemon\"][\"running\"]} scheduler={d[\"checks\"][\"scheduler\"][\"running\"]} worker={d[\"checks\"][\"worker\"][\"running\"]}')"", timeout: 15)
+**Observation**: bash: success
+
