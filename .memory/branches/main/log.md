@@ -6942,3 +6942,403 @@ but the goroutine dead — making the health check a zombie detector.
 - Added top-level recover() to Run() as safety net" && git push 2>&1", timeout: 15)
 **Observation**: bash: error
 
+## Turn 30 | 2026-06-22T22:12:08.096Z | deepseek/deepseek-v4-flash
+
+**Thought**: 
+**Thinking**: The API key leaked again into `.memory/branches/main/log.md`. Let me redact it and retry.
+**Action**: bash(command: "cd backend-go && sed -i 's/REDACTED_OPENROUTER_KEY/REDACTED_OPENROUTER_KEY/g' ../.memory/branches/main/log.md && git add ../.memory/branches/main/log.md && git commit --amend --no-edit && git push 2>&1", timeout: 15)
+**Observation**: bash: success
+
+## Turn 31 | 2026-06-22T22:12:24.419Z | deepseek/deepseek-v4-flash
+
+**Thought**: 
+**Thinking**: Pushed successfully. Let me do a final check to make sure everything is running.
+**Action**: bash(command: "echo "=== FINAL ===" && curl -s http://localhost:8082/api/health | python3 -c "import sys,json;d=json.load(sys.stdin);print(f'OK daemon={d[\"checks\"][\"daemon\"][\"running\"]} worker={d[\"checks\"][\"worker\"][\"running\"]} queue={d[\"queue\"]}')" && echo "" && tail -2 backend-go/watchdog.log", timeout: 10)
+**Observation**: bash: success
+
+## Turn 32 | 2026-06-22T22:12:36.417Z | deepseek/deepseek-v4-flash
+
+**Thought**: All fixed and running. Here's the story:
+
+### Root Cause
+The **daemon goroutine was crashing silently** — no `defer recover()` anywhere. When `ListSessions()` or any part of `tick()` panicked (e.g., nil pointer, slow HTTP response), the entire goroutine died. The `isRunning` flag stayed `true`, so the health check reported it as running. The daemon was a **zombie** — alive on paper, dead in reality.
+
+### The Fix
+Added panic recovery to `daemon.go`:
+- `tickAndWait()` wraps each tick in `defer recover()` that logs the crash via `addKeeperLog` and resets `isRunning = false`
+- The outer `for` loop in `Run()` auto-restarts after a crash
+- `StopDaemon()` uses a non-blocking channel send so it can't deadlock on dead goroutines
+- Top-level `recover()` in `Run()` as a final safety net
+
+### Current State
+- **PID 51752** — running since 18:04, no crashes
+- **Daemon ticked at 18:08** — found session 72176554 (127 min inactive), nudged it
+- **Queue: 5 processing** — jobs flowing
+- Watchdog healthy
+
+## Turn 1 | 2026-06-22T22:13:06.768Z | deepseek/deepseek-v4-flash
+
+**Thought**: The watchdog's `EnvironmentVariables` is null. Let me fix it.
+**Thinking**: The watchdog is failing with `Cannot index into a null array` at line 27 of `watchdog_loop.ps1`. This is because `$psi.EnvironmentVariables` is null. In newer versions of PowerShell/.NET, `ProcessStartInfo.EnvironmentVariables` might not be initialized by default. Let me look at the watchdog script and fix it.
+**Action**: read(path: "backend-go/watchdog_loop.ps1")
+**Observation**: read: success
+
+## Turn 2 | 2026-06-22T22:13:10.852Z | deepseek/deepseek-v4-flash
+
+**Thought**: 
+**Thinking**: The file has been overwritten with a different version that uses `go run .` instead of `backend.exe`. The current watchdog is the one with the error at line 27 (`$psi.EnvironmentVariables["PORT"] = "8082"`), which is from a different version that has the env vars line.
+
+But the file I just read doesn't have line 27 with EnvironmentVariables. The actual running watchdog must be a different version. Let me check the actual watchdog script that's running.
+
+Wait - there are multiple watchdog scripts:
+- `watchdog_loop.ps1` - what I just read
+- `watchdog.ps1` 
+- `watchdog_simple.cmd`
+- `watchdog.cmd`
+
+Let me check which one is actually running by looking at the command line of the running powershell process.
+
+Actually, looking at the powershell process that was started:
+```json
+"We are turning tabby into the ULTIMATE AGENTIC CODING HARNESS"
+```
+
+That's a huge command line - it's a powershell process probably running something else.
+
+Let me check the watchdog.ps1 file instead.
+**Action**: read(path: "backend-go/watchdog.ps1")
+**Observation**: read: success
+
+## Turn 3 | 2026-06-22T22:13:17.138Z | deepseek/deepseek-v4-flash
+
+**Thought**: 
+**Thinking**: I can see the issue. In `watchdog.ps1` at line 43:
+```powershell
+$startInfo.EnvironmentVariables["PORT"] = "$port"
+```
+
+`$startInfo.EnvironmentVariables` is null because `UseShellExecute = $false` was set BEFORE creating the EnvironmentVariables dictionary. In .NET, `ProcessStartInfo.EnvironmentVariables` is available but might need to be initialized.
+
+Actually, the real issue is that on some .NET versions, `ProcessStartInfo.EnvironmentVariables` is null before you first access it, or the environment hasn't been loaded yet. The fix is to use `$startInfo.EnvironmentVariables.Clear()` first or access a property to initialize it.
+
+Wait, actually, looking at the error more carefully: "Cannot index into a null array." - in PowerShell, `$null["PORT"] = "value"` causes this error because you can't index into null.
+
+The proper fix is to ensure `EnvironmentVariables` is initialized. We can do this by accessing the dictionary first: `$startInfo.EnvironmentVariables` on its own should return a `StringDictionary`, but on some systems it might return null if not initialized.
+
+A common fix is to set the environment variable via the process's environment block instead:
+
+```powershell
+$env:PORT = "$port"
+$process = [System.Diagnostics.Process]::Start($startInfo)
+```
+
+Or use the process's StartInfo differently. Actually, a simpler fix is to not use EnvironmentVariables at all and instead use the process's environment:
+
+```powershell
+$startInfo.EnvironmentVariables = New-Object System.Collections.Specialized.StringDictionary
+$startInfo.EnvironmentVariables.Add("PORT", "$port")
+```
+
+Or simplest: just set the env var before starting and use the inherited environment.
+
+Let me fix the watchdog.ps1 which is the one actually running (based on the error matching its code).
+**Action**: edit(path: "backend-go/watchdog.ps1", edits: [object Object])
+**Observation**: edit: error
+
+## Turn 4 | 2026-06-22T22:13:24.293Z | deepseek/deepseek-v4-flash
+
+**Thought**: 
+**Thinking**: The edit requires both oldText and newText. Let me just rewrite the whole file.
+**Action**: write(path: "backend-go/watchdog.ps1", content: "# Watchdog for Jules Autopilot Go Backend
+# Checks every 30s, restarts if dead.
+# Run: powershell -WindowStyle Hidden -File watchdog.ps1
+
+$port = 8081
+$backendDir = Split-Path -Parent $MyInvocation.MyCommand.Path
+$logFile = Join-Path $backendDir "watchdog.log"
+$serverLog = Join-Path $backendDir "server.log"
+$checkInterval = 30
+
+Add-Content $logFile "[$(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')] Watchdog started for backend on port $port"
+
+while ($true) {
+    try {
+        $response = Invoke-WebRequest -Uri "http://127.0.0.1:$port/api/health" -TimeoutSec 5 -ErrorAction Stop
+        if ($response.StatusCode -eq 200) {
+            # Backend is healthy - sleep and loop
+            Start-Sleep -Seconds $checkInterval
+            continue
+        }
+    } catch {
+        # Backend not responding
+    }
+
+    Add-Content $logFile "[$(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')] Backend not responding. Restarting..."
+
+    # Kill any stale process
+    Get-Process -Name "backend" -ErrorAction SilentlyContinue | Stop-Process -Force
+    Get-Process -Name "go" -ErrorAction SilentlyContinue | Stop-Process -Force
+    Start-Sleep -Seconds 3
+
+    # Set env var before starting so it's inherited
+    $env:PORT = "$port"
+
+    # Start fresh
+    $startInfo = New-Object System.Diagnostics.ProcessStartInfo
+    $startInfo.FileName = "go"
+    $startInfo.Arguments = "run ."
+    $startInfo.WorkingDirectory = $backendDir
+    $startInfo.RedirectStandardOutput = $true
+    $startInfo.RedirectStandardError = $true
+    $startInfo.UseShellExecute = $false
+    $startInfo.CreateNoWindow = $true
+    $process = New-Object System.Diagnostics.Process
+    $process.StartInfo = $startInfo
+    $process.Start() | Out-Null
+    
+    Add-Content $logFile "[$(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')] Started backend (PID: $($process.Id))"
+
+    # Wait for it to come up
+    $healthy = $false
+    for ($i = 0; $i -lt 12; $i++) {
+        Start-Sleep -Seconds 5
+        try {
+            $r = Invoke-WebRequest -Uri "http://127.0.0.1:$port/api/health" -TimeoutSec 3 -ErrorAction Stop
+            if ($r.StatusCode -eq 200) {
+                Add-Content $logFile "[$(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')] Backend is healthy"
+                $healthy = $true
+                break
+            }
+        } catch {}
+    }
+    if (-not $healthy) {
+        Add-Content $logFile "[$(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')] Backend failed to start after 60s"
+    }
+
+    Start-Sleep -Seconds $checkInterval
+}
+")
+**Observation**: write: success
+
+## Turn 5 | 2026-06-22T22:13:36.051Z | deepseek/deepseek-v4-flash
+
+**Thought**: 
+**Thinking**: I fixed the watchdog.ps1 by removing the `$startInfo.EnvironmentVariables["PORT"] = "$port"` line and instead setting `$env:PORT = "$port"` before starting the process. This way the PORT environment variable is inherited by the child process.
+
+But wait - I need to check which watchdog script is actually running. Let me check the PID of the watchdog (32972) and its command line.
+
+Actually, looking at the error message - it says `watchdog_loop.ps1:27 char:9`. So the running watchdog is `watchdog_loop.ps1`, not `watchdog.ps1`. Let me check that file again - I read it earlier and it didn't have an EnvironmentVariables line. Let me re-read it to be sure.
+
+Wait, I read `watchdog_loop.ps1` and it didn't have `EnvironmentVariables` at line 27. But the error says line 27. Maybe the file was modified since I last read it? Or maybe the error is from a different version that was running before my changes.
+
+Actually, looking at the error more carefully: the error stack says `watchdog_loop.ps1:27 char:9`. But the file I just read doesn't have `EnvironmentVariables` at that line. The file at line 27 is `$psi.EnvironmentVariables["PORT"] = "8082"`.
+
+OH WAIT - the file I read was already modified by an earlier edit. Let me re-read it to confirm.
+
+Wait no, looking at my earlier read of `watchdog_loop.ps1`:
+```
+$psi.EnvironmentVariables["PORT"] = "8082"
+```
+
+That WAS at line 27. So the file DOES have the issue. But the version I read earlier was the CURRENT content. Let me re-read it.
+**Action**: bash(command: "Select-String "EnvironmentVariables" backend-go/watchdog_loop.ps1 2>&1", timeout: 5)
+**Observation**: bash: error
+
+## Turn 6 | 2026-06-22T22:13:54.184Z | deepseek/deepseek-v4-flash
+
+**Thought**: 
+**Thinking**: Let me check the watchdog_loop.ps1 file content to see if it still has the EnvironmentVariables line.
+**Action**: bash(command: "grep -n "EnvironmentVariables" backend-go/watchdog_loop.ps1 2>&1", timeout: 5)
+**Observation**: bash: error
+
+## Turn 7 | 2026-06-22T22:13:58.165Z | deepseek/deepseek-v4-flash
+
+**Thought**: 
+**Thinking**: Good - `watchdog_loop.ps1` doesn't have EnvironmentVariables anymore. But the error came from `watchdog_loop.ps1:27`. Let me check the current file to see what's at line 27.
+**Action**: read(path: "backend-go/watchdog_loop.ps1")
+**Observation**: read: success
+
+## Turn 8 | 2026-06-22T22:14:02.142Z | deepseek/deepseek-v4-flash
+
+**Thought**: 
+**Thinking**: Wait, this file doesn't have `EnvironmentVariables` at line 27. The file at line 27 is `$psi.CreateNoWindow = $true`. So the error might have come from a different file or a different version of the file.
+
+Actually, looking at the error again: "Cannot index into a null array. At C:\Users\hyper\workspace\jules-autopilot\backend-go\watchdog_loop.ps1:27 char:9"
+
+Line 27: `$psi.EnvironmentVariables["PORT"] = "8082"`
+
+But the file I'm reading has `$psi.CreateNoWindow = $true` at line 27. This means the file was different when the error occurred. Maybe the watchdog_loop.ps1 was overwritten by the current version but the running watchdog has the old version in memory.
+
+Or maybe the error is from `watchdog.ps1` which also had the EnvironmentVariables issue. Let me check `watchdog.ps1` - I already fixed it by removing the line. So the error was from the old version that was running.
+
+Since I already:
+1. Fixed `watchdog.ps1` - removed the EnvironmentVariables line, set $env:PORT instead
+2. `watchdog_loop.ps1` - doesn't have EnvironmentVariables at all
+
+The error was likely from the currently running watchdog which has the old version of `watchdog_loop.ps1` in memory (loaded at startup). When the next crash happens, the watchdog will try to start the backend but fail with this error.
+
+I should kill the old watchdog and start a new one with the fixed scripts. Or better yet, just update the running version.
+
+Actually wait - let me re-check. The error says `watchdog_loop.ps1:27 char:9`. But the file I'm reading doesn't have EnvironmentVariables at line 27. This means the file was DIFFERENT when the watchdog started vs what I'm reading now.
+
+It's possible that another tool/agent modified this file before, adding the EnvironmentVariables line, and then my later reads/edits removed it. But I never edited watchdog_loop.ps1 - only watchdog.ps1.
+
+Let me check git to see if watchdog_loop.ps1 was modified.
+**Action**: bash(command: "cd backend-go && git log --oneline --follow watchdog_loop.ps1 2>&1 | head -5", timeout: 5)
+**Observation**: bash: success
+
+## Turn 9 | 2026-06-22T22:14:10.445Z | deepseek/deepseek-v4-flash
+
+**Thought**: 
+**Thinking**: The watchdog_loop.ps1 hasn't been modified since the port change commit (7b3bcf5). So the file on disk IS the same as when the watchdog was started. But it doesn't have EnvironmentVariables at line 27.
+
+Wait - let me check the actual line numbers. The file has:
+```
+Line 1: # Run: powershell -ExecutionPolicy Bypass -File watchdog_loop.ps1
+Line 2: # Or: Start-Process -WindowStyle Hidden powershell.exe '-ExecutionPolicy Bypass -File "C:\...\watchdog_loop.ps1"'
+Line 3: (empty)
+Line 4: $logFile = ...
+Line 5: Add-Content ...
+Line 6: (empty)
+Line 7: while ...
+Line 8: ...
+```
+
+The error says `watchdog_loop.ps1:27 char:9` with `$psi.EnvironmentVariables["PORT"] = "8082"`. But this file doesn't have that line! 
+
+This means the error MUST be coming from a DIFFERENT file. Let me check which file actually DOES have this line at line 27.
+
+Let me check `watchdog.ps1` which I just read - it had `$startInfo.EnvironmentVariables["PORT"] = "$port"` at... let me count the lines in the OLD version.
+
+Actually, I just overwrote watchdog.ps1 so I can't read the old version. But the error references `watchdog_loop.ps1` specifically. 
+
+Let me look at ALL watchdog-related files to find the one with the issue.
+**Action**: bash(command: "grep -rn "EnvironmentVariables" backend-go/watchdog* 2>&1", timeout: 5)
+**Observation**: bash: error
+
+## Turn 10 | 2026-06-22T22:14:16.072Z | deepseek/deepseek-v4-flash
+
+**Thought**: The running watchdog has a stale version loaded. Let me restart it with the current fixed scripts.
+**Thinking**: No files currently contain EnvironmentVariables. But the error came from somewhere. Let me check if there's a previously-saved version or if the running process has a different version loaded.
+
+The error shows the exception details - line 27, char 9, with the text `$psi.EnvironmentVariables["PORT"] = "8082"`. But no file currently has that text. This means the error was from a version that was running previously but the file has since been overwritten.
+
+Since the watchdog was started on June 22 at 10:40:28 (according to the earlier process listing), it loaded the version of `watchdog_loop.ps1` that was on disk at that time. The file might have had the EnvironmentVariables line then but was subsequently modified.
+
+Wait, actually looking at this more carefully - the file `watchdog_loop.ps1` in its current state starts the backend with `go run .` NOT with `backend.exe`. But the watchdog log shows it starting `backend.exe` on port 8082. So the running watchdog must be a DIFFERENT version than what's on disk.
+
+Let me check - the watchdog log shows:
+```
+Started backend (PID: 35616) on port 8082
+```
+
+The "on port 8082" text is from the old version of `watchdog_loop.ps1` that had the PORT env var. The current file on disk doesn't have that text.
+
+So the issue is clear: the running watchdog has an outdated version of the script in memory, and we need to restart it to pick up the fixed version.
+
+Let me kill the old watchdog and start a new one.
+**Action**: bash(command: "powershell -Command "Get-Process -Id 32972 -ErrorAction SilentlyContinue | Stop-Process -Force; Write-Output 'Killed old watchdog'"", timeout: 5)
+**Observation**: bash: success
+
+## Turn 11 | 2026-06-22T22:14:25.122Z | deepseek/deepseek-v4-flash
+
+**Thought**: 
+**Thinking**: Good, killed the old watchdog. But this also means there's no watchdog to restart the backend if it crashes. Let me also make sure the watchdog_loop.ps1 is the correct version - it doesn't use EnvironmentVariables and uses `go run .` which is fine for development. But for production, it should use `backend.exe`.
+
+Wait, looking at the watchdog_loop.ps1, it uses `go run .` which runs the Go code directly. The watchdog.ps1 also uses `go run .`. But the original watchdog log showed it starting `backend.exe` with port 8082. So the script that was running was a hybrid version.
+
+Let me just fix the watchdog_loop.ps1 to use `backend.exe` instead of `go run .` (faster startup) and set the env var properly.
+
+Actually, the current watchdog_loop.ps1 doesn't set PORT at all - it relies on the default from main.go which is "8080" if PORT env var is empty:
+
+```go
+port := os.Getenv("PORT")
+if port == "" {
+    port = "8080"
+}
+```
+
+So if PORT isn't set, the backend would start on 8080 instead of 8082. Let me fix the watchdog_loop.ps1 to use backend.exe and set PORT properly.
+
+Actually wait, looking more carefully at the running watchdog log:
+```
+Started backend (PID: 35616) on port 8082
+```
+
+The CURRENT log shows `on port 8082` which means the running (now killed) watchdog was passing PORT=8082. The script on disk doesn't have that. So the running script was different.
+
+Let me just write a clean, working watchdog_loop.ps1 that:
+1. Uses backend.exe (not go run .)
+2. Sets PORT via $env:PORT (not EnvironmentVariables)
+**Action**: write(path: "backend-go/watchdog_loop.ps1", content: "# Run: powershell -ExecutionPolicy Bypass -File watchdog_loop.ps1
+# Or: Start-Process -WindowStyle Hidden powershell.exe '-ExecutionPolicy Bypass -File "C:\...\watchdog_loop.ps1"'
+
+$port = 8082
+$backendDir = "C:\Users\hyper\workspace\jules-autopilot\backend-go"
+$logFile = "$backendDir\watchdog.log"
+$exePath = "$backendDir\backend.exe"
+
+Add-Content $logFile "[$(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')] Watchdog started"
+
+while ($true) {
+    $healthy = $false
+    try {
+        $r = Invoke-WebRequest -Uri "http://127.0.0.1:$port/api/health" -TimeoutSec 10 -UseBasicParsing -ErrorAction Stop
+        if ($r.StatusCode -eq 200) { $healthy = $true }
+    } catch {}
+
+    if (-not $healthy) {
+        Add-Content $logFile "[$(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')] DOWN - Restarting backend"
+        Get-Process -Name "backend" -ErrorAction SilentlyContinue | Stop-Process -Force
+        Start-Sleep -Seconds 3
+
+        # Set PORT via environment so child process inherits it
+        $env:PORT = "$port"
+
+        $psi = New-Object System.Diagnostics.ProcessStartInfo
+        $psi.FileName = $exePath
+        $psi.Arguments = ""
+        $psi.WorkingDirectory = $backendDir
+        $psi.RedirectStandardOutput = $true
+        $psi.RedirectStandardError = $true
+        $psi.UseShellExecute = $false
+        $psi.CreateNoWindow = $true
+        $p = [System.Diagnostics.Process]::Start($psi)
+        Add-Content $logFile "[$(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')] Started backend (PID: $($p.Id)) on port $port"
+
+        for ($i = 0; $i -lt 12; $i++) {
+            Start-Sleep -Seconds 5
+            try {
+                $r = Invoke-WebRequest -Uri "http://127.0.0.1:$port/api/health" -TimeoutSec 3 -UseBasicParsing -ErrorAction Stop
+                if ($r.StatusCode -eq 200) {
+                    Add-Content $logFile "[$(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')] Backend is healthy"
+                    break
+                }
+            } catch {}
+        }
+    }
+    Start-Sleep -Seconds 30
+}
+")
+**Observation**: write: success
+
+## Turn 12 | 2026-06-22T22:14:42.422Z | deepseek/deepseek-v4-flash
+
+**Thought**: Now let me start the new watchdog and verify everything.
+**Thinking**: Now let me start the new watchdog.
+**Action**: bash(command: "powershell -Command "Start-Process -WindowStyle Hidden powershell.exe '-ExecutionPolicy Bypass -File \"C:\Users\hyper\workspace\jules-autopilot\backend-go\watchdog_loop.ps1\"'"
+
+sleep 5
+
+echo "=== WATCHDOG ===" && tail -3 backend-go/watchdog.log
+echo ""
+echo "=== BACKEND ===" && curl -s http://localhost:8082/api/health | python3 -c "import sys,json;d=json.load(sys.stdin);print(f'OK daemon={d[\"checks\"][\"daemon\"][\"running\"]}')"", timeout: 15)
+**Observation**: bash: success
+
+## Turn 13 | 2026-06-22T22:14:57.061Z | deepseek/deepseek-v4-flash
+
+**Thought**: 
+**Thinking**: New watchdog started at 18:14:54. Backend is healthy (daemon=True). Let me commit and push the watchdog fix.
+**Action**: bash(command: "cd backend-go && git add -A && git commit -m "fix: watchdog EnvironmentVariables null crash, use $env:PORT instead" && git push 2>&1", timeout: 15)
+**Observation**: bash: error
+

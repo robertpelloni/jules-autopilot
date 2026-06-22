@@ -29,6 +29,9 @@ while ($true) {
     Get-Process -Name "go" -ErrorAction SilentlyContinue | Stop-Process -Force
     Start-Sleep -Seconds 3
 
+    # Set env var before starting so it's inherited
+    $env:PORT = "$port"
+
     # Start fresh
     $startInfo = New-Object System.Diagnostics.ProcessStartInfo
     $startInfo.FileName = "go"
@@ -38,7 +41,6 @@ while ($true) {
     $startInfo.RedirectStandardError = $true
     $startInfo.UseShellExecute = $false
     $startInfo.CreateNoWindow = $true
-    $startInfo.EnvironmentVariables["PORT"] = "$port"
     $process = New-Object System.Diagnostics.Process
     $process.StartInfo = $startInfo
     $process.Start() | Out-Null

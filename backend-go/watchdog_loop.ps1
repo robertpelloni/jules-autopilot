@@ -1,13 +1,17 @@
 # Run: powershell -ExecutionPolicy Bypass -File watchdog_loop.ps1
 # Or: Start-Process -WindowStyle Hidden powershell.exe '-ExecutionPolicy Bypass -File "C:\...\watchdog_loop.ps1"'
 
-$logFile = "C:\Users\hyper\workspace\jules-autopilot\backend-go\watchdog.log"
+$port = 8082
+$backendDir = "C:\Users\hyper\workspace\jules-autopilot\backend-go"
+$logFile = "$backendDir\watchdog.log"
+$exePath = "$backendDir\backend.exe"
+
 Add-Content $logFile "[$(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')] Watchdog started"
 
 while ($true) {
     $healthy = $false
     try {
-        $r = Invoke-WebRequest -Uri 'http://127.0.0.1:8082/api/health' -TimeoutSec 10 -UseBasicParsing -ErrorAction Stop
+        $r = Invoke-WebRequest -Uri "http://127.0.0.1:$port/api/health" -TimeoutSec 10 -UseBasicParsing -ErrorAction Stop
         if ($r.StatusCode -eq 200) { $healthy = $true }
     } catch {}
 
@@ -15,22 +19,25 @@ while ($true) {
         Add-Content $logFile "[$(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')] DOWN - Restarting backend"
         Get-Process -Name "backend" -ErrorAction SilentlyContinue | Stop-Process -Force
         Start-Sleep -Seconds 3
-        
+
+        # Set PORT via environment so child process inherits it
+        $env:PORT = "$port"
+
         $psi = New-Object System.Diagnostics.ProcessStartInfo
-        $psi.FileName = "go"
-        $psi.Arguments = "run ."
-        $psi.WorkingDirectory = "C:\Users\hyper\workspace\jules-autopilot\backend-go"
+        $psi.FileName = $exePath
+        $psi.Arguments = ""
+        $psi.WorkingDirectory = $backendDir
         $psi.RedirectStandardOutput = $true
         $psi.RedirectStandardError = $true
         $psi.UseShellExecute = $false
         $psi.CreateNoWindow = $true
         $p = [System.Diagnostics.Process]::Start($psi)
-        Add-Content $logFile "[$(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')] Started backend (PID: $($p.Id))"
-        
+        Add-Content $logFile "[$(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')] Started backend (PID: $($p.Id)) on port $port"
+
         for ($i = 0; $i -lt 12; $i++) {
             Start-Sleep -Seconds 5
             try {
-                $r = Invoke-WebRequest -Uri "http://127.0.0.1:8082/api/health" -TimeoutSec 3 -UseBasicParsing -ErrorAction Stop
+                $r = Invoke-WebRequest -Uri "http://127.0.0.1:$port/api/health" -TimeoutSec 3 -UseBasicParsing -ErrorAction Stop
                 if ($r.StatusCode -eq 200) {
                     Add-Content $logFile "[$(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')] Backend is healthy"
                     break
