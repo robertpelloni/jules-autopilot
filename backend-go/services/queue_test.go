@@ -236,73 +236,22 @@ func TestMapState(t *testing.T) {
 	}
 }
 
-func TestHasRecentRecoveryGuidance(t *testing.T) {
-	activities := []models.JulesActivity{
-		{Role: "agent", Content: "Working on task"},
-		{Role: "user", Content: "Recovery Guidance: Fix the error"},
-		{Role: "agent", Content: "Applying fix"},
+func TestExtractProjectName(t *testing.T) {
+	tests := []struct {
+		sourceID string
+		want     string
+	}{
+		{"hyper/jules-autopilot", "jules-autopilot"},
+		{"jules-autopilot", "jules-autopilot"},
+		{"hyper/turntUpToddler", "turntUpToddler"},
+		{"", ""},
+		{"hyper/repo/sub", "sub"},
 	}
-
-	if !hasRecentRecoveryGuidance(activities) {
-		t.Error("Should detect recovery guidance in recent activities")
-	}
-
-	activitiesNoRecovery := []models.JulesActivity{
-		{Role: "agent", Content: "Working on task"},
-		{Role: "user", Content: "Please continue"},
-	}
-
-	if hasRecentRecoveryGuidance(activitiesNoRecovery) {
-		t.Error("Should not detect recovery guidance when none exists")
-	}
-}
-
-func TestResolveRepoPath(t *testing.T) {
-	setupQueueTestDB(t)
-
-	// Default resolution
-	path := resolveRepoPath("owner/repo")
-	expectedPath := filepath.Join(filepath.Dir(GetProjectRoot()), "repo")
-	if path != expectedPath {
-		t.Errorf("Expected default path '%s', got '%s'", expectedPath, path)
-	}
-
-	// With mapping
-	mapping := models.RepoPath{
-		SourceID:  "owner/mapped-repo",
-		LocalPath: "C:/custom/path",
-	}
-	db.DB.Create(&mapping)
-
-	path = resolveRepoPath("owner/mapped-repo")
-	if path != "C:/custom/path" {
-		t.Errorf("Expected mapped path, got '%s'", path)
-	}
-}
-
-func TestBuildRecoveryMessage(t *testing.T) {
-	setupQueueTestDB(t)
-
-	session := models.JulesSession{
-		ID:    "sess-recovery",
-		Title: "Fix login bug",
-	}
-
-	activities := []models.JulesActivity{
-		{Role: "agent", Type: "message", Content: "I tried to fix the login bug"},
-		{Role: "agent", Type: "error", Content: "Error: missing dependency"},
-	}
-
-	settings := models.KeeperSettings{
-		SupervisorProvider: "openai",
-	}
-
-	msg := buildRecoveryMessage(session, activities, settings)
-	if msg == "" {
-		t.Error("Expected recovery message")
-	}
-	if len(msg) < 50 {
-		t.Errorf("Recovery message seems too short: %s", msg)
+	for _, tt := range tests {
+		got := extractProjectName(tt.sourceID)
+		if got != tt.want {
+			t.Errorf("extractProjectName(%q) = %q, want %q", tt.sourceID, got, tt.want)
+		}
 	}
 }
 

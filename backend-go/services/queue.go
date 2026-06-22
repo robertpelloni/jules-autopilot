@@ -677,66 +677,6 @@ func (w *Worker) handleCheckSession(payload string) (string, error) {
 		}
 	}
 
-	if session.RawState == "FAILED" && settings.SmartPilotEnabled {
-		alreadyProcessedFailure := false
-		if supervisorState.LastProcessedActivityTimestamp != nil {
-			if t, err := time.Parse(time.RFC3339, *supervisorState.LastProcessedActivityTimestamp); err == nil && !lastActivityTime.After(t) {
-				alreadyProcessedFailure = true
-			}
-		}
-
-		if !alreadyProcessedFailure {
-			activities, _ := client.ListActivities(session.ID)
-			if hasRecentRecoveryGuidance(activities) || hasRecentRecoveryCompletionLog(session.ID, lastActivityTime) {
-				timestamp := lastActivityTime.Format(time.RFC3339)
-				supervisorState.LastProcessedActivityTimestamp = &timestamp
-				_ = saveSupervisorState(supervisorState)
-				addKeeperLog("Skipped duplicate recovery guidance because a recent recovery instruction is already present.", "skip", session.ID, map[string]interface{}{
-					"event":        "session_recovery_skipped",
-					"sessionTitle": session.Title,
-				})
-				return "recovery_already_present", nil
-			}
-			emitDaemonEvent("session_recovery_started", map[string]interface{}{
-				"sessionId":    session.ID,
-				"sessionTitle": session.Title,
-			})
-			addKeeperLog("Detected failed session. Generating recovery guidance from Go backend.", "info", session.ID, map[string]interface{}{
-				"event":        "session_recovery_started",
-				"sessionTitle": session.Title,
-			})
-
-			recoveryMessage := buildRecoveryMessage(session, activities, settings)
-			if ragContext := buildRAGContext(session.Title, settings, 2); ragContext != "" {
-				recoveryMessage += ragContext
-			}
-
-			if _, err := client.CreateActivity(session.ID, CreateActivityRequest{
-				Content: recoveryMessage,
-				Type:    "message",
-				Role:    "user",
-			}); err != nil {
-				return "fail", err
-			}
-
-			addKeeperLog("Sent recovery guidance to failed session from Go backend.", "action", session.ID, map[string]interface{}{
-				"event":        "session_recovery_completed",
-				"sessionTitle": session.Title,
-				"summary":      recoveryMessage,
-			})
-			emitDaemonEvent("session_recovery_completed", map[string]interface{}{
-				"sessionId":    session.ID,
-				"sessionTitle": session.Title,
-				"summary":      recoveryMessage,
-			})
-
-			timestamp := lastActivityTime.Format(time.RFC3339)
-			supervisorState.LastProcessedActivityTimestamp = &timestamp
-			_ = saveSupervisorState(supervisorState)
-			return "recovery_sent", nil
-		}
-	}
-
 	if session.RawState == "COMPLETED" && settings.SmartPilotEnabled {
 		var existing models.MemoryChunk
 		if err := db.DB.First(&existing, "session_id = ?", session.ID).Error; err != nil {
@@ -762,11 +702,15 @@ func (w *Worker) handleCheckSession(payload string) (string, error) {
 		}
 		instructions := "Please instruct Google Jules agent to continue autonomously working on this project. Infer the next step based on the progress history and conversation."
 
-		// Documentation context
-		docContext := ""
+		// Resolve project name from the session's sourceID for workspace mirrored docs
+		projectName := extractProjectName(session.SourceID)
 		projectRoot := getProjectRoot()
+		projectDir := filepath.Join(projectRoot, projectName)
+
+		// Documentation context from the session's project in ../workspace/<project-name>/
+		docContext := ""
 		for _, docFile := range []string{"README.md", "ARCHITECTURE.md", "DEPLOY.md", "VISION.md", "ROADMAP.md", "MEMORY.md"} {
-			path := filepath.Join(projectRoot, docFile)
+			path := filepath.Join(projectDir, docFile)
 			if content, err := os.ReadFile(path); err == nil && len(content) > 0 {
 				maxLen := 2000
 				if len(content) > maxLen {
@@ -789,18 +733,42 @@ func (w *Worker) handleCheckSession(payload string) (string, error) {
 			}
 		}
 
-		// Git commits
+		// Git commits from the session's project
 		commitContext := ""
-		if output, err := exec.Command("git", "-C", projectRoot, "log", "--oneline", "-10").Output(); err == nil {
+		if output, err := exec.Command("git", "-C", projectDir, "log", "--oneline", "-5").Output(); err == nil {
 			commitContext = fmt.Sprintf("\n=== Recent Commits ===\n%s", string(output))
 		}
 
-		finalMessage := fmt.Sprintf(
+		// Build the prompt: instructions + docs + last 5 agent msgs + commits + instructions again
+		prompt := fmt.Sprintf(
 			"INSTRUCTIONS:\n%s\n\nDOCUMENTATION:\n%s\n\nJULES AGENT LAST 5 MESSAGES:\n%s\n%s\n\nINSTRUCTIONS AGAIN:\n%s",
 			instructions, docContext, lastAgentMessages.String(), commitContext, instructions)
 
+		// Send prompt to LM Studio, then send its response to the Jules session
+		provider := strings.TrimSpace(settings.SupervisorProvider)
+		if provider == "" {
+			provider = "lmstudio"
+		}
+		apiKey := getSupervisorAPIKey(provider, settings.SupervisorApiKey)
+
+		var nudgeContent string
+		if strings.TrimSpace(apiKey) != "" {
+			result, err := generateLLMText(provider, apiKey, settings.SupervisorModel, "You are a coding supervisor. Follow the INSTRUCTIONS.", []LLMMessage{{
+				Role:    "user",
+				Content: prompt,
+			}})
+			if err == nil && strings.TrimSpace(result.Content) != "" {
+				nudgeContent = result.Content
+			} else {
+				// Fallback: send the raw prompt if LLM fails
+				nudgeContent = prompt
+			}
+		} else {
+			nudgeContent = prompt
+		}
+
 		if _, err := client.CreateActivity(session.ID, CreateActivityRequest{
-			Content: finalMessage,
+			Content: nudgeContent,
 			Type:    "message",
 			Role:    "user",
 		}); err != nil {
@@ -838,92 +806,14 @@ func (w *Worker) handleCheckSession(payload string) (string, error) {
 	return "none", nil
 }
 
-func hasRecentRecoveryGuidance(activities []models.JulesActivity) bool {
-	limit := 6
-	if len(activities) < limit {
-		limit = len(activities)
+// extractProjectName extracts the repo/project name from a Jules sourceID.
+// sourceID looks like "hyper/jules-autopilot", returns "jules-autopilot".
+func extractProjectName(sourceID string) string {
+	parts := strings.Split(strings.TrimSpace(sourceID), "/")
+	if len(parts) == 0 || (len(parts) == 1 && parts[0] == "") {
+		return ""
 	}
-	for i := len(activities) - 1; i >= 0 && i >= len(activities)-limit; i-- {
-		activity := activities[i]
-		if activity.Role == "user" && strings.Contains(activity.Content, "Recovery Guidance:") {
-			return true
-		}
-	}
-	return false
-}
-
-func hasRecentRecoveryCompletionLog(sessionID string, since time.Time) bool {
-	var count int64
-	_ = db.DB.Model(&models.KeeperLog{}).
-		Where("session_id = ? AND message = ? AND created_at >= ?", sessionID, "Sent recovery guidance to failed session from Go backend.", since.Add(-2*time.Minute)).
-		Count(&count).Error
-	return count > 0
-}
-
-func buildRecoveryMessage(session models.JulesSession, activities []models.JulesActivity, settings models.KeeperSettings) string {
-	provider := strings.TrimSpace(settings.SupervisorProvider)
-	if provider == "" {
-		provider = "lmstudio"
-	}
-	apiKey := getSupervisorAPIKey(provider, settings.SupervisorApiKey)
-
-	// Instructions (appears at top and bottom)
-	instructions := "A Jules session has entered the FAILED state. Provide a concise recovery plan and direct next-step instruction for the coding agent. Keep it practical and actionable."
-
-	// Documentation context from repo
-	docContext := ""
-	projectRoot := getProjectRoot()
-	for _, docFile := range []string{"README.md", "ARCHITECTURE.md", "DEPLOY.md", "VISION.md", "ROADMAP.md", "MEMORY.md"} {
-		path := filepath.Join(projectRoot, docFile)
-		if content, err := os.ReadFile(path); err == nil && len(content) > 0 {
-			maxLen := 2000
-			if len(content) > maxLen {
-				content = content[:maxLen]
-			}
-			docContext += fmt.Sprintf("\n=== %s ===\n%s\n", docFile, string(content))
-		}
-	}
-
-	// Last 5 agent messages
-	var lastAgentMessages strings.Builder
-	agentCount := 0
-	for i := len(activities) - 1; i >= 0 && agentCount < 5; i-- {
-		if activities[i].Role == "agent" {
-			if agentCount > 0 {
-				lastAgentMessages.WriteString("\n---\n")
-			}
-			lastAgentMessages.WriteString(activities[i].Content)
-			agentCount++
-		}
-	}
-
-	// GitHub recent commits
-	commitContext := ""
-	if output, err := exec.Command("git", "-C", projectRoot, "log", "--oneline", "-10").Output(); err == nil {
-		commitContext = fmt.Sprintf("\n=== Recent Commits ===\n%s", string(output))
-	}
-
-	// Build prompt: instructions + docs + last 5 agent + commits + instructions again
-	prompt := fmt.Sprintf(
-		"INSTRUCTIONS:\n%s\n\nDOCUMENTATION:\n%s\n\nJULES AGENT LAST 5 MESSAGES:\n%s\n%s\n\nINSTRUCTIONS AGAIN:\n%s\n\nSession: %s\nTitle: %s",
-		instructions,
-		docContext,
-		lastAgentMessages.String(),
-		commitContext,
-		instructions,
-		session.ID, session.Title)
-
-	if strings.TrimSpace(apiKey) != "" && apiKey != "placeholder" {
-		result, err := generateLLMText(provider, apiKey, settings.SupervisorModel, "You are a recovery supervisor. Follow the INSTRUCTIONS.", []LLMMessage{{
-			Role:    "user",
-			Content: prompt,
-		}})
-		if err == nil && strings.TrimSpace(result.Content) != "" {
-			return "Recovery Guidance:\n\n" + result.Content
-		}
-	}
-
-	return "Recovery Guidance:\n\nThe session appears to have failed. Review the most recent error, identify the last successful step, fix the immediate cause, and continue with a revised plan. If a prior assumption was wrong, state it explicitly before proceeding."
+	return parts[len(parts)-1]
 }
 
 func getProjectRoot() string {

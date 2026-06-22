@@ -1,0 +1,12 @@
+active_branch: main
+initialized: "2026-06-22T13:58:40Z"
+sessions:
+  - file: "C:\Users\hyper\.pi\agent\sessions\--C--Users-hyper-workspace-jules-autopilot--\2026-06-18T16-54-56-401Z_019edba8-3c91-7a92-aae7-af09b2e29d1a.jsonl"
+    branch: main
+    started: "2026-06-22T14:00:29.602Z"
+  - file: "C:\Users\hyper\.pi\agent\sessions\--C--Users-hyper-workspace-jules-autopilot--\2026-06-22T14-15-22-932Z_019eefaf-9834-7567-af74-e16fb558fdcb.jsonl"
+    branch: main
+    started: "2026-06-22T14:15:31.632Z"
+  - file: "C:\Users\hyper\.pi\agent\sessions\--C--Users-hyper-workspace-jules-autopilot--\2026-06-22T14-43-05-158Z_019eefc8-f546-78a8-b7f5-85ab0bd114d9.jsonl"
+    branch: main
+    started: "2026-06-22T14:43:13.252Z"
