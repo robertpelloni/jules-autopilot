@@ -307,7 +307,7 @@ func (c *JulesClient) ListSessions() ([]models.JulesSession, error) {
 		resp.Body.Close()
 
 		allSessions = append(allSessions, data.Sessions...)
-		
+
 		pageToken = data.NextPageToken
 		if pageToken == "" {
 			break
@@ -477,8 +477,8 @@ func (c *JulesClient) ListActivitiesWithLimit(sessionId string, maxPages int) ([
 			return nil, fmt.Errorf("Jules API activities request failed with status %d: %s", resp.StatusCode, string(body))
 		}
 		var data struct {
-			Activities []map[string]interface{} `json:"activities"`
-			NextPageToken string `json:"nextPageToken"`
+			Activities    []map[string]interface{} `json:"activities"`
+			NextPageToken string                   `json:"nextPageToken"`
 		}
 		err = json.NewDecoder(resp.Body).Decode(&data)
 		resp.Body.Close()
@@ -496,7 +496,7 @@ func (c *JulesClient) ListActivitiesWithLimit(sessionId string, maxPages int) ([
 		}
 
 		pageToken = data.NextPageToken
-	pagesFetched++
+		pagesFetched++
 		if pageToken == "" || pagesFetched >= maxPages {
 			break
 		}

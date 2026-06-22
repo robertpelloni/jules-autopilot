@@ -1,6 +1,7 @@
 package services
 
 import (
+	"fmt"
 	"log"
 	"strings"
 	"sync"
@@ -42,28 +43,53 @@ func (d *Daemon) Run() {
 
 	log.Println("[Daemon] Starting background monitoring loop...")
 
-	for {
-		interval := d.tick()
-		if interval <= 0 {
-			interval = 30 * time.Second
+	defer func() {
+		if r := recover(); r != nil {
+			log.Printf("[Daemon] CRASHED (top-level): %v", r)
 		}
+	}()
 
-		timer := time.NewTimer(interval)
-		select {
-		case <-timer.C:
-		case <-d.stopChan:
-			if !timer.Stop() {
-				select {
-				case <-timer.C:
-				default:
-				}
-			}
+	for {
+		stopped := d.tickAndWait()
+		if stopped {
 			d.mu.Lock()
 			d.isRunning = false
 			d.mu.Unlock()
 			log.Println("[Daemon] Stopped.")
 			return
 		}
+	}
+}
+
+// tickAndWait runs one daemon tick with panic recovery.
+// Returns true if the daemon should stop.
+func (d *Daemon) tickAndWait() bool {
+	defer func() {
+		if r := recover(); r != nil {
+			log.Printf("[Daemon] CRASHED (will restart after delay): %v", r)
+			addKeeperLog(fmt.Sprintf("Daemon crashed and will restart: %v", r), "error", "global", map[string]interface{}{
+				"event": "daemon_crash",
+				"panic": fmt.Sprintf("%v", r),
+			})
+			d.mu.Lock()
+			d.isRunning = false
+			d.mu.Unlock()
+		}
+	}()
+
+	interval := d.tick()
+	if interval <= 0 {
+		interval = 30 * time.Second
+	}
+
+	timer := time.NewTimer(interval)
+	defer timer.Stop()
+
+	select {
+	case <-timer.C:
+		return false
+	case <-d.stopChan:
+		return true
 	}
 }
 
@@ -220,5 +246,11 @@ func StopDaemon() {
 		return
 	}
 	d.mu.Unlock()
-	d.stopChan <- struct{}{}
+	go func() {
+		// Non-blocking send: if nobody is reading, the goroutine is dead
+		select {
+		case d.stopChan <- struct{}{}:
+		default:
+		}
+	}()
 }
