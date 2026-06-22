@@ -835,36 +835,12 @@ func hasRecentRecoveryCompletionLog(sessionID string, since time.Time) bool {
 func buildRecoveryMessage(session models.JulesSession, activities []models.JulesActivity, settings models.KeeperSettings) string {
 	provider := strings.TrimSpace(settings.SupervisorProvider)
 	if provider == "" {
-		provider = "openai"
+		provider = "lmstudio"
 	}
 	apiKey := getSupervisorAPIKey(provider, settings.SupervisorApiKey)
 
-	// Last 5 agent messages
-	var lastAgentMessages strings.Builder
-	agentCount := 0
-	for i := len(activities) - 1; i >= 0 && agentCount < 5; i-- {
-		if activities[i].Role == "agent" {
-			if agentCount > 0 {
-				lastAgentMessages.WriteString("\n---\n")
-			}
-			lastAgentMessages.WriteString(activities[i].Content)
-			agentCount++
-		}
-	}
-
-	// Recent activity context (last 6 activities)
-	recentActivities := activities
-	if len(recentActivities) > 6 {
-		recentActivities = recentActivities[len(recentActivities)-6:]
-	}
-	var activityContext strings.Builder
-	for _, activity := range recentActivities {
-		role := strings.ToUpper(activity.Role)
-		if role == "" {
-			role = "SYSTEM"
-		}
-		activityContext.WriteString(fmt.Sprintf("%s [%s]: %s\n\n", role, activity.Type, activity.Content))
-	}
+	// Instructions (appears at top and bottom)
+	instructions := "A Jules session has entered the FAILED state. Provide a concise recovery plan and direct next-step instruction for the coding agent. Keep it practical and actionable."
 
 	// Documentation context from repo
 	docContext := ""
@@ -880,23 +856,39 @@ func buildRecoveryMessage(session models.JulesSession, activities []models.Jules
 		}
 	}
 
+	// Last 5 agent messages
+	var lastAgentMessages strings.Builder
+	agentCount := 0
+	for i := len(activities) - 1; i >= 0 && agentCount < 5; i-- {
+		if activities[i].Role == "agent" {
+			if agentCount > 0 {
+				lastAgentMessages.WriteString("\n---\n")
+			}
+			lastAgentMessages.WriteString(activities[i].Content)
+			agentCount++
+		}
+	}
+
 	// GitHub recent commits
 	commitContext := ""
 	if output, err := exec.Command("git", "-C", projectRoot, "log", "--oneline", "-10").Output(); err == nil {
 		commitContext = fmt.Sprintf("\n=== Recent Commits ===\n%s", string(output))
 	}
 
-	basePrompt := fmt.Sprintf(
-		"A Jules session has entered the FAILED state.\nSession: %s\nTitle: %s\n\n=== Last 5 Agent Messages ===\n%s\n\n=== Recent Activity ===\n%s\n\n=== Documentation ===\n%s\n%s\n\nProvide a concise recovery plan and direct next-step instruction for the coding agent. Keep it practical and actionable.",
-		session.ID, session.Title,
+	// Build prompt: instructions + docs + last 5 agent + commits + instructions again
+	prompt := fmt.Sprintf(
+		"INSTRUCTIONS:\n%s\n\nDOCUMENTATION:\n%s\n\nJULES AGENT LAST 5 MESSAGES:\n%s\n%s\n\nINSTRUCTIONS AGAIN:\n%s\n\nSession: %s\nTitle: %s",
+		instructions,
+		docContext,
 		lastAgentMessages.String(),
-		activityContext.String(),
-		docContext, commitContext)
+		commitContext,
+		instructions,
+		session.ID, session.Title)
 
 	if strings.TrimSpace(apiKey) != "" && apiKey != "placeholder" {
-		result, err := generateLLMText(provider, apiKey, settings.SupervisorModel, "You are a recovery supervisor helping an AI coding agent recover from a failed execution. Be concise, practical, and specific.", []LLMMessage{{
+		result, err := generateLLMText(provider, apiKey, settings.SupervisorModel, "You are a recovery supervisor. Follow the INSTRUCTIONS.", []LLMMessage{{
 			Role:    "user",
-			Content: basePrompt,
+			Content: prompt,
 		}})
 		if err == nil && strings.TrimSpace(result.Content) != "" {
 			return "Recovery Guidance:\n\n" + result.Content
