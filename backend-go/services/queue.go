@@ -760,16 +760,45 @@ func (w *Worker) handleCheckSession(payload string) (string, error) {
 		if len(lastActivities) > 0 && lastActivities[len(lastActivities)-1].Role == "user" {
 			return "none", nil
 		}
-		message := chooseNudgeMessage(settings)
-		ragContext := ""
-		if settings.SmartPilotEnabled {
-			query := session.Title
-			if strings.TrimSpace(query) == "" {
-				query = "recent development activity"
+		instructions := "Please instruct Google Jules agent to continue autonomously working on this project. Infer the next step based on the progress history and conversation."
+
+		// Documentation context
+		docContext := ""
+		projectRoot := getProjectRoot()
+		for _, docFile := range []string{"README.md", "ARCHITECTURE.md", "DEPLOY.md", "VISION.md", "ROADMAP.md", "MEMORY.md"} {
+			path := filepath.Join(projectRoot, docFile)
+			if content, err := os.ReadFile(path); err == nil && len(content) > 0 {
+				maxLen := 2000
+				if len(content) > maxLen {
+					content = content[:maxLen]
+				}
+				docContext += fmt.Sprintf("\n=== %s ===\n%s\n", docFile, string(content))
 			}
-			ragContext = buildRAGContext(query, settings, 3)
 		}
-		finalMessage := message + ragContext
+
+		// Last 5 agent messages
+		var lastAgentMessages strings.Builder
+		agentCount := 0
+		for i := len(lastActivities) - 1; i >= 0 && agentCount < 5; i-- {
+			if lastActivities[i].Role == "agent" {
+				if agentCount > 0 {
+					lastAgentMessages.WriteString("\n---\n")
+				}
+				lastAgentMessages.WriteString(lastActivities[i].Content)
+				agentCount++
+			}
+		}
+
+		// Git commits
+		commitContext := ""
+		if output, err := exec.Command("git", "-C", projectRoot, "log", "--oneline", "-10").Output(); err == nil {
+			commitContext = fmt.Sprintf("\n=== Recent Commits ===\n%s", string(output))
+		}
+
+		finalMessage := fmt.Sprintf(
+			"INSTRUCTIONS:\n%s\n\nDOCUMENTATION:\n%s\n\nJULES AGENT LAST 5 MESSAGES:\n%s\n%s\n\nINSTRUCTIONS AGAIN:\n%s",
+			instructions, docContext, lastAgentMessages.String(), commitContext, instructions)
+
 		if _, err := client.CreateActivity(session.ID, CreateActivityRequest{
 			Content: finalMessage,
 			Type:    "message",
@@ -786,8 +815,7 @@ func (w *Worker) handleCheckSession(payload string) (string, error) {
 				"event":           "session_nudged",
 				"sessionTitle":    session.Title,
 				"inactiveMinutes": int(time.Since(lastActivityTime).Minutes()),
-				"nudgeMessage":    message,
-				"usedRAG":         ragContext != "",
+				"nudgeMessage":    instructions,
 			},
 		)
 		emitDaemonEvent("activities_updated", map[string]interface{}{"sessionId": session.ID})
@@ -795,7 +823,7 @@ func (w *Worker) handleCheckSession(payload string) (string, error) {
 			"sessionId":       session.ID,
 			"sessionTitle":    session.Title,
 			"inactiveMinutes": int(time.Since(lastActivityTime).Minutes()),
-			"message":         message,
+			"message":         instructions,
 		})
 
 		timestamp := lastActivityTime.Format(time.RFC3339)
