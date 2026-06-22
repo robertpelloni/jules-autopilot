@@ -3379,3 +3379,178 @@ print(f'Status: {d[\"status\"]}  Daemon={d[\"checks\"][\"daemon\"][\"running\"]}
 **Action**: bash(command: "sleep 8 && tail -1 backend-go/watchdog.log && echo "" && curl -s http://localhost:8082/api/health | python3 -c "import sys,json;d=json.load(sys.stdin);print(f'PID={d[\"version\"]} AllServices: daemon={d[\"checks\"][\"daemon\"][\"running\"]} scheduler={d[\"checks\"][\"scheduler\"][\"running\"]} worker={d[\"checks\"][\"worker\"][\"running\"]}')"", timeout: 15)
 **Observation**: bash: success
 
+## Turn 8 | 2026-06-22T17:43:54.874Z | deepseek/deepseek-v4-flash
+
+**Thought**: 
+**Thinking**: All good. Let me commit, push, and verify.
+**Action**: bash(command: "cd backend-go && git add -A && git commit -m "fix: only block nudge if agent was active before last user message
+
+If the last message is from user and the message before it is from
+agent, the agent hasn't replied to our nudge yet — wait.
+If the last message is from user and the one before is also user,
+the agent never saw our nudge — bump again." && git push 2>&1", timeout: 30)
+**Observation**: bash: success
+
+## Turn 9 | 2026-06-22T17:44:27.574Z | deepseek/deepseek-v4-flash
+
+**Thought**: The `.exe~` backup file keeps sneaking in. Let me nuke it from tracking.
+**Thinking**: Let me clean up the tracked `backend.exe~` file that keeps getting included.
+**Action**: bash(command: "cd backend-go && echo "backend.exe~" >> .gitignore 2>&1 && git rm --cached backend.exe~ 2>&1 && git add .gitignore && git commit -m "chore: ignore editor backup files" && git push 2>&1", timeout: 15)
+**Observation**: bash: success
+
+## Turn 10 | 2026-06-22T17:44:32.891Z | deepseek/deepseek-v4-flash
+
+**Thought**: Clean. Running PID 46284, watchdog healthy, all pushed. Here's the final behavior:
+
+| Last 2 activities | Action |
+|---|---|
+| `[..., agent, agent]` | Agent idle → **bump** |
+| `[..., agent, **user**]` | We nudged, agent was active before it, no reply yet → **wait** |
+| `[..., user, **agent**]` | Agent replied to our nudge → **bump** (if threshold passed) |
+| `[..., user, **user**]` | Agent never saw first nudge → **bump again** |
+| `[user]` (single) | Only our message → **bump** |
+
+## Turn 1 | 2026-06-22T17:45:20.118Z | deepseek/deepseek-v4-flash
+
+**Thought**: Good call. LM Studio on local hardware can take several minutes. The current client has a 90s timeout. Let me give LM Studio a dedicated client that waits as long as needed.
+**Thinking**: The user is saying that LM Studio can take a long time to respond, and we need to make sure we wait long enough. Currently the HTTP client for LM Studio requests has a 90-second timeout:
+
+```go
+var llmHttpClient = &http.Client{
+	Timeout: 90 * time.Second,
+}
+```
+
+And for FreeLLM it's 10 minutes:
+```go
+var freellmHttpClient = &http.Client{
+	Timeout: 10 * time.Minute,
+}
+```
+
+But the LM Studio requests use `llmHttpClient` which has a 90-second timeout. The user wants us to wait "as long as necessary" for LM Studio. I should either:
+
+1. Increase the timeout for LM Studio specifically, or
+2. Create a separate longer timeout for LM Studio nudge requests
+
+Since "as long as necessary" for an LLM could mean many minutes (especially for complex models on local hardware), let me either bump the `llmHttpClient` timeout significantly or create a separate client for the nudge path.
+
+Actually, I shouldn't change `llmHttpClient` globally since other users of it (like risk scoring, reviews, etc.) might want the current 90s timeout. Instead, I should either:
+1. Use a longer timeout specifically in the nudge path, or
+2. Create a dedicated LM Studio client with a very long timeout
+
+The cleanest approach would be to use a custom HTTP client for the LM Studio nudge call. But the `generateLLMText` function doesn't accept a custom client - it uses the package-level `llmHttpClient`.
+
+Looking at the function, it creates its own requests and uses `llmHttpClient.Do(req)`. So I need to either:
+1. Modify `generateLLMText` to accept a timeout override, or
+2. Create a separate nudge function that uses a longer timeout, or
+3. Just increase the `llmHttpClient` timeout significantly
+
+Option 3 is simplest - since LM Studio is local, long timeouts are fine. But it might affect other callers that want fast failure.
+
+Option 1 is cleanest. Let me add a timeout parameter to `generateLLMText` or create a variant.
+
+Actually, looking at the code more carefully, `generateOpenRouterText` is what handles LM Studio. It uses `llmHttpClient` with 90s timeout. The simplest fix is to bump `llmHttpClient` to something like 10 minutes, since all its consumers should handle timeouts gracefully. But that might not be desired.
+
+Actually, let me just create a new client for LM Studio specifically. I can add an `lmStudioHttpClient` with a 10-minute timeout and use it in `generateOpenRouterText` when the request is going to LM Studio.
+
+Wait, looking at the code more carefully:
+
+```go
+var llmHttpClient = &http.Client{
+	Timeout: 90 * time.Second,
+}
+```
+
+And in `generateOpenRouterText`:
+```go
+resp, err := llmHttpClient.Do(retryReq)
+```
+
+The simplest and least disruptive approach: bump the global `llmHttpClient` timeout to something much longer like 10 minutes. The user said "wait as long as necessary" so even 10 min might not be enough for a very slow local model. But it's a reasonable upper bound.
+
+Actually, let me create a separate `lmStudioHttpClient` with a much longer timeout and use it only when the target is LM Studio.
+
+Let me check how generateOpenRouterText knows it's talking to LM Studio. Looking at the code:
+
+```go
+if strings.Contains(model, "lmstudio") || strings.HasPrefix(model, "gemma-4") {
+    apiURL = "http://localhost:1234/v1/chat/completions"
+    isLMStudio = true
+}
+```
+
+So I could add a special client for LM Studio requests. Let me do this.
+**Action**: read(offset: 281, path: "backend-go/services/llm.go", limit: 15)
+**Observation**: read: success
+
+## Turn 2 | 2026-06-22T17:45:30.260Z | deepseek/deepseek-v4-flash
+
+**Thought**: 
+**Thinking**: Let me look at the HTTP client declarations and where they're used for LM Studio.
+**Action**: grep(pattern: "llmHttpClient|freellmHttpClient|freellmSem", path: "backend-go/services/llm.go", context: 2)
+**Observation**: grep: success
+
+## Turn 3 | 2026-06-22T17:45:33.128Z | deepseek/deepseek-v4-flash
+
+**Thought**: 
+**Thinking**: I can see the current setup:
+- `llmHttpClient` = 90s timeout (used for OpenRouter/LM Studio)
+- `freellmHttpClient` = 10 min timeout (used for FreeLLM on port 4000)
+
+LM Studio calls go through `generateOpenRouterText` which uses `llmHttpClient.Do(retryReq)` at line 391.
+
+I need to create a separate client for LM Studio with a much longer timeout and route LM Studio requests through it. Let me modify:
+
+1. Add `lmStudioHttpClient` with a very long timeout (let's say 30 minutes or no timeout)
+2. In `generateOpenRouterText`, use `lmStudioHttpClient` when it's an LM Studio request
+
+Let me look at the full function to find the right place.
+**Action**: read(offset: 308, path: "backend-go/services/llm.go", limit: 15)
+**Observation**: read: success
+
+## Turn 4 | 2026-06-22T17:45:36.483Z | deepseek/deepseek-v4-flash
+
+**Thought**: 
+**Thinking**: I need to:
+1. Add `lmStudioHttpClient` with a very long timeout
+2. In `generateOpenRouterText`, use `lmStudioHttpClient` when the URL is LM Studio's localhost:1234
+
+Let me find the exact line where `llmHttpClient.Do(retryReq)` is called and check the context.
+**Action**: read(offset: 380, path: "backend-go/services/llm.go", limit: 25)
+**Observation**: read: success
+
+## Turn 5 | 2026-06-22T17:45:39.568Z | deepseek/deepseek-v4-flash
+
+**Thought**: 
+**Thinking**: Now I can see the structure. The `isLMStudio` flag is already set earlier in the function when it detects LM Studio from the model name. The request uses `llmHttpClient.Do(retryReq)` at line 391.
+
+I need to:
+1. Add `lmStudioHttpClient` with a 30-minute timeout next to the other clients
+2. At the point where `llmHttpClient.Do(retryReq)` is called, check if `isLMStudio` is true and use `lmStudioHttpClient` instead
+**Action**: edit(path: "backend-go/services/llm.go", edits: [object Object],[object Object])
+**Observation**: edit: success
+
+## Turn 6 | 2026-06-22T17:45:50.839Z | deepseek/deepseek-v4-flash
+
+**Thought**: Good. Let me build, deploy, push, and save the memory.
+**Thinking**: Good, clean build. Let me now build, restart, and push.
+
+Let me also save a memory about this for future reference.
+**Action**: bash(command: "cd backend-go && go build -o backend.exe . 2>&1 && echo "BUILD OK"", timeout: 30), memory_search(query: "LM Studio timeout client long wait")
+**Observation**: bash: success; memory_search: error
+
+## Turn 7 | 2026-06-22T17:45:57.874Z | deepseek/deepseek-v4-flash
+
+**Thought**: 
+**Thinking**: Memory search tool not available. Let me save a skill about this instead. Let me proceed with the deploy and push first.
+**Action**: bash(command: "powershell -Command "Stop-Process -Name 'backend' -Force -ErrorAction SilentlyContinue; Write-Output 'Killed'" && sleep 18 && echo "=== STATUS ===" && curl -s http://localhost:8082/api/health | python3 -c "import sys,json;d=json.load(sys.stdin);print(f'OK daemon={d[\"checks\"][\"daemon\"][\"running\"]} sched={d[\"checks\"][\"scheduler\"][\"running\"]} worker={d[\"checks\"][\"worker\"][\"running\"]}')" && tail -3 backend-go/watchdog.log 2>&1", timeout: 30)
+**Observation**: bash: success
+
+## Turn 8 | 2026-06-22T17:46:21.465Z | deepseek/deepseek-v4-flash
+
+**Thought**: 
+**Thinking**: Watchdog detected it, restarted. Let me wait for the healthy confirmation and then push.
+**Action**: bash(command: "sleep 8 && tail -1 backend-go/watchdog.log && echo "" && curl -s http://localhost:8082/api/health | python3 -c "import sys,json;d=json.load(sys.stdin);print(f'All green: daemon={d[\"checks\"][\"daemon\"][\"running\"]} sched={d[\"checks\"][\"scheduler\"][\"running\"]} worker={d[\"checks\"][\"worker\"][\"running\"]} db={d[\"checks\"][\"database\"][\"status\"]}')"", timeout: 15)
+**Observation**: bash: success
+

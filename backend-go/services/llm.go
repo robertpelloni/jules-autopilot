@@ -309,6 +309,11 @@ var llmHttpClient = &http.Client{
 	Timeout: 90 * time.Second,
 }
 
+// LM Studio can take many minutes on local hardware — wait as long as needed.
+var lmStudioHttpClient = &http.Client{
+	Timeout: 30 * time.Minute,
+}
+
 var freellmHttpClient = &http.Client{
 	Timeout: 10 * time.Minute,
 }
@@ -388,7 +393,11 @@ func generateOpenRouterText(apiKey, model, systemPrompt string, messages []LLMMe
 			retryReq.Header.Set("X-Title", "Jules Autopilot")
 		}
 
-		resp, err := llmHttpClient.Do(retryReq)
+		client := llmHttpClient
+		if isLMStudio {
+			client = lmStudioHttpClient
+		}
+		resp, err := client.Do(retryReq)
 		if err != nil {
 			lastErr = err
 			continue
