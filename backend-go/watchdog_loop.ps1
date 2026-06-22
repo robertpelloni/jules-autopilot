@@ -7,7 +7,7 @@ Add-Content $logFile "[$(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')] Watchdog start
 while ($true) {
     $healthy = $false
     try {
-        $r = Invoke-WebRequest -Uri 'http://127.0.0.1:8081/api/health' -TimeoutSec 10 -UseBasicParsing -ErrorAction Stop
+        $r = Invoke-WebRequest -Uri 'http://127.0.0.1:8082/api/health' -TimeoutSec 10 -UseBasicParsing -ErrorAction Stop
         if ($r.StatusCode -eq 200) { $healthy = $true }
     } catch {}
 
@@ -30,7 +30,7 @@ while ($true) {
         for ($i = 0; $i -lt 12; $i++) {
             Start-Sleep -Seconds 5
             try {
-                $r = Invoke-WebRequest -Uri "http://127.0.0.1:8081/api/health" -TimeoutSec 3 -UseBasicParsing -ErrorAction Stop
+                $r = Invoke-WebRequest -Uri "http://127.0.0.1:8082/api/health" -TimeoutSec 3 -UseBasicParsing -ErrorAction Stop
                 if ($r.StatusCode -eq 200) {
                     Add-Content $logFile "[$(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')] Backend is healthy"
                     break

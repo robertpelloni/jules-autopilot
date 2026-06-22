@@ -1,0 +1,35 @@
+{
+  "services": {
+    "lm-studio": {
+      "name": "LM Studio",
+      "port": 1234,
+      "protocol": "http",
+      "description": "Local LLM inference server",
+      "pid": 7976
+    },
+    "freellm": {
+      "name": "FreeLLM",
+      "port": 4000,
+      "protocol": "http",
+      "description": "Free LLM proxy (OpenAI-compatible)",
+      "pid": 20072
+    },
+    "freellm-web": {
+      "name": "FreeLLM Web",
+      "port": 8080,
+      "protocol": "http",
+      "description": "FreeLLM web interface (same process as FreeLLM)",
+      "pid": 20072,
+      "note": "Same PID as freellm — FreeLLM serves both :4000 and :8080"
+    },
+    "jules-backend": {
+      "name": "Jules Autopilot Backend",
+      "port": 8081,
+      "protocol": "http",
+      "description": "Go backend server for Jules Autopilot",
+      "pid": 43228,
+      "env_var": "PORT"
+    }
+  },
+  "ports": [1234, 4000, 8080, 8081]
+}
