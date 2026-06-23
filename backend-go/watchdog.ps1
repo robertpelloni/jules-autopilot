@@ -2,7 +2,7 @@
 # Checks every 30s, restarts if dead.
 # Run: powershell -WindowStyle Hidden -File watchdog.ps1
 
-$port = 8081
+$port = 8082
 $backendDir = Split-Path -Parent $MyInvocation.MyCommand.Path
 $logFile = Join-Path $backendDir "watchdog.log"
 $serverLog = Join-Path $backendDir "server.log"
@@ -32,10 +32,10 @@ while ($true) {
     # Set env var before starting so it's inherited
     $env:PORT = "$port"
 
-    # Start fresh
+    # Start fresh using pre-built binary
     $startInfo = New-Object System.Diagnostics.ProcessStartInfo
-    $startInfo.FileName = "go"
-    $startInfo.Arguments = "run ."
+    $startInfo.FileName = (Join-Path $backendDir "backend.exe")
+    $startInfo.Arguments = ""
     $startInfo.WorkingDirectory = $backendDir
     $startInfo.RedirectStandardOutput = $true
     $startInfo.RedirectStandardError = $true
