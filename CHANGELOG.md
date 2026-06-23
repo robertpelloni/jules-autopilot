@@ -2,6 +2,25 @@
 
 All notable changes to this project will be documented in this file.
 
+## [3.6.7] - 2026-06-23
+
+### Changed
+- Recovery messages removed entirely — all sessions get the same nudge treatment
+- Nudge prompt now goes to LM Studio; only LM Studio's response goes to Jules
+- Project docs/commits resolved from workspace mirror paths instead of autopilot root
+- LM Studio serialized to 1 concurrent call with dedicated 30-min timeout client
+- Inactivity threshold reduced to 1 min for failed/paused sessions, 10 min for others
+
+### Added
+- Panic recovery with auto-restart in daemon loop
+- Startup broadcast: sends "continue" directly to all sessions on restart
+
+### Fixed
+- Daemon goroutine crash silenced by missing recover()
+- Jules API timeout increased from 120s to 300s
+- Watchdog EnvironmentVariables null crash
+- Sessions blocked by 30-min daemon dedup
+
 ## [3.6.6] - 2026-06-15
 
 ### Added
