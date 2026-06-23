@@ -175,9 +175,9 @@ func checkDiskSpace() DependencyCheck {
 	// Get disk usage — use wmic on Windows (doesn't need admin)
 	var cmd *exec.Cmd
 	if runtime.GOOS == "windows" {
-		cmd = exec.Command("wmic", "logicaldisk", "where", "DeviceID='"+wd[:2]+"'", "get", "FreeSpace,Size", "/format:list")
+		cmd = Cmd("wmic", "logicaldisk", "where", "DeviceID='"+wd[:2]+"'", "get", "FreeSpace,Size", "/format:list")
 	} else {
-		cmd = exec.Command("df", "-h", wd)
+		cmd = Cmd("df", "-h", wd)
 	}
 	output, err := cmd.CombinedOutput()
 	if err != nil {
@@ -256,7 +256,7 @@ func checkGitAvailability() DependencyCheck {
 		CheckedAt: time.Now(),
 	}
 
-	cmd := exec.Command("git", "--version")
+	cmd := Cmd("git", "--version")
 	output, err := cmd.CombinedOutput()
 	check.Latency = time.Since(start).Milliseconds()
 

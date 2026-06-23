@@ -11510,3 +11510,323 @@ Let me build one more time to make sure everything compiles, then commit and dep
 **Action**: bash(command: "cd backend-go && go build -o backend.exe . 2>&1 && echo "BUILD OK"", timeout: 30)
 **Observation**: bash: success
 
+## Turn 24 | 2026-06-23T22:04:44.439Z | deepseek/deepseek-v4-flash
+
+**Thought**: 
+**Thinking**: Now let me commit and push.
+**Action**: bash(command: "cd backend-go && git add -A && git commit -m "fix: hide console windows for subprocesses, use pre-built backend.exe in watchdog
+
+- Added hideWindow() helper (Windows: HideWindow=true, others: no-op)
+- Applied to shadow_pilot.go (govulncheck, npm audit, git diff)
+- Fixed watchdog.ps1 to run backend.exe directly instead of go run .
+- Fixed watchdog port from 8081 to 8082" && git push 2>&1", timeout: 15)
+**Observation**: bash: success
+
+## Turn 25 | 2026-06-23T22:04:50.549Z | deepseek/deepseek-v4-flash
+
+**Thought**: 
+**Thinking**: Good, all changes committed and pushed. Let me also restart the watchdog so it uses the new settings (port 8082, backend.exe directly). Let me kill the current watchdog and start a new one.
+
+Actually, the watchdog is running as a separate process. I should kill it and restart it with the new script. Or the user may need to restart it manually. The watchdog doesn't restart itself on script changes. I should let the user know.
+
+Actually, I can also kill the watchdog process. Let me check if it's running.
+**Action**: bash(command: "powershell -Command "Get-Process -Name 'powershell','pwsh' -ErrorAction SilentlyContinue | Format-Table Id,ProcessName,StartTime,CommandLine -AutoSize" 2>&1 | head -10", timeout: 5)
+**Observation**: bash: success
+
+## Turn 26 | 2026-06-23T22:04:57.073Z | deepseek/deepseek-v4-flash
+
+**Thought**: 
+**Thinking**: Hard to tell which one is the watchdog. Let me check by looking at the running processes with their command lines.
+**Action**: bash(command: "powershell -Command "Get-WmiObject Win32_Process -Filter \"Name='powershell.exe'\" | Select-Object ProcessId,CommandLine | Format-Table -AutoSize" 2>&1", timeout: 5)
+**Observation**: bash: success
+
+## Turn 27 | 2026-06-23T22:05:03.555Z | deepseek/deepseek-v4-flash
+
+**Thought**: 
+**Thinking**: PID 57336 is running the watchdog (ExecutionPolicy Bypass -File "C:\Users\hyper\..."). But the path is truncated. Let me check if it's the watchdog.
+**Action**: bash(command: "powershell -Command "(Get-Process -Id 57336).CommandLine" 2>&1", timeout: 5)
+**Observation**: bash: success
+
+## Turn 28 | 2026-06-23T22:05:09.488Z | deepseek/deepseek-v4-flash
+
+**Thought**: 
+**Thinking**: Let me just check the paths of the PowerShell processes to find the watchdog.
+**Action**: bash(command: "powershell -Command "Get-CimInstance Win32_Process -Filter \"Name='powershell.exe'\" | Select-Object ProcessId, CommandLine | Where-Object { \$_.CommandLine -match 'watchdog' }" 2>&1", timeout: 5)
+**Observation**: bash: success
+
+## Turn 29 | 2026-06-23T22:05:15.614Z | deepseek/deepseek-v4-flash
+
+**Thought**: 
+**Thinking**: PID 57336 is the watchdog. Let me kill it and start a new one with the updated script. But wait - the watchdog is running with `-WindowStyle Hidden` (from the comment in the script). If I kill it and start a new one, the new watchdog will use the updated script with `backend.exe` instead of `go run .`, port 8082 instead of 8081.
+
+Let me also check what the full command line is for PID 57336 to confirm it's the watchdog.
+**Action**: bash(command: "powershell -Command "Get-CimInstance Win32_Process -Filter \"ProcessId=57336\" | Select-Object CommandLine" 2>&1", timeout: 5)
+**Observation**: bash: success
+
+## Turn 30 | 2026-06-23T22:05:22.149Z | deepseek/deepseek-v4-flash
+
+**Thought**: 
+**Thinking**: The path is truncated. Let me try to see the full path by accessing a different property or using a workaround.
+**Action**: bash(command: "powershell -Command "Get-Process -Id 57336 | Select-Object -ExpandProperty Path" 2>&1", timeout: 5)
+**Observation**: bash: success
+
+## Turn 31 | 2026-06-23T22:05:27.587Z | deepseek/deepseek-v4-flash
+
+**Thought**: 
+**Thinking**: That's just the executable path. I can't easily get the script path from a process. But based on the time it was started (6/22) and the command line mentioning a script file, it's likely the watchdog. Let me just kill it and restart it.
+
+But I should be careful - I don't want to kill someone else's critical PowerShell process. Let me check by looking at the script that PID 57336 might be running. I'll check for the watchdog.log.
+**Action**: bash(command: "powershell -Command "Get-CimInstance Win32_Process -Filter \"ProcessId=57336\" | Select-Object -ExpandProperty CommandLine" 2>&1", timeout: 5)
+**Observation**: bash: success
+
+## Turn 32 | 2026-06-23T22:05:34.890Z | deepseek/deepseek-v4-flash
+
+**Thought**: Different script running — `watchdog_loop.ps1`, not `watchdog.ps1`. Let me check what that is.
+**Thinking**: It's running `watchdog_loop.ps1`, not `watchdog.ps1`! There's a different script running. I updated `watchdog.ps1` but the old watchdog uses `watchdog_loop.ps1`. Let me check that script.
+**Action**: bash(command: "cat backend-go/watchdog_loop.ps1 2>&1 | head -20", timeout: 5)
+**Observation**: bash: success
+
+## Turn 33 | 2026-06-23T22:05:37.984Z | deepseek/deepseek-v4-flash
+
+**Thought**: The actual watchdog is `watchdog_loop.ps1` (already uses port 8082 and `backend.exe`). My `watchdog.ps1` edits were to a stale copy. The real flash culprit was `govulncheck`/`npm audit` subprocesses — now fixed with `hideWindow()`.
+
+Let me verify the backend is running healthy:
+**Thinking**: The already-running watchdog uses `watchdog_loop.ps1`, not `watchdog.ps1`. This one already uses port 8082 and backend.exe directly. So the watchdog was already updated! The changes I made to `watchdog.ps1` are to an unused file.
+
+The console windows flashing must be purely from `govulncheck` and `npm audit` subprocesses in shadow_pilot.go, which I've now fixed with `hideWindow()`. The fix should work now.
+
+Let me just commit and verify everything is good.
+**Action**: bash(command: "curl -s --max-time 5 http://localhost:8082/api/health | python3 -c "
+import sys,json;d=json.load(sys.stdin)
+print(f'Daemon: {d[\"checks\"][\"daemon\"][\"running\"]}')
+print(f'Queue: {d[\"queue\"]}')
+print(f'Sessions: {d[\"totals\"][\"sessions\"]}')
+" 2>&1", timeout: 10)
+**Observation**: bash: success
+
+## Turn 34 | 2026-06-23T22:05:42.763Z | deepseek/deepseek-v4-flash
+
+**Thought**: All good. The console window flashes were from `shadow_pilot.go` spawning `govulncheck` and `npm audit` subprocesses. Fixed with `hideWindow()` helper that sets `HideWindow=true` on Windows. Deployed and committed.
+
+## Turn 1 | 2026-06-23T23:23:53.162Z | deepseek/deepseek-v4-flash
+
+**Thought**: The binary might still be the old one. Let me rebuild and force restart the watchdog to pick up the fix.
+**Thinking**: The user is saying console windows are still popping up. My fix to shadow_pilot.go may not have been deployed yet - the watchdog uses `watchdog_loop.ps1` which runs `backend.exe`. Let me check if the binary was updated. I killed the backend, the watchdog restarted it, but it may have restarted with the OLD binary (before my fix). Let me check if the binary has the fix.
+
+Also, let me check if there are other places creating subprocesses that I missed. Let me look at:
+1. `ci_monitor.go` - runs many git commands
+2. `dependency_check.go` - runs wmic
+3. `queue.go` line 748 - runs git log
+
+Also, the `go` process from the old watchdog might still be around.
+
+Let me check what's currently running and whether the binary has the hideWindow changes.
+**Action**: bash(command: "cd backend-go && go build -o backend.exe . 2>&1 && echo "BUILD OK"", timeout: 30)
+**Observation**: bash: success
+
+## Turn 2 | 2026-06-23T23:25:00.743Z | deepseek/deepseek-v4-flash
+
+**Thought**: 
+**Thinking**: Good, built with the hideWindow fix. Now let me also check what subprocesses might be creating windows that I missed. Let me also apply hideWindow to other exec.Command calls like ci_monitor.go, dependency_check.go, and queue.go.
+
+But first, let me just restart and see if the issue persists.
+**Action**: bash(command: "powershell -Command "Stop-Process -Name 'backend' -Force -ErrorAction SilentlyContinue" && sleep 25 && curl -s --max-time 5 http://localhost:8082/api/health 2>&1 | python3 -c "import sys,json;d=json.load(sys.stdin);print(f'OK daemon={d[\"checks\"][\"daemon\"][\"running\"]}')" 2>&1", timeout: 35)
+**Observation**: bash: success
+
+## Turn 3 | 2026-06-23T23:25:32.751Z | deepseek/deepseek-v4-flash
+
+**Thought**: Let me fix the remaining `exec.Command` calls in `ci_monitor.go` and `dependency_check.go` that could also be causing flashes.
+**Thinking**: Wait, the backend was killed but came right back before I even waited. The watchdog (watchdog_loop.ps1) detected the kill and restarted. Good.
+
+But the issue: `ci_monitor.go` also runs many `git` commands using `exec.Command` which also create console windows on Windows. Let me fix those too, plus the `wmic` command in dependency_check.go.
+
+Let me also check if `dependency_check.go` is still in use.
+**Action**: read(limit: 10, offset: 55, path: "C:/Users/hyper/workspace/jules-autopilot/backend-go/services/ci_monitor.go")
+**Observation**: read: success
+
+## Turn 4 | 2026-06-23T23:25:37.849Z | deepseek/deepseek-v4-flash
+
+**Thought**: 
+**Thinking**: Lines 57, 74, 113, 118, 119, 159, 173 all have exec.Command calls. Let me add hideWindow to all of them. But I can do a bulk replace using sed -i.
+**Action**: bash(command: "cd backend-go/services && sed -i 's/if err := exec\.Command(/if err := func() *exec.Cmd { c := exec.Command(/g' ci_monitor.go && sed -i 's/statusOutput, err := exec\.Command(/statusOutput, err := func() *exec.Cmd { c := exec.Command(/g' ci_monitor.go && sed -i 's/lastMsg, err := exec\.Command(/lastMsg, err := func() *exec.Cmd { c := exec.Command(/g' ci_monitor.go && sed -i 's/commitHash, _ := exec\.Command(/commitHash, _ := func() *exec.Cmd { c := exec.Command(/g' ci_monitor.go && sed -i 's/branch, _ := exec\.Command(/branch, _ := func() *exec.Cmd { c := exec.Command(/g' ci_monitor.go && sed -i 's/output, err := exec\.Command(/output, err := func() *exec.Cmd { c := exec.Command(/g' ci_monitor.go && echo "DONE"", timeout: 5)
+**Observation**: bash: success
+
+## Turn 5 | 2026-06-23T23:25:45.943Z | deepseek/deepseek-v4-flash
+
+**Thought**: That sed made a mess. Let me restore and do it properly.
+**Thinking**: Now I need to:
+1. Replace each `c := exec.Command(...)` back to just `exec.Command(...)` — wait, no, I need to keep it as is.
+2. Add `hideWindow(c)` before each call.
+3. But the sed command I used is wrong. It added `func() *exec.Cmd { c := ` before each exec.Command call, which is not what I want. I should have just added `hideWindow(cmd)` after each exec.Command call.
+
+Let me revert and do it properly. The sed commands made a mess. Let me restore the file from git and try again.
+**Action**: bash(command: "cd backend-go/services && git checkout -- ci_monitor.go && echo "RESTORED"", timeout: 5)
+**Observation**: bash: success
+
+## Turn 6 | 2026-06-23T23:25:52.023Z | deepseek/deepseek-v4-flash
+
+**Thought**: Let me add `Cmd` wrapper to services and do the replacement properly.
+**Thinking**: Let me use the edit tool to add `hideWindow(cmd)` to each location individually. Let me list all the exec.Command calls in ci_monitor.go:
+
+Line 57: `if err := exec.Command("git", "-C", repo.LocalPath, "rev-parse", "--git-dir").Run(); err != nil {`
+Line 74: `statusOutput, err := exec.Command("git", "-C", repo.LocalPath, "status", "--porcelain").CombinedOutput()`
+Line 113: `lastMsg, err := exec.Command("git", "-C", repo.LocalPath, "log", "-1", "--format=%s").CombinedOutput()`
+Line 118: `commitHash, _ := exec.Command("git", "-C", repo.LocalPath, "log", "-1", "--format=%H").CombinedOutput()`
+Line 119: `branch, _ := exec.Command("git", "-C", repo.LocalPath, "rev-parse", "--abbrev-ref", "HEAD").CombinedOutput()`
+Line 159: `output, err := exec.Command("git", "-C", repoPath, "diff", "--name-only", "--diff-filter=U").CombinedOutput()`
+Line 173: `output, err := exec.Command("git", "-C", repoPath, "ls-files", "*_test.go", "*_test.ts", "*_test.tsx", "*.test.ts", "*.test.tsx", "*.spec.ts", "*.spec.tsx").CombinedOutput()`
+
+All of these are single-line patterns. I can't easily add an intermediate line with the edit tool for each one. Let me use a different approach: use Python to do the transformations properly.
+
+Actually, the simplest approach: just add `hideWindow(cmd)` as a function that wraps `exec.Command`. Let me change the approach: instead of modifying every call site, I can modify the `exec` package usage.
+
+Better idea: Create a wrapper function `Cmd` that wraps `exec.Command` with hideWindow:
+
+```go
+func Cmd(name string, args ...string) *exec.Cmd {
+    cmd := exec.Command(name, args...)
+    hideWindow(cmd)
+    return cmd
+}
+```
+
+Then I need to replace `exec.Command(` with `services.Cmd(` (or just `Cmd(` if in the same package). But this would need many edits.
+
+Actually, for `ci_monitor.go`, the simplest approach is to just use a single edit that replaces the entire `exec.Command` calls with `Cmd(`:
+
+```go
+// Replace all exec.Command with Cmd (a wrapper that hides windows)
+```
+
+Let me add `Cmd` to services, then do a bulk text replacement.
+**Action**: read(limit: 10, offset: 1, path: "C:/Users/hyper/workspace/jules-autopilot/backend-go/services/hide_window_windows.go")
+**Observation**: read: success
+
+## Turn 7 | 2026-06-23T23:25:58.844Z | deepseek/deepseek-v4-flash
+
+**Thought**: Let me check the watchdog script for hidden window issues.
+**Thinking**: Now replace all exec.Command calls in ci_monitor.go with a new Cmd wrapper that hides windows.Let me add a `Cmd` wrapper to hide_window_windows.go, then do the bulk sed replacement on ci_monitor.go. But actually, just two files: ci_monitor.go and queue.go (the git command).
+
+Actually, let me check if the ci_monitor.go functions are even being called. If they're triggered rarely or not at all, they might not be the cause of the popup. The `git` commands run fast, so they might flash but not be noticeable.
+
+The user says "somethings till popping up" — maybe it's not the Go binary at all. Let me check if there's something else starting processes. Let me also check what the watchdog_loop.ps1 does.
+
+Wait, the watchdog_loop.ps1 uses `Start-Process` which might create a window. Let me check the watchdog script to see if it starts with hidden window.
+**Action**: read(path: "C:/Users/hyper/workspace/jules-autopilot/backend-go/watchdog_loop.ps1")
+**Observation**: read: success
+
+## Turn 8 | 2026-06-23T23:26:03.381Z | deepseek/deepseek-v4-flash
+
+**Thought**: The watchdog's already clean. The flashes are from the subprocesses. Let me add a `Cmd` wrapper and fix all remaining calls.
+**Thinking**: The watchdog already uses `CreateNoWindow = $true` and `UseShellExecute = $false`. So the backend window shouldn't flash.
+
+The issue must be from subprocess spawns. Let me check if `ci_monitor.go` functions are actively being called. The daemon's tick checks for CI status via `checkRepoCIStatus`.
+
+Actually, let me also check `queue.go` line 748 - it runs a git command too. Let me find all remaining exec.Command calls I haven't fixed.
+
+Also, I notice `dependency_check.go` at line 178-180 runs `wmic` or `df -h`. These could also create windows.
+
+Let me just fix all remaining exec.Command calls using sed to add the Cmd wrapper. I'll:
+1. Add a Cmd wrapper function to hide_window_windows.go
+2. Run sed to replace `exec.Command(` with `hideWindowCmd(` in the remaining files
+3. Build
+**Action**: edit(edits: [object Object], path: "C:/Users/hyper/workspace/jules-autopilot/backend-go/services/hide_window_windows.go")
+**Observation**: edit: success
+
+## Turn 9 | 2026-06-23T23:26:23.835Z | deepseek/deepseek-v4-flash
+
+**Thought**: 
+**Thinking**: Now let me also add `Cmd` to the non-Windows version, then do bulk replacement in ci_monitor.go, dependency_check.go, queue.go.
+
+Let me first add to the other file as well.
+**Action**: edit(edits: [object Object], path: "C:/Users/hyper/workspace/jules-autopilot/backend-go/services/hide_window_other.go")
+**Observation**: edit: success
+
+## Turn 10 | 2026-06-23T23:26:36.684Z | deepseek/deepseek-v4-flash
+
+**Thought**: 
+**Thinking**: Now let me do bulk replacements of `exec.Command(` with `Cmd(` in all the service files that use it.
+**Action**: bash(command: "cd backend-go/services && for f in ci_monitor.go dependency_check.go queue.go shadow_pilot.go; do echo "=== $f ===" && grep -n "exec.Command" "$f" && echo; done", timeout: 5)
+**Observation**: bash: success
+
+## Turn 11 | 2026-06-23T23:26:40.283Z | deepseek/deepseek-v4-flash
+
+**Thought**: 
+**Thinking**: shadow_pilot.go already has `hideWindow(cmd)` after each exec.Command, so I don't need to replace those. But the ones in ci_monitor.go, dependency_check.go, and queue.go don't have it. Let me replace `exec.Command(` with `Cmd(` in all those files using sed.
+
+Wait, I can't just replace `exec.Command(` with `Cmd(` because the `Cmd` function is from the same package `services`, so it would be called as just `Cmd(...)`. Let me do `sed -i 's/exec\.Command(/Cmd(/g'` on those files.
+
+But `exec` is already imported in those files, so `Cmd` would resolve to the services package function. That should work.
+**Action**: bash(command: "cd backend-go/services && for f in ci_monitor.go dependency_check.go queue.go; do sed -i 's/exec\.Command(/Cmd(/g' "$f" && echo "Fixed: $f"; done", timeout: 5)
+**Observation**: bash: success
+
+## Turn 12 | 2026-06-23T23:26:44.521Z | deepseek/deepseek-v4-flash
+
+**Thought**: 
+**Thinking**: Now build to verify.
+**Action**: bash(command: "cd backend-go && go build -o backend.exe . 2>&1 && echo "BUILD OK"", timeout: 30)
+**Observation**: bash: error
+
+## Turn 13 | 2026-06-23T23:26:48.178Z | deepseek/deepseek-v4-flash
+
+**Thought**: 
+**Thinking**: `os/exec` is no longer used in queue.go since I replaced all `exec.Command` with `Cmd`. Let me remove the unused import.
+**Action**: read(limit: 15, offset: 1, path: "C:/Users/hyper/workspace/jules-autopilot/backend-go/services/queue.go")
+**Observation**: read: success
+
+## Turn 14 | 2026-06-23T23:26:50.745Z | deepseek/deepseek-v4-flash
+
+**Thought**: 
+**Thinking**: Remove `"os/exec"` from the import. Let me check if it's still used anywhere else in queue.go.
+**Action**: bash(command: "cd backend-go && grep -n "os/exec\|exec\.Command\|exec\.LookPath\|\.Run()" services/queue.go | grep -v "^.*:"", timeout: 5)
+**Observation**: bash: error
+
+## Turn 15 | 2026-06-23T23:26:53.760Z | deepseek/deepseek-v4-flash
+
+**Thought**: 
+**Thinking**: No remaining uses of os/exec in queue.go. Let me remove the import.
+**Action**: edit(edits: [object Object], path: "C:/Users/hyper/workspace/jules-autopilot/backend-go/services/queue.go")
+**Observation**: edit: success
+
+## Turn 16 | 2026-06-23T23:27:06.091Z | deepseek/deepseek-v4-flash
+
+**Thought**: 
+**Thinking**: The error shows at line 12 "path/filepath" but it says `"os/exec" imported and not used`. This is confusing. Let me check the file to see what's actually happening. The LSP says os/exec is still imported at line 12, but I removed it. Maybe it's not actually removed. Let me read the imports.
+**Action**: read(limit: 20, offset: 1, path: "C:/Users/hyper/workspace/jules-autopilot/backend-go/services/queue.go")
+**Observation**: read: success
+
+## Turn 17 | 2026-06-23T23:27:16.755Z | deepseek/deepseek-v4-flash
+
+**Thought**: 
+**Thinking**: The import `"os/exec"` is gone. The file looks fine. The LSP error might be stale. Let me try building again.
+**Action**: bash(command: "cd backend-go && go build -o backend.exe . 2>&1 && echo "BUILD OK"", timeout: 30)
+**Observation**: bash: success
+
+## Turn 18 | 2026-06-23T23:27:23.981Z | deepseek/deepseek-v4-flash
+
+**Thought**: 
+**Thinking**: Clean build. Let me also check if the other files still have os/exec import that's now unused.
+**Action**: bash(command: "cd backend-go && go build ./... 2>&1", timeout: 30)
+**Observation**: bash: success
+
+## Turn 19 | 2026-06-23T23:27:29.864Z | deepseek/deepseek-v4-flash
+
+**Thought**: All clean. Let me deploy and restart.
+**Thinking**: All clean. Now let me deploy - rebuild backend.exe and restart.
+**Action**: bash(command: "cd backend-go && go build -o backend.exe . 2>&1 && echo "BUILD OK"", timeout: 30)
+**Observation**: bash: success
+
+## Turn 20 | 2026-06-23T23:27:33.577Z | deepseek/deepseek-v4-flash
+
+**Thought**: 
+**Thinking**: Wait, we already built. Let me just kill and let watchdog restart.
+**Action**: bash(command: "powershell -Command "Stop-Process -Name 'backend' -Force -ErrorAction SilentlyContinue" && sleep 25 && curl -s --max-time 5 http://localhost:8082/api/health | python3 -c "import sys,json;d=json.load(sys.stdin);print(f'OK daemon={d[\"checks\"][\"daemon\"][\"running\"]}')"", timeout: 35)
+**Observation**: bash: error
+
+## Turn 21 | 2026-06-23T23:28:06.361Z | deepseek/deepseek-v4-flash
+
+**Thought**: 
+**Thinking**: Backend not up yet. Wait more.
+**Action**: bash(command: "sleep 15 && curl -s --max-time 5 http://localhost:8082/api/health | python3 -c "import sys,json;d=json.load(sys.stdin);print(f'OK daemon={d[\"checks\"][\"daemon\"][\"running\"]}')"", timeout: 25)
+**Observation**: bash: success
+

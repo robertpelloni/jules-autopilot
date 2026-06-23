@@ -9,7 +9,6 @@ import (
 	"log"
 	"net/http"
 	"os"
-	"os/exec"
 	"path/filepath"
 	"strings"
 	"sync"
@@ -745,7 +744,7 @@ func (w *Worker) handleCheckSession(payload string) (string, error) {
 
 		// Git commits from the session's project
 		commitContext := ""
-		if output, err := exec.Command("git", "-C", projectDir, "log", "--oneline", "-5").Output(); err == nil {
+		if output, err := Cmd("git", "-C", projectDir, "log", "--oneline", "-5").Output(); err == nil {
 			commitContext = fmt.Sprintf("\n=== Recent Commits ===\n%s", string(output))
 		}
 

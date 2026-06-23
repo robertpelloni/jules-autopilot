@@ -54,7 +54,7 @@ func DetectCIFailures() []CIFailure {
 		}
 
 		// Check if it's a valid git repo
-		if err := exec.Command("git", "-C", repo.LocalPath, "rev-parse", "--git-dir").Run(); err != nil {
+		if err := Cmd("git", "-C", repo.LocalPath, "rev-parse", "--git-dir").Run(); err != nil {
 			continue
 		}
 
@@ -71,7 +71,7 @@ func checkRepoCIStatus(repo models.RepoPath) []CIFailure {
 
 	// Check last commit for common CI failure indicators
 	// 1. Check if there are uncommitted changes that might indicate a failed rebase/merge
-	statusOutput, err := exec.Command("git", "-C", repo.LocalPath, "status", "--porcelain").CombinedOutput()
+	statusOutput, err := Cmd("git", "-C", repo.LocalPath, "status", "--porcelain").CombinedOutput()
 	if err != nil {
 		return failures
 	}
@@ -110,13 +110,13 @@ func checkRepoCIStatus(repo models.RepoPath) []CIFailure {
 	}
 
 	// 2. Check last commit message for failure indicators
-	lastMsg, err := exec.Command("git", "-C", repo.LocalPath, "log", "-1", "--format=%s").CombinedOutput()
+	lastMsg, err := Cmd("git", "-C", repo.LocalPath, "log", "-1", "--format=%s").CombinedOutput()
 	if err == nil {
 		msg := strings.ToLower(string(lastMsg))
 		if strings.Contains(msg, "fixup!") || strings.Contains(msg, "wip") {
 			// WIP or fixup commits that might need squashing
-			commitHash, _ := exec.Command("git", "-C", repo.LocalPath, "log", "-1", "--format=%H").CombinedOutput()
-			branch, _ := exec.Command("git", "-C", repo.LocalPath, "rev-parse", "--abbrev-ref", "HEAD").CombinedOutput()
+			commitHash, _ := Cmd("git", "-C", repo.LocalPath, "log", "-1", "--format=%H").CombinedOutput()
+			branch, _ := Cmd("git", "-C", repo.LocalPath, "rev-parse", "--abbrev-ref", "HEAD").CombinedOutput()
 
 			failures = append(failures, CIFailure{
 				ID:         uuid.New().String(),
@@ -156,7 +156,7 @@ func checkRepoCIStatus(repo models.RepoPath) []CIFailure {
 }
 
 func detectMergeConflicts(repoPath string) []string {
-	output, err := exec.Command("git", "-C", repoPath, "diff", "--name-only", "--diff-filter=U").CombinedOutput()
+	output, err := Cmd("git", "-C", repoPath, "diff", "--name-only", "--diff-filter=U").CombinedOutput()
 	if err != nil {
 		return nil
 	}
@@ -170,7 +170,7 @@ func detectMergeConflicts(repoPath string) []string {
 }
 
 func discoverTestFiles(repoPath string) []string {
-	output, err := exec.Command("git", "-C", repoPath, "ls-files", "*_test.go", "*_test.ts", "*_test.tsx", "*.test.ts", "*.test.tsx", "*.spec.ts", "*.spec.tsx").CombinedOutput()
+	output, err := Cmd("git", "-C", repoPath, "ls-files", "*_test.go", "*_test.ts", "*_test.tsx", "*.test.ts", "*.test.tsx", "*.spec.ts", "*.spec.tsx").CombinedOutput()
 	if err != nil {
 		return nil
 	}
