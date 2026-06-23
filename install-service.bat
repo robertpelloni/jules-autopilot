@@ -19,7 +19,7 @@ schtasks /delete /tn "JulesAutopilotWatchdog" /f >nul 2>&1
 
 :: Create backend task (starts on login)
 schtasks /create /tn "JulesAutopilot" /sc onlogon /rl highest /f /it ^
-    /tr "powershell.exe -ExecutionPolicy Bypass -NoProfile -WindowStyle Hidden -Command \"cd '%cd%\backend-go'; go run . > '%cd%\backend-go\server.log' 2>&1\"" ^
+    /tr "powershell.exe -ExecutionPolicy Bypass -NoProfile -WindowStyle Hidden -Command \"& '%cd%\backend-go\backend.exe' > '%cd%\backend-go\server.log' 2>&1\"" ^
     /np
 echo [OK] JulesAutopilot - starts backend on login
 

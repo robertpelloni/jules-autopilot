@@ -6,7 +6,6 @@ import (
 	"fmt"
 	"log"
 	"os"
-	"os/exec"
 	"path/filepath"
 	"strings"
 	"sync"
@@ -144,7 +143,7 @@ func getFleetSummary(c *fiber.Ctx) error {
 }
 
 func getSystemSubmodules(c *fiber.Ctx) error {
-	cmd := exec.Command("git", "submodule", "status")
+	cmd := services.Cmd("git", "submodule", "status")
 	cmd.Dir = filepath.Clean("..")
 	output, err := cmd.Output()
 	if err != nil {

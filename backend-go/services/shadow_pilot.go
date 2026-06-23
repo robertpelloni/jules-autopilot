@@ -106,8 +106,7 @@ func (sp *ShadowPilot) scanRepository(rp models.RepoPath) {
 }
 
 func (sp *ShadowPilot) monitorGitDiffs(rp models.RepoPath) {
-	cmd := exec.Command("git", "diff", "--stat")
-	hideWindow(cmd)
+	cmd := Cmd("git", "diff", "--stat")
 	cmd.Dir = rp.LocalPath
 	var out bytes.Buffer
 	cmd.Stdout = &out
@@ -177,8 +176,7 @@ func (sp *ShadowPilot) monitorGitDiffs(rp models.RepoPath) {
 
 // runGovulncheck executes `govulncheck ./...` and parses JSON output.
 func (sp *ShadowPilot) runGovulncheck(rp models.RepoPath) {
-	cmd := exec.Command("govulncheck", "-json", "./...")
-	hideWindow(cmd)
+	cmd := Cmd("govulncheck", "-json", "./...")
 	cmd.Dir = rp.LocalPath
 	var out bytes.Buffer
 	cmd.Stdout = &out
@@ -250,8 +248,7 @@ func (sp *ShadowPilot) runGovulncheck(rp models.RepoPath) {
 // runNpmAudit runs `npm audit --json` and parses results.
 func (sp *ShadowPilot) runNpmAudit(rp models.RepoPath) {
 	// Ensure npm is available; otherwise skip.
-	cmd := exec.Command("npm", "audit", "--json")
-	hideWindow(cmd)
+	cmd := Cmd("npm", "audit", "--json")
 	cmd.Dir = rp.LocalPath
 	var out bytes.Buffer
 	cmd.Stdout = &out
