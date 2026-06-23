@@ -66,6 +66,9 @@ export default defineConfig({
 			},
 		},
 	},
+	optimizeDeps: {
+		esbuildOptions: { target: "esnext" },
+	},
 	server: {
 		port: 3006,
 		proxy: {
