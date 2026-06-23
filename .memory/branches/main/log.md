@@ -12102,3 +12102,137 @@ Now let me build and deploy.
 **Action**: bash(command: "cd backend-go && go build -o backend.exe . 2>&1 && echo "BUILD OK"", timeout: 30)
 **Observation**: bash: success
 
+## Turn 21 | 2026-06-23T23:37:20.656Z | deepseek/deepseek-v4-flash
+
+**Thought**: 
+**Thinking**: Let me commit and push, then restart.
+**Action**: bash(command: "cd backend-go && git add -A && git commit -m "fix: finalize subprocess window hiding, fix install-service.bat
+
+- routes.go: use services.Cmd() instead of exec.Command for git submodule
+- install-service.bat: use backend.exe directly instead of go run .
+- shadow_pilot.go: use Cmd() wrapper instead of exec.Command+hideWindow
+- Removed unused os/exec import from routes.go" && git push 2>&1", timeout: 15)
+**Observation**: bash: success
+
+## Turn 22 | 2026-06-23T23:37:26.080Z | deepseek/deepseek-v4-flash
+
+**Thought**: 
+**Thinking**: Now let me restart the backend and check if the user still sees flashing. Let me kill the backend process and let the watchdog restart it.
+**Action**: bash(command: "powershell -Command "Stop-Process -Name 'backend' -Force -ErrorAction SilentlyContinue" && sleep 25 && curl -s --max-time 5 http://localhost:8082/api/health | python3 -c "import sys,json;d=json.load(sys.stdin);print(f'OK daemon={d[\"checks\"][\"daemon\"][\"running\"]}')"", timeout: 35)
+**Observation**: bash: success
+
+## Turn 23 | 2026-06-23T23:37:56.974Z | deepseek/deepseek-v4-flash
+
+**Thought**: Backend restarted with the new binary. Every subprocess (`git`, `govulncheck`, `npm audit`, `wmic`) now uses `Cmd()` wrapper that hides the console window on Windows. The scheduled task also runs `backend.exe` directly instead of `go run .`.
+
+Let me know if you still see flashing.
+
+## Turn 1 | 2026-06-23T23:50:28.205Z | deepseek/deepseek-v4-flash
+
+**Thought**: 
+**Thinking**: The user is STILL seeing flashing. I need to think about what else could be causing it. Let me think more broadly:
+
+1. All the Go subprocesses now use `Cmd()` with `HideWindow=true` - they shouldn't flash.
+2. `backend.exe` is started with `CreateNoWindow=$true` - shouldn't flash.
+3. The watchdog uses `CreateNoWindow=$true` - shouldn't flash.
+
+But wait - there's something I haven't checked. The watchdog script `watchdog_loop.ps1` itself is running as a PowerShell process. When the watchdog kills and restarts the backend, it runs `[System.Diagnostics.Process]::Start($psi)` which should be hidden because $psi.CreateNoWindow=$true.
+
+But there's also the scheduled task! The scheduled task runs:
+```
+powershell.exe -WindowStyle Hidden -Command "& 'C:\...\backend.exe' > 'C:\...\server.log' 2>&1"
+```
+
+When PowerShell starts `backend.exe` with redirect `>`, it needs to wait for the process. This might create a brief console allocation.
+
+Actually, I think the issue might be something different entirely. Let me check:
+
+1. Is there a `runner.bat` or startup script I haven't seen?
+2. Is the user running something manually?
+3. Maybe there's a Windows scheduled task that's restarting frequently?
+
+Wait - the scheduled task `JulesAutopilot` runs on login. When I kill the backend, the scheduled task is NOT running (it only runs at login). The watchdog is the one restarting. The watchdog uses `CreateNoWindow=$true`.
+
+But maybe the issue is that the watchdog is started by a scheduled task that uses `-WindowStyle Hidden` but Windows might still flash the console briefly for a PowerShell process running with `-Command` and redirects.
+
+Let me look at a completely different angle: maybe it's not the Go backend or the watchdog at all. Maybe it's something else on the system that's running periodically.
+
+Actually, let me check if `start.bat` is being run by something periodically. Or maybe the user is running it manually.
+
+Wait, I should also check if there's a `Start-JulesAutopilot.bat` that's referenced in the install-service.bat.
+**Action**: bash(command: "ls -la C:/Users/hyper/workspace/jules-autopilot/Start-JulesAutopilot* 2>&1", timeout: 5)
+**Observation**: bash: error
+
+## Turn 2 | 2026-06-23T23:50:48.937Z | deepseek/deepseek-v4-flash
+
+**Thought**: 
+**Thinking**: No such file. Let me check the scheduled tasks to see what's actually running.
+**Action**: bash(command: "powershell -Command "Get-ScheduledTask -TaskName 'JulesAutopilot*' | Format-List TaskName,State,LastRunTime,LastTaskResult" 2>&1", timeout: 5)
+**Observation**: bash: error
+
+## Turn 3 | 2026-06-23T23:50:57.398Z | deepseek/deepseek-v4-flash
+
+**Thought**: 
+**Thinking**: Timed out. Let me try with a shorter command.
+**Action**: bash(command: "schtasks /query /tn "JulesAutopilot" /v /fo LIST 2>&1 | head -20", timeout: 10)
+**Observation**: bash: success
+
+## Turn 4 | 2026-06-23T23:51:00.276Z | deepseek/deepseek-v4-flash
+
+**Thought**: 
+**Thinking**: The path separator issue. Let me use a different approach.
+**Action**: bash(command: "schtasks //query //tn "JulesAutopilot" //v //fo LIST 2>&1 | head -20", timeout: 10)
+**Observation**: bash: success
+
+## Turn 5 | 2026-06-23T23:51:04.018Z | deepseek/deepseek-v4-flash
+
+**Thought**: 
+**Thinking**: The scheduled task doesn't exist. Let me also check for the watchdog task.
+**Action**: bash(command: "schtasks //query //tn "JulesAutopilotWatchdog" //v //fo LIST 2>&1 | head -20", timeout: 10)
+**Observation**: bash: success
+
+## Turn 6 | 2026-06-23T23:51:06.686Z | deepseek/deepseek-v4-flash
+
+**Thought**: Let me try building as a Windows GUI app — no console window at all.
+**Thinking**: No scheduled tasks! So the watchdog is the only thing running the backend. And the watchdog uses `CreateNoWindow = $true` with `UseShellExecute = $false`.
+
+Let me think differently. What if the PowerShell process itself that runs the watchdog is popping up a window? When the watchdog runs `[System.Diagnostics.Process]::Start($psi)` to restart the backend, maybe something in PowerShell 7 (pwsh) creates a brief window.
+
+Actually, wait - let me check if there's a pwsh process running (PowerShell 7) that might behave differently from Windows PowerShell.
+
+Also, maybe the issue is the Go runtime itself. When a Go console program starts, the Windows loader creates a console window for it. Even if `CreateNoWindow = $true` is set by the parent, the behavior can vary:
+1. With `UseShellExecute = $false` and `CreateNoWindow = $true`, Windows creates a hidden console (no visible window).
+2. But the Go runtime might call `AllocConsole()` or `FreeConsole()` explicitly, which can flash.
+
+Actually, let me check if the Go binary has a build tag or if there's something in the code that calls `AllocConsole()`.
+
+But more practically, let me check if the issue is the Go binary itself. On Windows, a Go program compiled as a "console" subsystem will always have a console window. Even with `CreateNoWindow = $true` from the parent, the Go runtime might still attach to an existing console or allocate one.
+
+To prevent this, I could add a manifest to the Go binary or compile it as a Windows GUI application (instead of console). But that would mean it has no stdout/stderr, which we need for logging.
+
+Actually, the fix is simpler: add `-ldflags="-H=windowsgui"` to the Go build command. This tells the linker to create a Windows GUI application instead of a console application. The GUI app doesn't get a console window allocated.
+
+But wait - if we do that, the stdout/stderr redirection from the watchdog won't work (because GUI apps don't have stdout/stderr by default). However, since the watchdog uses `RedirectStandardOutput = $true` and `RedirectStandardError = $true`, the Go program's stdout/stderr will be piped regardless of whether it's a GUI app or console app. The `-H=windowsgui` flag just tells Windows not to allocate a console for the process.
+
+Let me try building with `-ldflags="-H=windowsgui"` and see if it resolves the flashing.
+**Action**: bash(command: "cd backend-go && go build -ldflags="-H=windowsgui" -o backend.exe . 2>&1 && echo "BUILD OK"", timeout: 30)
+**Observation**: bash: success
+
+## Turn 7 | 2026-06-23T23:51:20.396Z | deepseek/deepseek-v4-flash
+
+**Thought**: Backend built as GUI app — no console window allocation. Let me restart.
+**Thinking**: Good, build succeeded. Now the `backend.exe` is built as a Windows GUI application, which means Windows won't allocate a console for it. The watchdog redirects stdout/stderr, so logging will still work.
+
+Let me deploy this. But I need to be careful: the watchdog runs Process::Start with redirects, so stdout/stderr are piped correctly regardless of console subsystem.
+
+Let me restart the backend.
+**Action**: bash(command: "powershell -Command "Stop-Process -Name 'backend' -Force -ErrorAction SilentlyContinue" && sleep 25 && curl -s --max-time 5 http://localhost:8082/api/health | python3 -c "import sys,json;d=json.load(sys.stdin);print(f'OK')"", timeout: 35)
+**Observation**: bash: error
+
+## Turn 8 | 2026-06-23T23:51:55.635Z | deepseek/deepseek-v4-flash
+
+**Thought**: 
+**Thinking**: Backend isn't up yet. Wait longer.
+**Action**: bash(command: "sleep 15 && curl -s --max-time 5 http://localhost:8082/api/health | python3 -c "import sys,json;d=json.load(sys.stdin);print(f'OK')"", timeout: 25)
+**Observation**: bash: success
+
