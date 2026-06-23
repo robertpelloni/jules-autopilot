@@ -39,6 +39,7 @@ export default defineConfig({
 		dedupe: ["react", "react-dom"],
 	},
 	build: {
+		target: "esnext",
 		rollupOptions: {
 			output: {
 				manualChunks: {
