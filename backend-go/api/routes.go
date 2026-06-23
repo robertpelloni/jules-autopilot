@@ -1342,9 +1342,9 @@ func getHealth(c *fiber.Ctx) error {
 		_ = services.CaptureHealthSnapshot(map[string]interface{}{
 			"status": status,
 			"checks": fiber.Map{
-				"database": fiber.Map{"status": databaseStatus},
-				"daemon":   fiber.Map{"running": services.GetDaemon().IsRunning()},
-				"worker":   fiber.Map{"running": services.IsWorkerRunning()},
+				"database":  fiber.Map{"status": databaseStatus},
+				"daemon":    fiber.Map{"running": services.GetDaemon().IsRunning()},
+				"worker":    fiber.Map{"running": services.IsWorkerRunning()},
 				"scheduler": fiber.Map{"running": true},
 			},
 			"queue": fiber.Map{
@@ -1527,7 +1527,7 @@ func getSettings(c *fiber.Ctx) error {
 	// Also include a combined overview for the SettingsDialog
 
 	settingsOverview := fiber.Map{
-		"keeper":     nil, // populated by frontend from /api/settings/keeper
+		"keeper":          nil, // populated by frontend from /api/settings/keeper
 		"envKeysDetected": envKeys,
 	}
 	return c.JSON(settingsOverview)
@@ -1564,19 +1564,19 @@ func getKeeperSettings(c *fiber.Ctx) error {
 	messages := services.ParseMessages(settings.Messages)
 
 	frontendConfig := fiber.Map{
-		"isEnabled":                settings.IsEnabled,
-		"autoSwitch":               settings.AutoSwitch,
-		"checkIntervalSeconds":     settings.CheckIntervalSeconds,
+		"isEnabled":                  settings.IsEnabled,
+		"autoSwitch":                 settings.AutoSwitch,
+		"checkIntervalSeconds":       settings.CheckIntervalSeconds,
 		"inactivityThresholdMinutes": settings.InactivityThresholdMinutes,
 		"activeWorkThresholdMinutes": settings.ActiveWorkThresholdMinutes,
-		"messages":                 messages,
-		"smartPilotEnabled":        settings.SmartPilotEnabled,
-		"supervisorProvider":       settings.SupervisorProvider,
-		"supervisorApiKey":         supervisorApiKey,
-		"supervisorModel":          settings.SupervisorModel,
-		"contextMessageCount":      settings.ContextMessageCount,
-		"debateEnabled":            false,
-		"debateParticipants":       []interface{}{},
+		"messages":                   messages,
+		"smartPilotEnabled":          settings.SmartPilotEnabled,
+		"supervisorProvider":         settings.SupervisorProvider,
+		"supervisorApiKey":           supervisorApiKey,
+		"supervisorModel":            settings.SupervisorModel,
+		"contextMessageCount":        settings.ContextMessageCount,
+		"debateEnabled":              false,
+		"debateParticipants":         []interface{}{},
 	}
 	return c.JSON(frontendConfig)
 }
@@ -1608,17 +1608,17 @@ func detectEnvKeys() fiber.Map {
 func updateKeeperSettings(c *fiber.Ctx) error {
 	// Parse the frontend SessionKeeperConfig format (messages as array, supervisorApiKey as string)
 	var input struct {
-		IsEnabled *bool `json:"isEnabled"`
-		AutoSwitch *bool `json:"autoSwitch"`
-		CheckIntervalSeconds     int      `json:"checkIntervalSeconds"`
-		InactivityThresholdMin   int      `json:"inactivityThresholdMinutes"`
-		ActiveWorkThresholdMin   int      `json:"activeWorkThresholdMinutes"`
-		Messages                 []string `json:"messages"`
-		SmartPilotEnabled *bool `json:"smartPilotEnabled"`
-		SupervisorProvider       string   `json:"supervisorProvider"`
-		SupervisorApiKey         string   `json:"supervisorApiKey"`
-		SupervisorModel          string   `json:"supervisorModel"`
-		ContextMessageCount      int      `json:"contextMessageCount"`
+		IsEnabled              *bool    `json:"isEnabled"`
+		AutoSwitch             *bool    `json:"autoSwitch"`
+		CheckIntervalSeconds   int      `json:"checkIntervalSeconds"`
+		InactivityThresholdMin int      `json:"inactivityThresholdMinutes"`
+		ActiveWorkThresholdMin int      `json:"activeWorkThresholdMinutes"`
+		Messages               []string `json:"messages"`
+		SmartPilotEnabled      *bool    `json:"smartPilotEnabled"`
+		SupervisorProvider     string   `json:"supervisorProvider"`
+		SupervisorApiKey       string   `json:"supervisorApiKey"`
+		SupervisorModel        string   `json:"supervisorModel"`
+		ContextMessageCount    int      `json:"contextMessageCount"`
 	}
 	if err := c.BodyParser(&input); err != nil {
 		return c.Status(400).JSON(fiber.Map{"error": "Invalid request body: " + err.Error()})
@@ -1632,18 +1632,33 @@ func updateKeeperSettings(c *fiber.Ctx) error {
 	if err := db.DB.First(&settings, "id = ?", "default").Error; err != nil {
 		// Create new record
 		settings = models.KeeperSettings{
-			ID:                         "default",
-			IsEnabled: func() bool { if input.IsEnabled != nil { return *input.IsEnabled }; return false }(),
-			AutoSwitch: func() bool { if input.AutoSwitch != nil { return *input.AutoSwitch }; return false }(),
+			ID: "default",
+			IsEnabled: func() bool {
+				if input.IsEnabled != nil {
+					return *input.IsEnabled
+				}
+				return false
+			}(),
+			AutoSwitch: func() bool {
+				if input.AutoSwitch != nil {
+					return *input.AutoSwitch
+				}
+				return false
+			}(),
 			CheckIntervalSeconds:       input.CheckIntervalSeconds,
 			InactivityThresholdMinutes: input.InactivityThresholdMin,
 			ActiveWorkThresholdMinutes: input.ActiveWorkThresholdMin,
 			Messages:                   messagesStr,
-			SmartPilotEnabled: func() bool { if input.SmartPilotEnabled != nil { return *input.SmartPilotEnabled }; return false }(),
-			SupervisorProvider:         input.SupervisorProvider,
-			SupervisorApiKey:           &apiKey,
-			SupervisorModel:            input.SupervisorModel,
-			ContextMessageCount:        input.ContextMessageCount,
+			SmartPilotEnabled: func() bool {
+				if input.SmartPilotEnabled != nil {
+					return *input.SmartPilotEnabled
+				}
+				return false
+			}(),
+			SupervisorProvider:  input.SupervisorProvider,
+			SupervisorApiKey:    &apiKey,
+			SupervisorModel:     input.SupervisorModel,
+			ContextMessageCount: input.ContextMessageCount,
 		}
 		if err := db.DB.Create(&settings).Error; err != nil {
 			return c.Status(500).JSON(fiber.Map{"error": err.Error()})
@@ -1692,17 +1707,17 @@ func updateKeeperSettings(c *fiber.Ctx) error {
 
 	// Return the saved settings in frontend-compatible format
 	return c.JSON(fiber.Map{
-		"isEnabled":                settings.IsEnabled,
-		"autoSwitch":               settings.AutoSwitch,
-		"checkIntervalSeconds":     settings.CheckIntervalSeconds,
+		"isEnabled":                  settings.IsEnabled,
+		"autoSwitch":                 settings.AutoSwitch,
+		"checkIntervalSeconds":       settings.CheckIntervalSeconds,
 		"inactivityThresholdMinutes": settings.InactivityThresholdMinutes,
 		"activeWorkThresholdMinutes": settings.ActiveWorkThresholdMinutes,
-		"messages":                 input.Messages,
-		"smartPilotEnabled":        settings.SmartPilotEnabled,
-		"supervisorProvider":       settings.SupervisorProvider,
-		"supervisorApiKey":         input.SupervisorApiKey,
-		"supervisorModel":          settings.SupervisorModel,
-		"contextMessageCount":      settings.ContextMessageCount,
+		"messages":                   input.Messages,
+		"smartPilotEnabled":          settings.SmartPilotEnabled,
+		"supervisorProvider":         settings.SupervisorProvider,
+		"supervisorApiKey":           input.SupervisorApiKey,
+		"supervisorModel":            settings.SupervisorModel,
+		"contextMessageCount":        settings.ContextMessageCount,
 	})
 }
 
@@ -1856,7 +1871,7 @@ func getNotifications(c *fiber.Ctx) error {
 	}
 	return c.JSON(fiber.Map{
 		"notifications": notifications,
-		"total":        total,
+		"total":         total,
 	})
 }
 
@@ -2027,14 +2042,14 @@ func startShadowPilotAPI(c *fiber.Ctx) error {
 	if services.IsShadowPilotRunning() {
 		return c.JSON(fiber.Map{
 			"status":    "already_running",
-			"message":  "Shadow Pilot scan is already in progress",
+			"message":   "Shadow Pilot scan is already in progress",
 			"startedAt": time.Now().Format(time.RFC3339),
 		})
 	}
 	services.StartShadowPilot()
 	return c.JSON(fiber.Map{
 		"status":    "scanning",
-		"message":  "Shadow Pilot scan initiated",
+		"message":   "Shadow Pilot scan initiated",
 		"startedAt": time.Now().Format(time.RFC3339),
 	})
 }
@@ -2101,10 +2116,10 @@ func getHealthTrend(c *fiber.Ctx) error {
 		return c.Status(500).JSON(fiber.Map{"error": err.Error()})
 	}
 	return c.JSON(fiber.Map{
-		"check":      checkName,
-		"since":      since,
-		"snapshots":  snapshots,
-		"count":      len(snapshots),
+		"check":     checkName,
+		"since":     since,
+		"snapshots": snapshots,
+		"count":     len(snapshots),
 	})
 }
 

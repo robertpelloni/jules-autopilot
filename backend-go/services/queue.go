@@ -849,8 +849,16 @@ func CacheSessions(sessions []models.JulesSession) {
 	log.Printf("[Cache] Stored %d sessions locally", len(sessions))
 }
 
-// extractProjectName extracts the repo/project name from a Jules sourceID.
-// sourceID looks like "hyper/jules-autopilot", returns "jules-autopilot".
+// GetCachedSessions returns the sessions cached locally in the DB (jules_sessions table).
+// Used by the daemon to quickly check sessions without hitting the Jules API.
+func GetCachedSessions() ([]models.JulesSession, error) {
+	var sessions []models.JulesSession
+	if err := db.DB.Order("updated_at desc").Find(&sessions).Error; err != nil {
+		return nil, err
+	}
+	return sessions, nil
+}
+
 func extractProjectName(sourceID string) string {
 	parts := strings.Split(strings.TrimSpace(sourceID), "/")
 	if len(parts) == 0 || (len(parts) == 1 && parts[0] == "") {

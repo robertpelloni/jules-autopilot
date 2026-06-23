@@ -127,15 +127,18 @@ func (d *Daemon) tick() time.Duration {
 		return interval
 	}
 
-	sessions, err := client.ListSessions()
-	if err != nil {
-		log.Printf("[Daemon] Failed to fetch live sessions: %v", err)
-		addKeeperLog("Failed to fetch live Jules sessions in Go daemon.", "error", "global", map[string]interface{}{
-			"event": "daemon_session_poll_failed",
+	// Read cached sessions from local DB instead of hitting the Jules API.
+	// The broadcast populates this cache on startup; the dashboard reads from it too.
+	var sessions []models.JulesSession
+	if err := db.DB.Order("updated_at desc").Find(&sessions).Error; err != nil {
+		log.Printf("[Daemon] Failed to read cached sessions: %v", err)
+		addKeeperLog("Failed to read cached sessions in Go daemon.", "error", "global", map[string]interface{}{
+			"event": "daemon_cached_sessions_failed",
 			"error": err.Error(),
 		})
 		return interval
 	}
+	log.Printf("[Daemon] Tick: %d cached sessions, interval=%s", len(sessions), interval)
 
 	queuedSessions := 0
 	for _, session := range sessions {
