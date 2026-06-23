@@ -802,8 +802,7 @@ func (w *Worker) handleCheckSession(payload string) (string, error) {
 	return "none", nil
 }
 
-// BroadcastContinue enqueues a check_session job for every known session at startup.
-// This triggers a one-time nudge to all sessions, bypassing the daemon's tick delay.
+// BroadcastContinue sends "continue" directly to every session on startup — no LM Studio, no queue.
 func BroadcastContinue() {
 	client := NewJulesClient()
 	if !client.isConfigured() {
@@ -817,22 +816,23 @@ func BroadcastContinue() {
 		return
 	}
 
-	queued := 0
+	sent := 0
 	for _, session := range sessions {
-		payload := map[string]interface{}{
-			"session": session,
-		}
-		if _, err := AddJob("check_session", payload); err != nil {
-			log.Printf("[Broadcast] Failed to enqueue for %s: %v", session.ID[:8], err)
+		if _, err := client.CreateActivity(session.ID, CreateActivityRequest{
+			Content: "continue",
+			Type:    "message",
+			Role:    "user",
+		}); err != nil {
+			log.Printf("[Broadcast] Failed to send continue to %s: %v", session.ID[:8], err)
 			continue
 		}
-		queued++
+		sent++
 	}
-	log.Printf("[Broadcast] Enqueued continue for %d/%d sessions", queued, len(sessions))
-	addKeeperLog(fmt.Sprintf("Startup broadcast: enqueued continue for %d sessions", queued), "info", "global", map[string]interface{}{
-		"event":  "startup_broadcast",
-		"queued": queued,
-		"total":  len(sessions),
+	log.Printf("[Broadcast] Sent continue to %d/%d sessions", sent, len(sessions))
+	addKeeperLog(fmt.Sprintf("Startup broadcast: sent continue to %d sessions", sent), "info", "global", map[string]interface{}{
+		"event": "startup_broadcast",
+		"sent":  sent,
+		"total": len(sessions),
 	})
 }
 
