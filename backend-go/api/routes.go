@@ -1785,42 +1785,16 @@ func triggerSchedulerTask(c *fiber.Ctx) error {
 }
 
 func getSessions(c *fiber.Ctx) error {
-	client := getJulesClientForRequest(c)
-	liveSessions, err := client.ListSessions()
-	if err == nil && len(liveSessions) > 0 {
-		return c.JSON(fiber.Map{"sessions": liveSessions})
-	}
-
-	if err != nil {
-		log.Printf("Failed to fetch live sessions: %v", err)
-		// Return 200 with error session + mocks to prevent UI crash, mirroring Bun.
-		return c.JSON(fiber.Map{
-			"sessions": append([]models.JulesSession{
-				{
-					ID:        "critical-err",
-					Title:     "API Error: " + err.Error(),
-					Status:    "failed",
-					RawState:  "FAILED",
-					CreatedAt: time.Now(),
-					UpdatedAt: time.Now(),
-					SourceID:  "system",
-					Branch:    "none",
-				},
-			}, getMockSessions()...),
-		})
-	}
-
-	// No live sessions and no error (e.g. empty) - check DB
-	var sessions []models.JulesSession
-	if err := db.DB.Find(&sessions).Error; err != nil {
+	// Serve from local cache — never hit the Jules API (takes 300s).
+	// The broadcast caches sessions on startup, and daemon refreshes them.
+	var cached []models.JulesSession
+	if err := db.DB.Order("updated_at desc").Find(&cached).Error; err != nil {
 		return c.Status(500).JSON(fiber.Map{"error": err.Error()})
 	}
-
-	if len(sessions) == 0 {
+	if len(cached) == 0 {
 		return c.JSON(fiber.Map{"sessions": getMockSessions()})
 	}
-
-	return c.JSON(fiber.Map{"sessions": sessions})
+	return c.JSON(fiber.Map{"sessions": cached})
 }
 
 func nudgeSession(c *fiber.Ctx) error {

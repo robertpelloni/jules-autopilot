@@ -9229,3 +9229,242 @@ Major overhaul of the nudge/bump system and daemon reliability in the Go backend
 ")
 **Observation**: write: success
 
+## Turn 38 | 2026-06-23T13:45:32.561Z | deepseek/deepseek-v4-flash
+
+**Thought**: 
+**Thinking**: The edit tool doesn't support multi-replace for the same pattern across a file. I need to do them one by one with enough context. Let me use `sed` instead to do a batch replacement.
+**Action**: bash(command: "cd backend-go && sed -i 's/httpClient\.Do(req)/c.http().Do(req)/g' services/jules_client.go && go build ./... 2>&1", timeout: 10)
+**Observation**: bash: error
+
+## Turn 39 | 2026-06-23T13:45:53.691Z | deepseek/deepseek-v4-flash
+
+**Thought**: 
+**Thinking**: It seems my `c.http()` method wasn't added properly, or the sed replaced ALL instances including ones that aren't in JulesClient methods. Let me check if `c.http()` was actually added.
+**Action**: bash(command: "cd backend-go && grep -n "func (c \*JulesClient) http" services/jules_client.go", timeout: 5)
+**Observation**: bash: error
+
+## Turn 40 | 2026-06-23T13:45:59.344Z | deepseek/deepseek-v4-flash
+
+**Thought**: 
+**Thinking**: The method wasn't added either. The earlier edits must have failed silently. Let me check the current state of the file.
+**Action**: bash(command: "cd backend-go && git diff services/jules_client.go | head -30", timeout: 5)
+**Observation**: bash: success
+
+## Turn 41 | 2026-06-23T13:46:07.808Z | deepseek/deepseek-v4-flash
+
+**Thought**: 
+**Thinking**: No changes to jules_client.go at all. All my edits to this file were lost or reverted. The sed might have modified it but then it doesn't compile because the "http" method wasn't added.
+
+Let me just revert the sed changes and take a different approach. Instead of modifying jules_client.go, I'll just use a separate approach in the routes.go handler.
+**Action**: bash(command: "cd backend-go && git checkout -- services/jules_client.go && echo "Reverted"", timeout: 5)
+**Observation**: bash: success
+
+## Turn 42 | 2026-06-23T13:46:20.829Z | deepseek/deepseek-v4-flash
+
+**Thought**: Let me take the simplest approach — make the API call directly with a short timeout in the handler.
+**Thinking**: OK, let me take the simplest possible approach. Instead of modifying the JulesClient, I'll just make a direct HTTP call from the `getSessions` handler with a short timeout, bypassing the JulesClient entirely. This avoids all the complexity.
+**Action**: edit(path: "backend-go/api/routes.go", edits: [object Object])
+**Observation**: edit: error
+
+## Turn 43 | 2026-06-23T13:46:36.445Z | deepseek/deepseek-v4-flash
+
+**Thought**: 
+**Thinking**: My edits keep failing because the file content keeps drifting. Let me just read it fresh and make the edit.
+**Action**: read(offset: 1787, path: "backend-go/api/routes.go", limit: 35)
+**Observation**: read: success
+
+## Turn 44 | 2026-06-23T13:46:41.839Z | deepseek/deepseek-v4-flash
+
+**Thought**: 
+**Thinking**: Now I have the exact content. Let me replace the entire `getSessions` function to use a goroutine with timeout.
+**Action**: edit(path: "backend-go/api/routes.go", edits: [object Object])
+**Observation**: edit: success
+
+## Turn 45 | 2026-06-23T13:46:58.992Z | deepseek/deepseek-v4-flash
+
+**Thought**: 
+**Thinking**: Clean build. But there's a problem: the goroutine that calls `client.ListSessions()` will keep running even after the 15s timeout, because the HTTP client has a 300s timeout. The goroutine will be alive for 5 minutes doing nothing useful. But since it's just a goroutine with no one listening on the result channel, it'll eventually error out quietly when the HTTP timeout fires.
+
+More importantly: the goroutine will just silently complete and `resultCh <- s` would block forever since no one is reading it after the timer fires. That goroutine never terminates and leaks.
+
+Actually, it does terminate when the HTTP response comes back and it tries to send to the channel. Since the channel has a buffer of 1, it would succeed (no blocking). Then the goroutine terminates. So it doesn't leak.
+
+OK, let me also make `CacheSessions` actually work. Currently it stores in the DB. Let me verify the reference compiles.
+
+Wait, it compiles cleanly. Let me build and deploy this.
+
+Actually, the simpler approach: just make the handler return cached data immediately without even trying the live fetch. The broadcast already caches sessions. The dashboard just needs the cache.
+
+But the current approach is fine - try live for 15s, fall back to cache. Let me build and deploy.
+**Action**: bash(command: "cd backend-go && go build -o backend.exe . 2>&1 && echo "BUILD OK"", timeout: 30)
+**Observation**: bash: error
+
+## Turn 46 | 2026-06-23T13:47:09.928Z | deepseek/deepseek-v4-flash
+
+**Thought**: 
+**Thinking**: `CacheSessions` needs to be exported from the services package. Let me check if it exists.
+**Action**: bash(command: "cd backend-go && grep -n "CacheSessions" services/queue.go", timeout: 5)
+**Observation**: bash: error
+
+## Turn 47 | 2026-06-23T13:47:15.336Z | deepseek/deepseek-v4-flash
+
+**Thought**: 
+**Thinking**: `CacheSessions` doesn't exist in services/queue.go either. My earlier edits to add it must have been lost due to the content drift issues. Let me add it now.
+**Action**: grep(pattern: "^func.*extractProjectName", path: "backend-go/services/queue.go")
+**Observation**: grep: success
+
+## Turn 48 | 2026-06-23T13:47:19.643Z | deepseek/deepseek-v4-flash
+
+**Thought**: 
+**Thinking**: I'll add `CacheSessions` right before `extractProjectName`.
+**Action**: read(offset: 838, path: "backend-go/services/queue.go", limit: 5)
+**Observation**: read: success
+
+## Turn 49 | 2026-06-23T13:47:23.365Z | deepseek/deepseek-v4-flash
+
+**Thought**: 
+**Action**: edit(path: "backend-go/services/queue.go", edits: [object Object])
+**Observation**: edit: success
+
+## Turn 50 | 2026-06-23T13:47:41.253Z | deepseek/deepseek-v4-flash
+
+**Thought**: 
+**Thinking**: Build is clean. Now let me build `backend.exe` and deploy.
+**Action**: bash(command: "cd backend-go && go build -o backend.exe . 2>&1 && echo "BUILD OK"", timeout: 30)
+**Observation**: bash: success
+
+## Turn 51 | 2026-06-23T13:47:52.051Z | deepseek/deepseek-v4-flash
+
+**Thought**: 
+**Thinking**: Now let me also add the `CacheSessions` call in `BroadcastContinue` so sessions are cached immediately on startup.
+**Action**: grep(pattern: "func BroadcastContinue", path: "backend-go/services/queue.go", context: 15)
+**Observation**: grep: success
+
+## Turn 52 | 2026-06-23T13:47:56.090Z | deepseek/deepseek-v4-flash
+
+**Thought**: 
+**Thinking**: I see the `BroadcastContinue` function. After `ListSessions()` succeeds (line 813), it has the sessions. I should cache them before the "continue" loop.
+**Action**: edit(path: "backend-go/services/queue.go", edits: [object Object])
+**Observation**: edit: success
+
+## Turn 53 | 2026-06-23T13:48:13.673Z | deepseek/deepseek-v4-flash
+
+**Thought**: 
+**Thinking**: Good. Now let me build and deploy.
+**Action**: bash(command: "cd backend-go && go build -o backend.exe . 2>&1 && echo "BUILD OK"", timeout: 30)
+**Observation**: bash: success
+
+## Turn 54 | 2026-06-23T13:48:26.049Z | deepseek/deepseek-v4-flash
+
+**Thought**: 
+**Action**: bash(command: "powershell -Command "Stop-Process -Name 'backend' -Force -ErrorAction SilentlyContinue" && sleep 18 && tail -3 backend-go/watchdog.log", timeout: 25)
+**Observation**: bash: success
+
+## Turn 55 | 2026-06-23T13:48:50.874Z | deepseek/deepseek-v4-flash
+
+**Thought**: 
+**Thinking**: Watchdog log still shows the old restart. Let me wait for the watchdog to detect the kill and restart.
+**Action**: bash(command: "sleep 20 && tail -3 backend-go/watchdog.log && echo "" && curl -s http://localhost:8082/api/health | python3 -c "import sys,json;d=json.load(sys.stdin);print(f'OK')"", timeout: 30)
+**Observation**: bash: success
+
+## Turn 56 | 2026-06-23T13:49:16.154Z | deepseek/deepseek-v4-flash
+
+**Thought**: 
+**Thinking**: New backend PID 43904. Now let me wait for the broadcast to cache sessions and then test the sessions endpoint.
+**Action**: bash(command: "sleep 60 && curl -s http://localhost:8082/api/sessions 2>&1 | python3 -c "
+import sys, json
+try:
+    data = json.load(sys.stdin)
+    s = data if isinstance(data, list) else data.get('sessions', [])
+    print(f'Sessions: {len(s)}')
+    states = {}
+    for x in s:
+        st = x.get('rawState','?')
+        states[st] = states.get(st, 0) + 1
+    for k,v in sorted(states.items()):
+        print(f'  {k}: {v}')
+except Exception as e:
+    print(f'Error: {e}')
+" 2>&1", timeout: 30)
+**Observation**: bash: error
+
+## Turn 57 | 2026-06-23T13:49:54.360Z | deepseek/deepseek-v4-flash
+
+**Thought**: 
+**Thinking**: Still timing out. The issue is that `ListSessions()` in the goroutine has a 300s timeout, and the goroutine keeps the HTTP request running. Even though the handler times out after 15s, the goroutine is still alive doing the HTTP request. But that shouldn't cause the second request to hang...
+
+Wait, the actual issue might be that `ListSessions()` is called from the broadcast AND from the getSessions handler simultaneously, and they're competing for the same Jules API key. Or the goroutine from the first request is still running.
+
+Actually, the real issue might be that the FIRST request to `/api/sessions` fires a goroutine that calls `ListSessions()`. That goroutine takes 300s to complete. While it's running, subsequent requests also try to call `ListSessions()` and the Jules API might be rate-limited or just slow.
+
+Let me check if the broadcast already completed and cached sessions.
+**Action**: bash(command: "curl -s http://localhost:8082/api/daemon/status 2>&1 | python3 -c "
+import sys, json
+d = json.load(sys.stdin)
+logs = d.get('logs',[])
+since = '2026-06-23T09:49'
+recent = [x for x in logs if x.get('createdAt','') > since]
+print(f'Logs since restart: {len(recent)}')
+for x in recent:
+    print(f'  {x.get(\"message\",\"\")[:150]}')
+" && echo "" && curl -s http://localhost:8082/api/health | python3 -c "import sys,json;d=json.load(sys.stdin);print(f'Sessions cached: {d[\"totals\"][\"sessions\"]} Queue: {d[\"queue\"]}')"", timeout: 10)
+**Observation**: bash: success
+
+## Turn 58 | 2026-06-23T13:50:08.493Z | deepseek/deepseek-v4-flash
+
+**Thought**: The real problem is `ListSessions` takes 300s. Let me just serve sessions from the local cache — never hit the Jules API from the dashboard handler.
+**Thinking**: The broadcast hasn't completed yet — sessions cached is 0. The `ListSessions()` call is still running after 60+ seconds. The broadcast goroutine is stuck on the Jules API.
+
+This means the broadcast itself is the problem — it blocks startup for up to 5 minutes while waiting for ListSessions. And during that time, the sessions endpoint also tries ListSessions, making things worse.
+
+The fix: make the broadcast non-blocking for other startup operations, and use a cached/fallback approach for the sessions endpoint.
+
+Actually, let me think about this differently. The fundamental problem is: **ListSessions takes 5 minutes to return from the Jules API**. The handler has a 15s timeout, but the goroutine with the HTTP call is still alive for 5 minutes, completing uselessly.
+
+The simplest fix: make `getSessions` NOT call ListSessions at all. Just serve from cache or return mock sessions. The broadcast will eventually cache them.
+
+Let me do that — make getSessions only serve from DB cache, never hit the Jules API.
+**Action**: edit(path: "backend-go/api/routes.go", edits: [object Object])
+**Observation**: edit: success
+
+## Turn 59 | 2026-06-23T13:50:36.001Z | deepseek/deepseek-v4-flash
+
+**Thought**: 
+**Thinking**: Good. Now `getSessions` just reads from the local DB. No Jules API call. The broadcast caches sessions on startup.
+
+But there's still the problem of the `BroadcastContinue` goroutine being stuck on `ListSessions()` for 300s. The broadcast is what populates the cache. Without the broadcast completing, the sessions endpoint returns mock data.
+
+The fix: also make the broadcast async - start it in a goroutine and don't block main startup.
+
+Actually, it IS already in a goroutine (`go services.BroadcastContinue()`). The issue is just that ListSessions takes 300s and during that time, the cache is empty. On the NEXT restart, if the broadcast completed before the restart, the cache would have data.
+
+Let me build and deploy this version. The dashboard will show mock sessions initially, then real sessions once the broadcast completes.
+**Action**: bash(command: "cd backend-go && go build -o backend.exe . 2>&1 && echo "BUILD OK"", timeout: 30)
+**Observation**: bash: success
+
+## Turn 60 | 2026-06-23T13:50:50.798Z | deepseek/deepseek-v4-flash
+
+**Thought**: 
+**Thinking**: Wait, I should also commit and push before deploying, so the changes are tracked. Let me do that.
+
+Actually, let me first deploy to verify it works, then commit and push.
+**Action**: bash(command: "powershell -Command "Stop-Process -Name 'backend' -Force -ErrorAction SilentlyContinue" && sleep 25 && tail -3 backend-go/watchdog.log && echo "" && sleep 3 && curl -s http://localhost:8082/api/health | python3 -c "import sys,json;d=json.load(sys.stdin);print(f'OK')"", timeout: 35)
+**Observation**: bash: success
+
+## Turn 61 | 2026-06-23T13:51:31.130Z | deepseek/deepseek-v4-flash
+
+**Thought**: 
+**Thinking**: Now let me test the sessions endpoint immediately — it should return mock sessions instantly since the broadcast hasn't cached yet.
+**Action**: bash(command: "sleep 5 && curl -s http://localhost:8082/api/sessions 2>&1 | python3 -c "
+import sys, json
+try:
+    data = json.load(sys.stdin)
+    s = data if isinstance(data, list) else data.get('sessions', [])
+    print(f'Sessions: {len(s)} (instant response)')
+    for x in s[:3]:
+        print(f'  {x.get(\"id\",\"\")[:12]} {x.get(\"rawState\",\"\")} {x.get(\"sourceId\",\"\")}')
+except Exception as e:
+    print(f'Error: {e}')
+" 2>&1", timeout: 10)
+**Observation**: bash: success
+

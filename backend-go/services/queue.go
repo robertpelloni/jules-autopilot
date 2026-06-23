@@ -816,6 +816,9 @@ func BroadcastContinue() {
 		return
 	}
 
+	// Cache sessions so the dashboard loads instantly
+	CacheSessions(sessions)
+
 	sent := 0
 	for _, session := range sessions {
 		if _, err := client.CreateActivity(session.ID, CreateActivityRequest{
@@ -834,6 +837,16 @@ func BroadcastContinue() {
 		"sent":  sent,
 		"total": len(sessions),
 	})
+}
+
+// CacheSessions replaces all locally stored sessions with fresh data from Jules.
+// This lets the dashboard load instantly without waiting for the Jules API.
+func CacheSessions(sessions []models.JulesSession) {
+	db.DB.Unscoped().Where("1 = 1").Delete(&models.JulesSession{})
+	for _, s := range sessions {
+		db.DB.Create(&s)
+	}
+	log.Printf("[Cache] Stored %d sessions locally", len(sessions))
 }
 
 // extractProjectName extracts the repo/project name from a Jules sourceID.
