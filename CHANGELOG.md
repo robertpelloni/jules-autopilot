@@ -2,6 +2,23 @@
 
 All notable changes to this project will be documented in this file.
 
+## [3.6.9] - 2026-06-23
+
+### Changed
+- Repository: Full upstream sync executed — local main fast-forwarded to origin/main (v3.6.8)
+- Version: Bumped to v3.6.9 after sync, config reconciliation, and workspace validation
+- Vite config: Proxy port corrected to :8080 for local backend compatibility
+- pnpm-workspace: Enabled unrs-resolver build
+- Documentation: Synced VERSION.md to match VERSION (was stale at 3.6.5)
+- Batch scripts: Validated start.bat pathing — unchanged (targets :8080 backend)
+
+## [3.6.8] - 2026-06-23
+
+### Changed
+- README: Added prominent 'UNDER CONSTRUCTION — ALPHA STATE' banner
+- Performance: Sessions served from local cache for instant dashboard load
+- README: Added giant 'UNDER CONSTRUCTION' banner
+
 ## [3.6.7] - 2026-06-23
 
 ### Changed

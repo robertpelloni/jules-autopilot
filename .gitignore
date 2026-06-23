@@ -71,6 +71,8 @@ dev.db-shm
 dev.db-wal
 autopilot-backend.exe~
 backend-go/backend.exe
+backend-go/*.exe
+nul
 .pi-lens/
 
 # Temp scripts

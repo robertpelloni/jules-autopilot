@@ -3,6 +3,7 @@
 This document tracks granular bugs, missing features, and technical debt. For epic-level milestones, see `ROADMAP.md`.
 
 ## Immediate Actions
+- [x] **Repository Sync & Merge (v3.6.9):** Executed full upstream fetch, fast-forwarded main to origin/main (v3.6.8), verified all remote feature branches are caught up, resolved vite.config.ts conflict (proxy port :8082→:8080 for local), synced version files (VERSION, VERSION.md, package.json), and updated CHANGELOG.md with missing v3.6.8 and new v3.6.9 entries.
 - [x] **Shadow Pilot: Git Diff Monitoring (v3.6.6):** Implemented `monitorGitDiffs` in Go backend to detect significant changes and regressions. Added `git_diff` anomaly type and deduplicated logging.
 - [x] **Shadow Pilot & Submodule UI Restore (v3.6.6):** Restored `ShadowPilotPanel` and `SubmoduleList` components. Integrated into `SettingsDialog` tabs.
 - [x] **Automated CI Fix Loop (v3.6.6):** Verified CI monitoring integration with autonomous session spawning. Failures now trigger `ci_auto_fix` queue jobs.
