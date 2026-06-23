@@ -1,3 +1,5 @@
+# 🚧 UNDER CONSTRUCTION — ALPHA STATE! 🚧
+
 # Jules Autopilot (Go Primary Runtime)
 
 > **The ultra-fast, autonomous command center for Google Jules.**
