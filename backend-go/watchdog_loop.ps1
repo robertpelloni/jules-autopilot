@@ -8,6 +8,14 @@ $exePath = "$backendDir\backend.exe"
 
 Add-Content $logFile "[$(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')] Watchdog started"
 
+# Single-instance mutex to prevent duplicate watchdogs
+\$mutexName = "Global\JulesAutopilotWatchdog"
+\$mutex = New-Object System.Threading.Mutex(\$false, \$mutexName)
+if (!\$mutex.WaitOne(0)) {
+    Add-Content \$logFile "[$(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')] Another watchdog instance already running, exiting."
+    exit
+}
+
 while ($true) {
     $healthy = $false
     try {
@@ -34,7 +42,7 @@ while ($true) {
         $p = [System.Diagnostics.Process]::Start($psi)
         Add-Content $logFile "[$(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')] Started backend (PID: $($p.Id)) on port $port"
 
-        for ($i = 0; $i -lt 12; $i++) {
+	for ($i = 0; $i -lt 12; $i++) {
             Start-Sleep -Seconds 5
             try {
                 $r = Invoke-WebRequest -Uri "http://127.0.0.1:$port/api/health" -TimeoutSec 3 -UseBasicParsing -ErrorAction Stop
