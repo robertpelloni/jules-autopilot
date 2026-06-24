@@ -881,15 +881,14 @@ func GetCachedSessions() ([]models.JulesSession, error) {
 }
 
 // generateNudgeMessage uses LM Studio to craft an intelligent bump message for a session.
-// Falls back to a simple project-specific message if LM Studio fails.
 func generateNudgeMessage(session models.JulesSession, settings models.KeeperSettings) (string, error) {
-	instructions := "Please instruct Google Jules agent to continue autonomously working on this project. Infer the next step based on the progress history and conversation."
-
+	client := NewJulesClient()
 	projectName := extractProjectName(session.SourceID)
+	instructions := fmt.Sprintf("Craft a brief nudge to instruct the Google Jules agent working on %s to continue autonomously. Infer the next step from the context below.", projectName)
+
+	// Documentation context from the project workspace
 	workspaceRoot := filepath.Join(getProjectRoot(), "..")
 	projectDir := filepath.Join(workspaceRoot, projectName)
-
-	// Documentation context
 	docContext := ""
 	for _, docFile := range []string{"README.md", "ARCHITECTURE.md", "DEPLOY.md", "VISION.md", "ROADMAP.md", "MEMORY.md"} {
 		path := filepath.Join(projectDir, docFile)
@@ -902,15 +901,28 @@ func generateNudgeMessage(session models.JulesSession, settings models.KeeperSet
 		}
 	}
 
-	// Recent git commits
-	commitContext := ""
-	if output, err := Cmd("git", "-C", projectDir, "log", "--oneline", "-5").Output(); err == nil {
-		commitContext = fmt.Sprintf("\n=== Recent Commits ===\n%s", string(output))
+	// Last 10 messages from the Jules agent
+	var lastMsgs string
+	if activities, err := client.ListActivities(session.ID); err == nil && len(activities) > 0 {
+		var msgs []string
+		count := 0
+		for i := len(activities) - 1; i >= 0 && count < 10; i-- {
+			a := activities[i]
+			if a.Role == "agent" {
+				content := a.Content
+				if len(content) > 1000 {
+					content = content[:1000]
+				}
+				msgs = append([]string{content}, msgs...)
+				count++
+			}
+		}
+		lastMsgs = strings.Join(msgs, "\n---\n")
 	}
 
 	prompt := fmt.Sprintf(
-		"INSTRUCTIONS:\n%s\n\nDOCUMENTATION:\n%s\n\n%s\n\nINSTRUCTIONS AGAIN:\n%s",
-		instructions, docContext, commitContext, instructions)
+		"INSTRUCTIONS:\n%s\n\nDOCUMENTATION:\n%s\n\nJULES AGENT LAST MESSAGES:\n%s\n\nINSTRUCTIONS AGAIN:\n%s",
+		instructions, docContext, lastMsgs, instructions)
 
 	result, err := generateLLMText("lmstudio", "placeholder", settings.SupervisorModel,
 		"You are a coding supervisor. Follow the INSTRUCTIONS.",
@@ -919,7 +931,7 @@ func generateNudgeMessage(session models.JulesSession, settings models.KeeperSet
 			Content: prompt,
 		}})
 	if err != nil || strings.TrimSpace(result.Content) == "" {
-		return "", fmt.Errorf("lmstudio nudge failed: %w", err)
+		return fmt.Sprintf("[Supervisor] Continue autonomous development on %s.", projectName), nil
 	}
 
 	return "[Supervisor] " + result.Content, nil
