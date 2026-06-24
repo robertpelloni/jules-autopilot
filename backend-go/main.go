@@ -78,6 +78,9 @@ func main() {
 	// Start system tray icon (Windows)
 	go services.StartTray()
 
+	// Rate limiter for Jules API calls (prevent 429 flooding)
+	services.InitRateLimiter()
+
 	// On startup, broadcast "continue" to all sessions so they don't sit idle
 	// until the daemon's first tick (up to 5 min).
 	go services.BroadcastContinue()

@@ -1020,6 +1020,11 @@ func handleSessionAction(c *fiber.Ctx) error {
 
 	client := getJulesClientForRequest(c)
 
+	// Rate limit: max 5 activity requests per second per session
+	if !services.GetRateLimiter().Allow("activity:" + id) {
+		return c.Status(429).JSON(fiber.Map{"error": "Too many requests. Please slow down."})
+	}
+
 	if action == "sendMessage" {
 		var body struct {
 			Prompt string `json:"prompt"`
@@ -1106,6 +1111,11 @@ func createActivity(c *fiber.Ctx) error {
 	}
 
 	client := getJulesClientForRequest(c)
+
+	if !services.GetRateLimiter().Allow("activity:" + id) {
+		return c.Status(429).JSON(fiber.Map{"error": "Too many requests. Please slow down."})
+	}
+
 	result, err := client.CreateActivity(id, req)
 	if err != nil {
 		errStr := err.Error()
