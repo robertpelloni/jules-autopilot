@@ -14142,3 +14142,262 @@ Let me find the end of the route registration to add new routes.
 **Action**: bash(command: "cd backend-go && go build -o backend.exe -ldflags="-H=windowsgui" . 2>&1 && echo "BUILD OK"", timeout: 30)
 **Observation**: bash: success
 
+## Turn 21 | 2026-06-24T00:24:50.713Z | deepseek/deepseek-v4-flash
+
+**Thought**: 
+**Thinking**: Let me commit, push, and restart.
+**Action**: bash(command: "cd backend-go && git add -A && git commit -m "fix: replace getlantern/systray with PowerShell tray script
+
+- Removed getlantern/systray dependency (wasn't working at runtime)
+- Added PowerShell-based tray icon (tray.ps1) using .NET NotifyIcon
+- Added /api/daemon/restart and /api/worker/restart endpoints
+- Go backend launches tray.ps1 as hidden process on startup" && git push 2>&1", timeout: 15)
+**Observation**: bash: success
+
+## Turn 22 | 2026-06-24T00:24:56.128Z | deepseek/deepseek-v4-flash
+
+**Thought**: 
+**Thinking**: Now let me restart the backend.
+**Action**: bash(command: "powershell -Command "Stop-Process -Name 'backend' -Force -ErrorAction SilentlyContinue" && sleep 25 && curl -s --max-time 5 http://localhost:8082/api/health | python3 -c "import sys,json;d=json.load(sys.stdin);print('OK')" 2>&1", timeout: 35)
+**Observation**: bash: error
+
+## Turn 23 | 2026-06-24T00:25:29.470Z | deepseek/deepseek-v4-flash
+
+**Thought**: 
+**Thinking**: Restarting. Let me wait.
+**Action**: bash(command: "sleep 15 && curl -s --max-time 5 http://localhost:8082/api/health | python3 -c "import sys,json;d=json.load(sys.stdin);print('OK')"", timeout: 25)
+**Observation**: bash: success
+
+## Turn 24 | 2026-06-24T00:25:48.104Z | deepseek/deepseek-v4-flash
+
+**Thought**: 
+**Thinking**: Backend restarted. Now the tray icon should be created by the PowerShell script `tray.ps1`. Let me check if the PowerShell process was launched.
+
+But wait - there's a problem. The `StartTray` function launches `powershell.exe` with `-WindowStyle Hidden`. But when `powershell.exe` starts, Windows might briefly create a console window before hiding it. This is what the user was complaining about!
+
+The `-WindowStyle Hidden` flag hides the PowerShell window, but it might still flash briefly. To avoid this, I should use the same technique as the watchdog: create a ProcessStartInfo with `CreateNoWindow = $true` and `UseShellExecute = $false`.
+
+Actually, the `Cmd()` wrapper in Go already sets `HideWindow: true` via `syscall.SysProcAttr`. So the PowerShell process should not create a visible console window. Let me check if the `hideWindow` function properly sets `HideWindow` for PowerShell.
+
+Looking at hide_window_windows.go:
+```go
+func hideWindow(cmd *exec.Cmd) {
+    cmd.SysProcAttr = &syscall.SysProcAttr{HideWindow: true}
+}
+
+func Cmd(name string, args ...string) *exec.Cmd {
+    cmd := exec.Command(name, args...)
+    hideWindow(cmd)
+    return cmd
+}
+```
+
+So when we do `Cmd("powershell", ...)`, it creates a PowerShell process with `HideWindow: true`. This should work. The PowerShell window should be created but immediately hidden (or not created at all, depending on Windows version).
+
+But the user said "something still popping up" earlier. Maybe it's the PowerShell script launching that's causing the flash. Let me check.
+
+Actually, let me just verify the tray is working by checking if there's a PowerShell process running the tray.ps1.
+**Action**: bash(command: "powershell -Command "Get-Process | Where-Object { \$_.ProcessName -eq 'powershell' -and \$_.CommandLine -match 'tray' } | Select-Object Id,ProcessName,StartTime | Format-Table -AutoSize" 2>&1", timeout: 10)
+**Observation**: bash: success
+
+## Turn 25 | 2026-06-24T00:25:57.857Z | deepseek/deepseek-v4-flash
+
+**Thought**: 
+**Thinking**: No PowerShell process running tray.ps1. That means the tray script either:
+1. Wasn't launched (StartTray didn't run)
+2. Launched but crashed/exited immediately
+3. Is running but doesn't match the filter
+
+Let me check if StartTray was called. Let me also look for any PowerShell process that might be the tray.
+
+Actually, let me check all PowerShell processes.
+**Action**: bash(command: "powershell -Command "Get-Process -Name 'powershell' -ErrorAction SilentlyContinue | Select-Object Id,StartTime,@{N='Cmd';E={(Get-CimInstance Win32_Process -Filter \"ProcessId='$($_.Id)'\").CommandLine}}" 2>&1", timeout: 10)
+**Observation**: bash: success
+
+## Turn 26 | 2026-06-24T00:26:11.772Z | deepseek/deepseek-v4-flash
+
+**Thought**: 
+**Thinking**: I see PowerShell processes but they're likely from:
+- 57336: watchdog_loop.ps1
+- 45076, 50692: other scripts
+- 17432, 43756, 57036: recently started (maybe from our commands)
+
+But none seem to be running tray.ps1. The tray script might not have started.
+
+Wait - I need to check if `StartTray` was actually called. In main.go, it says `go services.StartTray()`. But `StartTray` might have been called before the `tray.ps1` file was updated. Let me check if the tray.ps1 file exists in the right location.
+
+The `getScriptDir()` function uses `os.Executable()` which returns the path to the running executable. The executable is `backend.exe` in `backend-go/`. So `getScriptDir()` should return `C:\Users\hyper\workspace\jules-autopilot\backend-go\`. And the tray.ps1 is there. So it should work.
+
+But maybe the backend hasn't been restarted with the new code? Let me check the watchdog log.
+
+Actually wait - I did restart the backend. The health check passed. So the new binary is running.
+
+Let me check if the tray.ps1 file exists in the binary's directory.
+**Action**: bash(command: "ls -la backend-go/tray.ps1 2>&1", timeout: 5)
+**Observation**: bash: success
+
+## Turn 27 | 2026-06-24T00:26:18.499Z | deepseek/deepseek-v4-flash
+
+**Thought**: 
+**Thinking**: The file exists. But maybe the issue is that the tray.ps1 script is being launched but crashes immediately. The tray script requires `System.Windows.Forms` assembly which is a .NET Framework assembly. On systems without .NET Framework (or with only .NET Core), it might fail.
+
+But Windows 11 should have .NET Framework installed. The script uses `Add-Type -AssemblyName System.Windows.Forms` which should work.
+
+Wait - there might be an execution policy issue. The script uses `-ExecutionPolicy Bypass` in the command line, so that should be fine.
+
+Let me also check: the `powershell.exe` might be the one at `C:\WINDOWS\System32\WindowsPowerShell\v1.0\powershell.exe` (Windows PowerShell 5.1) which has .NET Framework, or `pwsh.exe` (PowerShell 7+) which is cross-platform.
+
+The `Cmd("powershell", ...)` uses "powershell" which resolves to Windows PowerShell 5.1, not PowerShell 7 (pwsh). Windows PowerShell 5.1 ships with Windows and has .NET Framework support.
+
+Let me check if there's an issue with the PowerShell process starting. Maybe the `-WindowStyle Hidden` flag is causing issues with the `HideWindow: true` in Go? Actually, `-WindowStyle Hidden` tells PowerShell to hide its window, and `HideWindow: true` in Go does the same thing at the process level. They might conflict.
+
+Let me just try removing the `-WindowStyle Hidden` from the Go command since `Cmd()` already sets `HideWindow: true`.
+**Action**: bash(command: "powershell -Command "powershell -NoProfile -ExecutionPolicy Bypass -WindowStyle Hidden -File backend-go\tray.ps1" &
+sleep 3
+powershell -Command "Get-Process | Where-Object { \$_.CommandLine -match 'tray' } | Select-Object Id,ProcessName | Format-Table -AutoSize" 2>&1", timeout: 10)
+**Observation**: bash: success
+
+## Turn 28 | 2026-06-24T00:26:31.121Z | deepseek/deepseek-v4-flash
+
+**Thought**: The em dash is breaking PowerShell parsing. Let me rewrite the script without special characters.
+**Thinking**: The error is on line 11: `$tray.Text = "Jules Autopilot — starting..."` - the em dash character is causing a parser error! The file was saved with a Unicode em dash (—) which PowerShell can't parse properly.
+
+I need to fix the script by using a regular dash or ASCII hyphen instead of the em dash.
+
+Also, there's more errors: the `$mRestartDaemon` and `$mQuit` handlers have issues too.
+
+Let me rewrite the tray.ps1 without any special characters and fix the syntax.
+**Action**: write(content: "# Jules Autopilot System Tray Icon
+Add-Type -AssemblyName System.Windows.Forms
+Add-Type -AssemblyName System.Drawing
+
+$backendUrl = "http://localhost:8082"
+
+# Create the NotifyIcon
+$tray = New-Object System.Windows.Forms.NotifyIcon
+$tray.Text = "Jules Autopilot - starting..."
+
+# Create a 16x16 blue triangle icon
+$bmp = New-Object System.Drawing.Bitmap(16, 16)
+$g = [System.Drawing.Graphics]::FromImage($bmp)
+$g.Clear([System.Drawing.Color]::Transparent)
+$brush = New-Object System.Drawing.SolidBrush([System.Drawing.Color]::FromArgb(255, 0, 120, 212))
+$points = @(
+    [System.Drawing.Point]::new(8, 1)
+    [System.Drawing.Point]::new(1, 14)
+    [System.Drawing.Point]::new(15, 14)
+)
+$g.FillPolygon($brush, $points)
+$g.Dispose()
+$hIcon = $bmp.GetHicon()
+$tray.Icon = [System.Drawing.Icon]::FromHandle($hIcon)
+
+# Build context menu
+$menu = New-Object System.Windows.Forms.ContextMenuStrip
+
+$mDashboard = New-Object System.Windows.Forms.ToolStripMenuItem
+$mDashboard.Text = "Dashboard"
+$mDashboard.Add_Click({ Start-Process $backendUrl })
+
+$mStatus = New-Object System.Windows.Forms.ToolStripMenuItem
+$mStatus.Text = "Status"
+$mStatus.Add_Click({ Start-Process "$backendUrl/api/health" })
+
+$menu.Items.Add($mDashboard)
+$menu.Items.Add($mStatus)
+$menu.Items.Add((New-Object System.Windows.Forms.ToolStripSeparator))
+
+$mRestartDaemon = New-Object System.Windows.Forms.ToolStripMenuItem
+$mRestartDaemon.Text = "Restart Daemon"
+$mDaemonClick = {
+    try {
+        Invoke-RestMethod -Uri "$backendUrl/api/daemon/restart" -Method Post -ErrorAction Stop | Out-Null
+    } catch {
+        [System.Windows.Forms.MessageBox]::Show("Failed to restart daemon: $_", "Error")
+    }
+}
+$mRestartDaemon.Add_Click($mDaemonClick)
+
+$mRestartWorker = New-Object System.Windows.Forms.ToolStripMenuItem
+$mRestartWorker.Text = "Restart Worker"
+$mWorkerClick = {
+    try {
+        Invoke-RestMethod -Uri "$backendUrl/api/worker/restart" -Method Post -ErrorAction Stop | Out-Null
+    } catch {
+        [System.Windows.Forms.MessageBox]::Show("Failed to restart worker: $_", "Error")
+    }
+}
+$mRestartWorker.Add_Click($mWorkerClick)
+
+$menu.Items.Add($mRestartDaemon)
+$menu.Items.Add($mRestartWorker)
+$menu.Items.Add((New-Object System.Windows.Forms.ToolStripSeparator))
+
+$mQuit = New-Object System.Windows.Forms.ToolStripMenuItem
+$mQuit.Text = "Quit"
+$mQuit.Add_Click({
+    $tray.Visible = $false
+    [System.Windows.Forms.Application]::Exit()
+})
+$menu.Items.Add($mQuit)
+
+$tray.ContextMenuStrip = $menu
+$tray.Visible = $true
+
+# Tooltip updater
+$timer = New-Object System.Windows.Forms.Timer
+$timer.Interval = 30000
+$timer.Add_Tick({
+    try {
+        $r = Invoke-RestMethod -Uri "$backendUrl/api/health" -TimeoutSec 5 -ErrorAction Stop
+        $q = $r.queue
+        $s = $r.totals.sessions
+        $tray.Text = "Jules Autopilot - Queue: $($q.pending)/$($q.processing) Sessions: $s"
+    } catch {
+        $tray.Text = "Jules Autopilot - offline"
+    }
+})
+$timer.Start()
+
+# Keep running
+[System.Windows.Forms.Application]::Run()
+", path: "C:/Users/hyper/workspace/jules-autopilot/backend-go/tray.ps1")
+**Observation**: write: success
+
+## Turn 29 | 2026-06-24T00:26:49.087Z | deepseek/deepseek-v4-flash
+
+**Thought**: 
+**Thinking**: Let me also update the Go `StartTray` to not use `-WindowStyle Hidden` since the Go `Cmd()` already hides the window via `CreateNoWindow`. Also, the openBrowser and systray imports are no longer needed.
+
+Actually, let me just update the tray.go to simplify the PowerShell launch command.
+**Action**: edit(edits: [object Object], path: "C:/Users/hyper/workspace/jules-autopilot/backend-go/services/tray.go")
+**Observation**: edit: success
+
+## Turn 30 | 2026-06-24T00:27:01.405Z | deepseek/deepseek-v4-flash
+
+**Thought**: 
+**Thinking**: Wait - removing `-WindowStyle Hidden` means the PowerShell window will be visible! But the `Cmd()` function sets `HideWindow: true` via `syscall.SysProcAttr`, so the window should still be hidden.
+
+Actually, `HideWindow: true` should handle this. Let me verify by looking at hide_window_windows.go.
+
+Yes, `hideWindow(cmd)` sets `cmd.SysProcAttr.HideWindow = true`. This suppresses the window creation entirely (or hides it immediately). So the PowerShell window should not be visible.
+
+But wait, there's a subtlety: `powershell.exe` is a console application. When `HideWindow: true` is set, the console window is created but hidden. On some Windows versions, this can still cause a brief flash.
+
+A better approach: use `powershell.exe -WindowStyle Hidden` AND `HideWindow: true` which double-ensures the window is hidden.
+
+Actually, the original code had both `-WindowStyle Hidden` in PowerShell args AND `HideWindow: true` in Go. That should be fine. Let me put back the `-WindowStyle Hidden` flag to be safe.
+
+But actually, I removed it because I was doing manual testing and the PowerShell script had errors. Now that the script is fixed, let me rebuild and deploy with both hiding flags.
+
+Let me put back `-WindowStyle Hidden`.
+**Action**: edit(edits: [object Object], path: "C:/Users/hyper/workspace/jules-autopilot/backend-go/services/tray.go")
+**Observation**: edit: success
+
+## Turn 31 | 2026-06-24T00:27:15.576Z | deepseek/deepseek-v4-flash
+
+**Thought**: 
+**Thinking**: Now let me build, deploy, and check the log to see if the tray was launched.
+**Action**: bash(command: "cd backend-go && go build -o backend.exe -ldflags="-H=windowsgui" . 2>&1 && echo "BUILD OK"", timeout: 30)
+**Observation**: bash: success
+
