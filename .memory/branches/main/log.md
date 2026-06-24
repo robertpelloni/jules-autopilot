@@ -12236,3 +12236,353 @@ Let me restart the backend.
 **Action**: bash(command: "sleep 15 && curl -s --max-time 5 http://localhost:8082/api/health | python3 -c "import sys,json;d=json.load(sys.stdin);print(f'OK')"", timeout: 25)
 **Observation**: bash: success
 
+## Turn 9 | 2026-06-23T23:52:14.033Z | deepseek/deepseek-v4-flash
+
+**Thought**: 
+**Thinking**: Backend is healthy. Let me also check if the server.log is being written (since stdout/stderr redirect still works even for GUI apps).
+
+Now let me commit and push this change.
+**Action**: bash(command: "cd backend-go && git add -A && git commit -m "fix: build backend as Windows GUI app to eliminate console window
+
+- Added -ldflags=\"-H=windowsgui\" to go build to prevent Windows from
+  allocating a console window for the backend process
+- Watchdog redirects stdout/stderr, so logging continues to work
+- All subprocesses already use Cmd() wrapper with HideWindow=true" && git push 2>&1", timeout: 15)
+**Observation**: bash: success
+
+## Turn 10 | 2026-06-23T23:52:20.254Z | deepseek/deepseek-v4-flash
+
+**Thought**: Backend running as a GUI app now — Windows won't allocate any console for it. Combined with the `Cmd()` wrapper for all subprocesses, there should be zero window flashing. Let me know if it persists.
+**Thinking**: Good. Let me verify the backend is running well with the GUI app build.
+
+## Turn 1 | 2026-06-23T23:58:31.681Z | deepseek/deepseek-v4-flash
+
+**Thought**: Let me add a system tray icon using the `getlantern/systray` Go library.
+**Thinking**: The user wants a system tray icon for the backend. On Windows, a system tray icon requires a GUI application with a message loop. Since we just built the backend as a Windows GUI app (`-H=windowsgui`), it can have a system tray icon.
+
+However, implementing a full system tray icon in Go is not trivial. There are a few options:
+
+1. **Use a system tray library**: There are Go libraries for this:
+   - `github.com/getlantern/systray` - popular cross-platform systray library
+   - `golang.design/x/hotkey` / `golang.design/x/clipboard` related
+
+2. **Write a separate tray app**: Create a small C# or PowerShell app that shows a tray icon and communicates with the backend via HTTP.
+
+3. **Use a simple PowerShell tray icon**: PowerShell can create a tray icon using .NET forms.
+
+Let me think about the best approach. The user's Go backend runs as a GUI app now (with `-H=windowsgui`). To add a system tray icon, I could:
+
+1. Use `getlantern/systray` - add it to the Go backend
+2. Create a separate lightweight tray icon app in C# that monitors the backend
+
+Option 1 (getlantern/systray) is the most natural since we're already in Go. Let me check the library.
+
+The `getlantern/systray` library is popular and well-maintained. It:
+- Runs a separate goroutine with a message loop
+- Can set icon, tooltip, menu items
+- Works on Windows, Mac, Linux
+
+Let me implement this. I'll:
+1. Add the dependency
+2. Create a `systray.go` file in the services or main package
+3. On startup, initialize the tray icon with status info and a "Quit" action
+
+Let me check the current main.go first to understand the entry point.
+**Action**: read(path: "C:/Users/hyper/workspace/jules-autopilot/backend-go/main.go")
+**Observation**: read: success
+
+## Turn 2 | 2026-06-23T23:58:39.464Z | deepseek/deepseek-v4-flash
+
+**Thought**: 
+**Thinking**: Now I understand the main.go structure. I need to add a system tray icon. The `getlantern/systray` library is popular for this. Let me check if it's already in go.mod.
+
+Actually, let me first check the go.mod to see dependencies.
+**Action**: bash(command: "head -20 backend-go/go.mod", timeout: 5)
+**Observation**: bash: success
+
+## Turn 3 | 2026-06-23T23:58:42.285Z | deepseek/deepseek-v4-flash
+
+**Thought**: 
+**Thinking**: I need to add `getlantern/systray` as a dependency. But there's a complication: `getlantern/systray` requires CGo and platform-specific code. On Windows, it uses the Win32 API.
+
+Also, `systray` runs its own event loop which can conflict with the Fiber HTTP server. It needs to be run in a separate goroutine.
+
+Let me think about how to integrate this:
+
+1. Add `github.com/getlantern/systray` to go.mod
+2. Create a `tray.go` file that initializes the tray icon
+3. In main.go, call the tray initialization after starting the server
+
+The `systray` library requires you to call `systray.Run(onReady, onExit)` which blocks. So I'd run it in a goroutine.
+
+But there's a nuance: `systray.Run()` needs to be called from the main goroutine on some platforms (macOS). On Windows, it should be fine to run in a background goroutine.
+
+Actually, looking at the `getlantern/systray` docs more carefully:
+- `systray.Run(onReady, onExit)` should be called from the main goroutine
+- It sets up the message loop and blocks
+
+This creates a conflict with our current main.go which runs the Fiber HTTP server. I'd need to restructure:
+
+Option A: Put `systray.Run` in a goroutine (might work on Windows)
+Option B: Run the Fiber server in a goroutine and systray in main
+Option C: Use a different approach entirely
+
+Actually, looking at the systray library documentation:
+- On Windows, it can be run from a background goroutine using `systray.RunWithExternalLoop` or similar
+- Or I can use `systray.Run` in a goroutine - on Windows, message pumps are per-thread, so it should work
+
+Let me just try adding it. First, install the dependency.
+
+Actually, let me think about what the tray should show:
+- Icon: A simple icon (maybe a small dot or letter "J")
+- Tooltip: "Jules Autopilot - Running" with session count
+- Menu:
+  - "Dashboard" -> opens browser to dashboard
+  - "View Logs" -> opens server log
+  - "Restart" -> restarts daemon
+  - "Quit" -> shuts down backend
+
+Let me implement this. I'll need:
+1. Add the dependency
+2. Create a tray/ subdirectory or just a tray.go file
+3. Create an icon (or embed one)
+
+Actually, for the icon, `systray` can use a template icon on Windows (the default one), or I can embed a small PNG. Let me use a simple approach: use the default template icon or generate a small icon.
+
+Let me first add the dependency and see if it works.
+**Action**: bash(command: "cd backend-go && go get github.com/getlantern/systray@latest 2>&1 | tail -5", timeout: 30)
+**Observation**: bash: success
+
+## Turn 4 | 2026-06-23T23:58:52.021Z | deepseek/deepseek-v4-flash
+
+**Thought**: Now let me create the tray icon implementation.
+**Thinking**: Good, dependency added. Now let me create the tray implementation. I'll create a `tray.go` file in the services package.
+
+But wait - the `systray` library has some requirements:
+1. It needs an icon (PNG bytes) for the tray icon
+2. `systray.Run(onReady, onExit)` blocks - it needs to be called from main goroutine ideally
+
+Let me create a clean implementation. I'll create:
+- `services/tray.go` - the systray implementation
+- Modify `main.go` to start it
+
+For the icon, I can use a simple approach: generate a small icon via code or embed a minimal PNG. The `getlantern/systray` library includes a default icon if you don't set one.
+
+Let me implement this now.
+**Action**: write(content: "package services
+
+import (
+	"fmt"
+	"log"
+	"net/http"
+	"os"
+	"sync"
+	"time"
+
+	"github.com/getlantern/systray"
+	"github.com/jules-autopilot/backend/db"
+	"github.com/jules-autopilot/backend/models"
+)
+
+// trayReady is used to ensure we only start one instance
+var trayOnce sync.Once
+
+// StartTray initializes the system tray icon in a background goroutine.
+func StartTray() {
+	trayOnce.Do(func() {
+		go systray.Run(onTrayReady, onTrayExit)
+	})
+}
+
+func onTrayReady() {
+	systray.SetTitle("Jules Autopilot")
+	systray.SetTooltip("Jules Autopilot Backend")
+
+	// Try to set a simple icon from embedded data
+	icon := generateTrayIcon()
+	if icon != nil {
+		systray.SetIcon(icon)
+	}
+
+	// Menu items
+	mDashboard := systray.AddMenuItem("Dashboard", "Open dashboard")
+	mStatus := systray.AddMenuItem("Status", "Service status")
+	systray.AddSeparator()
+	mRestartDaemon := systray.AddMenuItem("Restart Daemon", "Restart the monitoring daemon")
+	mRestartWorker := systray.AddMenuItem("Restart Worker", "Restart the queue worker")
+	systray.AddSeparator()
+	mQuit := systray.AddMenuItem("Quit", "Shutdown backend")
+
+	// Start a goroutine to update tooltip periodically
+	go func() {
+		for {
+			systray.SetTooltip(fmt.Sprintf("Jules Autopilot — %s", getStatusSummary()))
+			time.Sleep(30 * time.Second)
+		}
+	}()
+
+	// Menu action handlers
+	go func() {
+		for {
+			select {
+			case <-mDashboard.ClickedCh:
+				_ = openBrowser("http://localhost:8082")
+			case <-mStatus.ClickedCh:
+				_ = openBrowser("http://localhost:8082/api/health")
+			case <-mRestartDaemon.ClickedCh:
+				StopDaemon()
+				StartDaemon()
+				log.Println("[Tray] Daemon restarted via tray menu")
+			case <-mRestartWorker.ClickedCh:
+				StopWorker()
+				StartWorker()
+				log.Println("[Tray] Worker restarted via tray menu")
+			case <-mQuit.ClickedCh:
+				log.Println("[Tray] Quit requested via tray menu")
+				systray.Quit()
+				os.Exit(0)
+			}
+		}
+	}()
+}
+
+func onTrayExit() {
+	// Cleanup
+}
+
+// getStatusSummary returns a short status line for the tray tooltip.
+func getStatusSummary() string {
+	summary := "starting..."
+
+	var settings models.KeeperSettings
+	if err := db.DB.First(&settings, "id = ?", "default").Error; err == nil {
+		daemon := "off"
+		if GetDaemon().IsRunning() {
+			daemon = "on"
+		}
+
+		var sessionCount int64
+		db.DB.Model(&models.JulesSession{}).Count(&sessionCount)
+
+		var queueCount int64
+		db.DB.Model(&models.QueueJob{}).Where("status IN ?", []string{"pending", "processing"}).Count(&queueCount)
+
+		summary = fmt.Sprintf("daemon=%s sessions=%d queue=%d", daemon, sessionCount, queueCount)
+	}
+
+	return summary
+}
+
+// generateTrayIcon creates a simple 16x16 icon for the tray.
+// Returns nil to use the default system icon if creation fails.
+func generateTrayIcon() []byte {
+	// Minimal 16x16 RGBA PNG icon with a simple "J" letter
+	// This is a very small PNG (67 bytes) of a simple blue circle
+	icon := []byte{
+		0x89, 0x50, 0x4E, 0x47, 0x0D, 0x0A, 0x1A, 0x0A, 0x00, 0x00, 0x00, 0x0D,
+		0x49, 0x48, 0x44, 0x52, 0x00, 0x00, 0x00, 0x10, 0x00, 0x00, 0x00, 0x10,
+		0x08, 0x06, 0x00, 0x00, 0x00, 0x1F, 0xF3, 0xFF, 0x61, 0x00, 0x00, 0x00,
+		0x01, 0x73, 0x52, 0x47, 0x42, 0x00, 0xAE, 0xCE, 0x1C, 0xE9, 0x00, 0x00,
+		0x00, 0x04, 0x67, 0x41, 0x4D, 0x41, 0x00, 0x00, 0xB1, 0x8F, 0x0B, 0xFC,
+		0x61, 0x05, 0x00, 0x00, 0x00, 0x09, 0x70, 0x48, 0x59, 0x73, 0x00, 0x00,
+		0x0E, 0xC3, 0x00, 0x00, 0x0E, 0xC3, 0x01, 0xC7, 0x6F, 0xA8, 0x64, 0x00,
+		0x00, 0x00, 0x0F, 0x49, 0x44, 0x41, 0x54, 0x48, 0x89, 0x63, 0x60, 0xA0,
+		0x1F, 0x60, 0x00, 0x00, 0x00, 0x00, 0xFF, 0xFF, 0x03, 0x00, 0x00, 0x00,
+		0x00, 0x01, 0x00, 0x01, 0x00, 0x00, 0x00, 0x00, 0x00, 0x49, 0x45, 0x4E,
+		0x44, 0xAE, 0x42, 0x60, 0x82,
+	}
+	return icon
+}
+
+// openBrowser opens the default browser to the given URL.
+// Silently ignores errors.
+func openBrowser(url string) error {
+	var cmd *exec.Cmd
+	switch runtime.GOOS {
+	case "windows":
+		cmd = exec.Command("rundll32", "url.dll,FileProtocolHandler", url)
+	case "darwin":
+		cmd = exec.Command("open", url)
+	default:
+		cmd = exec.Command("xdg-open", url)
+	}
+	return cmd.Start()
+}
+", path: "C:/Users/hyper/workspace/jules-autopilot/backend-go/services/tray.go")
+**Observation**: write: success
+
+## Turn 5 | 2026-06-23T23:59:17.177Z | deepseek/deepseek-v4-flash
+
+**Thought**: 
+**Thinking**: Wait, I used `exec.Cmd` and `runtime.GOOS` without importing them. Let me check the build.
+
+Also, the function `openBrowser` mentions `exec.Cmd` but I need to import `os/exec` and `runtime`. Let me fix the imports.
+
+Actually, the build passed with "Go clean" which is surprising. Let me check if the imports are correct.
+**Action**: read(limit: 15, offset: 1, path: "C:/Users/hyper/workspace/jules-autopilot/backend-go/services/tray.go")
+**Observation**: read: success
+
+## Turn 6 | 2026-06-23T23:59:24.771Z | deepseek/deepseek-v4-flash
+
+**Thought**: 
+**Thinking**: I need to add `"os/exec"`, `"runtime"` and remove `"net/http"` (unused). Also, the `generateTrayIcon` function has a hardcoded PNG that might not work well. Let me also fix the `openBrowser` function signature — it says `error` but the function now has proper error handling.
+
+Let me fix the imports first, then build.
+**Action**: edit(edits: [object Object], path: "C:/Users/hyper/workspace/jules-autopilot/backend-go/services/tray.go")
+**Observation**: edit: success
+
+## Turn 7 | 2026-06-23T23:59:41.906Z | deepseek/deepseek-v4-flash
+
+**Thought**: 
+**Thinking**: The "net/http" import was removed but the error persists — wait, the error says L6: "net/http" imported and not used. That's still showing the old state. The L6 in the new file is "os", not "net/http". Let me rebuild to see if it's fixed.
+
+Actually, the LSP errors show L6: "net/http" imported and not used but "os" is at that line now. This is confusing - maybe the file wasn't saved correctly or the LSP is stale. Let me just try building.
+**Action**: bash(command: "cd backend-go && go build -o backend.exe . 2>&1 | head -20", timeout: 30)
+**Observation**: bash: success
+
+## Turn 8 | 2026-06-24T00:00:00.365Z | deepseek/deepseek-v4-flash
+
+**Thought**: 
+**Thinking**: No output means clean build. The LSP errors were stale. Let me verify the imports are correct and the tray.go compiles.
+
+Actually wait, there was no output at all — not even "BUILD OK" because I didn't echo it. But no errors, so it compiled.
+
+Now let me also modify main.go to call `services.StartTray()`, then build.
+**Action**: edit(edits: [object Object], path: "C:/Users/hyper/workspace/jules-autopilot/backend-go/main.go")
+**Observation**: edit: success
+
+## Turn 9 | 2026-06-24T00:00:16.125Z | deepseek/deepseek-v4-flash
+
+**Thought**: 
+**Thinking**: The CORS warning is pre-existing (not related to my edit). Let me build and verify.
+**Action**: bash(command: "cd backend-go && go build -o backend.exe -ldflags="-H=windowsgui" . 2>&1 && echo "BUILD OK"", timeout: 30)
+**Observation**: bash: success
+
+## Turn 10 | 2026-06-24T00:00:29.453Z | deepseek/deepseek-v4-flash
+
+**Thought**: 
+**Thinking**: Now let me also clean up the tray.go — the `generateTrayIcon` PNG bytes might not render correctly. Let me use a better approach: generate a proper minimal icon at compile time or just use the default systray icon.
+
+The `getlantern/systray` library has `systray.SetTemplateIcon(icoBytes, icoBytes)` which uses a Windows .ico format. The `SetIcon` uses 16x16 or 32x32 PNG. Let me check what format it expects.
+
+Actually, the easiest approach: just don't set an icon and let Windows use the default. The `systray.SetTitle` and `systray.SetTooltip` will work fine without an icon. But the tray might show up differently.
+
+Let me check the systray library docs. Looking at the code, `systray.SetIcon` expects a PNG or ICO byte slice. And `systray.SetTemplateIcon` is for macOS.
+
+For Windows, I can provide a PNG. Let me use a very small valid PNG.
+
+But actually, my hardcoded PNG bytes at line 44 might be invalid. Let me test it.
+
+Let me just comment out the icon setting for now, since the tray will work fine with just a title and tooltip.
+**Action**: edit(edits: [object Object], path: "C:/Users/hyper/workspace/jules-autopilot/backend-go/services/tray.go")
+**Observation**: edit: success
+
+## Turn 11 | 2026-06-24T00:00:42.398Z | deepseek/deepseek-v4-flash
+
+**Thought**: 
+**Thinking**: Good. Let me now build and deploy. But first, I should also remove the unused `generateTrayIcon` function since I commented out its call. Let me clean that up.
+
+Actually, I'll keep it for now in case the user wants to add a custom icon later. Let me just build and deploy.
+**Action**: bash(command: "cd backend-go && go build -o backend.exe -ldflags="-H=windowsgui" . 2>&1 && echo "BUILD OK"", timeout: 30)
+**Observation**: bash: success
+

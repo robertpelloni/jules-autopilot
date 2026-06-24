@@ -75,6 +75,9 @@ func main() {
 	}
 	services.StartScheduler()
 
+	// Start system tray icon (Windows)
+	go services.StartTray()
+
 	// On startup, broadcast "continue" to all sessions so they don't sit idle
 	// until the daemon's first tick (up to 5 min).
 	go services.BroadcastContinue()
