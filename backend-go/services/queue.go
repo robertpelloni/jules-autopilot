@@ -276,7 +276,7 @@ func StartWorker() {
 	globalWorkerMu.Lock()
 	defer globalWorkerMu.Unlock()
 	if globalWorker == nil {
-		globalWorker = NewWorker(50)
+		globalWorker = NewWorker(4)
 	}
 	globalWorker.Start()
 }
