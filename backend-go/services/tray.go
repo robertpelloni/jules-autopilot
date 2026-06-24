@@ -9,20 +9,19 @@ import (
 
 var trayOnce sync.Once
 
-// StartTray initializes the system tray icon by launching a PowerShell tray script.
+// StartTray initializes the system tray icon.
 func StartTray() {
 	trayOnce.Do(func() {
-		log.Println("[Tray] Starting PowerShell tray icon...")
-		psPath := filepath.Join(getScriptDir(), "tray.ps1")
-		if _, err := os.Stat(psPath); os.IsNotExist(err) {
-			log.Printf("[Tray] tray.ps1 not found at %s, skipping", psPath)
+		trayExe := filepath.Join(getScriptDir(), "trayicon.exe")
+		if _, err := os.Stat(trayExe); os.IsNotExist(err) {
+			log.Printf("[Tray] trayicon.exe not found at %s, skipping", trayExe)
 			return
 		}
-		cmd := Cmd("powershell", "-NoProfile", "-ExecutionPolicy", "Bypass", "-WindowStyle", "Hidden", "-File", psPath)
+		cmd := Cmd(trayExe)
 		if err := cmd.Start(); err != nil {
-			log.Printf("[Tray] Failed to start tray script: %v", err)
+			log.Printf("[Tray] Failed to start: %v", err)
 		} else {
-			log.Printf("[Tray] Tray script started (PID: %d)", cmd.Process.Pid)
+			log.Printf("[Tray] Started (PID: %d)", cmd.Process.Pid)
 		}
 	})
 }
