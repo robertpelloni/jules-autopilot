@@ -178,9 +178,28 @@ func (d *Daemon) tick() time.Duration {
 
 	queuedSessions := 0
 	for _, session := range sessions {
+		// COMPLETED sessions are done — skip them entirely
+		if session.RawState == "COMPLETED" {
+			continue
+		}
+		// Only check sessions that need attention
+		needsCheck := session.RawState == "FAILED" ||
+			session.RawState == "PAUSED" ||
+			session.RawState == "AWAITING_PLAN_APPROVAL"
+		if !needsCheck && session.RawState == "IN_PROGRESS" && session.LastActivityAt != nil {
+			threshold := time.Duration(settings.ActiveWorkThresholdMinutes) * time.Minute
+			if threshold < 5*time.Minute {
+				threshold = 10 * time.Minute
+			}
+			if time.Since(*session.LastActivityAt) > threshold {
+				needsCheck = true
+			}
+		}
+		if !needsCheck {
+			continue
+		}
+
 		// Only skip if a check_session is currently pending or processing.
-		// Don't block re-checking on completed/failed — handleCheckSession
-		// has its own supervisor-state dedup for nudging.
 		var existing models.QueueJob
 		found := db.DB.Where(
 			"type = ? AND status IN ? AND payload LIKE ?",
