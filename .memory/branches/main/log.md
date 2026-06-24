@@ -15690,3 +15690,706 @@ Let me build and restart.
 **Action**: bash(command: "cd backend-go && go build -o backend.exe . 2>&1 && echo "BUILD OK"", timeout: 30)
 **Observation**: bash: success
 
+## Turn 4 | 2026-06-24T01:09:29.533Z | deepseek/deepseek-v4-flash
+
+**Thought**: 
+**Thinking**: But wait - I need to also remove the `go services.StartTray()` from main.go... no, it's already there. The `StartTray()` in tray.go now uses `getlantern/systray` directly. That's correct.
+
+But the issue is: if I build `backend.exe` as a console app (no `-H=windowsgui`), then the watchdog will hide the console window. But the Go import used `os/exec` for the Cmd wrapper. Let me also check that `openBrowser` still works without the `-H=windowsgui` flag - it should, because `exec.Command` is independent of the parent process type.
+
+Let me also check: the `getlantern/systray` library creates a hidden window on Windows. So even without `-H=windowsgui`, the backend will run with a hidden console window AND a hidden systray window. The console window is hidden by the watchdog's `CreateNoWindow=true`. The systray window is a hidden GUI window.
+
+Should be fine. Let me deploy.
+**Action**: bash(command: "cd backend-go && git add -A && git commit -m "fix: build as console app to avoid Windows background process duplicate
+
+- Build without -H=windowsgui to prevent Windows 11 background process entry
+- Use SetIcon instead of SetTemplateIcon for Windows compatibility
+- Watchdog hides console window via CreateNoWindow" && git push 2>&1", timeout: 15)
+**Observation**: bash: success
+
+## Turn 5 | 2026-06-24T01:09:36.544Z | deepseek/deepseek-v4-flash
+
+**Thought**: 
+**Thinking**: Wait, I need to check something. The `getlantern/systray` library was imported via go get earlier but maybe got removed by go mod tidy again since I removed the import in a previous edit. But now I added it back in tray.go, so it should be there.
+
+Let me verify:
+**Action**: bash(command: "grep "getlantern/systray" backend-go/go.mod 2>&1", timeout: 5)
+**Observation**: bash: success
+
+## Turn 6 | 2026-06-24T01:09:39.777Z | deepseek/deepseek-v4-flash
+
+**Thought**: 
+**Thinking**: It's marked as `// indirect`. That might cause issues. Let me check if the build will pick it up. Actually, since it's used directly in tray.go, the Go compiler will use it, and `go mod tidy` will remove the `// indirect` marker.
+
+Let me check if the build succeeds now.
+**Action**: bash(command: "cd backend-go && go build -o backend.exe . 2>&1 && echo "BUILD OK"", timeout: 30)
+**Observation**: bash: success
+
+## Turn 7 | 2026-06-24T01:09:45.434Z | deepseek/deepseek-v4-flash
+
+**Thought**: 
+**Thinking**: Good. Now restart.
+**Action**: bash(command: "powershell.exe -Command "Get-Process -Name backend -ErrorAction SilentlyContinue | Stop-Process -Force" 2>&1 && sleep 25 && curl -s --max-time 5 http://localhost:8082/api/health | python3 -c "import sys,json;d=json.load(sys.stdin);print('OK')" 2>&1", timeout: 35)
+**Observation**: bash: success
+
+## Turn 8 | 2026-06-24T01:10:15.914Z | deepseek/deepseek-v4-flash
+
+**Thought**: Backend restarted. Now there should be just **one** blue triangle in the system tray, no blank slot. Can you check?
+**Thinking**: Backend is running. Now the tray icon should be:
+1. Only ONE entry (no background process duplicate since it's a console app hidden by watchdog)
+2. Blue triangle icon (using SetIcon instead of SetTemplateIcon)
+3. Tooltip "Jules Autopilot - Daemon:on Sessions:78 Queue:0"
+
+Let me ask the user if it's working now.
+
+## Turn 1 | 2026-06-24T01:13:20.474Z | deepseek/deepseek-v4-flash
+
+**Thought**: Let me try a low-level approach — create the tray icon directly via Win32 API, avoiding the extra hidden window.
+**Thinking**: The user says there are still two entries. This means the issue is NOT about the GUI/console app distinction. Something else is creating two tray entries.
+
+Let me think about this more carefully. The `getlantern/systray` library creates a `NotifyIcon`. On Windows, this should create exactly one notification icon. But on Windows 11, there's a "Notification Area" and a "Taskbar Overflow" section.
+
+Actually, I think I know what's happening. The `systray` library on Windows creates:
+1. A hidden window (for message processing)
+2. A `NotifyIcon` in the notification area
+
+On Windows 11, the hidden window might appear as a "background process" in the system tray overflow area. The user sees:
+1. The background process entry (blank icon, says "Jules Autopilot" on hover) ← from the hidden window
+2. The NotifyIcon (blue triangle) ← from the NotifyIcon
+
+This would explain the user's description: "one blank system tray slot that says jules autopilot on hover and one blue triangle."
+
+So the blank one is the hidden window of the systray library. The blue triangle is the NotifyIcon.
+
+The fix for this: prevent the hidden window from appearing as a background process. This is a Windows 11 "feature" - all background GUI apps appear in the overflow area.
+
+Actually, on Windows 11, there's an option in Settings > Personalization > Taskbar > Taskbar overflow that shows background apps. The user can turn this off.
+
+But programmatically, to prevent this, the application needs to register itself as a "service" or "background process" rather than a regular GUI app.
+
+Actually, the correct fix is: the `getlantern/systray` library creates the hidden window with specific styles that should prevent it from appearing in the taskbar. If it's appearing, it means the window styles are wrong.
+
+Looking at the `getlantern/systray` source for Windows, it creates a window using `CreateWindowExW` with `WS_EX_TOOLWINDOW` style. This should prevent it from appearing in the taskbar. But on Windows 11, there might be different behavior.
+
+OK, let me try a completely different approach. Instead of using `getlantern/systray` (which creates a hidden window that appears as a background process), let me use a raw Win32 API call via syscall to create just the `Shell_NotifyIcon` without a hidden window. This is a lower-level approach that avoids the extra window.
+
+Actually, `Shell_NotifyIcon` requires a window handle (to receive messages from the shell). So a hidden window is needed.
+
+Let me try yet another approach: modify the hidden window's extended styles to use `WS_EX_NOACTIVATE` and `WS_EX_TOOLWINDOW` which should prevent it from appearing in the taskbar.
+
+Actually, the simplest approach: in the `getlantern/systray` library, there's a way to set the window as a "message-only window" using `HWND_MESSAGE` as the parent. This would make it NOT appear in the taskbar at all.
+
+But I can't easily modify the library. Let me try using a different approach: use the Windows API's `WM_QUERYENDSESSION` handling.
+
+Actually, I think the simplest fix is: provide a manifest file for `backend.exe` that marks it as a background task, or set `DisableTaskbarAutoHide` or similar.
+
+Or... the easiest fix: use `runenv` or `--background` flag.
+
+Let me try another approach: instead of a hidden window, use a background thread with a message loop. This is more complex.
+
+Actually, the REAL fix is: modify the `getlantern/systray` library's Windows implementation to create a message-only window (parent = HWND_MESSAGE). Let me check if I can do this by forking the library.
+
+Actually, I can create a simple wrapper. Let me look at the `systray` library source to find where the window is created.
+
+But modifying a dependency is complex. Let me try the simplest possible fix: when the user clicks the blank icon, it should open the dashboard. And maybe the user can just ignore the blank one and use the blue triangle.
+
+Wait, actually, the simplest fix: use `github.com/lxn/walk` library instead of `getlantern/systray`. The `walk` library creates Windows GUI applications and might handle the taskbar visibility better.
+
+Or... I could just accept the two entries and make both look good. The blank one needs an icon too. Let me add an icon resource to `backend.exe` using `rsrc` tool.
+
+Actually, I think the cleanest fix is: don't use `getlantern/systray` at all. Instead, create the tray icon using raw Win32 API in Go. I can call `Shell_NotifyIconW` directly via `golang.org/x/sys/windows`.
+
+Let me look for a minimal Go implementation of a Windows tray icon using syscall.
+**Action**: write(content: "package services
+
+import (
+	"fmt"
+	"log"
+	"os"
+	"sync"
+	"time"
+	"unsafe"
+
+	"github.com/jules-autopilot/backend/db"
+	"github.com/jules-autopilot/backend/models"
+	"golang.org/x/sys/windows"
+)
+
+var trayOnce sync.Once
+
+// Windows API constants
+const (
+	WM_USER         = 0x0400
+	WM_TRAY_CALLBACK = WM_USER + 100
+	NIM_ADD         = 0
+	NIM_MODIFY      = 2
+	NIF_MESSAGE     = 1
+	NIF_ICON        = 2
+	NIF_TIP         = 4
+	NIF_INFO        = 16
+	NOTIFYICON_VERSION_4 = 4
+
+	// Menu IDs
+	IDM_DASHBOARD  = 1001
+	IDM_STATUS     = 1002
+	IDM_RESTARTD   = 1003
+	IDM_RESTARTW   = 1004
+	IDM_QUIT       = 1005
+)
+
+type NOTIFYICONDATA struct {
+	CbSize           uint32
+	HWnd             windows.Handle
+	UID              uint32
+	UFlags           uint32
+	UCallbackMessage uint32
+	HIcon            windows.Handle
+	SzTip            [128]uint16
+	DwState          uint32
+	DwStateMask      uint32
+	SzInfo           [256]uint16
+	UVersion         uint32
+	SzInfoTitle      [64]uint16
+	DwInfoFlags      uint32
+	GuidItem         windows.GUID
+	HBalloonIcon     windows.Handle
+}
+
+var (
+	user32            = windows.NewLazySystemDLL("user32.dll")
+	shell32           = windows.NewLazySystemDLL("shell32.dll")
+	procCreateWindow  = user32.NewProc("CreateWindowExW")
+	procDefWindowProc = user32.NewProc("DefWindowProcW")
+	procRegisterClass = user32.NewProc("RegisterClassW")
+	procGetMessage    = user32.NewProc("GetMessageW")
+	procTranslateMsg  = user32.NewProc("TranslateMessage")
+	procDispatchMsg   = user32.NewProc("DispatchMessageW")
+	procCreatePopup   = user32.NewProc("CreatePopupMenu")
+	procAppendMenu    = user32.NewProc("AppendMenuW")
+	procTrackPopup    = user32.NewProc("TrackPopupMenu")
+	procDestroyMenu   = user32.NewProc("DestroyMenu")
+	procPostQuit      = user32.NewProc("PostQuitMessage")
+	procLoadIcon      = user32.NewProc("LoadIconW")
+	procLoadCursor    = user32.NewProc("LoadCursorW")
+	procNotifyIcon    = shell32.NewProc("Shell_NotifyIconW")
+)
+
+var hwnd windows.Handle
+var hicon windows.Handle
+
+// StartTray initializes the system tray icon using Win32 API.
+func StartTray() {
+	trayOnce.Do(func() {
+		log.Println("[Tray] Starting Win32 tray icon...")
+		go runTrayLoop()
+	})
+}
+
+func runTrayLoop() {
+	defer func() {
+		if r := recover(); r != nil {
+			log.Printf("[Tray] Panic: %v", r)
+		}
+	}()
+
+	// Register window class
+	className := []uint16{}, 'J', 'u', 'l', 'e', 's', 'T', 'r', 'a', 'y', 0}
+	hInst := windows.Handle(0)
+	_ = windows.GetModuleHandleEx(0, nil, &hInst)
+
+	var wc windows.WndClassEx
+	wc.CbSize = uint32(unsafe.Sizeof(wc))
+	wc.LpfnWndProc = windows.NewCallback(trayWndProc)
+	wc.HInstance = hInst
+	wc.LpszClassName = &className[0]
+	// Load default icon and cursor to avoid null
+	wc.HIcon = windows.Handle(procLoadIcon.Addr())
+	wc.HCursor = windows.Handle(procLoadCursor.Addr())
+	_ = procRegisterClass.Call(uintptr(unsafe.Pointer(&wc)))
+
+	// Create message-only window
+	hwnd, _, _ = procCreateWindow.Call(
+		0,
+		uintptr(unsafe.Pointer(&className[0])),
+		0,
+		0, 0, 0, 0,
+		uintptr(windows.HWND_MESSAGE), // message-only parent
+		0, 0, 0,
+	)
+	if hwnd == 0 {
+		log.Println("[Tray] Failed to create window")
+		return
+	}
+
+	// Create a simple 16x16 blue triangle icon
+	hicon = createTriangleIcon()
+	_ = addTrayIcon(hwnd, hicon, "Jules Autopilot")
+
+	// Message loop
+	var msg windows.MSG
+	for {
+		ret, _, _ := procGetMessage.Call(uintptr(unsafe.Pointer(&msg)), 0, 0, 0)
+		if ret == 0 {
+			break // WM_QUIT
+		}
+		procTranslateMsg.Call(uintptr(unsafe.Pointer(&msg)))
+		procDispatchMsg.Call(uintptr(unsafe.Pointer(&msg)))
+	}
+
+	// Cleanup
+	_ = removeTrayIcon(hwnd)
+	log.Println("[Tray] Exited")
+}
+
+func trayWndProc(hWnd windows.Handle, msg uint32, wParam uintptr, lParam uintptr) uintptr {
+	switch msg {
+	case WM_TRAY_CALLBACK:
+		switch lParam {
+		case 0x0202: // WM_LBUTTONUP - left click
+			_ = openBrowser("http://localhost:8082")
+		case 0x0205: // WM_RBUTTONUP - right click
+			showContextMenu(hWnd)
+		}
+	case windows.WM_DESTROY:
+		procPostQuit.Call(0)
+		return 0
+	}
+	ret, _, _ := procDefWindowProc.Call(uintptr(hWnd), uintptr(msg), wParam, lParam)
+	return ret
+}
+
+func addTrayIcon(hwnd, hicon windows.Handle, tip string) error {
+	var nid NOTIFYICONDATA
+	nid.CbSize = uint32(unsafe.Sizeof(nid))
+	nid.HWnd = hwnd
+	nid.UID = 1
+	nid.UFlags = NIF_MESSAGE | NIF_ICON | NIF_TIP
+	nid.UCallbackMessage = WM_TRAY_CALLBACK
+	nid.HIcon = hicon
+	copy(nid.SzTip[:], windows.StringToUTF16(tip))
+
+	ret, _, _ := procNotifyIcon.Call(NIM_ADD, uintptr(unsafe.Pointer(&nid)), 0)
+	if ret == 0 {
+		return fmt.Errorf("Shell_NotifyIcon failed")
+	}
+	return nil
+}
+
+func removeTrayIcon(hwnd windows.Handle) error {
+	var nid NOTIFYICONDATA
+	nid.CbSize = uint32(unsafe.Sizeof(nid))
+	nid.HWnd = hwnd
+	nid.UID = 1
+	// NIM_DELETE = 2
+	_, _, _ = procNotifyIcon.Call(2, uintptr(unsafe.Pointer(&nid)), 0)
+	return nil
+}
+
+func showContextMenu(hwnd windows.Handle) {
+	hMenu, _, _ := procCreatePopup.Call()
+	if hMenu == 0 {
+		return
+	}
+	procAppendMenu.Call(hMenu, 0, IDM_DASHBOARD, uintptr(unsafe.Pointer(windows.StringToUTF16Ptr("Dashboard"))))
+	procAppendMenu.Call(hMenu, 0, IDM_STATUS, uintptr(unsafe.Pointer(windows.StringToUTF16Ptr("Status"))))
+	procAppendMenu.Call(hMenu, 0x0800, 0, uintptr(unsafe.Pointer(windows.StringToUTF16Ptr("-")))) // separator
+	procAppendMenu.Call(hMenu, 0, IDM_RESTARTD, uintptr(unsafe.Pointer(windows.StringToUTF16Ptr("Restart Daemon"))))
+	procAppendMenu.Call(hMenu, 0, IDM_RESTARTW, uintptr(unsafe.Pointer(windows.StringToUTF16Ptr("Restart Worker"))))
+	procAppendMenu.Call(hMenu, 0x0800, 0, uintptr(unsafe.Pointer(windows.StringToUTF16Ptr("-"))))
+	procAppendMenu.Call(hMenu, 0, IDM_QUIT, uintptr(unsafe.Pointer(windows.StringToUTF16Ptr("Quit"))))
+
+	// Get cursor position for menu placement
+	var pt windows.POINT
+	windows.GetCursorPos(&pt)
+
+	// TrackPopupMenu flags: TPM_RIGHTALIGN | TPM_BOTTOMALIGN
+	cmd, _, _ := procTrackPopup.Call(hMenu, 0x0008|0x0002, uintptr(pt.X), uintptr(pt.Y), 0, uintptr(hwnd), 0)
+
+	switch cmd {
+	case IDM_DASHBOARD:
+		_ = openBrowser("http://localhost:8082")
+	case IDM_STATUS:
+		_ = openBrowser("http://localhost:8082/api/health")
+	case IDM_RESTARTD:
+		StopDaemon()
+		StartDaemon()
+	case IDM_RESTARTW:
+		StopWorker()
+		StartWorker()
+	case IDM_QUIT:
+		removeTrayIcon(hwnd)
+		procPostQuit.Call(0)
+		os.Exit(0)
+	}
+
+	procDestroyMenu.Call(hMenu)
+}
+
+// createTriangleIcon creates a 16x16 blue triangle icon using GDI
+func createTriangleIcon() windows.Handle {
+	// Get GDI functions
+	gdi32 := windows.NewLazySystemDLL("gdi32.dll")
+	procCreateCompatibleDC := gdi32.NewProc("CreateCompatibleDC")
+	procCreateCompatibleBitmap := gdi32.NewProc("CreateCompatibleBitmap")
+	procSelectObject := gdi32.NewProc("SelectObject")
+	procDeleteDC := gdi32.NewProc("DeleteDC")
+	procDeleteObject := gdi32.NewProc("DeleteObject")
+	procCreateSolidBrush := gdi32.NewProc("CreateSolidBrush")
+	procCreatePen := gdi32.NewProc("CreatePen")
+	procEllipse := gdi32.NewProc("Ellipse")
+	procFillRgn := gdi32.NewProc("FillRgn")
+	procCreateRectRgn := gdi32.NewProc("CreateRectRgn")
+	procCombineRgn := gdi32.NewProc("CombineRgn")
+	procCreatePolygonRgn := gdi32.NewProc("CreatePolygonRgn")
+
+	// Create a 16x16 bitmap
+	dc, _, _ := procCreateCompatibleDC.Call(0)
+	bmp, _, _ := procCreateCompatibleBitmap.Call(dc, 16, 16)
+	procSelectObject.Call(dc, bmp)
+
+	// Create blue brush
+	brush, _, _ := procCreateSolidBrush.Call(0x00D47800) // RGB(0, 120, 212)
+	procSelectObject.Call(dc, brush)
+
+	// Triangle points
+	var pts [3]windows.POINT
+	pts[0] = windows.POINT{X: 8, Y: 1}  // top center
+	pts[1] = windows.POINT{X: 1, Y: 14} // bottom left
+	pts[2] = windows.POINT{X: 15, Y: 14} // bottom right
+
+	// Create polygon region and fill
+	rgn, _, _ := procCreatePolygonRgn.Call(uintptr(unsafe.Pointer(&pts[0])), 3, 2) // ALTERNATE = 2
+	if rgn != 0 {
+		procFillRgn.Call(dc, rgn, brush)
+		procDeleteObject.Call(rgn)
+	}
+
+	// Convert bitmap to icon
+	iconInfo := struct {
+		FIcon    windows.BOOL
+		XHotspot uint32
+		YHotspot uint32
+		HbmMask  windows.Handle
+		HbmColor windows.Handle
+		Reserved [3]uint32
+	}{FIcon: 1, HbmColor: bmp}
+
+	// CreateIconIndirect
+	user32 := windows.NewLazySystemDLL("user32.dll")
+	procCreateIcon := user32.NewProc("CreateIconIndirect")
+	hicon, _, _ := procCreateIcon.Call(uintptr(unsafe.Pointer(&iconInfo)))
+
+	// Cleanup
+	procDeleteObject.Call(brush)
+	procDeleteDC.Call(dc)
+
+	return windows.Handle(hicon)
+}
+", path: "C:/Users/hyper/workspace/jules-autopilot/backend-go/services/tray.go")
+**Observation**: write: success
+
+## Turn 2 | 2026-06-24T01:14:01.250Z | deepseek/deepseek-v4-flash
+
+**Thought**: 
+**Thinking**: The user is going to quit one of the tray icons to see what happens. This will help us understand which one is which - whether the blank one is from the old trayicon.exe process or the new getlantern/systray one.
+**Action**: bash(command: "powershell.exe -Command "Get-Process -Name backend -ErrorAction SilentlyContinue | Stop-Process -Force" 2>&1 && sleep 30 && curl -s --max-time 5 http://localhost:8082/api/health | python3 -c "import sys,json;d=json.load(sys.stdin);print('OK')" 2>&1", timeout: 40)
+**Observation**: bash: error
+
+## Turn 3 | 2026-06-24T01:14:08.648Z | deepseek/deepseek-v4-flash
+
+**Thought**: OK, so there were genuinely two from the same process. My Win32 API version uses a message-only window (HWND_MESSAGE) which won't create a second entry. Let me build and deploy it.
+**Thinking**: The user confirmed there were two running. And then I killed the backend, which probably killed both (since they're both from the same process). Let me check if the backend came back up.
+
+But wait - the user said "yeah there were two running" - this confirms there were two tray icons from the `getlantern/systray` library in the single `backend.exe` process. This is unusual because `getlantern/systray` should only create ONE NotifyIcon.
+
+But the `getlantern/systray` library creates:
+1. A hidden window (message-only window)
+2. A NotifyIcon
+
+On Windows 11, if the backend is built as a GUI app (`-H=windowsgui`), the process shows in the background processes section PLUS the NotifyIcon shows. That's TWO entries.
+
+But if I build as console app (no `-H=windowsgui`), the process doesn't show as a background process, and only the NotifyIcon should appear. So the fix is to build as console app.
+
+But earlier, the user said "still both" even after I removed `-H=windowsgui`. However, I had also killed all processes at that point, so the old GUI binary might have been replaced.
+
+Wait, let me re-check. After the "still both" message, I:
+1. Killed backend and trayicon processes
+2. Built without `-H=windowsgui`
+3. Restarted
+
+But the user said "still both" AFTER that restart. So even as a console app, the `getlantern/systray` creates two entries? That's weird.
+
+Actually, I think the issue might be that the `getlantern/systray` library creates BOTH:
+1. A `NotifyIcon` via `Shell_NotifyIconW` 
+2. A taskbar button via `ITaskbarList3` or something
+
+Or maybe the library has a bug that creates duplicate icons.
+
+Let me try the Win32 API approach I just wrote (tray.go with raw Win32 calls). It creates the tray using only `NOTIFYICONDATA` and uses a message-only window (`HWND_MESSAGE`) which doesn't appear in the taskbar. This should result in exactly ONE tray icon.
+
+But the build might fail because I used `windows.HWND_MESSAGE` which might not exist in the `golang.org/x/sys/windows` package. Let me check.
+**Action**: bash(command: "cd backend-go && go build -o backend.exe . 2>&1 | head -20", timeout: 30)
+**Observation**: bash: success
+
+## Turn 4 | 2026-06-24T01:14:18.132Z | deepseek/deepseek-v4-flash
+
+**Thought**: Let me try a simpler approach — compile trayicon.exe as a **console** app so Windows doesn't show it as a background process. The Go Cmd() wrapper hides its console.
+**Thinking**: The Win32 API code has syntax errors. The `className` initialization has `uint16{}, 'J', 'u', ...` which is wrong Go syntax. I can't mix `{}` and `[]` that way.
+
+Also, the `golang.org/x/sys/windows` package might not have all the functions I'm using.
+
+Let me take a completely different approach. Instead of writing raw Win32 API (which is error-prone), let me just fix the `getlantern/systray` approach. The duplicate entries were likely because:
+1. I built with `-H=windowsgui` which made Windows show the process as a background process
+2. PLUS the NotifyIcon from `getlantern/systray`
+
+If I build as a console app (no `-H=windowsgui`), the process won't show as a background process. But the user said it still showed two. Let me check if the reason is that the `getlantern/systray` library might still create a visible window.
+
+Let me look at the `getlantern/systray` source for Windows to see what window styles it uses.
+
+Actually, let me just fix the Win32 API code. The main issues are:
+1. `className := []uint16{}, 'J', 'u', ...` should be `className := []uint16{'J', 'u', 'l', 'e', 's', 'T', 'r', 'a', 'y', 0}`
+2. `HWND_MESSAGE` is a constant I defined
+3. Need to import `golang.org/x/sys/windows`
+
+Let me fix the syntax and try building again.
+
+Actually, the Win32 API approach is too complex. Let me use a simpler approach: the `github.com/lxn/walk` Windows GUI library. It's well-documented and known to work correctly.
+
+Or even simpler: re-use the C# `trayicon.exe` but fix the duplicate issue. The duplicate in C# was also two entries. So the issue is the same: separate process + GUI app = background process entry.
+
+Actually, the simplest fix: have the C# `trayicon.exe` use a `.config` file or set itself to not show in the taskbar. In C#, I can set `ShowInTaskbar = false` on the form.
+
+But `trayicon.exe` doesn't have a form (it uses `Application.Run()` without a form).
+
+Let me try modifying the C# code to create a hidden form and set `ShowInTaskbar = false`.
+
+Actually, the simplest fix: use `System.Windows.Forms.ApplicationContext` to run without a main form. Or set the `NotifyIcon` to use a message-only window.
+
+Wait - I think the real issue with the C# approach is simpler. On Windows 11, when a GUI application runs, Windows adds it to the "Background processes" section of the taskbar overflow area, REGARDLESS of whether it creates a window or not. This is a Windows 11 feature.
+
+To prevent this, the application needs to be registered as a Windows service or use a different approach.
+
+The only way to avoid the "background processes" entry is to NOT be a GUI application. So I should:
+1. Keep `backend.exe` as a console app (no `-H=windowsgui`)
+2. Have the tray icon created by a separate EXE that's also a console app but hidden
+
+But then the tray icon EXE would also show up in background processes...
+
+OK, I think the issue is fundamental: on Windows 11, any running executable that's a GUI app shows up in the system tray background processes section. The only way around this is to build as a console app and hide the console with `CreateNoWindow`. But then the console app might not have the proper window handle for `Shell_NotifyIcon`.
+
+Let me try this: build `trayicon.exe` as a console app (remove `/target:winexe`), and use the Go `Cmd()` wrapper with `HideWindow: true` to hide its console. The NotifyIcon should still work because it uses `Shell_NotifyIconW` which doesn't require a visible window.
+
+Actually, the C# NotifyIcon already uses `Application.Run()` which creates a hidden window. Even as a console app, the hidden window should work. And since the console is hidden by the Go wrapper, it won't flash.
+
+Let me try this approach: compile tray.cs as a CONSOLE app (remove `/target:winexe`), and launch it from Go with `Cmd()` which hides the console.
+**Action**: bash(command: "cd backend-go && powershell -Command '& "C:\Windows\Microsoft.NET\Framework64\v4.0.30319\csc.exe" /reference:System.Windows.Forms.dll /reference:System.Drawing.dll /reference:System.Net.Http.dll /target:exe /out:trayicon.exe tray.cs' 2>&1", timeout: 30)
+**Observation**: bash: success
+
+## Turn 5 | 2026-06-24T01:14:32.546Z | deepseek/deepseek-v4-flash
+
+**Thought**: Ah, two processes! Let me check.
+**Thinking**: The user is saying they think two processes were running - not two icons from one process, but TWO SEPARATE PROCESSES. That makes much more sense!
+
+So there were likely two `backend.exe` processes running:
+1. One started by the VBS script `JulesAutopilot.vbs` at login
+2. One started by the watchdog `watchdog_loop.ps1`
+
+When I killed the backend with `Stop-Process -Name 'backend'`, I killed one of them. The watchdog then restarted another. But the VBS script's `backend.exe` was still running. So there were two `backend.exe` processes, each creating its own tray icon (via `getlantern/systray` in-process).
+
+That explains everything! The user saw two blue triangles because there were two `backend.exe` processes.
+
+To fix this, I need to check how the VBS script and watchdog interact. The VBS script starts `backend.exe` hidden, waits 20 seconds, then starts the watchdog. When the watchdog starts, it checks if the backend is healthy. If it is (because the VBS started it), it doesn't start another one. So normally there should be only one.
+
+But when I kill the backend (for deployment), I kill ONE of them, then the watchdog starts a NEW one. The other one (from VBS) is still running. Now there are TWO.
+
+Wait, `Stop-Process -Name 'backend'` kills ALL processes named "backend", not just one. So it should kill both.
+
+Unless there's a timing issue: I kill `backend.exe`, the watchdog detects the health check failure, starts a new one. Meanwhile, the VBS script's process is also killed. So only one should remain.
+
+Let me check: is there actually a second instance running?
+**Action**: bash(command: "powershell.exe -Command "Get-Process -Name backend -ErrorAction SilentlyContinue | Select-Object Id,ProcessName,StartTime | Format-Table -AutoSize" 2>&1", timeout: 10)
+**Observation**: bash: success
+
+## Turn 6 | 2026-06-24T01:14:41.568Z | deepseek/deepseek-v4-flash
+
+**Thought**: Just one now (PID 49276). The duplicate was likely from the VBS startup script running alongside the watchdog. Since the user quit both, only the watchdog's instance remains now. The tray should show just **one** blue triangle — does it look right now?
+**Thinking**: The user quit two instances. Now there's only one running (PID 49276 started at 9:14 PM, which is from the watchdog restart after I killed the backend).
+
+So the issue was indeed TWO backend.exe processes. One was started by the VBS script at login, and another was started by the watchdog. The user quit both, and now only one remains (the one started by the watchdog after my most recent kill+restart).
+
+The root cause: the VBS script `JulesAutopilot.vbs` in the Startup folder starts `backend.exe` at login. Then the watchdog also starts `backend.exe` if needed. But if the VBS already started it, the watchdog shouldn't start another. However, there could be a race condition or the watchdog might be confused.
+
+Actually, looking at the VBS script:
+```
+WshShell.Run "backend.exe", 0, False
+WScript.Sleep 20000
+WshShell.Run "powershell ... watchdog_loop.ps1", 0, False
+```
+
+The VBS starts `backend.exe` first. Then after 20 seconds, it starts the watchdog. The watchdog checks the health of the backend. If the backend is running (which it is, from the VBS), the watchdog doesn't start another instance. So there should be only ONE backend.
+
+But the watchdog log shows restarts happening even when the backend should be running. Let me check the watchdog log to understand the sequence.
+
+Actually, looking at the watchdog log from earlier:
+```
+[2026-06-23 20:33:22] DOWN - Restarting backend
+[2026-06-23 20:33:25] Started backend (PID: 57740) on port 8082
+[2026-06-23 20:33:30] Backend is healthy
+```
+
+The watchdog detected the backend was DOWN and restarted it. This was after I killed the backend. But the VBS script's `backend.exe` might have been listening on port 8082. Wait - are both instances listening on the same port? If so, the second one would fail to bind.
+
+Actually, Go's `app.Listen(":8082")` would fail if the port is already in use. So the second `backend.exe` would crash or log an error. The watchdog would then detect it as down.
+
+But the user said "i had to quit two" - there were TWO running and they quit both. This confirms there were two separate `backend.exe` processes.
+
+How did two start? Let me think:
+1. At login, VBS starts `backend.exe` (listening on 8082)
+2. After 20 seconds, VBS starts the watchdog
+3. The watchdog checks health on 8082 - it's healthy, so nothing happens
+4. Some time later, I kill ALL `backend` processes
+5. The watchdog detects down and restarts `backend.exe`
+6. But the VBS's `backend.exe` was also killed (by my Stop-Process)
+7. So now there's only ONE (the watchdog's one)
+
+But somehow two are running. Unless the VBS starts `backend.exe` TWICE? Or there's another startup mechanism?
+
+Wait - maybe the VBS script runs on EVERY login, not just the first login. If the user logged in multiple times without restarting, there would be multiple instances. But the VBS runs once per login.
+
+Or maybe the install-service.bat created a scheduled task that runs on startup. Let me check again.
+
+## Turn 7 | 2026-06-24T01:14:50.928Z | deepseek/deepseek-v4-flash
+
+**Thought**: Blank icon means the `SetIcon` bytes are probably invalid. Let me regenerate the PNG and verify it's correct.
+**Thinking**: The user says the tray icon is blank - no blue triangle, just a blank icon that says "Jules Autopilot" on hover. This means the `getlantern/systray` library's `SetIcon` call isn't working properly.
+
+The issue could be:
+1. The embedded PNG bytes are invalid
+2. The `SetIcon` function isn't accepting the bytes format
+3. The PNG needs to be in a specific format for Windows
+
+Let me check the embedded icon bytes. I generated them with Python but maybe they got corrupted when I pasted them into the Go code.
+
+Actually, let me regenerate the icon and make sure it's a valid PNG, then verify the bytes are correctly embedded.
+
+Let me also check if the `getlantern/systray` library's `SetIcon` function expects a specific format. On Windows, it should accept PNG bytes.
+**Action**: bash(command: "cd backend-go && python3 << 'PYEOF'
+import struct, zlib
+
+def make_png(w, h, pixels):
+    raw = b''
+    for row in pixels:
+        raw += b'\x00'
+        for r, g, b, a in row:
+            raw += struct.pack('BBBB', r, g, b, a)
+    def chunk(ctype, data):
+        c = ctype + data
+        return struct.pack('>I', len(data)) + c + struct.pack('>I', zlib.crc32(c) & 0xffffffff)
+    sig = b'\x89PNG\r\n\x1a\n'
+    ihdr = struct.pack('>IIBBBBB', w, h, 8, 6, 0, 0, 0)
+    compressed = zlib.compress(raw)
+    return sig + chunk(b'IHDR', ihdr) + chunk(b'IDAT', compressed) + chunk(b'IEND', b'')
+
+# Generate 16x16 blue triangle (better for tray icons)
+size = 16
+pixels = []
+for y in range(size):
+    row = []
+    fraction = y / (size - 1)
+    half = int(size * fraction / 2)
+    left = size//2 - half
+    right = size//2 + half
+    for x in range(size):
+        if x >= left and x <= right:
+            r, g, b, a = 0, 120, 212, 255  # blue
+        else:
+            r, g, b, a = 0, 0, 0, 0
+        row.append((r, g, b, a))
+    pixels.append(row)
+
+png = make_png(size, size, pixels)
+print(f'Size: {len(png)} bytes')
+print(f'Valid PNG: {png[:8] == b"\\x89PNG\\r\\n\\x1a\\n"}')
+
+# Output Go bytes
+print('var trayIcon = []byte{')
+for i in range(0, len(png), 12):
+    chunk = png[i:i+12]
+    print('    ' + ', '.join(f'0x{b:02X}' for b in chunk) + ',')
+print('}')
+PYEOF", timeout: 5)
+**Observation**: bash: success
+
+## Turn 8 | 2026-06-24T01:15:00.327Z | deepseek/deepseek-v4-flash
+
+**Thought**: Let me switch back to the C# tray approach but compile it as a console app — no background process entries.
+**Thinking**: Good, the PNG is 127 bytes and valid. Let me now update tray.go with these bytes. The previous bytes (32x32) were 178 bytes and might have been corrupted. Also, 16x16 is better for tray icons.
+
+But wait - the `getlantern/systray` library had issues earlier (the user said "no apparent icon"). Now the user says it's blank (the icon area is empty). Maybe the `SetIcon` call isn't working at all with `getlantern/systray`.
+
+Let me check if there's a known issue with `getlantern/systray` on Windows. 
+
+Actually, let me just re-compile the C# `trayicon.exe` as a console app (without `/target:winexe`), rebuild `backend.exe` as a console app, and launch `trayicon.exe` from Go with `Cmd()` (which hides the console). This should give a single NotifyIcon with no extra background process entry, because:
+1. `backend.exe` is a console app (no background process entry)
+2. `trayicon.exe` is a console app launched hidden by `Cmd()` (no visible console, no background process entry)
+3. Only the NotifyIcon shows
+
+This is the most reliable approach. Let me do it.
+**Action**: write(content: "package services
+
+import (
+	"log"
+	"os"
+	"path/filepath"
+	"sync"
+)
+
+var trayOnce sync.Once
+
+// StartTray launches the tray icon as a hidden console process.
+func StartTray() {
+	trayOnce.Do(func() {
+		trayExe := filepath.Join(getScriptDir(), "trayicon.exe")
+		if _, err := os.Stat(trayExe); os.IsNotExist(err) {
+			log.Printf("[Tray] trayicon.exe not found at %s", trayExe)
+			return
+		}
+		// Kill any stale one first
+		kill := Cmd("taskkill", "/f", "/im", "trayicon.exe")
+		_ = kill.Run()
+
+		cmd := Cmd(trayExe)
+		if err := cmd.Start(); err != nil {
+			log.Printf("[Tray] Failed: %v", err)
+		} else {
+			log.Printf("[Tray] Started PID %d", cmd.Process.Pid)
+		}
+	})
+}
+
+func getScriptDir() string {
+	exe, err := os.Executable()
+	if err != nil {
+		return "."
+	}
+	return filepath.Dir(exe)
+}
+", path: "C:/Users/hyper/workspace/jules-autopilot/backend-go/services/tray.go")
+**Observation**: write: success
+
+## Turn 9 | 2026-06-24T01:15:17.850Z | deepseek/deepseek-v4-flash
+
+**Thought**: 
+**Thinking**: Hmm, the LSP error says L95: "expected declaration, found hInst" — but the file is only 29 lines long now. This must be a stale LSP error from the previous Win32 API code. The file is now clean. Let me build.
+
+Wait, the error says "L95" but the file is 29 lines. That's definitely a stale error from the previous `tray.go` content. Let me just build.
+**Action**: bash(command: "cd backend-go && go build -o backend.exe . 2>&1 && echo "BUILD OK"", timeout: 30)
+**Observation**: bash: success
+
+## Turn 10 | 2026-06-24T01:15:41.289Z | deepseek/deepseek-v4-flash
+
+**Thought**: 
+**Thinking**: Good. Now let me update the C# tray code to be a console app rather than winexe, then build and deploy.
+**Action**: bash(command: "cd backend-go && powershell -Command '& "C:\Windows\Microsoft.NET\Framework64\v4.0.30319\csc.exe" /reference:System.Windows.Forms.dll /reference:System.Drawing.dll /reference:System.Net.Http.dll /out:trayicon.exe tray.cs' 2>&1", timeout: 30)
+**Observation**: bash: success
+
