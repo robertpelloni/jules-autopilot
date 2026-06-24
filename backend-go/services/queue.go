@@ -699,7 +699,7 @@ func (w *Worker) handleCheckSession(payload string) (string, error) {
 		// If the last message is from user and the message before it is from agent,
 		// the agent was actively working when we nudged and hasn't replied yet — wait.
 		// If the message before it is also from user, the agent never saw our nudge — bump again.
-		if len(lastActivities) >= 2 && lastActivities[len(lastActivities)-1].Role == "user" && lastActivities[len(lastActivities)-2].Role == "agent" {
+		if session.RawState != "FAILED" && session.RawState != "PAUSED" && len(lastActivities) >= 2 && lastActivities[len(lastActivities)-1].Role == "user" && lastActivities[len(lastActivities)-2].Role == "agent" {
 			return "none", nil
 		}
 

@@ -1,7 +1,7 @@
 $watchdogScript = @'
 $logFile = "C:\Users\hyper\workspace\jules-autopilot\backend-go\watchdog.log"
 try {
-    $r = Invoke-WebRequest -Uri 'http://127.0.0.1:8081/api/health' -TimeoutSec 10 -UseBasicParsing -ErrorAction Stop
+    $r = Invoke-WebRequest -Uri 'http://127.0.0.1:8082/api/health' -TimeoutSec 10 -UseBasicParsing -ErrorAction Stop
     if ($r.StatusCode -eq 200) { exit 0 }
 } catch {}
 Add-Content $logFile "[$(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')] DOWN - Restarting backend"
@@ -11,8 +11,8 @@ $psi = New-Object System.Diagnostics.ProcessStartInfo
 $psi.FileName = "go"
 $psi.Arguments = "run ."
 $psi.WorkingDirectory = "C:\Users\hyper\workspace\jules-autopilot\backend-go"
-$psi.RedirectStandardOutput = $true
-$psi.RedirectStandardError = $true
+$psi.RedirectStandardOutput = $false
+$psi.RedirectStandardError = $false
 $psi.UseShellExecute = $false
 $psi.CreateNoWindow = $true
 $p = [System.Diagnostics.Process]::Start($psi)
@@ -20,7 +20,7 @@ Add-Content $logFile "[$(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')] Started backen
 for ($i = 0; $i -lt 12; $i++) {
     Start-Sleep -Seconds 5
     try {
-        $r = Invoke-WebRequest -Uri "http://127.0.0.1:8081/api/health" -TimeoutSec 3 -UseBasicParsing -ErrorAction Stop
+        $r = Invoke-WebRequest -Uri "http://127.0.0.1:8082/api/health" -TimeoutSec 3 -UseBasicParsing -ErrorAction Stop
         if ($r.StatusCode -eq 200) {
             Add-Content $logFile "[$(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')] Backend is healthy"
             break

@@ -1,6 +1,6 @@
 @echo off
 setlocal enabledelayedexpansion
-set PORT=8081
+set PORT=8082
 set DIR=%~dp0
 echo [%DATE% %TIME%] Watchdog started >> "%DIR%watchdog.log"
 

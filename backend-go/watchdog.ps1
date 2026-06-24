@@ -37,8 +37,8 @@ while ($true) {
     $startInfo.FileName = (Join-Path $backendDir "backend.exe")
     $startInfo.Arguments = ""
     $startInfo.WorkingDirectory = $backendDir
-    $startInfo.RedirectStandardOutput = $true
-    $startInfo.RedirectStandardError = $true
+    $startInfo.RedirectStandardOutput = $false
+    $startInfo.RedirectStandardError = $false
     $startInfo.UseShellExecute = $false
     $startInfo.CreateNoWindow = $true
     $process = New-Object System.Diagnostics.Process

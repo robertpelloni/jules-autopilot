@@ -9,10 +9,10 @@ $exePath = "$backendDir\backend.exe"
 Add-Content $logFile "[$(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')] Watchdog started"
 
 # Single-instance mutex to prevent duplicate watchdogs
-\$mutexName = "Global\JulesAutopilotWatchdog"
-\$mutex = New-Object System.Threading.Mutex(\$false, \$mutexName)
-if (!\$mutex.WaitOne(0)) {
-    Add-Content \$logFile "[$(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')] Another watchdog instance already running, exiting."
+$mutexName = "Global\JulesAutopilotWatchdog"
+$mutex = New-Object System.Threading.Mutex($false, $mutexName)
+if (!$mutex.WaitOne(0)) {
+    Add-Content $logFile "[$(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')] Another watchdog instance already running, exiting."
     exit
 }
 
@@ -35,8 +35,8 @@ while ($true) {
         $psi.FileName = $exePath
         $psi.Arguments = ""
         $psi.WorkingDirectory = $backendDir
-        $psi.RedirectStandardOutput = $true
-        $psi.RedirectStandardError = $true
+        $psi.RedirectStandardOutput = $false
+        $psi.RedirectStandardError = $false
         $psi.UseShellExecute = $false
         $psi.CreateNoWindow = $true
         $p = [System.Diagnostics.Process]::Start($psi)

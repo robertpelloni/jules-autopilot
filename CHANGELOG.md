@@ -2,6 +2,14 @@
 
 All notable changes to this project will be documented in this file.
 
+## [3.6.11] - 2026-06-24
+
+### Fixed
+- Go backend watchdog: Disabled stdout/stderr redirection for the spawned backend process in `watchdog.ps1`, `watchdog_loop.ps1`, and `setup_watchdog_task.ps1` to prevent pipe buffer overflow deadlock hangs.
+- Port misalignment: Realigned the health check port from `8081` to `8082` in `run.bat`, `watchdog.cmd`, and `watchdog_simple.cmd` to match the local Fiber backend server port.
+- Go backend daemon: Allowed FAILED and PAUSED sessions to bypass the `[agent, user]` wait check in `services/queue.go` so they can be autonomously bumped/nudged back to life.
+- PowerShell script: Fixed duplicate watchdog mutex syntax escapes in `watchdog_loop.ps1`.
+
 ## [3.6.10] - 2026-06-24
 
 ### Fixed
