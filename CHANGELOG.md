@@ -2,6 +2,12 @@
 
 All notable changes to this project will be documented in this file.
 
+## [3.6.13] - 2026-06-24
+
+### Fixed
+- Go backend: Short-circuited `handleSyncSessionMemory` in `services/queue.go` to return `"skipped", nil` immediately. This halts all `[PROJECT_MEMORY]` prompt activity creations and associated polling loops, resolving the completed sessions spamming bug.
+- Go backend: Refactored the inactive session nudge deduplication check in `services/queue.go` by prefixing automated nudges with `[Supervisor]`. The worker now only skips a nudge if the last activity was an automated supervisor nudge, allowing stalled sessions with a user message to be correctly bumped/nudged.
+
 ## [3.6.12] - 2026-06-24
 
 ### Changed

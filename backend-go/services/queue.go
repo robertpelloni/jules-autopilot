@@ -696,11 +696,13 @@ func (w *Worker) handleCheckSession(payload string) (string, error) {
 	if time.Since(lastActivityTime) > time.Duration(thresholdMinutes)*time.Minute && session.RawState != "AWAITING_PLAN_APPROVAL" {
 		lastActivities, _ := client.ListActivities(session.ID)
 
-		// If the last message is from user and the message before it is from agent,
-		// the agent was actively working when we nudged and hasn't replied yet — wait.
-		// If the message before it is also from user, the agent never saw our nudge — bump again.
-		if session.RawState != "FAILED" && session.RawState != "PAUSED" && len(lastActivities) >= 2 && lastActivities[len(lastActivities)-1].Role == "user" && lastActivities[len(lastActivities)-2].Role == "agent" {
-			return "none", nil
+		// If the last message is a supervisor nudge, avoid spamming nudges.
+		// If it is a normal user message, we DO want to nudge/wake up the agent.
+		if session.RawState != "FAILED" && session.RawState != "PAUSED" && len(lastActivities) > 0 {
+			lastAct := lastActivities[len(lastActivities)-1]
+			if lastAct.Role == "user" && strings.HasPrefix(lastAct.Content, "[Supervisor]") {
+				return "none", nil
+			}
 		}
 
 		instructions := "Please instruct Google Jules agent to continue autonomously working on this project. Infer the next step based on the progress history and conversation."
@@ -757,8 +759,9 @@ func (w *Worker) handleCheckSession(payload string) (string, error) {
 			return "fail", fmt.Errorf("lmstudio nudge failed: %w", err)
 		}
 
+		nudgeContent := "[Supervisor] " + result.Content
 		if _, err := client.CreateActivity(session.ID, CreateActivityRequest{
-			Content: result.Content,
+			Content: nudgeContent,
 			Type:    "message",
 			Role:    "user",
 		}); err != nil {
@@ -1078,6 +1081,10 @@ func IndexCodebase() (string, error) {
 }
 
 func (w *Worker) handleSyncSessionMemory(payload string) (string, error) {
+	return "skipped", nil
+}
+
+func (w *Worker) handleSyncSessionMemoryOld(payload string) (string, error) {
 	var data struct {
 		SessionID string `json:"sessionId"`
 	}
