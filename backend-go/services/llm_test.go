@@ -1,6 +1,8 @@
 package services
 
 import (
+	"fmt"
+	"net/http"
 	"os"
 	"testing"
 	"time"
@@ -27,17 +29,16 @@ func TestNormalizeProvider(t *testing.T) {
 }
 
 func TestDefaultModelForProvider(t *testing.T) {
-	defaultModel := "nvidia/nemotron-3-nano-omni-30b-a3b-reasoning:free"
 	tests := []struct {
 		provider string
 		expected string
 	}{
-		{"openai", defaultModel},
-		{"anthropic", defaultModel},
-		{"gemini", "gemini-2.0-flash"},
-		{"unknown", defaultModel},
-		{"openrouter", defaultModel},
-		{"lmstudio", "gemma-4-e4b-uncensored-hauhaucs-aggressive"},
+		{"openai", "gpt-4o-mini"},
+		{"anthropic", "claude-3-5-sonnet-latest"},
+		{"gemini", "gemini-1.5-flash"},
+		{"unknown", "gpt-4o-mini"},
+		{"openrouter", "nvidia/nemotron-3-nano-omni-30b-a3b-reasoning:free"},
+		{"lmstudio", "gemma-4-26b-a4b-it-qat-heretic"},
 	}
 
 	for _, tt := range tests {
@@ -49,7 +50,7 @@ func TestDefaultModelForProvider(t *testing.T) {
 }
 
 func TestResolveModel(t *testing.T) {
-	defaultModel := "nvidia/nemotron-3-nano-omni-30b-a3b-reasoning:free"
+	defaultModel := "gpt-4o-mini"
 	// Empty model falls back to default
 	if resolveModel("openai", "") != defaultModel {
 		t.Error("Empty model should use default")
@@ -145,11 +146,31 @@ func TestCircuitBreaker(t *testing.T) {
 	}
 }
 
+type mockTransport struct {
+	roundTrip func(req *http.Request) (*http.Response, error)
+}
+
+func (m *mockTransport) RoundTrip(req *http.Request) (*http.Response, error) {
+	return m.roundTrip(req)
+}
+
 func TestGenerateRiskScore(t *testing.T) {
 	// Ensure we don't pick up real keys from environment
 	oldKey := os.Getenv("OPENROUTER_API_KEY")
 	os.Setenv("OPENROUTER_API_KEY", "")
 	defer os.Setenv("OPENROUTER_API_KEY", oldKey)
+
+	// Mock http transport to return error immediately
+	oldDefaultTransport := http.DefaultTransport
+	defer func() {
+		http.DefaultTransport = oldDefaultTransport
+	}()
+	mock := &mockTransport{
+		roundTrip: func(req *http.Request) (*http.Response, error) {
+			return nil, fmt.Errorf("mocked connection error")
+		},
+	}
+	http.DefaultTransport = mock
 
 	// Without real API key, should return fallback
 	score := generateRiskScore("openai", "fake-key", "gpt-4o", "test topic", "test summary", 42)

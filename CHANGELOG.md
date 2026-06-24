@@ -2,6 +2,14 @@
 
 All notable changes to this project will be documented in this file.
 
+## [3.6.10] - 2026-06-24
+
+### Fixed
+- Go backend tests: Resolved `TestGenerateRiskScore` failure by mocking HTTP default transport to ensure hermetic and network-independent test runs.
+- Go backend tests: Fixed `TestResolveModel` and `TestDefaultModelForProvider` failures by aligning test assertions with the latest default models defined in `llm.go`.
+- Go backend tests: Resolved four failures in `daemon_test.go` by updating tick interval assertions to expect the correct minimum interval of `5 * time.Minute` enforced in `daemon.go`.
+- Frontend typecheck: Cast `import.meta` to `any` in `lib/jules/provider.tsx` to fix typescript compilation error (`Property 'env' does not exist on type 'ImportMeta'`).
+
 ## [3.6.9] - 2026-06-23
 
 ### Changed

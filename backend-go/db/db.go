@@ -41,6 +41,13 @@ func InitDB() {
 		&models.HealthSnapshot{},
 		&models.TokenUsage{},
 		&models.AnomalyRecord{},
+		&models.Plugin{},
+		&models.Swarm{},
+		&models.SwarmAgent{},
+		&models.SwarmEvent{},
+		&models.ShadowPilotSettings{},
+		&models.VulnerabilityRecord{},
+		&models.ScheduledTask{},
 	)
 	if err != nil {
 		log.Fatalf("failed to auto-migrate models: %v", err)
@@ -82,6 +89,13 @@ func InitTestDB() (*gorm.DB, error) {
 		&models.HealthSnapshot{},
 		&models.TokenUsage{},
 		&models.AnomalyRecord{},
+		&models.Plugin{},
+		&models.Swarm{},
+		&models.SwarmAgent{},
+		&models.SwarmEvent{},
+		&models.ShadowPilotSettings{},
+		&models.VulnerabilityRecord{},
+		&models.ScheduledTask{},
 	)
 	if err != nil {
 		return nil, err

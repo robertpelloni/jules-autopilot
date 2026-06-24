@@ -3,6 +3,7 @@ package services
 import (
 	"encoding/json"
 	"testing"
+	"time"
 
 	"github.com/jules-autopilot/backend/db"
 	"github.com/jules-autopilot/backend/models"
@@ -49,8 +50,8 @@ func TestDaemonTickNoAPIKey(t *testing.T) {
 	d := GetDaemon()
 	interval := d.tick()
 
-	if interval != 120*1e9 { // Minimum enforced 120s
-		t.Errorf("Expected 120s interval, got %v", interval)
+	if interval != 5*time.Minute { // Minimum enforced 5m
+		t.Errorf("Expected 5m interval, got %v", interval)
 	}
 }
 
@@ -67,8 +68,8 @@ func TestDaemonTickDisabled(t *testing.T) {
 	d := GetDaemon()
 	interval := d.tick()
 
-	if interval != 120*1e9 { // Minimum enforced 120s
-		t.Errorf("Expected 120s interval, got %v", interval)
+	if interval != 5*time.Minute { // Minimum enforced 5m
+		t.Errorf("Expected 5m interval, got %v", interval)
 	}
 }
 
@@ -98,9 +99,9 @@ func TestDaemonTickZeroInterval(t *testing.T) {
 	d := GetDaemon()
 	interval := d.tick()
 
-	// Zero interval should default to 30s, but then be bumped to 120s min
-	if interval != 120*1e9 {
-		t.Errorf("Expected 120s for zero interval, got %v", interval)
+	// Zero interval should default to 120s, but then be bumped to 5m min
+	if interval != 5*time.Minute {
+		t.Errorf("Expected 5m for zero interval, got %v", interval)
 	}
 }
 
@@ -117,8 +118,8 @@ func TestDaemonTickNegativeInterval(t *testing.T) {
 	d := GetDaemon()
 	interval := d.tick()
 
-	if interval != 120*1e9 {
-		t.Errorf("Expected 120s for negative interval, got %v", interval)
+	if interval != 5*time.Minute {
+		t.Errorf("Expected 5m for negative interval, got %v", interval)
 	}
 }
 

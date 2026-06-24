@@ -17,6 +17,7 @@ import (
 	"github.com/google/uuid"
 	"github.com/jules-autopilot/backend/db"
 	"github.com/jules-autopilot/backend/models"
+	"gorm.io/gorm"
 )
 
 const (
@@ -38,7 +39,7 @@ type Worker struct {
 // NewWorker creates a new queue worker
 func NewWorker(concurrency int) *Worker {
 	if concurrency <= 0 {
-		concurrency = 2
+		concurrency = 4
 	}
 	return &Worker{
 		concurrency: concurrency,
@@ -265,20 +266,9 @@ func GetProjectRoot() string {
 	return ".."
 }
 
-// ParseMessages splits a raw messages string into a slice
+// ParseMessages splits a raw messages string into a slice, supporting JSON array unmarshaling
 func ParseMessages(raw string) []string {
-	if strings.TrimSpace(raw) == "" {
-		return nil
-	}
-	lines := strings.Split(raw, "\n")
-	var result []string
-	for _, line := range lines {
-		trimmed := strings.TrimSpace(line)
-		if trimmed != "" {
-			result = append(result, trimmed)
-		}
-	}
-	return result
+	return parseMessages(raw)
 }
 
 // StartWorker initializes and starts the global queue worker
@@ -569,6 +559,11 @@ func (w *Worker) handleCheckSession(payload string) (string, error) {
 		return "fail", fmt.Errorf("failed to refresh session %s: %w", data.Session.ID, err)
 	}
 
+	// Save refreshed session to DB cache so the UI and Daemon stay updated.
+	if saveErr := db.DB.Save(&session).Error; saveErr != nil {
+		log.Printf("[Queue] Failed to update session cache for %s: %v", session.ID, saveErr)
+	}
+
 	lastActivityTime := session.UpdatedAt
 	if session.LastActivityAt != nil {
 		lastActivityTime = *session.LastActivityAt
@@ -841,9 +836,18 @@ func BroadcastContinue() {
 // CacheSessions replaces all locally stored sessions with fresh data from Jules.
 // This lets the dashboard load instantly without waiting for the Jules API.
 func CacheSessions(sessions []models.JulesSession) {
-	db.DB.Unscoped().Where("1 = 1").Delete(&models.JulesSession{})
-	for _, s := range sessions {
-		db.DB.Create(&s)
+	err := db.DB.Transaction(func(tx *gorm.DB) error {
+		tx.Unscoped().Where("1 = 1").Delete(&models.JulesSession{})
+		if len(sessions) > 0 {
+			if err := tx.Create(&sessions).Error; err != nil {
+				return err
+			}
+		}
+		return nil
+	})
+	if err != nil {
+		log.Printf("[Cache] Failed to cache sessions: %v", err)
+		return
 	}
 	log.Printf("[Cache] Stored %d sessions locally", len(sessions))
 }
@@ -1101,12 +1105,21 @@ func (w *Worker) handleSyncSessionMemory(payload string) (string, error) {
 			continue
 		}
 
-		// Find the response to our prompt
+		// Find the response to our prompt in the last 5 activities
 		if len(activities) > 0 {
-			last := activities[len(activities)-1]
-			if last.Role == "agent" && strings.Contains(last.Content, "[PROJECT_MEMORY]") {
-				memoryContent = strings.Replace(last.Content, "[PROJECT_MEMORY]", "", 1)
-				memoryContent = strings.TrimSpace(memoryContent)
+			searchLimit := 5
+			if len(activities) < searchLimit {
+				searchLimit = len(activities)
+			}
+			for j := 0; j < searchLimit; j++ {
+				act := activities[len(activities)-1-j]
+				if act.Role == "agent" && strings.Contains(act.Content, "[PROJECT_MEMORY]") {
+					memoryContent = strings.Replace(act.Content, "[PROJECT_MEMORY]", "", 1)
+					memoryContent = strings.TrimSpace(memoryContent)
+					break
+				}
+			}
+			if memoryContent != "" {
 				break
 			}
 		}

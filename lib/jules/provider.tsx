@@ -24,9 +24,8 @@ export function JulesProvider({ children }: { children: React.ReactNode }) {
     try {
       const localJulesKey = typeof window !== 'undefined' ? safeLocalStorage.getItem('jules_api_key') : null;
 
-      // @ts-expect-error - import.meta is handled by Vite/Bundler
-      const viteEnv = (typeof import.meta !== 'undefined' && import.meta.env) 
-        ? import.meta.env as { VITE_JULES_API_KEY?: string }
+      const viteEnv = (typeof import.meta !== 'undefined' && (import.meta as any).env) 
+        ? (import.meta as any).env as { VITE_JULES_API_KEY?: string }
         : (typeof process !== 'undefined' ? process.env as { VITE_JULES_API_KEY?: string } : undefined);
 
       const envJulesKey = viteEnv?.VITE_JULES_API_KEY;

@@ -671,7 +671,6 @@ func SetupRoutes(app *fiber.App) {
 	// Settings routes
 	api.Get("/settings", getSettings)
 	api.Get("/settings/keeper", getKeeperSettings)
-	api.Get("/settings", getAppSettings)
 	api.Post("/settings/keeper", updateKeeperSettings)
 
 	// Session routes
