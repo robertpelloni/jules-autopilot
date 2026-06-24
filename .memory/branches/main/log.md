@@ -17621,3 +17621,120 @@ Now let me also commit the watchdog fix, build and deploy.
 **Action**: bash(command: "cd backend-go && go build -o backend.exe . 2>&1 && echo "BUILD OK"", timeout: 30)
 **Observation**: bash: success
 
+## Turn 19 | 2026-06-24T13:35:47.483Z | deepseek/deepseek-v4-flash
+
+**Thought**: 
+**Thinking**: Let me commit and push everything, then restart.
+**Action**: bash(command: "cd backend-go && git add -A && git commit -m "fix: watchdog mutex to prevent duplicates, daemon fallback to live API
+
+- watchdog_loop.ps1: added global mutex to prevent duplicate instances
+- daemon.go: if session cache is empty, fall back to live API fetch
+- daemon.go: log tick count for visibility" && git push 2>&1", timeout: 15)
+**Observation**: bash: success
+
+## Turn 20 | 2026-06-24T13:35:58.322Z | deepseek/deepseek-v4-flash
+
+**Thought**: 
+**Thinking**: Let me restart and watch the logs.
+**Action**: bash(command: "powershell.exe -Command "Get-Process -Name backend -ErrorAction SilentlyContinue | Stop-Process -Force" 2>&1 && sleep 30 && curl -s --max-time 5 http://localhost:8082/api/health | python3 -c "import sys,json;d=json.load(sys.stdin);print('OK')" 2>&1", timeout: 40)
+**Observation**: bash: success
+
+## Turn 21 | 2026-06-24T13:36:42.784Z | deepseek/deepseek-v4-flash
+
+**Thought**: 
+**Thinking**: Now let me wait a bit and check the logs for improvements.
+**Action**: bash(command: "sleep 30 && curl -s --max-time 5 http://localhost:8082/api/daemon/status 2>&1 | python3 -c "
+import sys, json
+d = json.load(sys.stdin)
+logs = d.get('logs',[])
+today = [x for x in logs if '2026-06-24' in x.get('createdAt','')]
+print(f'Logs from today: {len(today)}')
+for x in today:
+    ts = x.get('createdAt','')[11:19]
+    msg = x.get('message','')[:120]
+    print(f'{ts} {msg}')
+if not today:
+    print('(no today logs - checking last 5)')
+    for x in logs[-5:]:
+        print(f'{x[\"createdAt\"][11:19]} {x[\"message\"][:100]}')
+" 2>&1 && echo "" && tail -3 backend-go/watchdog.log", timeout: 10)
+**Observation**: bash: error
+
+## Turn 22 | 2026-06-24T13:37:00.037Z | deepseek/deepseek-v4-flash
+
+**Thought**: 
+**Thinking**: The daemon/status endpoint timed out. That's odd. Let me check the health.
+**Action**: bash(command: "curl -s --max-time 5 http://localhost:8082/api/health | python3 -c "import sys,json;d=json.load(sys.stdin);print('OK')" 2>&1", timeout: 10)
+**Observation**: bash: success
+
+## Turn 23 | 2026-06-24T13:37:05.329Z | deepseek/deepseek-v4-flash
+
+**Thought**: 
+**Thinking**: Health is OK. The daemon/status might have timed out because of the ListSessions call blocking. The daemon's first tick now calls client.ListSessions() (because the cache is empty) which takes 300s. During that call, the daemon/status endpoint can't return because the daemon is processing the live sessions fetch.
+
+Wait, that's a problem. The daemon now calls `client.ListSessions()` synchronously if the cache is empty. This blocks the daemon tick for 300s. And the daemon/status endpoint might be getting the daemon status, which requires a mutex lock that the daemon holds.
+
+Let me wait and check again.
+**Action**: bash(command: "sleep 10 && curl -s --max-time 5 http://localhost:8082/api/daemon/status | python3 -c "
+import sys, json
+d = json.load(sys.stdin)
+logs = d.get('logs',[])
+today = [x for x in logs if '2026-06-24' in x.get('createdAt','')]
+print(f'Todays logs: {len(today)}')
+for x in today:
+    ts = x.get('createdAt','')[11:19]
+    msg = x.get('message','')[:120]
+    print(f'  {ts} {msg}')
+if not today:
+    print('Last 3:')
+    for x in logs[-3:]:
+        print(f'  {x[\"createdAt\"][11:19]} {x[\"message\"][:100]}')
+" 2>&1", timeout: 15)
+**Observation**: bash: success
+
+## Turn 24 | 2026-06-24T13:37:23.001Z | deepseek/deepseek-v4-flash
+
+**Thought**: The first tick fallback `ListSessions()` blocks for 300s. Let me make it async.
+**Thinking**: Still no logs from today. The daemon hasn't logged anything. But earlier, the daemon/status endpoint timed out - which means the daemon is doing something (the ListSessions call takes 300s).
+
+Wait - I added a fallback in the daemon that calls `client.ListSessions()` synchronously if the cache is empty. This call takes 300 seconds. During those 300 seconds, the daemon tick() function is blocked. After 300 seconds, the daemon's ListSessions returns, caches the sessions, and then the daemon processes them.
+
+But this means the daemon's very first tick blocks for 300s. After that, it will tick normally every 5 minutes.
+
+The daemon/status endpoint timed out earlier because... actually, the daemon/status endpoint doesn't call the daemon tick. It just reads the current status. Let me check why it timed out.
+
+Actually, the daemon/status endpoint might be waiting for a mutex. Let me check.
+
+Anyway, the real improvements I should note:
+1. ✅ Rate limiter added to prevent 429 flooding
+2. ✅ Watchdog mutex to prevent duplicate instances
+3. ✅ Daemon fallback to live API when cache is empty
+4. ❌ Daemon/status endpoint timeout during first tick (the live API call blocks the daemon, and the status endpoint also blocks)
+5. ❌ No daemon activity logs from today
+
+The main issue is #4 - the daemon's ListSessions() call during the first tick blocks everything. I should make the fallback asynchronous.
+
+Let me fix #4 by making the fallback async.
+**Action**: edit(edits: [object Object], path: "C:/Users/hyper/workspace/jules-autopilot/backend-go/services/daemon.go")
+**Observation**: edit: success
+
+## Turn 25 | 2026-06-24T13:37:39.476Z | deepseek/deepseek-v4-flash
+
+**Thought**: 
+**Thinking**: Good. Now the fallback is async - the daemon tick won't block on ListSessions. The background goroutine will cache the sessions when ListSessions completes.
+
+Let me also add a log when the cache is empty so the user can see the daemon is alive and waiting.
+
+Actually, I already have `log.Printf("[Daemon] Tick: %d cached sessions, interval=%s", len(sessions), interval)` which logs "0 cached sessions" if the cache is empty. That should be enough.
+
+But the daemon logs are stored in keeper_logs table. Let me also add a keeper log when the cache is empty.
+**Action**: edit(edits: [object Object], path: "C:/Users/hyper/workspace/jules-autopilot/backend-go/services/daemon.go")
+**Observation**: edit: success
+
+## Turn 26 | 2026-06-24T13:37:50.962Z | deepseek/deepseek-v4-flash
+
+**Thought**: 
+**Thinking**: Good. Now let me build and deploy.
+**Action**: bash(command: "cd backend-go && go build -o backend.exe . 2>&1 && echo "BUILD OK"", timeout: 30)
+**Observation**: bash: success
+

@@ -140,18 +140,21 @@ func (d *Daemon) tick() time.Duration {
 	}
 	log.Printf("[Daemon] Tick: %d cached sessions, interval=%s", len(sessions), interval)
 
-	// If cache is empty, try live fetch as fallback
+	// If cache is empty, try live fetch in background
 	if len(sessions) == 0 {
-		log.Println("[Daemon] Cache empty, fetching live sessions...")
-		client := NewJulesClient()
-		if live, err := client.ListSessions(); err == nil && len(live) > 0 {
-			// Convert live sessions to models format and cache
-			go CacheSessions(live)
-			sessions = live
-			log.Printf("[Daemon] Fetched %d live sessions from API", len(live))
-		} else if err != nil {
-			log.Printf("[Daemon] Live fetch failed: %v", err)
-		}
+		log.Println("[Daemon] Cache empty, triggering background live fetch...")
+		addKeeperLog("Daemon started: cache empty, fetching sessions in background", "info", "global", map[string]interface{}{
+			"event": "daemon_cache_empty_background_fetch",
+		})
+		go func() {
+			client := NewJulesClient()
+			if live, err := client.ListSessions(); err == nil && len(live) > 0 {
+				CacheSessions(live)
+				log.Printf("[Daemon] Cached %d live sessions from API", len(live))
+			} else if err != nil {
+				log.Printf("[Daemon] Background live fetch failed: %v", err)
+			}
+		}()
 	}
 
 	queuedSessions := 0
