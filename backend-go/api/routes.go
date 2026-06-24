@@ -665,6 +665,8 @@ func SetupRoutes(app *fiber.App) {
 	// Daemon routes
 	api.Get("/daemon/status", getDaemonStatus)
 	api.Post("/daemon/status", postDaemonStatus)
+	api.Post("/daemon/restart", restartDaemon)
+	api.Post("/worker/restart", restartWorker)
 
 	// Settings routes
 	api.Get("/settings", getSettings)
@@ -1511,6 +1513,18 @@ func postDaemonStatus(c *fiber.Ctx) error {
 	}
 
 	return c.JSON(fiber.Map{"success": true})
+}
+
+func restartDaemon(c *fiber.Ctx) error {
+	services.StopDaemon()
+	services.StartDaemon()
+	return c.JSON(fiber.Map{"success": true, "daemon": services.GetDaemon().IsRunning()})
+}
+
+func restartWorker(c *fiber.Ctx) error {
+	services.StopWorker()
+	services.StartWorker()
+	return c.JSON(fiber.Map{"success": true, "worker": services.IsWorkerRunning()})
 }
 
 func getSettings(c *fiber.Ctx) error {

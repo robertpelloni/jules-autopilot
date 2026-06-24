@@ -13698,3 +13698,447 @@ Let me build and deploy.
 **Action**: bash(command: "cd backend-go && go build -o backend.exe -ldflags="-H=windowsgui" . 2>&1 && echo "BUILD OK"", timeout: 30)
 **Observation**: bash: success
 
+## Turn 10 | 2026-06-24T00:19:26.132Z | deepseek/deepseek-v4-flash
+
+**Thought**: 
+**Thinking**: Let me commit and push, then deploy.
+**Action**: bash(command: "cd backend-go && git add -A && git commit -m "fix: lock OS thread for systray message pump, add panic recovery" && git push 2>&1", timeout: 15)
+**Observation**: bash: success
+
+## Turn 11 | 2026-06-24T00:19:32.451Z | deepseek/deepseek-v4-flash
+
+**Thought**: 
+**Action**: bash(command: "powershell -Command "Stop-Process -Name 'backend' -Force -ErrorAction SilentlyContinue" && sleep 25 && curl -s --max-time 5 http://localhost:8082/api/health | python3 -c "import sys,json;d=json.load(sys.stdin);print('OK')" 2>&1", timeout: 35)
+**Observation**: bash: error
+
+## Turn 12 | 2026-06-24T00:20:06.582Z | deepseek/deepseek-v4-flash
+
+**Thought**: 
+**Thinking**: Backend still restarting. Let me wait a bit more.
+**Action**: bash(command: "sleep 15 && curl -s --max-time 5 http://localhost:8082/api/health | python3 -c "import sys,json;d=json.load(sys.stdin);print('OK')"", timeout: 25)
+**Observation**: bash: success
+
+## Turn 13 | 2026-06-24T00:20:25.686Z | deepseek/deepseek-v4-flash
+
+**Thought**: Backend restarted with the locked OS thread fix. Should have a blue triangle in the system tray now — check the notification area (you might need to expand hidden icons).
+**Thinking**: OK, the tray should now appear with a proper icon and locked OS thread. The blue triangle icon should show in the system tray. Let me tell the user.
+
+## Turn 1 | 2026-06-24T00:21:03.164Z | deepseek/deepseek-v4-flash
+
+**Thought**: Let me check if CGo is the issue and verify the library links correctly.
+**Thinking**: The tray icon still isn't showing. Let me think about what's going wrong.
+
+Possible issues:
+1. The `getlantern/systray` library might not be working correctly with Go 1.26 or with the `-H=windowsgui` flag.
+2. The goroutine might be crashing even with recovery.
+3. The `systray.Run()` might need to be called from a different context.
+4. There might be a CGo issue.
+
+Let me check if there's an issue with the `systray` library on this version of Go. Let me look at possible compilation errors.
+
+Actually, let me try a completely different approach: instead of trying to make `getlantern/systray` work, let me write the tray icon directly using Windows API calls via the `golang.org/x/sys/windows` package or the standard `syscall` package.
+
+But first, let me check if the `getlantern/systray` library actually initializes correctly. Let me check if there are any error logs. The problem is I can't easily see stdout/stderr from the GUI app.
+
+Let me try a simpler approach: use a PowerShell script that creates a tray icon, which communicates with the backend. This is actually a common Windows pattern.
+
+Actually, let me first try another approach: remove the `-H=windowsgui` flag and see if the tray works as a console app. The console window would be there but might be hidden by the watchdog's `CreateNoWindow=true`.
+
+Wait, that won't work because the console window would appear (that's what the user was complaining about).
+
+Let me try yet another approach: use `walk` library (Windows GUI toolkit for Go) or just use the Win32 API directly.
+
+Actually, let me look at this from a different angle. Let me check if the `getlantern/systray` library even supports the Windows build tags correctly. The library has platform-specific files.
+
+Actually, the simplest approach that I know works on Windows: use a PowerShell script as a tray icon. PowerShell can create a .NET NotifyIcon with a menu. I'll create a small PowerShell script and have the backend launch it as a hidden process.
+
+But that has the same problem - launching a PowerShell process might flash.
+
+OK, let me try another approach. Let me look at what `getlantern/systray` needs:
+
+1. On Windows, it creates a hidden window class and a Windows message loop
+2. It requires CGo to call the Win32 API
+
+Let me verify that the library was actually compiled with CGo. The `go build` command should handle this.
+
+Actually, let me check if CGo is enabled:
+**Action**: bash(command: "cd backend-go && go env CGO_ENABLED 2>&1", timeout: 5)
+**Observation**: bash: success
+
+## Turn 2 | 2026-06-24T00:21:14.599Z | deepseek/deepseek-v4-flash
+
+**Thought**: 
+**Thinking**: CGo is enabled. Let me check if the systray library has CGo files that need compiling. Let me look at the systray package to see what's in it.
+
+Actually, let me try a different approach. Instead of debugging the library, let me just check if the `systray` init is working by looking at a simple test. Let me look at the tray.go file and see if there's any issue.
+
+Wait - I just realized something. The `systray` library on Windows uses the `walk` library internally, which creates actual Windows GUI elements. But the `getlantern/systray` library I'm using is a fork of the original `systray` library. Let me check which version we have.
+
+Actually, looking at the go.mod, we have `github.com/getlantern/systray v1.2.2`. This is a fork by getlantern (the same people behind lantern VPN/proxy). It should work.
+
+Let me check if there's a compile-time issue by looking at the actual source files being compiled. Let me check if the Windows-specific files in the systray library are being included.
+
+Actually, I know what the problem might be. The `getlantern/systray` library might require CGo on Windows, and we're building with `CGO_ENABLED=1` (which is the default on Windows with MinGW or GCC installed). But maybe the GCC is missing or not set up correctly.
+
+Let me check:
+```
+go build -v github.com/getlantern/systray
+```
+
+This will show if the library compiles correctly.
+
+Actually, a simpler test: let me create a small test program that uses systray and see if it works.
+
+But even simpler: let me just check if there's any compile error by doing `go vet` or looking more carefully at the build output.
+
+Actually, you know what, let me try a different approach entirely. Let me write a minimal PowerShell-based tray icon. This avoids any CGo issues.
+**Action**: bash(command: "cd backend-go && go build -v github.com/getlantern/systray 2>&1 | tail -5", timeout: 15)
+**Observation**: bash: success
+
+## Turn 3 | 2026-06-24T00:21:24.156Z | deepseek/deepseek-v4-flash
+
+**Thought**: 
+**Thinking**: No output - meaning the package compiled without issues. So the library itself compiles fine. The issue must be at runtime.
+
+Let me look at the `getlantern/systray` source code for Windows to understand what could go wrong at runtime.
+
+Actually, let me check if maybe the `systray` library has a specific initialization issue. On Windows, it calls `RegisterClass` and `CreateWindowEx`. If these fail (e.g., because the application is running as a service without a desktop session), the tray icon won't appear.
+
+But the backend runs in the user's session (started by the VBS script at login or the watchdog), so it should have a desktop session.
+
+Let me check if the `systray` library outputs any errors. It writes to stderr via `log.Fatal` or similar. Since we redirect stdout/stderr, we might see errors in the server.log file.
+
+Let me check the server.log for any systray-related errors.
+**Action**: bash(command: "tail -20 backend-go/server.log 2>&1", timeout: 5)
+**Observation**: bash: success
+
+## Turn 4 | 2026-06-24T00:21:29.353Z | deepseek/deepseek-v4-flash
+
+**Thought**: 
+**Thinking**: I see `exit status 0xffffffff` which is `-1` or a crash exit code. That's from an old log. The current server.log might not have the latest output.
+
+Wait, the server.log is for the scheduled task's `go run .` output, not for the current `backend.exe` which is started by the watchdog. The watchdog uses `RedirectStandardOutput` and `RedirectStandardError`, so the output goes to the watchdog log, not server.log.
+
+Actually, looking at the watchdog script, it doesn't redirect output to server.log - it just discards it (no file output). So any errors from the systray library would be lost.
+
+Let me modify the StartTray function to log errors to the keeper logs so I can see them through the API.
+
+Actually, let me take a completely different approach. Instead of trying to debug why `getlantern/systray` isn't working, let me use a PowerShell-based tray icon. I'll create a small PowerShell script that creates a System.Windows.Forms.NotifyIcon, and have the Go backend launch it.
+
+But the issue is: launching PowerShell creates a new process, which might flash. But I can use `CreateNoWindow = $true` and `WindowStyle = Hidden` via .NET to avoid that.
+
+Actually, an even better approach: write a small C# tray app, compile it with `csc.exe` (the C# compiler built into Windows), and launch it from Go. This is the most reliable way to create a Windows tray icon.
+
+But let me try the simplest possible thing first: just log the tray startup status to the daemon logs so I can see if it's even starting.
+**Action**: edit(edits: [object Object], path: "C:/Users/hyper/workspace/jules-autopilot/backend-go/services/tray.go")
+**Observation**: edit: success
+
+## Turn 5 | 2026-06-24T00:21:45.708Z | deepseek/deepseek-v4-flash
+
+**Thought**: 
+**Thinking**: Let me also add a log in onTrayReady to confirm initialization succeeded.
+
+Actually, I need a different approach. The `getlantern/systray` library might not be working for reasons I can't easily debug. Let me create a PowerShell-based tray icon instead. This is a more reliable approach on Windows.
+
+I'll create a `tray.ps1` script that creates a NotifyIcon, and have the Go backend invoke it via `powershell.exe -NoProfile -ExecutionPolicy Bypass -WindowStyle Hidden -File tray.ps1`.
+
+But wait - I just removed the `go services.StartTray()` from main.go? No, it's still there.
+
+Let me try a hybrid approach: keep the `getlantern/systray` as the primary tray, but also check if the process is even running properly by looking at the daemon logs after restart.
+
+Actually, let me first just build and deploy with the logging changes, then check the daemon logs.
+**Action**: bash(command: "cd backend-go && go build -o backend.exe -ldflags="-H=windowsgui" . 2>&1 && powershell -Command "Stop-Process -Name 'backend' -Force -ErrorAction SilentlyContinue" && sleep 25 && curl -s --max-time 5 http://localhost:8082/api/health | python3 -c "import sys,json;d=json.load(sys.stdin);print('OK')" 2>&1", timeout: 40)
+**Observation**: bash: success
+
+## Turn 6 | 2026-06-24T00:22:23.961Z | deepseek/deepseek-v4-flash
+
+**Thought**: 
+**Thinking**: Let me check the daemon logs to see if the tray started.
+**Action**: bash(command: "sleep 10 && curl -s http://localhost:8082/api/daemon/status 2>&1 | python3 -c "
+import sys, json
+d = json.load(sys.stdin)
+logs = d.get('logs',[])
+for x in logs[-20:]:
+    ts = x.get('createdAt','')[11:19]
+    msg = x.get('message','')[:120]
+    if 'tray' in msg.lower() or 'systray' in msg.lower():
+        print(f'{ts} {msg}')
+print('---')
+print(f'Total logs: {len(logs)}')
+" 2>&1", timeout: 10)
+**Observation**: bash: error
+
+## Turn 7 | 2026-06-24T00:22:37.815Z | deepseek/deepseek-v4-flash
+
+**Thought**: 
+**Thinking**: The daemon/status endpoint timed out. That's suspicious. Let me check if the backend is healthy.
+**Action**: bash(command: "curl -s --max-time 5 http://localhost:8082/api/health | python3 -c "import sys,json;d=json.load(sys.stdin);print(f'Daemon: {d[\"checks\"][\"daemon\"][\"running\"]}')" 2>&1", timeout: 10)
+**Observation**: bash: success
+
+## Turn 8 | 2026-06-24T00:22:46.231Z | deepseek/deepseek-v4-flash
+
+**Thought**: The library may be having runtime issues. Let me switch to a PowerShell-based tray icon — more reliable on Windows.
+**Thinking**: The daemon is healthy. The status endpoint timeout might be a fluke. Let me just try with a shorter timeout.
+
+Actually, maybe the `getlantern/systray` library is crashing in a way that doesn't show in logs. Let me try a completely different approach: instead of using `getlantern/systray`, let me write a simple PowerShell-based tray icon that the Go backend communicates with.
+
+I'll create a `tray.ps1` script that:
+1. Creates a `System.Windows.Forms.NotifyIcon`
+2. Has menu items (Dashboard, Status, Restart, Quit)
+3. Communicates with the backend via HTTP
+
+Then in Go, I'll launch this script as a hidden PowerShell process.
+
+But the problem with launching a PowerShell process is that it might flash. But if I use `powershell.exe -WindowStyle Hidden -NoProfile -File tray.ps1`, it should be completely hidden.
+
+Let me do this.
+**Action**: write(content: "# Jules Autopilot System Tray Icon
+# Run: powershell -WindowStyle Hidden -NoProfile -ExecutionPolicy Bypass -File tray.ps1
+
+Add-Type -AssemblyName System.Windows.Forms
+Add-Type -AssemblyName System.Drawing
+
+$backendUrl = "http://localhost:8082"
+
+# Create the NotifyIcon
+$tray = New-Object System.Windows.Forms.NotifyIcon
+$tray.Text = "Jules Autopilot — starting..."
+
+# Create a simple 16x16 blue triangle icon programmatically
+$bmp = New-Object System.Drawing.Bitmap(16, 16)
+$g = [System.Drawing.Graphics]::FromImage($bmp)
+$g.Clear([System.Drawing.Color]::Transparent)
+
+# Draw a blue triangle
+$brush = New-Object System.Drawing.SolidBrush([System.Drawing.Color]::FromArgb(255, 0, 120, 212))
+$points = @(
+    [System.Drawing.Point]::new(8, 1),   # top
+    [System.Drawing.Point]::new(1, 14),  # bottom-left
+    [System.Drawing.Point]::new(15, 14)  # bottom-right
+)
+$g.FillPolygon($brush, $points)
+$g.Dispose()
+
+# Convert to icon
+$hIcon = $bmp.GetHicon()
+$tray.Icon = [System.Drawing.Icon]::FromHandle($hIcon)
+
+# Build context menu
+$menu = New-Object System.Windows.Forms.ContextMenuStrip
+
+$mDashboard = New-Object System.Windows.Forms.ToolStripMenuItem
+$mDashboard.Text = "Dashboard"
+$mDashboard.Add_Click({ Start-Process $backendUrl })
+
+$mStatus = New-Object System.Windows.Forms.ToolStripMenuItem
+$mStatus.Text = "Status"
+$mStatus.Add_Click({ Start-Process "$backendUrl/api/health" })
+
+$menu.Items.Add($mDashboard) | Out-Null
+$menu.Items.Add($mStatus) | Out-Null
+$menu.Items.Add((New-Object System.Windows.Forms.ToolStripSeparator)) | Out-Null
+
+$mRestartDaemon = New-Object System.Windows.Forms.ToolStripMenuItem
+$mRestartDaemon.Text = "Restart Daemon"
+$mRestartDaemon.Add_Click({
+    try {
+        Invoke-RestMethod -Uri "$backendUrl/api/daemon/restart" -Method Post -ErrorAction Stop | Out-Null
+    } catch {
+        [System.Windows.Forms.MessageBox]::Show("Failed to restart daemon: $_", "Error")
+    }
+})
+
+$mRestartWorker = New-Object System.Windows.Forms.ToolStripMenuItem
+$mRestartWorker.Text = "Restart Worker"
+$mRestartWorker.Add_Click({
+    try {
+        Invoke-RestMethod -Uri "$backendUrl/api/worker/restart" -Method Post -ErrorAction Stop | Out-Null
+    } catch {
+        [System.Windows.Forms.MessageBox]::Show("Failed to restart worker: $_", "Error")
+    }
+})
+
+$menu.Items.Add($mRestartDaemon) | Out-Null
+$menu.Items.Add($mRestartWorker) | Out-Null
+$menu.Items.Add((New-Object System.Windows.Forms.ToolStripSeparator)) | Out-Null
+
+$mQuit = New-Object System.Windows.Forms.ToolStripMenuItem
+$mQuit.Text = "Quit"
+$mQuit.Add_Click({
+    $tray.Visible = $false
+    [System.Windows.Forms.Application]::Exit()
+})
+$menu.Items.Add($mQuit) | Out-Null
+
+$tray.ContextMenuStrip = $menu
+$tray.Visible = $true
+
+# Tooltip updater
+$timer = New-Object System.Windows.Forms.Timer
+$timer.Interval = 30000
+$timer.Add_Tick({
+    try {
+        $r = Invoke-RestMethod -Uri "$backendUrl/api/health" -TimeoutSec 5 -ErrorAction Stop
+        $q = $r.queue
+        $s = $r.totals.sessions
+        $tray.Text = "Jules Autopilot`nQueue: $($q.pending)/$($q.processing)  Sessions: $s"
+    } catch {
+        $tray.Text = "Jules Autopilot — offline"
+    }
+})
+$timer.Start()
+
+# Keep the script running
+[System.Windows.Forms.Application]::Run()
+", path: "C:/Users/hyper/workspace/jules-autopilot/backend-go/tray.ps1")
+**Observation**: write: success
+
+## Turn 9 | 2026-06-24T00:23:04.704Z | deepseek/deepseek-v4-flash
+
+**Thought**: Now let me update the Go code to launch the tray script instead of the library.
+**Thinking**: Now I need to:
+1. Update the Go code to launch this PowerShell script instead of (or in addition to) the systray library
+2. Remove the `getlantern/systray` dependency since it's not working
+3. Add restart endpoints to the API (Restart Daemon, Restart Worker)
+4. Handle the tray script launch with CreateNoWindow
+
+But actually, let me keep it simple:
+- Remove the `getlantern/systray` Go code
+- Have the Go backend launch `tray.ps1` on startup using `Cmd()` wrapper
+- Add `/api/daemon/restart` and `/api/worker/restart` endpoints to the API
+
+Let me first modify main.go to launch the tray script, then add the API endpoints, then remove the old Go systray code.
+
+Actually wait, the VBS already launches the backend. Maybe I should modify the VBS to also launch the tray script. But the VBS is a startup script. Let me just have the Go backend launch the tray script.
+
+But there's a timing issue: the Go backend starts and then launches the tray script. The tray script checks the health endpoint. But if the backend crashes, the tray script will show "offline".
+
+Let me keep it simple: launch the tray script from the Go backend using `Cmd()`.
+**Action**: edit(edits: [object Object], path: "C:/Users/hyper/workspace/jules-autopilot/backend-go/services/tray.go")
+**Observation**: edit: success
+
+## Turn 10 | 2026-06-24T00:23:24.703Z | deepseek/deepseek-v4-flash
+
+**Thought**: 
+**Thinking**: Need to add `path/filepath` import. Also need to remove the old unused imports (`os/exec`, `runtime`, the `getlantern/systray` import, `github.com/jules-autopilot/backend/db`, `github.com/jules-autopilot/backend/models`, and `time`).
+
+Let me also remove all the unused functions (onTrayReady, onTrayExit, getStatusSummary, generateTrayIcon, openBrowser, trayIconBytes).
+
+Let me clean up the entire tray.go file, removing everything that's no longer needed.
+**Action**: write(content: "package services
+
+import (
+	"log"
+	"os"
+	"path/filepath"
+	"sync"
+)
+
+var trayOnce sync.Once
+
+// StartTray initializes the system tray icon by launching a PowerShell tray script.
+func StartTray() {
+	trayOnce.Do(func() {
+		log.Println("[Tray] Starting PowerShell tray icon...")
+		psPath := filepath.Join(getScriptDir(), "tray.ps1")
+		if _, err := os.Stat(psPath); os.IsNotExist(err) {
+			log.Printf("[Tray] tray.ps1 not found at %s, skipping", psPath)
+			return
+		}
+		cmd := Cmd("powershell", "-NoProfile", "-ExecutionPolicy", "Bypass", "-WindowStyle", "Hidden", "-File", psPath)
+		if err := cmd.Start(); err != nil {
+			log.Printf("[Tray] Failed to start tray script: %v", err)
+		} else {
+			log.Printf("[Tray] Tray script started (PID: %d)", cmd.Process.Pid)
+		}
+	})
+}
+
+func getScriptDir() string {
+	exe, err := os.Executable()
+	if err != nil {
+		return "."
+	}
+	return filepath.Dir(exe)
+}
+", path: "C:/Users/hyper/workspace/jules-autopilot/backend-go/services/tray.go")
+**Observation**: write: success
+
+## Turn 11 | 2026-06-24T00:23:44.992Z | deepseek/deepseek-v4-flash
+
+**Thought**: Now let me add the restart API endpoints for the tray menu, then remove unused dependency.
+**Thinking**: Good, now tray.go is clean. Let me also remove the unused imports and functions. The `Cmd` function is in hide_window_windows.go, so that's fine.
+
+Now I also need to add the restart endpoints to the API. The tray menu has "Restart Daemon" and "Restart Worker" which call POST /api/daemon/restart and POST /api/worker/restart. Let me add those routes.
+
+Let me also remove the `getlantern/systray` dependency from go.mod since we no longer use it.
+**Action**: grep(context: 1, path: "backend-go/api/routes.go", pattern: "func restartDaemon\|func restartWorker\|/daemon/restart\|/worker/restart")
+**Observation**: grep: success
+
+## Turn 12 | 2026-06-24T00:23:56.410Z | deepseek/deepseek-v4-flash
+
+**Thought**: 
+**Thinking**: No restart endpoints exist yet. Let me add them. Let me find a good place in routes.go to add them.
+**Action**: grep(context: 3, path: "backend-go/api/routes.go", pattern: "func SetupRoutes")
+**Observation**: grep: success
+
+## Turn 13 | 2026-06-24T00:23:59.409Z | deepseek/deepseek-v4-flash
+
+**Thought**: 
+**Thinking**: Good. Let me add the restart endpoints after the daemon endpoints. Let me check what daemon endpoints exist.
+**Action**: bash(command: "grep -n -i "daemon\|worker" backend-go/api/routes.go | head -20", timeout: 5)
+**Observation**: bash: success
+
+## Turn 14 | 2026-06-24T00:24:02.276Z | deepseek/deepseek-v4-flash
+
+**Thought**: 
+**Thinking**: I see there's already a POST /daemon/status endpoint that can start/stop the daemon. The tray uses POST /api/daemon/restart and POST /api/worker/restart which are different. Let me add those endpoints, or I could just have the tray use existing endpoints.
+
+Actually, let me just add the restart endpoints for the tray. It's cleaner.
+
+Let me find the end of the route registration to add new routes.
+**Action**: read(limit: 40, offset: 660, path: "C:/Users/hyper/workspace/jules-autopilot/backend-go/api/routes.go")
+**Observation**: read: success
+
+## Turn 15 | 2026-06-24T00:24:05.466Z | deepseek/deepseek-v4-flash
+
+**Thought**: 
+**Thinking**: Let me add the restart endpoints after the daemon routes. I'll add them right after line 667 (POST /daemon/status).
+**Action**: edit(edits: [object Object], path: "C:/Users/hyper/workspace/jules-autopilot/backend-go/api/routes.go")
+**Observation**: edit: success
+
+## Turn 16 | 2026-06-24T00:24:16.428Z | deepseek/deepseek-v4-flash
+
+**Thought**: 
+**Thinking**: This is exactly the same issue as the first message in this conversation! The LSP says restartDaemon and restartWorker are undefined. I need to add the handler functions. Let me add them near the postDaemonStatus function.
+**Action**: read(limit: 20, offset: 1494, path: "C:/Users/hyper/workspace/jules-autopilot/backend-go/api/routes.go")
+**Observation**: read: success
+
+## Turn 17 | 2026-06-24T00:24:26.485Z | deepseek/deepseek-v4-flash
+
+**Thought**: 
+**Thinking**: I'll add the restart handlers after postDaemonStatus. Let me read the end of that function.
+**Action**: read(limit: 10, offset: 1514, path: "C:/Users/hyper/workspace/jules-autopilot/backend-go/api/routes.go")
+**Observation**: read: success
+
+## Turn 18 | 2026-06-24T00:24:29.481Z | deepseek/deepseek-v4-flash
+
+**Thought**: 
+**Thinking**: Good, I can add the restart handlers right after postDaemonStatus.
+**Action**: edit(edits: [object Object], path: "C:/Users/hyper/workspace/jules-autopilot/backend-go/api/routes.go")
+**Observation**: edit: success
+
+## Turn 19 | 2026-06-24T00:24:40.075Z | deepseek/deepseek-v4-flash
+
+**Thought**: 
+**Thinking**: Now let me also remove the unused `getlantern/systray` and its dependencies from go.mod. Let me run `go mod tidy` to clean up.
+**Action**: bash(command: "cd backend-go && go mod tidy 2>&1 && echo "TIDY OK"", timeout: 15)
+**Observation**: bash: success
+
+## Turn 20 | 2026-06-24T00:24:43.130Z | deepseek/deepseek-v4-flash
+
+**Thought**: 
+**Thinking**: Now let me build and deploy.
+**Action**: bash(command: "cd backend-go && go build -o backend.exe -ldflags="-H=windowsgui" . 2>&1 && echo "BUILD OK"", timeout: 30)
+**Observation**: bash: success
+

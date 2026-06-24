@@ -1,165 +1,36 @@
 package services
 
 import (
-	"fmt"
 	"log"
 	"os"
-	"os/exec"
-	"runtime"
+	"path/filepath"
 	"sync"
-	"time"
-
-	"github.com/getlantern/systray"
-	"github.com/jules-autopilot/backend/db"
-	"github.com/jules-autopilot/backend/models"
 )
 
-// trayReady is used to ensure we only start one instance
 var trayOnce sync.Once
 
-// StartTray initializes the system tray icon in a background goroutine.
+// StartTray initializes the system tray icon by launching a PowerShell tray script.
 func StartTray() {
 	trayOnce.Do(func() {
-		go func() {
-			// Lock OS thread for Windows message pump
-			runtime.LockOSThread()
-			defer runtime.UnlockOSThread()
-			defer func() {
-				if r := recover(); r != nil {
-					log.Printf("[Tray] CRASHED: %v", r)
-				}
-			}()
-			systray.Run(onTrayReady, onTrayExit)
-		}()
+		log.Println("[Tray] Starting PowerShell tray icon...")
+		psPath := filepath.Join(getScriptDir(), "tray.ps1")
+		if _, err := os.Stat(psPath); os.IsNotExist(err) {
+			log.Printf("[Tray] tray.ps1 not found at %s, skipping", psPath)
+			return
+		}
+		cmd := Cmd("powershell", "-NoProfile", "-ExecutionPolicy", "Bypass", "-WindowStyle", "Hidden", "-File", psPath)
+		if err := cmd.Start(); err != nil {
+			log.Printf("[Tray] Failed to start tray script: %v", err)
+		} else {
+			log.Printf("[Tray] Tray script started (PID: %d)", cmd.Process.Pid)
+		}
 	})
 }
 
-var trayIconBytes = []byte{
-	0x89, 0x50, 0x4E, 0x47, 0x0D, 0x0A, 0x1A, 0x0A, 0x00, 0x00, 0x00, 0x0D,
-	0x49, 0x48, 0x44, 0x52, 0x00, 0x00, 0x00, 0x20, 0x00, 0x00, 0x00, 0x20,
-	0x08, 0x06, 0x00, 0x00, 0x00, 0x73, 0x7A, 0x7A, 0xF4, 0x00, 0x00, 0x00,
-	0x79, 0x49, 0x44, 0x41, 0x54, 0x78, 0x9C, 0xE5, 0xCE, 0x49, 0x0A, 0xC0,
-	0x20, 0x10, 0x05, 0x51, 0x8F, 0x9D, 0x83, 0xE6, 0x3E, 0x89, 0x59, 0x18,
-	0x5C, 0x88, 0xD8, 0x63, 0x21, 0x36, 0xFC, 0x6D, 0xD7, 0x2B, 0xC5, 0x7A,
-	0xD7, 0xFD, 0x98, 0x7F, 0xEC, 0x0B, 0xF8, 0xE2, 0x6D, 0xE7, 0x01, 0xFA,
-	0x38, 0x82, 0x40, 0x01, 0xA3, 0x78, 0x2A, 0x02, 0x05, 0xCC, 0xE2, 0x29,
-	0x08, 0x14, 0xB0, 0x12, 0x0F, 0x45, 0xA0, 0x00, 0x49, 0x3C, 0x04, 0x81,
-	0x02, 0x34, 0x71, 0x57, 0x04, 0x0A, 0xB0, 0xC4, 0x5D, 0x10, 0x28, 0xC0,
-	0x23, 0x6E, 0x42, 0xA0, 0x00, 0xCF, 0xB8, 0x0A, 0x81, 0x02, 0x22, 0xE2,
-	0x22, 0x04, 0x0A, 0x88, 0x8C, 0x2F, 0x21, 0x50, 0x40, 0x46, 0x7C, 0x8A,
-	0x40, 0x01, 0x99, 0xF1, 0x21, 0x02, 0x05, 0x10, 0xF1, 0x1F, 0x41, 0xC6,
-	0xEB, 0x5E, 0xB0, 0x7B, 0x98, 0x88, 0x15, 0x0A, 0x40, 0x62, 0x00, 0x00,
-	0x00, 0x00, 0x49, 0x45, 0x4E, 0x44, 0xAE, 0x42, 0x60, 0x82,
-}
-
-func onTrayReady() {
-	systray.SetTitle("Jules Autopilot")
-	systray.SetTooltip("Jules Autopilot Backend")
-
-	// Set the icon (16x16 blue circle PNG)
-	systray.SetIcon(trayIconBytes)
-
-	// Menu items
-	mDashboard := systray.AddMenuItem("Dashboard", "Open dashboard")
-	mStatus := systray.AddMenuItem("Status", "Service status")
-	systray.AddSeparator()
-	mRestartDaemon := systray.AddMenuItem("Restart Daemon", "Restart the monitoring daemon")
-	mRestartWorker := systray.AddMenuItem("Restart Worker", "Restart the queue worker")
-	systray.AddSeparator()
-	mQuit := systray.AddMenuItem("Quit", "Shutdown backend")
-
-	// Start a goroutine to update tooltip periodically
-	go func() {
-		for {
-			systray.SetTooltip(fmt.Sprintf("Jules Autopilot — %s", getStatusSummary()))
-			time.Sleep(30 * time.Second)
-		}
-	}()
-
-	// Menu action handlers
-	go func() {
-		for {
-			select {
-			case <-mDashboard.ClickedCh:
-				_ = openBrowser("http://localhost:8082")
-			case <-mStatus.ClickedCh:
-				_ = openBrowser("http://localhost:8082/api/health")
-			case <-mRestartDaemon.ClickedCh:
-				StopDaemon()
-				StartDaemon()
-				log.Println("[Tray] Daemon restarted via tray menu")
-			case <-mRestartWorker.ClickedCh:
-				StopWorker()
-				StartWorker()
-				log.Println("[Tray] Worker restarted via tray menu")
-			case <-mQuit.ClickedCh:
-				log.Println("[Tray] Quit requested via tray menu")
-				systray.Quit()
-				os.Exit(0)
-			}
-		}
-	}()
-}
-
-func onTrayExit() {
-	// Cleanup
-}
-
-// getStatusSummary returns a short status line for the tray tooltip.
-func getStatusSummary() string {
-	summary := "starting..."
-
-	var settings models.KeeperSettings
-	if err := db.DB.First(&settings, "id = ?", "default").Error; err == nil {
-		daemon := "off"
-		if GetDaemon().IsRunning() {
-			daemon = "on"
-		}
-
-		var sessionCount int64
-		db.DB.Model(&models.JulesSession{}).Count(&sessionCount)
-
-		var queueCount int64
-		db.DB.Model(&models.QueueJob{}).Where("status IN ?", []string{"pending", "processing"}).Count(&queueCount)
-
-		summary = fmt.Sprintf("daemon=%s sessions=%d queue=%d", daemon, sessionCount, queueCount)
+func getScriptDir() string {
+	exe, err := os.Executable()
+	if err != nil {
+		return "."
 	}
-
-	return summary
-}
-
-// generateTrayIcon creates a simple 16x16 icon for the tray.
-// Returns nil to use the default system icon if creation fails.
-func generateTrayIcon() []byte {
-	// Minimal 16x16 RGBA PNG icon with a simple "J" letter
-	// This is a very small PNG (67 bytes) of a simple blue circle
-	icon := []byte{
-		0x89, 0x50, 0x4E, 0x47, 0x0D, 0x0A, 0x1A, 0x0A, 0x00, 0x00, 0x00, 0x0D,
-		0x49, 0x48, 0x44, 0x52, 0x00, 0x00, 0x00, 0x10, 0x00, 0x00, 0x00, 0x10,
-		0x08, 0x06, 0x00, 0x00, 0x00, 0x1F, 0xF3, 0xFF, 0x61, 0x00, 0x00, 0x00,
-		0x01, 0x73, 0x52, 0x47, 0x42, 0x00, 0xAE, 0xCE, 0x1C, 0xE9, 0x00, 0x00,
-		0x00, 0x04, 0x67, 0x41, 0x4D, 0x41, 0x00, 0x00, 0xB1, 0x8F, 0x0B, 0xFC,
-		0x61, 0x05, 0x00, 0x00, 0x00, 0x09, 0x70, 0x48, 0x59, 0x73, 0x00, 0x00,
-		0x0E, 0xC3, 0x00, 0x00, 0x0E, 0xC3, 0x01, 0xC7, 0x6F, 0xA8, 0x64, 0x00,
-		0x00, 0x00, 0x0F, 0x49, 0x44, 0x41, 0x54, 0x48, 0x89, 0x63, 0x60, 0xA0,
-		0x1F, 0x60, 0x00, 0x00, 0x00, 0x00, 0xFF, 0xFF, 0x03, 0x00, 0x00, 0x00,
-		0x00, 0x01, 0x00, 0x01, 0x00, 0x00, 0x00, 0x00, 0x00, 0x49, 0x45, 0x4E,
-		0x44, 0xAE, 0x42, 0x60, 0x82,
-	}
-	return icon
-}
-
-// openBrowser opens the default browser to the given URL.
-// Silently ignores errors.
-func openBrowser(url string) error {
-	var cmd *exec.Cmd
-	switch runtime.GOOS {
-	case "windows":
-		cmd = exec.Command("rundll32", "url.dll,FileProtocolHandler", url)
-	case "darwin":
-		cmd = exec.Command("open", url)
-	default:
-		cmd = exec.Command("xdg-open", url)
-	}
-	return cmd.Start()
+	return filepath.Dir(exe)
 }
