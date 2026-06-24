@@ -14677,3 +14677,350 @@ Now let me update tray.go to launch this exe instead of the PowerShell script.
 **Action**: bash(command: "cd backend-go && go build -o backend.exe -ldflags="-H=windowsgui" . 2>&1 && echo "BUILD OK"", timeout: 30)
 **Observation**: bash: success
 
+## Turn 48 | 2026-06-24T00:31:28.313Z | deepseek/deepseek-v4-flash
+
+**Thought**: 
+**Thinking**: Let me commit, push, and restart.
+**Action**: bash(command: "cd backend-go && git add -A && git commit -m "fix: replace PowerShell tray with compiled C# trayicon.exe
+
+- Created C# tray app (tray.cs) compiled with /target:winexe
+- Blue triangle icon with Dashboard/Status/Restart/Quit menu
+- No console window, no PowerShell dependency
+- Go backend launches trayicon.exe as hidden process
+- Kept tray.ps1 as reference, trayicon.exe is the active one" && git push 2>&1", timeout: 15)
+**Observation**: bash: success
+
+## Turn 49 | 2026-06-24T00:31:37.356Z | deepseek/deepseek-v4-flash
+
+**Thought**: 
+**Thinking**: I should also add `trayicon.exe` to .gitignore? Actually, it's a built binary. Let me check if it's tracked now.
+**Action**: bash(command: "powershell -Command "Stop-Process -Name 'backend' -Force -ErrorAction SilentlyContinue" && sleep 25 && curl -s --max-time 5 http://localhost:8082/api/health | python3 -c "import sys,json;d=json.load(sys.stdin);print('OK')" 2>&1", timeout: 35)
+**Observation**: bash: error
+
+## Turn 50 | 2026-06-24T00:32:13.898Z | deepseek/deepseek-v4-flash
+
+**Thought**: 
+**Thinking**: Still restarting. Let me wait more.
+**Action**: bash(command: "sleep 15 && curl -s --max-time 5 http://localhost:8082/api/health | python3 -c "import sys,json;d=json.load(sys.stdin);print('OK')" 2>&1", timeout: 25)
+**Observation**: bash: error
+
+## Turn 51 | 2026-06-24T00:32:35.601Z | deepseek/deepseek-v4-flash
+
+**Thought**: 
+**Thinking**: Backend is still down after 40 seconds. The watchdog should have restarted it within 30 seconds. Let me check the watchdog log.
+**Action**: bash(command: "tail -5 backend-go/watchdog.log 2>&1", timeout: 5)
+**Observation**: bash: success
+
+## Turn 52 | 2026-06-24T00:32:39.117Z | deepseek/deepseek-v4-flash
+
+**Thought**: 
+**Thinking**: The watchdog log shows the last restart at 20:27 (about 5 minutes ago). But the current backend was killed by my command. The watchdog should have detected the failure and restarted it. Let me check if the watchdog is still running.
+**Action**: bash(command: "sleep 15 && curl -s --max-time 5 http://localhost:8082/api/health 2>&1 | head -c 100", timeout: 25)
+**Observation**: bash: success
+
+## Turn 53 | 2026-06-24T00:33:00.148Z | deepseek/deepseek-v4-flash
+
+**Thought**: 
+**Thinking**: The backend is still not responding after 70+ seconds. The watchdog should have restarted it by now. Let me check if the watchdog process is even running.
+**Action**: bash(command: "tail -10 backend-go/watchdog.log 2>&1", timeout: 5)
+**Observation**: bash: success
+
+## Turn 54 | 2026-06-24T00:33:04.317Z | deepseek/deepseek-v4-flash
+
+**Thought**: 
+**Thinking**: The watchdog log stops at 20:27:49. The watchdog hasn't detected my latest kill (at ~20:31). That means the watchdog process might have died. Let me check.
+
+Wait - I see the watchdog log shows restarts from previous kills. The last entry is at 20:27:49 - "Backend is healthy". That was from my previous deployment cycle. After that, I did a new build (at 20:30) and killed the backend (at 20:31). The watchdog should have detected the failure and logged "DOWN - Restarting backend" around 20:31:30 or so. But it hasn't logged anything since 20:27.
+
+This means the watchdog process (PID 57336) might have died or hung. Let me check.
+**Action**: bash(command: "powershell -Command "Get-Process -Id 57336 -ErrorAction SilentlyContinue | Select-Object Id,ProcessName,Responding | Format-Table -AutoSize" 2>&1", timeout: 10)
+**Observation**: bash: error
+
+## Turn 55 | 2026-06-24T00:33:11.024Z | deepseek/deepseek-v4-flash
+
+**Thought**: Watchdog died (I accidentally killed it). Let me restart it.
+**Thinking**: The watchdog process (PID 57336) is dead! That's why the backend hasn't been restarted. The watchdog was killed somehow - maybe by one of my earlier `Stop-Process -Name 'backend','go' -Force` commands? No, the watchdog kills `Get-Process -Name "backend"` not by PID.
+
+Actually, maybe when I ran `Get-Process | Where-Object { ... } | Stop-Process` earlier, I accidentally killed the watchdog too. The `powershell -Command "Stop-Process -Name 'backend' -Force"` would kill `backend.exe` but not the watchdog PowerShell process. But earlier I also ran `powershell -Command "Stop-Process -Name powershell -Force -ErrorAction SilentlyContinue"` which would kill ALL PowerShell processes, including the watchdog!
+
+Yes, that must have been it. I accidentally killed the watchdog by running `Stop-Process -Name powershell -Force`.
+
+Let me restart the watchdog manually.
+**Action**: bash(command: "cd backend-go && powershell -Command "Start-Process -WindowStyle Hidden -FilePath powershell -ArgumentList '-NoProfile -ExecutionPolicy Bypass -File \"C:\Users\hyper\workspace\jules-autopilot\backend-go\watchdog_loop.ps1\"'" 2>&1 && sleep 20 && tail -3 watchdog.log && echo "" && curl -s --max-time 5 http://localhost:8082/api/health | python3 -c "import sys,json;d=json.load(sys.stdin);print('OK')" 2>&1", timeout: 30)
+**Observation**: bash: success
+
+## Turn 56 | 2026-06-24T00:33:38.932Z | deepseek/deepseek-v4-flash
+
+**Thought**: 
+**Thinking**: Backend is back up with the new binary. The trayicon.exe should be launched now as part of `StartTray()`. Let me check if it's running.
+**Action**: bash(command: "sleep 5 && powershell -Command "Get-Process -Name trayicon -ErrorAction SilentlyContinue | Select-Object Id,StartTime,Responding | Format-Table -AutoSize" 2>&1", timeout: 10)
+**Observation**: bash: success
+
+## Turn 57 | 2026-06-24T00:33:51.556Z | deepseek/deepseek-v4-flash
+
+**Thought**: **Trayicon.exe is running** — PID 2216 at 20:33:25, responding. You should see a blue triangle in the system tray now with right-click menu for Dashboard, Status, Restart Daemon/Worker, and Quit.
+**Thinking**: The trayicon.exe is running! PID 2216, started at 20:33:25, Responding: True. The C# tray app is working.
+
+Now the system tray should show a blue triangle icon for "Jules Autopilot" with the context menu (Dashboard, Status, Restart Daemon, Restart Worker, Quit).
+
+Let me also check the daemon logs for the tray start message.
+
+## Turn 1 | 2026-06-24T00:34:39.856Z | deepseek/deepseek-v4-flash
+
+**Thought**: 
+**Thinking**: The user says there are two tray icons running. That could be because:
+
+1. The old `trayicon.exe` from a previous restart is still running
+2. Both `trayicon.exe` and the old PowerShell `tray.ps1` are running
+3. The `StartTray()` function uses `sync.Once` so it should only start one, but maybe there's a stale process from before
+
+Let me check all trayicon.exe processes.
+**Action**: bash(command: "powershell -Command "Get-Process -Name trayicon -ErrorAction SilentlyContinue | Select-Object Id,StartTime | Format-Table -AutoSize" 2>&1", timeout: 10)
+**Observation**: bash: success
+
+## Turn 2 | 2026-06-24T00:34:45.334Z | deepseek/deepseek-v4-flash
+
+**Thought**: Only one running now (PID 2216). The second one might have been from an earlier restart that didn't clean up. Should just be the one blue triangle now — does it look right?
+**Thinking**: Only one `trayicon.exe` process is running. But the user said "there are two running". Maybe one is `backend.exe` (the main backend) which also shows a... wait, `backend.exe` is built with `-H=windowsgui` so it doesn't show a console window. And `trayicon.exe` is the only tray icon.
+
+Maybe the user is seeing the `backend.exe` and `trayicon.exe` as two processes? Or maybe there were two before I cleaned up.
+
+Actually, now that I think about it, the user might be referring to two tray icons in the notification area. The `trayicon.exe` uses `NotifyIcon` which creates a tray icon. If two instances were running, two icons would appear.
+
+But I only see one `trayicon.exe`. Maybe there was an old one that I killed or it auto-exited.
+
+Let me just tell the user there's only one now and ask if the icon looks good.
+
+## Turn 1 | 2026-06-24T00:53:57.945Z | deepseek/deepseek-v4-flash
+
+**Thought**: 
+**Thinking**: The user says there are still two icons. Let me investigate more carefully. Maybe there are two `trayicon.exe` processes but they started at different times. Let me check more thoroughly.
+**Action**: bash(command: "powershell -Command "Get-Process -Name trayicon -ErrorAction SilentlyContinue | Select-Object *,@{N='CmdLine';E={(Get-CimInstance Win32_Process -Filter \"ProcessId='\$(\$_.Id)'\").CommandLine}} | Format-List Id,ProcessName,StartTime,Responding,CmdLine" 2>&1", timeout: 10)
+**Observation**: bash: success
+
+## Turn 2 | 2026-06-24T00:54:04.752Z | deepseek/deepseek-v4-flash
+
+**Thought**: 
+**Thinking**: Only one trayicon.exe running. But the user says two. Maybe both icons are from the SAME trayicon.exe but it creates two NotifyIcon instances? Let me check the C# code.
+
+Looking at the C# code:
+```csharp
+tray = new NotifyIcon();
+...
+tray.Visible = true;
+```
+
+Only one NotifyIcon is created. So from one process, there should be one icon.
+
+But maybe the user is seeing two icons because:
+1. One is from the new `trayicon.exe` (blue triangle)
+2. One is from the old `getlantern/systray` that might have created an icon before we removed it
+
+Wait, the `getlantern/systray` was never working (the icon never showed). So it can't be that.
+
+Or maybe the user is seeing two icons because they're in different locations:
+1. The tray icon (blue triangle)
+2. The "Show hidden icons" arrow
+
+Or maybe one of them is a Windows system icon or another app's icon.
+
+Let me also check if there's an old trayicon.exe from the VBS startup script. The VBS script starts `backend.exe` which then starts `trayicon.exe`. But the watchdog also started `backend.exe` which also starts `trayicon.exe`. If the backend was started twice (by VBS and watchdog), there would be two instances of `backend.exe`, each starting its own `trayicon.exe`.
+
+Wait - let me check. The VBS script `JulesAutopilot.vbs` starts `backend.exe`. Then after 20 seconds, it starts `watchdog_loop.ps1`. The watchdog then also starts `backend.exe` if it detects the backend is dead. But if the backend is still running (from the VBS launch), the watchdog won't start another one.
+
+So there should only be one `backend.exe` and one `trayicon.exe`.
+
+But the user said "still two". Maybe they're counting the `backend.exe` icon too? But `backend.exe` is a GUI app with `-H=windowsgui` and doesn't have a tray icon (the tray is created by `trayicon.exe`).
+
+Let me check how many backend.exe processes are running.
+**Action**: bash(command: "powershell -Command "Get-Process -Name backend,trayicon -ErrorAction SilentlyContinue | Select-Object Id,ProcessName,@{N='AgeMin';E={[math]::Round(((Get-Date)-$_.StartTime).TotalMinutes,1)}} | Format-Table -AutoSize" 2>&1", timeout: 10)
+**Observation**: bash: error
+
+## Turn 3 | 2026-06-24T00:54:14.035Z | deepseek/deepseek-v4-flash
+
+**Thought**: 
+**Thinking**: The bash escaping is still mangling my PowerShell commands. The issue is that bash is interpreting things like `$_.Id` and `$_.StartTime` as bash variable references. Let me use single quotes around the entire PowerShell command, or escape the dollar signs.
+
+Actually, looking at the error: `(Get-Date)-/usr/bin/bash.StartTime` - the `$_.StartTime` is being expanded by bash to `/usr/bin/bash.StartTime` because `$_` is a bash variable that contains the current shell's path? No, that's odd.
+
+Actually wait - the `$_` in the bash command is being interpreted as the bash `$_` variable which is the last argument of the previous command. In this case, it expanded to `/usr/bin/bash`. So the PowerShell sees `(Get-Date)-/usr/bin/bash.StartTime` which is invalid.
+
+This is a quoting nightmare. Let me use a heredoc or a script file instead.
+
+Actually, the simplest approach: let me just use `Get-Process -Name backend,trayicon` with simple output.
+**Action**: bash(command: "powershell.exe -Command "Get-Process -Name backend,trayicon -ErrorAction SilentlyContinue | Select-Object Id,ProcessName,StartTime" 2>&1", timeout: 10)
+**Observation**: bash: success
+
+## Turn 4 | 2026-06-24T00:54:20.575Z | deepseek/deepseek-v4-flash
+
+**Thought**: Only one backend and one trayicon. Maybe you're seeing the icon in both the main tray and the overflow area? Can you expand the hidden icons (^ arrow) — is there a duplicate in there?
+**Thinking**: One backend.exe and one trayicon.exe, both started at 8:33:25 PM. Both from the same restart. So there's only one tray icon process.
+
+But the user says "still two" icons. Maybe they're seeing TWO icons in the notification area from the single trayicon.exe process? That would mean the C# code creates two NotifyIcons.
+
+Looking at the C# code again:
+```csharp
+tray = new NotifyIcon();
+// ... icon setup ...
+tray.Visible = true;
+```
+
+Only one NotifyIcon. But maybe Windows is showing it twice? Or maybe there's a duplicate from the hidden icons area?
+
+Let me also check: is there a "Show hidden icons" arrow that the user might be collapsing? In Windows 11, the system tray has a "chevron" that shows hidden icons. Maybe the user is seeing:
+1. The tray icon visible in the notification area
+2. A hidden icon in the overflow area
+
+Actually, there's a simpler explanation: Windows might show both an icon and the application itself as separate entries. The trayicon runs as a process, and Windows shows it in the system tray. But maybe the user is also seeing it listed elsewhere.
+
+Or maybe the user is referring to a different "two" - like two icons visible in the system tray at the same time. This could happen if the `trayicon.exe` process was started twice.
+
+Let me just ask the user what they mean by "two" - two icons in the notification area, or two processes, or something else?
+
+Actually wait - maybe I should check `Get-Process -Name trayicon` didn't show two because one exited. But the user said "still two" meaning they see two icons right now. Let me check if there's another process that might be creating a tray icon.
+
+Actually, let me check if there's an old `systray` process or something:
+
+## Turn 1 | 2026-06-24T00:55:04.023Z | deepseek/deepseek-v4-flash
+
+**Thought**: Two possibilities:
+1. Two `trayicon.exe` processes — but I only see one
+2. Windows might show the process itself as a "background process" entry AND the NotifyIcon separately
+
+Let me check if there's a stale one hiding in the background.
+**Thinking**: The user is saying they see TWO blue triangle icons for "Jules Autopilot" in the system tray. This means two NotifyIcon instances are showing. The most likely cause is that the `trayicon.exe` process was launched twice. But I only see one process.
+
+Wait - maybe the issue is that `StartTray()` is called twice from different places, or the `sync.Once` isn't working as expected.
+
+Actually, let me think about this differently. The `StartTray()` function uses `sync.Once` so it should only run once per program execution. But what if the program is running twice? Let me check if there are two `backend.exe` processes.
+
+The process list showed only one `backend.exe` and one `trayicon.exe`. But the user sees two icons.
+
+Wait - maybe the C# tray app creates TWO NotifyIcons somehow. Let me look at the C# code more carefully.
+
+Actually, looking at the C# code again:
+
+```csharp
+static void Main()
+{
+    tray = new NotifyIcon();
+    tray.Text = "Jules Autopilot - starting...";
+    
+    // ... icon setup ...
+    
+    tray.Visible = true;
+    
+    // ... timer setup ...
+    
+    Application.Run();
+}
+```
+
+Only one `NotifyIcon` is created. But maybe the issue is that `Application.Run()` creates a hidden form, which Windows might show as a separate icon? No, `Application.Run()` in a tray app doesn't create a visible window.
+
+Hmm, let me check if maybe the problem is that both `backend.exe` and `trayicon.exe` are showing in the "system tray" area. `backend.exe` is built with `-H=windowsgui`, so it's a GUI app. But it doesn't have a NotifyIcon itself. However, Windows might still show it in the notification area as a background process.
+
+Actually, on Windows 11, GUI applications with no visible windows might appear in the system tray under the "hidden icons" chevron. So maybe:
+1. `backend.exe` shows as one entry (background process)
+2. `trayicon.exe` shows as another entry (with the blue triangle icon)
+
+Both would have the same name "Jules Autopilot" in the tooltip? No, `backend.exe` wouldn't have a tooltip. And `trayicon.exe` would show the tooltip from `tray.Text`.
+
+Let me check if the issue is that `backend.exe` creates a visible window (even though built with `-H=windowsgui`). The `systray` library or the hidden window from Fiber might show up.
+
+Actually, I just realized: Fiber's `app.Listen(":8082")` creates a TCP listener, not a window. And `-H=windowsgui` prevents Windows from allocating a console. So `backend.exe` shouldn't have any visual presence.
+
+But the C# `Application.Run()` creates a message-only window internally. This window is hidden and shouldn't show in the tray. The icon is from `tray.Visible = true`.
+
+Let me check if maybe the VBS script `JulesAutopilot.vbs` is running `backend.exe` separately, creating a second instance. Let me look at the start times.
+
+The `backend.exe` has PID 57740 started at 20:33:25 and `trayicon.exe` has PID 2216 also at 20:33:25. These were started by the watchdog at the same time. So there's only one instance of each.
+
+But the user sees two icons. Let me think about what could cause this...
+
+Oh! I think I know. The `trayicon.exe` was started with `/target:winexe`. This means it's a Windows GUI application. When a GUI application starts on Windows, it doesn't show a console window. But it DOES show up in the system tray area as a "background process" under the hidden icons section. And then the `NotifyIcon` also shows up.
+
+On Windows 10/11, there are two places an app can show:
+1. "System Tray" (taskbar notification area) - where NotifyIcon appears
+2. "Background processes" (in the taskbar overflow area) - where any GUI app with no visible window appears
+
+So maybe Windows is showing `trayicon.exe` both as the NotifyIcon AND as a background process entry.
+
+To fix this, I don't think there's much I can do. The user would just see one actual icon (the NotifyIcon with the triangle). The other "entry" is just the process listing in the background processes area.
+
+But actually, on Windows 11, background processes don't show in the taskbar by default. The user might be wrong about seeing "two" - or they might mean something else.
+
+Let me just explain what they're seeing and ask if both icons actually have the blue triangle and tooltip "Jules Autopilot", or if one is different.
+**Action**: bash(command: "powershell.exe -Command "Get-Process -Name trayicon,backend -ErrorAction SilentlyContinue | Select-Object Id,ProcessName,SessionId,StartTime | Format-Table -AutoSize" 2>&1", timeout: 10)
+**Observation**: bash: success
+
+## Turn 2 | 2026-06-24T00:55:23.050Z | deepseek/deepseek-v4-flash
+
+**Thought**: Only one process but you're seeing two icons. Let me kill any stale ones and modify the launcher to clean up before starting.
+**Thinking**: Only one of each. Both started at the same time. So there's really only one trayicon.exe. The user must be seeing the NotifyIcon (blue triangle) plus maybe something else.
+
+Wait - I bet I know what it is. The `trayicon.exe` is a GUI application built with `/target:winexe`. On Windows 11, GUI applications that don't have any windows show up in the "Background processes" section of the taskbar overflow. When the user clicks the chevron (^), they might see:
+1. The background process entry for `trayicon.exe` (generic icon)
+2. The actual NotifyIcon with the blue triangle
+
+Both might have the same tooltip "Jules Autopilot - ..." if the process name or tooltip matches.
+
+Actually, on Windows 11, background processes show with the program's icon, not a NotifyIcon. So if the user hovers over the background process entry, it might show "trayicon" (the exe name). And the NotifyIcon shows "Jules Autopilot".
+
+The user said "two blue triangle" which means both have the blue triangle icon. That's strange because the background process entry wouldn't have the triangle icon; it would have the default Windows app icon.
+
+Unless... there are actually two NotifyIcons created. Let me check the C# code again. Maybe `tray.SetIcon` or `tray.Visible` is being called twice.
+
+Actually, I think I see the issue now. Looking at the C# code:
+
+```csharp
+tray.Icon = Icon.FromHandle(bmp.GetHicon());
+```
+
+`GetHicon()` creates an HICON handle. `Icon.FromHandle(hIcon)` wraps it in a .NET Icon object. But `GetHicon()` requires the Bitmap to be alive. The Bitmap `bmp` is created in `Main()` but disposed in the `using` block for `g`. The icon handle is created before `bmp` is garbage collected.
+
+But there might be a GDI handle leak issue where the icon handle is duplicated. The first call creates the icon, but then somehow creates a second one.
+
+Actually, let me look at the code flow more carefully:
+
+```csharp
+var bmp = new Bitmap(16, 16);                    // bmp created
+using (var g = Graphics.FromImage(bmp))          // g created, disposed at end of using
+{
+    g.Clear(Color.Transparent);
+    using (var brush = new SolidBrush(...))
+    {
+        g.FillPolygon(brush, new[] { ... });
+    }
+}                                                  // g disposed here
+tray.Icon = Icon.FromHandle(bmp.GetHicon());       // icon set
+```
+
+This looks fine. `bmp.GetHicon()` should only create one HICON. `tray.Icon` only stores one icon.
+
+I'm confused. Let me just take a different approach: kill all trayicon processes and see if it fixes it. Then I'll modify the Go code to kill any old trayicon processes before starting a new one.
+**Action**: bash(command: "powershell.exe -Command "Get-Process -Name trayicon -ErrorAction SilentlyContinue | Stop-Process -Force" 2>&1 && echo "Killed"", timeout: 5)
+**Observation**: bash: success
+
+## Turn 3 | 2026-06-24T00:55:36.698Z | deepseek/deepseek-v4-flash
+
+**Thought**: Now let me fix `StartTray` to kill any stale trayicon before starting.
+**Thinking**: Now let me modify the Go code to kill old trayicon processes before starting a new one. Then restart.
+**Action**: edit(edits: [object Object], path: "C:/Users/hyper/workspace/jules-autopilot/backend-go/services/tray.go")
+**Observation**: edit: success
+
+## Turn 4 | 2026-06-24T00:55:58.564Z | deepseek/deepseek-v4-flash
+
+**Thought**: 
+**Thinking**: Also, I realized the issue might be that the C# program creates the icon but also the `NotifyIcon`'s context menu has multiple menu items. But that shouldn't create duplicate icons.
+
+Actually, wait - I just thought of something. The `NotifyIcon` on Windows has two parts: the icon in the notification area and the tooltip. Maybe the user is seeing:
+1. The icon in the notification area
+2. The tooltip when hovering over it?
+
+No, the user specifically said "two blue triangle" and "two jules autopilot". That means two separate icons with the same appearance.
+
+Let me just build and see if the kill-on-startup fix resolves it.
+**Action**: bash(command: "cd backend-go && go build -o backend.exe -ldflags="-H=windowsgui" . 2>&1 && echo "BUILD OK"", timeout: 30)
+**Observation**: bash: success
+

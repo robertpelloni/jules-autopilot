@@ -17,6 +17,9 @@ func StartTray() {
 			log.Printf("[Tray] trayicon.exe not found at %s, skipping", trayExe)
 			return
 		}
+		// Kill any stale trayicon processes before starting
+		kill := Cmd("taskkill", "/f", "/im", "trayicon.exe")
+		_ = kill.Run()
 		cmd := Cmd(trayExe)
 		if err := cmd.Start(); err != nil {
 			log.Printf("[Tray] Failed to start: %v", err)
