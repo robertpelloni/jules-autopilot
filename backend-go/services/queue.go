@@ -815,23 +815,36 @@ func BroadcastContinue() {
 		return
 	}
 
+	// Load settings for LM Studio configuration
+	var settings models.KeeperSettings
+	if err := db.DB.First(&settings, "id = ?", "default").Error; err != nil {
+		log.Println("[Broadcast] No keeper settings found, using defaults")
+	}
+
 	// Cache sessions so the dashboard loads instantly
 	CacheSessions(sessions)
 
 	sent := 0
 	for _, session := range sessions {
+		// Use LM Studio to generate an intelligent bump message
+		msg, err := generateNudgeMessage(session, settings)
+		if err != nil {
+			log.Printf("[Broadcast] Failed to generate nudge for %s: %v", session.ID[:8], err)
+			// Fallback: send a simple bump
+			msg = fmt.Sprintf("[Supervisor] Continue autonomous development on %s.", extractProjectName(session.SourceID))
+		}
 		if _, err := client.CreateActivity(session.ID, CreateActivityRequest{
-			Content: "continue",
+			Content: msg,
 			Type:    "message",
 			Role:    "user",
 		}); err != nil {
-			log.Printf("[Broadcast] Failed to send continue to %s: %v", session.ID[:8], err)
+			log.Printf("[Broadcast] Failed to bump %s: %v", session.ID[:8], err)
 			continue
 		}
 		sent++
 	}
-	log.Printf("[Broadcast] Sent continue to %d/%d sessions", sent, len(sessions))
-	addKeeperLog(fmt.Sprintf("Startup broadcast: sent continue to %d sessions", sent), "info", "global", map[string]interface{}{
+	log.Printf("[Broadcast] Sent intelligent bump to %d/%d sessions", sent, len(sessions))
+	addKeeperLog(fmt.Sprintf("Startup broadcast: bumped %d sessions intelligently", sent), "info", "global", map[string]interface{}{
 		"event": "startup_broadcast",
 		"sent":  sent,
 		"total": len(sessions),
@@ -865,6 +878,51 @@ func GetCachedSessions() ([]models.JulesSession, error) {
 		return nil, err
 	}
 	return sessions, nil
+}
+
+// generateNudgeMessage uses LM Studio to craft an intelligent bump message for a session.
+// Falls back to a simple project-specific message if LM Studio fails.
+func generateNudgeMessage(session models.JulesSession, settings models.KeeperSettings) (string, error) {
+	instructions := "Please instruct Google Jules agent to continue autonomously working on this project. Infer the next step based on the progress history and conversation."
+
+	projectName := extractProjectName(session.SourceID)
+	workspaceRoot := filepath.Join(getProjectRoot(), "..")
+	projectDir := filepath.Join(workspaceRoot, projectName)
+
+	// Documentation context
+	docContext := ""
+	for _, docFile := range []string{"README.md", "ARCHITECTURE.md", "DEPLOY.md", "VISION.md", "ROADMAP.md", "MEMORY.md"} {
+		path := filepath.Join(projectDir, docFile)
+		if content, err := os.ReadFile(path); err == nil && len(content) > 0 {
+			maxLen := 2000
+			if len(content) > maxLen {
+				content = content[:maxLen]
+			}
+			docContext += fmt.Sprintf("\n=== %s ===\n%s\n", docFile, string(content))
+		}
+	}
+
+	// Recent git commits
+	commitContext := ""
+	if output, err := Cmd("git", "-C", projectDir, "log", "--oneline", "-5").Output(); err == nil {
+		commitContext = fmt.Sprintf("\n=== Recent Commits ===\n%s", string(output))
+	}
+
+	prompt := fmt.Sprintf(
+		"INSTRUCTIONS:\n%s\n\nDOCUMENTATION:\n%s\n\n%s\n\nINSTRUCTIONS AGAIN:\n%s",
+		instructions, docContext, commitContext, instructions)
+
+	result, err := generateLLMText("lmstudio", "placeholder", settings.SupervisorModel,
+		"You are a coding supervisor. Follow the INSTRUCTIONS.",
+		[]LLMMessage{{
+			Role:    "user",
+			Content: prompt,
+		}})
+	if err != nil || strings.TrimSpace(result.Content) == "" {
+		return "", fmt.Errorf("lmstudio nudge failed: %w", err)
+	}
+
+	return "[Supervisor] " + result.Content, nil
 }
 
 func extractProjectName(sourceID string) string {

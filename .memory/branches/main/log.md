@@ -19164,3 +19164,181 @@ The queue is in good shape. Let me summarize the issues I identified and fixed.
 **Action**: bash(command: "cd backend-go && go build -o backend.exe . 2>&1 && echo "BUILD OK"", timeout: 30)
 **Observation**: bash: success
 
+## Turn 5 | 2026-06-24T16:12:07.883Z | deepseek/deepseek-v4-flash
+
+**Thought**: 
+**Action**: bash(command: "cd backend-go && git add -A && git commit -m "fix: don't skip COMPLETED sessions in daemon check" && git push 2>&1 && powershell -Command "Get-Process -Name backend -ErrorAction SilentlyContinue | Stop-Process -Force" 2>&1 && sleep 25 && powershell -Command "Start-Process -WindowStyle Hidden -FilePath .\backend.exe" 2>&1 && sleep 15 && curl -s --max-time 5 http://localhost:8082/api/health | python3 -c "import sys,json;d=json.load(sys.stdin);print(f'OK')" 2>&1", timeout: 60)
+**Observation**: bash: success
+
+## Turn 6 | 2026-06-24T16:13:01.434Z | deepseek/deepseek-v4-flash
+
+**Thought**: Fixed — COMPLETED sessions are back in the check loop. Sorry about that. Backend restarted and running.
+**Thinking**: Done. Backend restarted with COMPLETED sessions included in checks.
+
+## Turn 1 | 2026-06-24T16:14:09.393Z | deepseek/deepseek-v4-flash
+
+**Thought**: 
+**Thinking**: The user wants to send an intelligent bump message to every session instead of the generic "continue" message. And they want this done on startup (instead of the broadcast "continue").
+
+Let me think about what an "intelligent bump" would look like:
+- Instead of sending "continue" (which is vague), send a message that provides context about what the session was working on and asks it to continue
+- The message should be personalized per session based on its project/sourceId
+
+Currently, the BroadcastContinue function sends "continue" to all sessions. The user wants to replace this with an intelligent bump.
+
+Let me look at the BroadcastContinue function and the nudge logic to understand how to implement this.
+
+An intelligent bump would:
+1. Know which project/session to bump
+2. Craft a message that references the project name and asks the agent to continue autonomously
+3. Send it via CreateActivity
+
+Let me modify the BroadcastContinue to send intelligent bumps instead of "continue".
+**Action**: read(limit: 30, offset: 805, path: "C:/Users/hyper/workspace/jules-autopilot/backend-go/services/queue.go")
+**Observation**: read: success
+
+## Turn 2 | 2026-06-24T16:14:15.553Z | deepseek/deepseek-v4-flash
+
+**Thought**: 
+**Thinking**: Now I need to create an intelligent bump message for each session instead of just "continue". An intelligent bump should:
+
+1. Reference the project/repo name
+2. Ask the agent to continue working autonomously
+3. Maybe include context about what was happening
+
+I can craft a message that includes the project name from the session's sourceId. Something like:
+
+```
+[Supervisor] Continuing autonomous work on <project-name>. Please review the current state and proceed with the next logical step in the implementation plan. Focus on making tangible progress.
+```
+
+Let me also use LM Studio to generate a truly intelligent bump. But that would be slow (300 seconds per session). Instead, let me use a templated message that's personalized per project.
+
+Actually, looking at the handleCheckSession nudge logic at line 762, it already generates an intelligent nudge via LM Studio:
+```go
+nudgeContent := "[Supervisor] " + result.Content
+```
+
+Where `result.Content` comes from LM Studio. But for the broadcast, we want to send to ALL sessions at once. Using LM Studio for each would be terribly slow.
+
+A better approach: use a template with project-specific context. I can format the message like:
+```
+[Supervisor] Please continue autonomous development on <project-name>. Review the current state, identify the next task, and proceed. Run tests, fix issues, and push progress.
+```
+
+This is personalized by project but doesn't require LM Studio calls.
+
+Let me implement this for the BroadcastContinue function.
+**Action**: read(limit: 15, offset: 835, path: "C:/Users/hyper/workspace/jules-autopilot/backend-go/services/queue.go")
+**Observation**: read: success
+
+## Turn 3 | 2026-06-24T16:14:22.503Z | deepseek/deepseek-v4-flash
+
+**Thought**: 
+**Thinking**: Now let me rewrite BroadcastContinue to send intelligent bump messages instead of "continue". I'll use a templated message per session that references the project name.
+
+The message should be something like:
+```
+[Supervisor] Continue autonomous work on <project-name>. Review the current state, identify the next logical task, and make progress. Run tests, commit working code, and push changes.
+```
+
+Let me create this.
+**Action**: edit(edits: [object Object], path: "C:/Users/hyper/workspace/jules-autopilot/backend-go/services/queue.go")
+**Observation**: edit: success
+
+## Turn 4 | 2026-06-24T16:14:38.038Z | deepseek/deepseek-v4-flash
+
+**Thought**: 
+**Thinking**: The user wants me to use the standard LM Studio bump message for each session instead of the templated message I created. Looking at the nudge logic in handleCheckSession, the bump goes through LM Studio which generates a context-specific message.
+
+But using LM Studio for EVERY session on startup would take a very long time (potentially seconds per session * 78 sessions = minutes). The current broadcast already takes 300 seconds because of ListSessions.
+
+Actually, the user wants the same intelligent bump that the daemon uses for nudges during its ticks, but applied to all sessions on startup instead of the simple "continue" message.
+
+Looking at the handleCheckSession code, the nudge works like this:
+1. Call LM Studio to generate instructions: `instructions := "Please instruct Google Jules agent to continue..."` 
+2. Call LM Studio's GenerateChat to get the actual message content
+3. Prepend `[Supervisor] ` to the content
+4. Send via CreateActivity
+
+For the startup broadcast, running LM Studio for 78 sessions sequentially would take forever. But the user explicitly wants this.
+
+Let me look at how the nudge generates the LM Studio call and replicate that logic in the broadcast.
+**Action**: read(limit: 80, offset: 700, path: "C:/Users/hyper/workspace/jules-autopilot/backend-go/services/queue.go")
+**Observation**: read: success
+
+## Turn 5 | 2026-06-24T16:14:47.286Z | deepseek/deepseek-v4-flash
+
+**Thought**: 
+**Thinking**: I see the full nudge logic. It:
+1. Generates instructions
+2. Collects documentation context from project files
+3. Gets last agent messages
+4. Gets recent git commits
+5. Sends all this to LM Studio
+6. Gets back a generated nudge message
+7. Prepends [Supervisor] and sends via CreateActivity
+
+For the broadcast, I need to replicate this for each session. But LM Studio calls are slow (maybe 1-3 seconds each). With 78 sessions, that's potentially minutes.
+
+But the user explicitly wants the standard LM Studio bump. Let me refactor the nudge logic into a reusable function and call it from BroadcastContinue.
+
+Actually, let me take a simpler approach: extract the nudge generation into a function that takes a session and returns the message, then call it from both BroadcastContinue and handleCheckSession.
+
+Wait, I realize the user said "use the standard lmstudio bump" - they want the same LM Studio-powered nudge that the daemon uses. Let me create a function that generates the nudge message and call it from the broadcast.
+
+Let me create a function `generateNudgeMessage(session models.JulesSession, settings models.KeeperSettings) (string, error)` that does the LM Studio call. Then call it from both places.
+**Action**: edit(edits: [object Object], path: "C:/Users/hyper/workspace/jules-autopilot/backend-go/services/queue.go")
+**Observation**: edit: success
+
+## Turn 6 | 2026-06-24T16:15:06.133Z | deepseek/deepseek-v4-flash
+
+**Thought**: 
+**Thinking**: Now I need to:
+1. Create the `generateNudgeMessage` function that reuses the LM Studio nudge logic from `handleCheckSession`
+2. Fix the `settings` variable - the broadcast runs at startup and doesn't have access to settings. I need to load them.
+
+Let me create the function and also load settings in BroadcastContinue.
+
+Let me look at the nudge logic more carefully to extract it. The nudge logic in handleCheckSession:
+1. Gets instructions string
+2. Gets project path and docs
+3. Gets last 5 agent messages
+4. Gets recent git commits
+5. Calls `generateLLMText("lmstudio", ...)` with the prompt
+6. Returns `[Supervisor] ` + response
+
+Let me create this as a reusable function.
+**Action**: read(limit: 10, offset: 806, path: "C:/Users/hyper/workspace/jules-autopilot/backend-go/services/queue.go")
+**Observation**: read: success
+
+## Turn 7 | 2026-06-24T16:15:24.054Z | deepseek/deepseek-v4-flash
+
+**Thought**: 
+**Thinking**: I need to add the settings loading before the sessions loop. Let me add it after the ListSessions call.
+**Action**: edit(edits: [object Object], path: "C:/Users/hyper/workspace/jules-autopilot/backend-go/services/queue.go")
+**Observation**: edit: success
+
+## Turn 8 | 2026-06-24T16:15:37.157Z | deepseek/deepseek-v4-flash
+
+**Thought**: 
+**Thinking**: Now let me create the `generateNudgeMessage` function. I'll extract the nudge generation logic from `handleCheckSession` into a reusable function.
+
+Let me find the right place to add it - maybe between `handleCheckSession` and `BroadcastContinue`, or at the end of the file.
+**Action**: bash(command: "grep -n "func generateNudgeMessage\|func BroadcastContinue\|func handleCheckSession\|func extractProjectName" backend-go/services/queue.go | head -10", timeout: 5)
+**Observation**: bash: success
+
+## Turn 9 | 2026-06-24T16:15:54.029Z | deepseek/deepseek-v4-flash
+
+**Thought**: 
+**Thinking**: Let me add `generateNudgeMessage` between BroadcastContinue and extractProjectName.
+**Action**: read(limit: 10, offset: 876, path: "C:/Users/hyper/workspace/jules-autopilot/backend-go/services/queue.go")
+**Observation**: read: success
+
+## Turn 10 | 2026-06-24T16:15:57.987Z | deepseek/deepseek-v4-flash
+
+**Thought**: 
+**Thinking**: Good. Now I'll add the `generateNudgeMessage` function before `extractProjectName`.
+**Action**: edit(edits: [object Object], path: "C:/Users/hyper/workspace/jules-autopilot/backend-go/services/queue.go")
+**Observation**: edit: success
+
