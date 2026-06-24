@@ -41,6 +41,25 @@ func (d *Daemon) Run() {
 	d.isRunning = true
 	d.mu.Unlock()
 
+	// Start background session cache fetch immediately (before first tick)
+	go func() {
+		var count int64
+		db.DB.Model(&models.JulesSession{}).Count(&count)
+		if count == 0 {
+			log.Println("[Daemon] Cache empty, fetching sessions in background...")
+			addKeeperLog("Daemon: cache empty, fetching sessions", "info", "global", map[string]interface{}{
+				"event": "daemon_cache_fetch_start",
+			})
+			client := NewJulesClient()
+			if live, err := client.ListSessions(); err == nil && len(live) > 0 {
+				CacheSessions(live)
+				log.Printf("[Daemon] Cached %d sessions", len(live))
+			} else if err != nil {
+				log.Printf("[Daemon] Initial fetch failed: %v", err)
+			}
+		}
+	}()
+
 	log.Println("[Daemon] Starting background monitoring loop...")
 
 	defer func() {

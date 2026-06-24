@@ -17738,3 +17738,101 @@ But the daemon logs are stored in keeper_logs table. Let me also add a keeper lo
 **Action**: bash(command: "cd backend-go && go build -o backend.exe . 2>&1 && echo "BUILD OK"", timeout: 30)
 **Observation**: bash: success
 
+## Turn 27 | 2026-06-24T13:37:58.911Z | deepseek/deepseek-v4-flash
+
+**Thought**: 
+**Thinking**: Let me commit, push, and restart.
+**Action**: bash(command: "cd backend-go && git add -A && git commit -m "fix: make daemon background fetch async to not block first tick" && git push 2>&1 && powershell.exe -Command "Get-Process -Name backend -ErrorAction SilentlyContinue | Stop-Process -Force" 2>&1", timeout: 15)
+**Observation**: bash: success
+
+## Turn 28 | 2026-06-24T13:38:07.164Z | deepseek/deepseek-v4-flash
+
+**Thought**: 
+**Thinking**: Good. Now let me wait for the restart and check the logs.
+**Action**: bash(command: "sleep 30 && curl -s --max-time 5 http://localhost:8082/api/health | python3 -c "import sys,json;d=json.load(sys.stdin);print(f'OK Daemon:{d[\"checks\"][\"daemon\"][\"running\"]}')" 2>&1", timeout: 40)
+**Observation**: bash: success
+
+## Turn 29 | 2026-06-24T13:38:42.105Z | deepseek/deepseek-v4-flash
+
+**Thought**: 
+**Thinking**: Let me wait a bit more and check the daemon logs for the new "cache empty" message.
+**Action**: bash(command: "sleep 10 && curl -s --max-time 5 http://localhost:8082/api/daemon/status | python3 -c "
+import sys, json
+d = json.load(sys.stdin)
+logs = d.get('logs',[])
+today = [x for x in logs if '2026-06-24' in x.get('createdAt','')]
+print(f'Today logs: {len(today)}')
+for x in today:
+    ts = x.get('createdAt','')[11:19]
+    msg = x.get('message','')[:120]
+    print(f'  {ts} {msg}')
+" 2>&1", timeout: 15)
+**Observation**: bash: success
+
+## Turn 30 | 2026-06-24T13:38:56.769Z | deepseek/deepseek-v4-flash
+
+**Thought**: The daemon waits 5 minutes for first tick. Let me start the cache fetch immediately on daemon start.
+**Thinking**: Still no logs from today. But the daemon has been running for about 40 seconds. Let me check if the daemon tick has occurred. The daemon's tickAndWait() waits for the interval (minimum 5 minutes). So the first tick won't happen until 5 minutes after startup.
+
+Wait, that's a problem. The daemon waits 5 minutes before its first tick. During those 5 minutes, no logs are generated. And the background fetch (from the cache-empty case) only starts on the FIRST tick.
+
+So the sequence is:
+1. Backend starts at T+0
+2. Daemon starts Run() loop
+3. First tick at T+5min
+4. On first tick, cache is empty → background fetch starts
+5. Background fetch takes 300s (ListSessions)
+6. At T+10min, sessions are cached and daemon starts processing
+
+This is slow. Let me optimize: start the background fetch immediately at daemon startup, not on the first tick.
+
+Actually, the BroadcastContinue already starts ListSessions on startup. So the background fetch from the daemon is redundant - the broadcast is already fetching. I just need to ensure the daemon waits for the broadcast.
+
+But the daemon and broadcast are independent goroutines. I can't easily synchronize them. The simplest fix: start the cache fetch immediately when the daemon starts, not on the first tick.
+**Action**: read(limit: 15, offset: 44, path: "C:/Users/hyper/workspace/jules-autopilot/backend-go/services/daemon.go")
+**Observation**: read: success
+
+## Turn 31 | 2026-06-24T13:39:04.815Z | deepseek/deepseek-v4-flash
+
+**Thought**: 
+**Thinking**: Let me add a background cache fetch right after the daemon starts, before the first tick.
+**Action**: edit(edits: [object Object], path: "C:/Users/hyper/workspace/jules-autopilot/backend-go/services/daemon.go")
+**Observation**: edit: error
+
+## Turn 32 | 2026-06-24T13:39:11.265Z | deepseek/deepseek-v4-flash
+
+**Thought**: 
+**Thinking**: The file has changed. Let me re-read the area around line 44-60.
+**Action**: read(limit: 30, offset: 40, path: "C:/Users/hyper/workspace/jules-autopilot/backend-go/services/daemon.go")
+**Observation**: read: success
+
+## Turn 33 | 2026-06-24T13:39:16.714Z | deepseek/deepseek-v4-flash
+
+**Thought**: 
+**Thinking**: Let me add the cache fetch right after "Starting background monitoring loop..."
+**Action**: edit(edits: [object Object], path: "C:/Users/hyper/workspace/jules-autopilot/backend-go/services/daemon.go")
+**Observation**: edit: success
+
+## Turn 34 | 2026-06-24T13:39:28.444Z | deepseek/deepseek-v4-flash
+
+**Thought**: 
+**Thinking**: Good. Now the cache fetch starts immediately when the daemon starts, not on the first tick at +5min. But this is redundant with the broadcast's ListSessions call. The broadcast runs in a separate goroutine anyway. Having two concurrent ListSessions calls might cause issues (rate limiting, etc.).
+
+But actually, the broadcast calls `client.ListSessions()` and then `CacheSessions()`. The daemon also calls `client.ListSessions()` and then `CacheSessions()`. If both run simultaneously, one will cache the sessions first, then the other will overwrite them. This is fine - the result is the same.
+
+However, having two concurrent 300-second API calls is wasteful. The daemon's call is redundant with the broadcast's call. Let me remove the daemon's initial fetch since the broadcast already handles it.
+
+Actually, the broadcast has a problem: if it fails, the cache stays empty and the daemon never has sessions to process. The daemon's fetch acts as a fallback if the broadcast fails.
+
+But the daemon's fetch and the broadcast's fetch are nearly identical. Let me just keep both as fallbacks - the broadcast runs first, and if it fails, the daemon's first tick will try.
+
+Actually, I just made the daemon start its fetch immediately. This means the daemon's fetch runs concurrently with the broadcast's fetch. The broadcast's fetch takes 300s, and the daemon's fetch also takes 300s. They both call the same API with the same credentials. This might cause rate limiting on the Jules API.
+
+Let me simplify: remove the daemon's initial fetch since the broadcast handles it. The daemon's tick will use the cached sessions (populated by the broadcast). If the cache is empty after 5 minutes, the daemon's tick will start a background fetch.
+
+Actually, wait. Let me just build, deploy, and test. The daemon's initial fetch + broadcast's fetch are both async goroutines. They'll both call ListSessions concurrently, which might cause two 300-second blocks. But they'll both eventually complete and cache the sessions.
+
+Let me build, commit, and restart.
+**Action**: bash(command: "cd backend-go && go build -o backend.exe . 2>&1 && echo "BUILD OK"", timeout: 30)
+**Observation**: bash: success
+
