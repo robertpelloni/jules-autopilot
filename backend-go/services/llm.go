@@ -314,8 +314,8 @@ var lmStudioHttpClient = &http.Client{
 	Timeout: 30 * time.Minute,
 }
 
-// Local hardware — one LM Studio inference at a time.
-var lmStudioSem = make(chan struct{}, 1)
+// Local hardware — up to four LM Studio inferences at a time.
+var lmStudioSem = make(chan struct{}, 4)
 
 var freellmHttpClient = &http.Client{
 	Timeout: 10 * time.Minute,

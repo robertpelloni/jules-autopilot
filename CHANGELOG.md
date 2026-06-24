@@ -2,6 +2,11 @@
 
 All notable changes to this project will be documented in this file.
 
+## [3.6.12] - 2026-06-24
+
+### Changed
+- Go backend: Increased local LM Studio inference concurrency from `1` to `4` in `services/llm.go` to support faster parallel session checks and supervisor nudges.
+
 ## [3.6.11] - 2026-06-24
 
 ### Fixed
