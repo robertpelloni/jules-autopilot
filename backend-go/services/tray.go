@@ -12,6 +12,11 @@ var trayOnce sync.Once
 // StartTray launches the tray icon as a hidden console process.
 func StartTray() {
 	trayOnce.Do(func() {
+		defer func() {
+			if r := recover(); r != nil {
+				log.Printf("[Tray] CRASH: %v", r)
+			}
+		}()
 		trayExe := filepath.Join(getScriptDir(), "trayicon.exe")
 		if _, err := os.Stat(trayExe); os.IsNotExist(err) {
 			log.Printf("[Tray] trayicon.exe not found at %s", trayExe)
