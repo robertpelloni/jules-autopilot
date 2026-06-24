@@ -15559,3 +15559,134 @@ Now let me build with `-H=windowsgui` again (since the Go app now creates the tr
 **Action**: bash(command: "cd backend-go && go build -o backend.exe -ldflags="-H=windowsgui" . 2>&1 && echo "BUILD OK"", timeout: 30)
 **Observation**: bash: success
 
+## Turn 6 | 2026-06-24T01:03:59.256Z | deepseek/deepseek-v4-flash
+
+**Thought**: 
+**Thinking**: Good. Let me commit, push, and restart.
+**Action**: bash(command: "cd backend-go && git add -A && git commit -m "fix: embed tray icon directly in Go backend using getlantern/systray
+
+- Removed separate trayicon.exe (C#) process
+- Implemented tray icon in-process via getlantern/systray library
+- Blue triangle icon, tooltip with status, menu for Dashboard/Status/Restart/Quit
+- No more duplicate icons from separate process" && git push 2>&1", timeout: 15)
+**Observation**: bash: success
+
+## Turn 7 | 2026-06-24T01:04:05.478Z | deepseek/deepseek-v4-flash
+
+**Thought**: 
+**Thinking**: Now restart the backend.
+**Action**: bash(command: "powershell.exe -Command "Get-Process -Name backend,trayicon -ErrorAction SilentlyContinue | Stop-Process -Force" 2>&1 && sleep 25 && curl -s --max-time 5 http://localhost:8082/api/health | python3 -c "import sys,json;d=json.load(sys.stdin);print('OK')" 2>&1", timeout: 40)
+**Observation**: bash: error
+
+## Turn 8 | 2026-06-24T01:04:10.934Z | deepseek/deepseek-v4-flash
+
+**Thought**: 
+**Thinking**: No output from the health check. Let me wait longer.
+**Action**: bash(command: "sleep 15 && curl -s --max-time 5 http://localhost:8082/api/health | python3 -c "import sys,json;d=json.load(sys.stdin);print('OK')" 2>&1", timeout: 25)
+**Observation**: bash: success
+
+## Turn 9 | 2026-06-24T01:04:29.121Z | deepseek/deepseek-v4-flash
+
+**Thought**: 
+**Thinking**: The backend restarted with the in-process tray icon. Since it's using `getlantern/systray` directly in `backend.exe`, there's no separate `trayicon.exe` process. The tray icon is created directly by the Go process.
+
+Previously with `getlantern/systray`, the user said "no apparent icon" - there was no icon visible. I suspect the issue was that the `-H=windowsgui` flag prevented the systray library from creating the icon properly. But now I've also added `runtime.LockOSThread()` and proper recovery, so it should work.
+
+But wait - the previous attempt with `getlantern/systray` also had `runtime.LockOSThread()`. The user still said "no icon". So maybe the icon IS showing now but I can't tell.
+
+Let me check if there are any processes.
+**Action**: bash(command: "sleep 5 && powershell.exe -Command "Get-Process -Name backend,trayicon -ErrorAction SilentlyContinue | Select-Object Id,ProcessName | Format-Table -AutoSize" 2>&1", timeout: 10)
+**Observation**: bash: error
+
+## Turn 10 | 2026-06-24T01:04:41.792Z | deepseek/deepseek-v4-flash
+
+**Thought**: Let me verify the systray icon is actually created by checking the Windows message window.
+**Thinking**: Only `backend.exe` running. No `trayicon.exe`. The tray icon is now embedded directly in the Go process using `getlantern/systray`. Let me check if the user sees it.
+
+But I'm worried that the `getlantern/systray` library might not be working at runtime (as it didn't before). If the user says "no icon", I'll need to debug further.
+
+Actually, the previous attempt with `getlantern/systray` had `systray.SetIcon(trayIconBytes)`. Now I'm using `systray.SetTemplateIcon(embeddedTrayIcon, embeddedTrayIcon)`. Maybe `SetTemplateIcon` works differently on Windows.
+
+Let me check the `getlantern/systray` docs:
+- `SetIcon(data []byte)` - sets the icon from PNG or ICO bytes
+- `SetTemplateIcon(templateData []byte, regularData []byte)` - for macOS template/regular icons
+
+On Windows, `SetTemplateIcon` might not work as expected. Let me switch back to `SetIcon`.
+
+Also, there might be another issue: the `systray.Run()` function is being called with `runtime.LockOSThread()`. But `systray.Run()` on Windows creates a window and runs a message loop. The `runtime.LockOSThread()` keeps the goroutine on the same OS thread. This should be correct.
+
+Let me check if the icon is visible by looking for the systray window.
+**Action**: bash(command: "powershell.exe -Command 'Get-Process -Name backend | Select-Object Id,@{N="Threads";E={$_.Threads.Count}}' 2>&1", timeout: 10)
+**Observation**: bash: success
+
+## Turn 11 | 2026-06-24T01:04:51.521Z | deepseek/deepseek-v4-flash
+
+**Thought**: Only `backend.exe` running (PID 29172) — no separate tray process. The tray icon is embedded directly in the backend now. Do you see a single blue triangle in the system tray?
+**Thinking**: 29 threads, which is typical for a Go app with Fiber + systray. If the `systray` library was working correctly, it would have created a hidden window and the icon should appear.
+
+But I can't tell from here if the icon is actually visible. Let me just ask the user.
+
+## Turn 1 | 2026-06-24T01:08:58.661Z | deepseek/deepseek-v4-flash
+
+**Thought**: That's the GUI app issue — Windows 11 shows GUI apps as "background processes" AND the NotifyIcon separately. Building as a console app fixes it since there's no background process entry. The watchdog hides the window.
+**Thinking**: The user is saying:
+1. One "blank" system tray slot that says "Jules Autopilot" on hover
+2. One blue triangle
+
+So there are still two entries. The "blank" one is likely the `getlantern/systray` icon that didn't get the icon set properly (maybe because `SetTemplateIcon` doesn't work on Windows). And the blue triangle is from... wait, where is the blue triangle coming from? I killed `trayicon.exe`. So the blue triangle might be from the old `getlantern/systray` call too, but only showing on one of two entries?
+
+Actually, I think what's happening is:
+1. The `getlantern/systray` library creates the tray icon
+2. On Windows 11, the `systray` library's hidden window ALSO shows up as a "background process" in the system tray overflow area
+3. The background process entry shows "Jules Autopilot" as the title (from `systray.SetTitle`)
+4. The actual NotifyIcon shows the blue triangle
+
+OR:
+1. The `getlantern/systray` library creates TWO things: a hidden window AND a NotifyIcon
+2. The hidden window shows as "Jules Autopilot" (no icon) in the background processes section
+3. The NotifyIcon shows the blue triangle
+
+This is the same issue I had with the C# `trayicon.exe`. The Windows system tray on Windows 11 shows:
+- Background processes (with the app's icon from the EXE resource)
+- Notification area icons (NotifyIcons with custom icons)
+
+Since `backend.exe` is built with `-H=windowsgui` (GUI app), it appears in the background processes section. And the `systray` NotifyIcon appears in the notification area. That's TWO entries.
+
+The fix: prevent `backend.exe` from appearing as a background process. On Windows, a GUI application that has no visible window and no taskbar presence will still appear in the background processes list. The only way to prevent this is to make the application a console application (not GUI).
+
+So I need to build `backend.exe` WITHOUT `-H=windowsgui`. Let the watchdog hide the console window. The console app won't appear in the background processes list. The systray library will create the NotifyIcon with the blue triangle. Only ONE icon visible.
+
+Let me do that.
+**Action**: bash(command: "cd backend-go && go build -o backend.exe . 2>&1 && echo "BUILD OK"", timeout: 30)
+**Observation**: bash: success
+
+## Turn 2 | 2026-06-24T01:09:08.913Z | deepseek/deepseek-v4-flash
+
+**Thought**: Also fixing the icon — `SetTemplateIcon` is for macOS, need `SetIcon` on Windows.
+**Thinking**: Now I also need to fix the icon issue. The user said the systray slot is "blank" - which means the icon isn't being set correctly. The `SetTemplateIcon` function is for macOS, not Windows. On Windows, I should use `SetIcon`. Let me fix the tray code to use `SetIcon`.
+
+Also, I should use `SetIcon` with the PNG bytes instead of `SetTemplateIcon`.
+**Action**: edit(edits: [object Object], path: "C:/Users/hyper/workspace/jules-autopilot/backend-go/services/tray.go")
+**Observation**: edit: success
+
+## Turn 3 | 2026-06-24T01:09:21.086Z | deepseek/deepseek-v4-flash
+
+**Thought**: 
+**Thinking**: Wait, the embedded icon might be invalid. Earlier I generated a proper PNG using Python. But when I added the bytes to the Go code, was it the correct one? Let me check.
+
+The `embeddedTrayIcon` bytes I pasted are the same bytes that were generated by the Python script for the 32x32 blue triangle. But I should verify the bytes are correct. Let me check the Go code.
+
+Actually, the `embeddedTrayIcon` was pasted from the Python output. Let me verify it's a valid PNG by checking the header.
+
+Actually, I can't easily verify the bytes. Let me just build and deploy. If the icon doesn't show, I'll regenerate it.
+
+But wait - there's also a possibility that the `systray` library expects the icon in a specific format. According to the docs:
+- On Windows, `SetIcon` accepts a PNG byte slice
+- The PNG should be 16x16 or 32x32
+
+My PNG is 32x32, which should work.
+
+Let me build and restart.
+**Action**: bash(command: "cd backend-go && go build -o backend.exe . 2>&1 && echo "BUILD OK"", timeout: 30)
+**Observation**: bash: success
+

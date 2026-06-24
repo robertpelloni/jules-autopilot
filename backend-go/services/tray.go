@@ -54,7 +54,7 @@ func StartTray() {
 }
 
 func onTrayReady() {
-	systray.SetTemplateIcon(embeddedTrayIcon, embeddedTrayIcon)
+	systray.SetIcon(embeddedTrayIcon)
 	systray.SetTitle("Jules Autopilot")
 	systray.SetTooltip(getTrayTooltip())
 
