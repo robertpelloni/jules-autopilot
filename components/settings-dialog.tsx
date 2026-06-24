@@ -1,15 +1,12 @@
 'use client';
 
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useCallback } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Github, Brain, Database, Download, Upload, Loader2, Key, ShieldCheck, GitBranch, Shield } from 'lucide-react';
-import { SessionKeeperSettingsContent } from './session-keeper-settings-content';
-import { SubmoduleList } from './submodule-list';
-import { ShadowPilotPanel } from './shadow-pilot-panel';
+import { Database, Download, Upload, Loader2, Settings2 } from 'lucide-react';
 import { useSessionKeeperStore } from '@/lib/stores/session-keeper';
 import { toast } from 'sonner';
 
@@ -22,49 +19,10 @@ interface SettingsDialogProps {
 export function SettingsDialog({ open: propOpen, onOpenChange: propOnOpenChange, trigger }: SettingsDialogProps) {
   const { config, saveConfig } = useSessionKeeperStore();
   const [internalOpen, setInternalOpen] = useState(false);
-  const [githubToken, setGithubToken] = useState('');
-  const [julesKey, setJulesKey] = useState('');
-  const [openRouterKey, setOpenRouterKey] = useState('');
-  const [geminiKey, setGeminiKey] = useState('');
   const [isImporting, setIsImporting] = useState(false);
-  const [envKeys, setEnvKeys] = useState<Record<string, boolean>>({});
 
   const open = propOpen !== undefined ? propOpen : internalOpen;
   const onOpenChange = propOnOpenChange || setInternalOpen;
-
-  const handleOpenChange = (newOpen: boolean) => {
-    onOpenChange(newOpen);
-    if (newOpen && typeof window !== 'undefined') {
-      setGithubToken(localStorage.getItem('github_pat') || '');
-      setJulesKey(localStorage.getItem('jules_api_key') || '');
-      setOpenRouterKey(localStorage.getItem('openrouter_api_key') || '');
-      setGeminiKey(localStorage.getItem('gemini_api_key') || '');
-    }
-  };
-
-  // Detect env-provided keys
-  useEffect(() => {
-    if (open) {
-      fetch('/api/settings')
-        .then(r => r.ok ? r.json() : null)
-        .then(d => d?.envKeysDetected && setEnvKeys(d.envKeysDetected))
-        .catch(() => {});
-    }
-  }, [open]);
-
-  // handleSaveIntegrations ...
-
-  const handleSaveIntegrations = () => {
-    localStorage.setItem('github_pat', githubToken);
-    localStorage.setItem('openrouter_api_key', openRouterKey);
-    localStorage.setItem('gemini_api_key', geminiKey);
-    const oldJulesKey = localStorage.getItem('jules_api_key');
-    localStorage.setItem('jules_api_key', julesKey);
-    if (oldJulesKey !== julesKey) {
-      window.dispatchEvent(new Event('jules-api-key-updated'));
-    }
-    toast.success('Integration settings saved');
-  };
 
   const handleExport = async () => {
     try {
@@ -110,30 +68,18 @@ export function SettingsDialog({ open: propOpen, onOpenChange: propOnOpenChange,
   }, []);
 
   return (
-    <Dialog open={open} onOpenChange={handleOpenChange}>
+    <Dialog open={open} onOpenChange={onOpenChange}>
       {trigger && <DialogTrigger asChild>{trigger}</DialogTrigger>}
       <DialogContent className="max-w-3xl bg-zinc-950 border-white/10 text-white h-[80vh] flex flex-col p-0 shadow-2xl">
         <DialogHeader className="px-6 py-4 border-b border-white/10">
           <DialogTitle>Settings</DialogTitle>
         </DialogHeader>
-        <Tabs defaultValue="integrations" className="flex-1 flex flex-col min-h-0">
+        <Tabs defaultValue="general" className="flex-1 flex flex-col min-h-0">
           <div className="px-6 pt-4">
             <TabsList className="bg-zinc-900 border border-white/10">
-              <TabsTrigger value="integrations" className="text-xs flex items-center gap-2">
-                <Key className="h-3.5 w-3.5" />
-                Integrations
-              </TabsTrigger>
-              <TabsTrigger value="supervisor" className="text-xs flex items-center gap-2">
-                <Brain className="h-3.5 w-3.5" />
-                Supervisor
-              </TabsTrigger>
-              <TabsTrigger value="shadow" className="text-xs flex items-center gap-2">
-                <Shield className="h-3.5 w-3.5" />
-                Shadow Pilot
-              </TabsTrigger>
-              <TabsTrigger value="submodules" className="text-xs flex items-center gap-2">
-                <GitBranch className="h-3.5 w-3.5" />
-                Submodules
+              <TabsTrigger value="general" className="text-xs flex items-center gap-2">
+                <Settings2 className="h-3.5 w-3.5" />
+                General
               </TabsTrigger>
               <TabsTrigger value="data" className="text-xs flex items-center gap-2">
                 <Database className="h-3.5 w-3.5" />
@@ -141,97 +87,38 @@ export function SettingsDialog({ open: propOpen, onOpenChange: propOnOpenChange,
               </TabsTrigger>
             </TabsList>
           </div>
-          <TabsContent value="integrations" className="flex-1 p-6 overflow-y-auto">
+          <TabsContent value="general" className="flex-1 p-6 overflow-y-auto">
             <div className="space-y-6 max-w-md pb-8">
               <div className="space-y-4 border border-white/10 p-4 rounded-lg bg-white/5">
-                <div className="flex items-center gap-2 mb-2">
-                  <Brain className="h-5 w-5 text-purple-400" />
-                  <h3 className="text-sm font-bold">Google Jules</h3>
-                </div>
-                <div className="space-y-2">
-                  <div className="flex items-center gap-2">
-                    <Key className="h-3 w-3 text-white/40" />
-                    <Label className="text-xs text-white/60 uppercase tracking-tight">API Key</Label>
-                    {envKeys.jules && (
-                      <span className="text-[9px] bg-green-500/10 text-green-400 px-1.5 py-0.5 rounded border border-green-500/20">from env</span>
-                    )}
-                  </div>
-                  <Input
-                    type="password"
-                    value={julesKey}
-                    onChange={e => setJulesKey(e.target.value)}
-                    placeholder="AQ.A..."
-                    disabled={!!envKeys.jules}
-                    className="bg-black/50 border-white/10 text-xs font-mono"
-                  />
-                </div>
-              </div>
-
-              <div className="space-y-4 border border-white/10 p-4 rounded-lg bg-white/5">
-                <div className="flex items-center gap-2 mb-2">
-                  <ShieldCheck className="h-5 w-5 text-blue-400" />
-                  <h3 className="text-sm font-bold">OpenRouter (Supervisor)</h3>
-                </div>
-                <div className="grid grid-cols-1 gap-4">
+                <h3 className="text-sm font-bold flex items-center gap-2">
+                  <Settings2 className="h-4 w-4 text-white/60" />
+                  Monitoring
+                </h3>
+                <div className="grid grid-cols-2 gap-4">
                   <div className="space-y-2">
-                    <Label className="text-xs text-white/60">Google Gemini API Key</Label>
+                    <Label className="text-xs text-white/60">Check Interval (seconds)</Label>
                     <Input
-                      type="password"
-                      value={geminiKey || (envKeys.GEMINI_API_KEY ? '••••••••••••••••' : '')}
-                      onChange={e => setGeminiKey(e.target.value)}
-                      placeholder={envKeys.GEMINI_API_KEY ? "Detected from Environment" : "AIza..."}
-                      disabled={!!envKeys.GEMINI_API_KEY}
-                      className="bg-black/50 border-white/10 text-xs font-mono"
+                      className="h-8 text-xs bg-black/50 border-white/10"
+                      type="number"
+                      min={10}
+                      value={config.checkIntervalSeconds}
+                      onChange={(e) => saveConfig({ ...config, checkIntervalSeconds: parseInt(e.target.value) || 300 })}
                     />
                   </div>
                   <div className="space-y-2">
-                    <Label className="text-xs text-white/60">OpenRouter API Key</Label>
+                    <Label className="text-xs text-white/60">Idle Threshold (minutes)</Label>
                     <Input
-                      type="password"
-                      value={openRouterKey || (envKeys.OPENROUTER_API_KEY ? '••••••••••••••••' : '')}
-                      onChange={e => setOpenRouterKey(e.target.value)}
-                      placeholder={envKeys.OPENROUTER_API_KEY ? "Detected from Environment" : "sk-or-..."}
-                      disabled={!!envKeys.OPENROUTER_API_KEY}
-                      className="bg-black/50 border-white/10 text-xs font-mono"
+                      className="h-8 text-xs bg-black/50 border-white/10"
+                      type="number"
+                      min={1}
+                      value={config.inactivityThresholdMinutes}
+                      onChange={(e) => saveConfig({ ...config, inactivityThresholdMinutes: parseInt(e.target.value) || 1 })}
                     />
                   </div>
                 </div>
-                <p className="text-[10px] text-zinc-500 italic">Powering RAG indexing and OpenRouter free model cycling.</p>
+                <p className="text-[10px] text-zinc-500 italic">How often to check sessions and how long before a session is considered idle.</p>
               </div>
-
-              <div className="space-y-4 border border-white/10 p-4 rounded-lg bg-white/5">
-                <div className="flex items-center gap-2 mb-2">
-                  <Github className="h-5 w-5 text-white" />
-                  <h3 className="text-sm font-bold">GitHub</h3>
-                </div>
-                <div className="space-y-2">
-                  <Label className="text-xs text-white/60">Personal Access Token</Label>
-                  <Input
-                    type="password"
-                    value={githubToken}
-                    onChange={e => setGithubToken(e.target.value)}
-                    placeholder="ghp_..."
-                    className="bg-black/50 border-white/10 text-xs font-mono"
-                  />
-                </div>
-              </div>
-
-              <Button
-                onClick={handleSaveIntegrations}
-                className="w-full bg-purple-600 hover:bg-purple-500 text-white font-bold uppercase tracking-widest text-[10px] h-10"
-              >
-                Save Integrations
-              </Button>
             </div>
-          </TabsContent>
-          <TabsContent value="supervisor" className="flex-1 min-h-0 overflow-hidden">
-            <SessionKeeperSettingsContent config={config} onConfigChange={saveConfig} />
-          </TabsContent>
-          <TabsContent value="shadow" className="flex-1 p-6 overflow-y-auto">
-            <ShadowPilotPanel />
-          </TabsContent>
-          <TabsContent value="submodules" className="flex-1 p-6 overflow-y-auto">
-            <SubmoduleList />
           </TabsContent>
           <TabsContent value="data" className="flex-1 p-6 overflow-y-auto">
             <div className="space-y-6 max-w-md">

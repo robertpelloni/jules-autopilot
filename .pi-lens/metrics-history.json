@@ -3,14 +3,14 @@
   "files": {
     "components\\settings-dialog.tsx": {
       "latest": {
-        "commit": "3aa549c",
-        "timestamp": "2026-06-18T18:26:28.929Z",
-        "mi": 17.1,
-        "cognitive": 66,
+        "commit": "adb3ffd",
+        "timestamp": "2026-06-24T16:39:50.359Z",
+        "mi": 20.8,
+        "cognitive": 56,
         "nesting": 4,
-        "lines": 356,
-        "maxCyclomatic": 29,
-        "entropy": 6.39
+        "lines": 261,
+        "maxCyclomatic": 40,
+        "entropy": 6.07
       },
       "history": [
         {
@@ -22,9 +22,19 @@
           "lines": 356,
           "maxCyclomatic": 29,
           "entropy": 6.39
+        },
+        {
+          "commit": "adb3ffd",
+          "timestamp": "2026-06-24T16:39:50.359Z",
+          "mi": 20.8,
+          "cognitive": 56,
+          "nesting": 4,
+          "lines": 261,
+          "maxCyclomatic": 40,
+          "entropy": 6.07
         }
       ],
-      "trend": "stable"
+      "trend": "improving"
     },
     "lib\\jules\\provider.tsx": {
       "latest": {
@@ -100,7 +110,107 @@
         }
       ],
       "trend": "stable"
+    },
+    "components\\layout\\app-sidebar.tsx": {
+      "latest": {
+        "commit": "adb3ffd",
+        "timestamp": "2026-06-24T16:40:06.875Z",
+        "mi": 27,
+        "cognitive": 32,
+        "nesting": 3,
+        "lines": 163,
+        "maxCyclomatic": 34,
+        "entropy": 5.06
+      },
+      "history": [
+        {
+          "commit": "adb3ffd",
+          "timestamp": "2026-06-24T16:40:06.875Z",
+          "mi": 27,
+          "cognitive": 32,
+          "nesting": 3,
+          "lines": 163,
+          "maxCyclomatic": 34,
+          "entropy": 5.06
+        }
+      ],
+      "trend": "stable"
+    },
+    "components\\layout\\app-header.tsx": {
+      "latest": {
+        "commit": "adb3ffd",
+        "timestamp": "2026-06-24T16:40:15.220Z",
+        "mi": 27.3,
+        "cognitive": 31,
+        "nesting": 5,
+        "lines": 168,
+        "maxCyclomatic": 8,
+        "entropy": 5.74
+      },
+      "history": [
+        {
+          "commit": "adb3ffd",
+          "timestamp": "2026-06-24T16:40:15.220Z",
+          "mi": 27.3,
+          "cognitive": 31,
+          "nesting": 5,
+          "lines": 168,
+          "maxCyclomatic": 8,
+          "entropy": 5.74
+        }
+      ],
+      "trend": "stable"
+    },
+    "components\\session-keeper-settings-content.tsx": {
+      "latest": {
+        "commit": "adb3ffd",
+        "timestamp": "2026-06-24T16:40:24.463Z",
+        "mi": 26,
+        "cognitive": 24,
+        "nesting": 6,
+        "lines": 195,
+        "maxCyclomatic": 17,
+        "entropy": 5.85
+      },
+      "history": [
+        {
+          "commit": "adb3ffd",
+          "timestamp": "2026-06-24T16:40:24.463Z",
+          "mi": 26,
+          "cognitive": 24,
+          "nesting": 6,
+          "lines": 195,
+          "maxCyclomatic": 17,
+          "entropy": 5.85
+        }
+      ],
+      "trend": "stable"
+    },
+    "components\\layout\\main-content.tsx": {
+      "latest": {
+        "commit": "adb3ffd",
+        "timestamp": "2026-06-24T16:40:36.271Z",
+        "mi": 40.8,
+        "cognitive": 6,
+        "nesting": 2,
+        "lines": 61,
+        "maxCyclomatic": 7,
+        "entropy": 5.44
+      },
+      "history": [
+        {
+          "commit": "adb3ffd",
+          "timestamp": "2026-06-24T16:40:36.271Z",
+          "mi": 40.8,
+          "cognitive": 6,
+          "nesting": 2,
+          "lines": 61,
+          "maxCyclomatic": 7,
+          "entropy": 5.44
+        }
+      ],
+      "trend": "stable"
     }
   },
-  "capturedAt": "2026-06-18T18:35:33.329Z"
+  "capturedAt": "2026-06-24T16:40:41.296Z"
 }
