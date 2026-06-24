@@ -3,6 +3,7 @@
 This document tracks granular bugs, missing features, and technical debt. For epic-level milestones, see `ROADMAP.md`.
 
 ## Immediate Actions
+- [x] **Repository Sync (v3.6.10→v3.6.14):** Fast-forwarded local main through 23 new commits (v3.6.9→v3.6.14) including system tray, watchdog fixes, rate limiter, LM Studio concurrency, nudge rewrite, and daemon cache improvements. All remote feature branches re-verified at parity — no merges needed.
 - [x] **Repository Sync & Merge (v3.6.9):** Executed full upstream fetch, fast-forwarded main to origin/main (v3.6.8), verified all remote feature branches are caught up, resolved vite.config.ts conflict (proxy port :8082→:8080 for local), synced version files (VERSION, VERSION.md, package.json), and updated CHANGELOG.md with missing v3.6.8 and new v3.6.9 entries.
 - [x] **Shadow Pilot: Git Diff Monitoring (v3.6.6):** Implemented `monitorGitDiffs` in Go backend to detect significant changes and regressions. Added `git_diff` anomaly type and deduplicated logging.
 - [x] **Shadow Pilot & Submodule UI Restore (v3.6.6):** Restored `ShadowPilotPanel` and `SubmoduleList` components. Integrated into `SettingsDialog` tabs.
