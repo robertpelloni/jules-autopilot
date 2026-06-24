@@ -20,7 +20,17 @@ var trayOnce sync.Once
 // StartTray initializes the system tray icon in a background goroutine.
 func StartTray() {
 	trayOnce.Do(func() {
-		go systray.Run(onTrayReady, onTrayExit)
+		go func() {
+			// Lock OS thread for Windows message pump
+			runtime.LockOSThread()
+			defer runtime.UnlockOSThread()
+			defer func() {
+				if r := recover(); r != nil {
+					log.Printf("[Tray] CRASHED: %v", r)
+				}
+			}()
+			systray.Run(onTrayReady, onTrayExit)
+		}()
 	})
 }
 

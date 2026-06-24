@@ -13458,3 +13458,243 @@ print('}')
 **Action**: bash(command: "cd backend-go && go build -o backend.exe -ldflags="-H=windowsgui" . 2>&1 && echo "BUILD OK"", timeout: 30)
 **Observation**: bash: success
 
+## Turn 10 | 2026-06-24T00:14:36.303Z | deepseek/deepseek-v4-flash
+
+**Thought**: 
+**Thinking**: Let me commit and deploy quickly.
+**Action**: bash(command: "cd backend-go && git add -A && git commit -m "fix: replace tray icon with blue triangle" && git push 2>&1", timeout: 15)
+**Observation**: bash: success
+
+## Turn 11 | 2026-06-24T00:14:41.601Z | deepseek/deepseek-v4-flash
+
+**Thought**: 
+**Action**: bash(command: "powershell -Command "Stop-Process -Name 'backend' -Force -ErrorAction SilentlyContinue" && sleep 30 && curl -s --max-time 5 http://localhost:8082/api/health | python3 -c "import sys,json;d=json.load(sys.stdin);print(f'OK')" 2>&1", timeout: 40)
+**Observation**: bash: success
+
+## Turn 12 | 2026-06-24T00:15:17.592Z | deepseek/deepseek-v4-flash
+
+**Thought**: Tray updated with a blue triangle icon. Should appear in your notification area now.
+
+## Turn 1 | 2026-06-24T00:17:52.003Z | deepseek/deepseek-v4-flash
+
+**Thought**: Let me check if there's a crash or if it's hidden in the overflow.
+**Thinking**: The user says there's no icon showing in the system tray at all. Let me investigate why `getlantern/systray` might not be working.
+
+Possible issues:
+1. The `systray.Run()` is called in a goroutine, but on Windows, the message pump needs to be on a thread that's set up correctly. The `systray` library expects to be called from the main goroutine on some platforms.
+2. The `-H=windowsgui` flag might interfere with the systray library's ability to create windows.
+3. The `systray` library might need to be initialized before the HTTP server starts, or there might be a timing issue.
+4. The tray process might be crashing silently.
+
+Let me check the Go modules to see if there are any issues with the systray library. Actually, let me first check if there's an error by looking at stderr of the backend process.
+
+Actually, the issue might be simpler: `systray.Run()` is supposed to be called on the main goroutine, not a background goroutine. On Windows, doing GUI operations from a non-main thread requires special handling (like `runtime.LockOSThread`). The `systray` library might not work correctly if run from a goroutine.
+
+Let me also check if the systray library needs a specific initialization sequence. Looking at the library's documentation:
+- `systray.Run(onReady, onExit)` must be called on the main goroutine
+- It blocks and runs the message loop
+- On Windows, it creates a hidden window for receiving messages
+
+Since our main goroutine is running the Fiber HTTP server, I can't call `systray.Run` there. But there's an alternative: `systray.RunWithExternalLoop` which allows running the message loop externally.
+
+Wait, actually looking at the `getlantern/systray` library more carefully:
+- `systray.Run(onReady, onExit)` registers the window class, creates the window, runs the message loop, and blocks
+- On Windows, it can be called from any thread as long as that thread has a message loop
+
+But there's also `systray.Register(onReady, onExit)` which just registers the window class and creates the window without running the message loop. Then you'd call `systray.RunOnMainThread(fn)` for each callback.
+
+Actually, let me look at the real issue. The `systray` library might have crashed silently. Let me check by looking at:
+1. Did the backend start successfully?
+2. Are there any error logs?
+
+Let me check the server.log to see if there are any crashes.
+
+Also, another possibility: the `start.bat` has `go run main.go` which is for development. But the running instance is `backend.exe` built with `-H=windowsgui`. The systray might not be working because of the windowsgui flag - it changes how Windows allocates the console, but doesn't affect window creation.
+
+Actually, I just thought of something. The `systray` library on Windows uses CGo to call Win32 API functions. Building with `go build` should work. But when we use `-ldflags="-H=windowsgui"`, the linker changes the subsystem from console to windows. This should still work with CGo.
+
+Let me check if the systray library actually compiled correctly by looking at the build output. We got "BUILD OK" so it compiled.
+
+Let me try a different approach: instead of running `systray.Run()` in a goroutine, I'll use `runtime.LockOSThread()` to lock the goroutine to an OS thread, and then run the message loop on that thread.
+
+Actually, looking more carefully at the `getlantern/systray` library source code, on Windows it:
+1. Creates a window class and registers it
+2. Creates a hidden window
+3. Enters a message loop (GetMessage/DispatchMessage)
+
+This should work from any thread with a message loop. But the issue is that if the goroutine dies or panics, the tray disappears.
+
+Let me add some error handling and logging to see what's happening. Let me also check if there's a panic happening by looking at the logs.
+
+Let me also consider: maybe the tray IS showing but the user doesn't see it because it's in the overflow area (hidden icons). On Windows, tray icons can be hidden by default.
+
+Let me first check if there's any error by adding a log and checking the server log.
+**Action**: bash(command: "curl -s http://localhost:8082/api/daemon/status 2>&1 | python3 -c "
+import sys, json
+d = json.load(sys.stdin)
+logs = d.get('logs',[])
+since = '2026-06-23T20:10'
+recent = [x for x in logs if x.get('createdAt','') > since]
+for x in recent:
+    print(f'{x[\"createdAt\"][11:19]} {x[\"message\"][:150]}')
+" 2>&1", timeout: 10)
+**Observation**: bash: success
+
+## Turn 2 | 2026-06-24T00:18:06.981Z | deepseek/deepseek-v4-flash
+
+**Thought**: 
+**Thinking**: The user is still seeing something popping up. Let me think about this differently.
+
+The user said "no apparent icon" for the tray, and "something still popping up". 
+
+For the tray icon: the `systray` library might not be working because it's called from a goroutine. Let me check by looking at the process.
+
+For the popup: maybe the VBS script `JulesAutopilot.vbs` is launching `backend.exe` but the VBS script itself uses `wscript.exe`. If the VBS is triggered on every login, and the user logs out/in repeatedly... but they said it's happening repeatedly, not just at login.
+
+Wait - let me re-read the VBS script:
+```
+WshShell.Run "C:\Users\hyper\workspace\jules-autopilot\backend-go\backend.exe", 0, False
+WScript.Sleep 20000
+WshShell.Run "powershell -NoProfile -ExecutionPolicy Bypass -File C:\Users\hyper\workspace\jules-autopilot\backend-go\watchdog_loop.ps1", 0, False
+```
+
+The first line runs `backend.exe` with `0` (hidden window). But wait - `0` means `SW_HIDE` which hides the window. But what if `backend.exe` is a Windows GUI app (with `-H=windowsgui`)? Then it won't have a console at all. Good.
+
+The second line runs the watchdog PowerShell script, also hidden. Good.
+
+But what about the `powershell` process that runs the watchdog? PID 57336 is the watchdog. It's running as a background PowerShell process. Could this PowerShell process be the one flashing? When PowerShell starts a `[System.Diagnostics.Process]::Start($psi)`, it doesn't create a new window.
+
+Hmm, let me look at the VBS script name: `JulesAutopilot.vbs` in the startup folder. When Windows starts, it runs this VBS script. The VBS runs `backend.exe` hidden and then `powershell.exe` hidden.
+
+But wait - there's also `start.bat` which uses `go run main.go`. If the user ever runs this, it would compile and run the Go program, creating a console window.
+
+Let me focus on the immediate issues:
+1. The tray icon isn't showing - maybe I should check if `systray` is actually running
+2. The popup - the user needs to identify what it is
+
+Actually, let me try a completely different approach for the tray icon. Instead of using `getlantern/systray` (which might not be working in a goroutine), let me check if the library actually creates the icon correctly on Windows.
+
+Let me look at the process list and see if there are any error messages. But first, let me check if the systray library's goroutine panicked.
+
+Actually, I just realized something: `systray.Run()` is blocking and it runs a Windows message loop. When called from a goroutine, it locks the OS thread and processes messages. But the issue is that the goroutine will block forever, and the `systray` library might need the main goroutine to be available for certain callbacks.
+
+Let me try a different approach: instead of using `getlantern/systray`, I'll create a simple Windows tray icon using the Win32 API directly via syscall. But that's complex.
+
+For now, let me check if the systray library is even working by looking at the process and see if there's any way to debug this.
+
+Let me check the current state of things. Let me look at the process list more carefully.
+
+Actually, let me just check if the `getlantern/systray` dependency was properly installed and compiled.
+**Action**: bash(command: "powershell -Command "Get-Process | Where-Object { \$_.ProcessName -eq 'backend' -or \$_.ProcessName -eq 'go' -or \$_.ProcessName -eq 'powershell' -and \$_.CommandLine -match 'watchdog' } | Select-Object Id,ProcessName,StartTime | Format-Table -AutoSize" 2>&1", timeout: 10)
+**Observation**: bash: success
+
+## Turn 3 | 2026-06-24T00:18:22.287Z | deepseek/deepseek-v4-flash
+
+**Thought**: 
+**Thinking**: No output means no matching processes? That can't be right - the backend was responding to health checks earlier. Let me check again.
+
+Wait, maybe the backend crashed since my last restart. Let me check.
+**Action**: bash(command: "curl -s --max-time 5 http://localhost:8082/api/health | python3 -c "import sys,json;d=json.load(sys.stdin);print('OK')" 2>&1", timeout: 10)
+**Observation**: bash: success
+
+## Turn 4 | 2026-06-24T00:18:26.788Z | deepseek/deepseek-v4-flash
+
+**Thought**: 
+**Thinking**: OK backend is healthy. Let me check if the systray goroutine might have panicked. The `systray.Run()` call in the goroutine might crash without any visible error. Let me modify the code to add recovery.
+
+Actually, let me first check if the `getlantern/systray` library is actually functional. The library might have issues on Windows with Go 1.26 (the version we're using). Let me check the Go version.
+
+Actually wait - maybe the issue is simpler. The `go.sum` file might not have been properly updated when I ran `go get`. Let me check if the library is properly in go.sum.
+**Action**: bash(command: "grep "getlantern/systray" backend-go/go.sum", timeout: 5)
+**Observation**: bash: success
+
+## Turn 5 | 2026-06-24T00:18:31.492Z | deepseek/deepseek-v4-flash
+
+**Thought**: 
+**Thinking**: The dependency is there and compiled (we got BUILD OK). So the library is installed.
+
+Let me think about why the tray icon isn't showing:
+
+1. Maybe `systray.Run()` needs to be called from the main goroutine, not a goroutine launched by `go services.StartTray()`. The `StartTray` function does `go systray.Run(onTrayReady, onTrayExit)`. But `systray.Run` on Windows creates a hidden window and runs a message loop. This SHOULD work from any thread.
+
+2. But wait - there's a subtle issue. When we build with `-H=windowsgui`, the application has no console. The `systray` library might need a console or might try to allocate one.
+
+3. Actually, I think the issue is that `systray.Run()` panicked (maybe because of the goroutine). Let me add panic recovery and logging.
+
+4. Another possibility: the `systray` library was compiled for the wrong architecture or has CGo issues.
+
+Let me add better error handling to the tray code and also add a recovery wrapper.
+
+Actually, let me try a completely different approach. Instead of the `getlantern/systray` library, let me write a simple Windows tray icon using only the syscall package and Win32 API. This is more work but avoids dependency issues.
+
+Actually, there's a much simpler approach: I can use PowerShell to create a tray icon! I can create a small PowerShell script that creates a tray icon with a menu, and have the backend launch it. But that would create another flashing PowerShell window.
+
+OK, let me take yet another approach: create a small C# program that creates the tray icon, compile it to an EXE, and have the backend launch it. But that adds more complexity.
+
+For now, let me just add panic recovery to the tray goroutine and see if it's crashing.
+**Action**: read(limit: 15, offset: 46, path: "C:/Users/hyper/workspace/jules-autopilot/backend-go/services/tray.go")
+**Observation**: read: success
+
+## Turn 6 | 2026-06-24T00:18:39.250Z | deepseek/deepseek-v4-flash
+
+**Thought**: 
+**Thinking**: Let me check the StartTray function and add panic recovery.
+**Action**: read(limit: 15, offset: 31, path: "C:/Users/hyper/workspace/jules-autopilot/backend-go/services/tray.go")
+**Observation**: read: success
+
+## Turn 7 | 2026-06-24T00:18:42.498Z | deepseek/deepseek-v4-flash
+
+**Thought**: 
+**Thinking**: Let me look at the StartTray function and onTrayReady to add panic recovery and locking.
+**Action**: grep(context: 5, path: "C:/Users/hyper/workspace/jules-autopilot/backend-go/services/tray.go", pattern: "func StartTray")
+**Observation**: grep: success
+
+## Turn 8 | 2026-06-24T00:18:46.218Z | deepseek/deepseek-v4-flash
+
+**Thought**: The goroutine needs to lock the OS thread for the Windows message pump. Let me fix that.
+**Thinking**: I see the issue! `systray.Run()` needs to be called on the main goroutine on some platforms (macOS), but on Windows it should work from any thread. However, the `` library might require the calling goroutine to lock the OS thread.
+
+But actually, looking at the `` library's source code more carefully, on Windows it creates a window and runs a message loop. This requires the calling thread to be a UI thread. Go goroutines are NOT guaranteed to be on a specific OS thread. The `runtime` might move the goroutine to a different OS thread.
+
+The fix: use `runtime.LockOSThread()` before calling `systray.Run()`.
+
+But there's another problem: the `sync.Once` with `go` might cause issues. Let me restructure:
+
+```go
+func StartTray() {
+    trayOnce.Do(func() {
+        go func() {
+            runtime.LockOSThread()
+            defer runtime.UnlockOSThread()
+            defer func() {
+                if r := recover(); r != nil {
+                    log.Printf("[Tray] CRASHED: %v", r)
+                }
+            }()
+            systray.Run(onTrayReady, onTrayExit)
+        }()
+    })
+}
+```
+
+This should work. Let me update the code.
+**Action**: edit(edits: [object Object],[object Object], path: "C:/Users/hyper/workspace/jules-autopilot/backend-go/services/tray.go")
+**Observation**: edit: success
+
+## Turn 9 | 2026-06-24T00:19:08.722Z | deepseek/deepseek-v4-flash
+
+**Thought**: 
+**Thinking**: Wait, the import already has `runtime` (I added it earlier) and the new edit is the same as the old - I made a mistake. Let me check if the import was actually unchanged. Looking at the first edit, the oldText and newText are identical. That was a no-op edit.
+
+The second edit replaced the StartTray function with the locked version. Good.
+
+But actually, the `go` keyword launching `systray.Run` after `runtime.LockOSThread()` means this goroutine stays on the same OS thread forever. That's important for the Windows message pump.
+
+Let me also check: the `onTrayReady` callbacks (menu actions) launch goroutines. Those goroutines call `systray.Quit()` on Quit menu. On Windows, `systray.Quit()` posts a `WM_QUIT` message to the message queue, which causes the message loop to exit. This should work correctly.
+
+But there could be another issue: when `systray.Quit()` is called and the message loop exits, `systray.Run()` returns. Then `systray.RunOnMainThread` is no longer available, and the application can't interact with the tray anymore. The recover would catch any panics.
+
+Let me build and deploy.
+**Action**: bash(command: "cd backend-go && go build -o backend.exe -ldflags="-H=windowsgui" . 2>&1 && echo "BUILD OK"", timeout: 30)
+**Observation**: bash: success
+
