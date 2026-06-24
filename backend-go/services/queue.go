@@ -707,7 +707,7 @@ func (w *Worker) handleCheckSession(payload string) (string, error) {
 			}
 		}
 
-		instructions := "Please instruct Google Jules agent to continue autonomously working on this project. Infer the next step based on the progress history and conversation."
+		instructions := "Craft a brief nudge to instruct the Google Jules agent to continue autonomously. Infer the next step based on the progress history and conversation."
 
 		// Resolve project name from the session's sourceID for workspace mirrored docs
 		// Workspace root is ../.. from backend-go/ (where all project mirrors live)

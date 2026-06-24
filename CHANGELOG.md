@@ -2,6 +2,12 @@
 
 All notable changes to this project will be documented in this file.
 
+## [3.6.14] - 2026-06-24
+
+### Fixed
+- Go backend: Updated `instructions` prompt in `handleCheckSession` of `services/queue.go` from "Please instruct..." to "Craft a brief nudge...", preventing the LLM from echoing the system/user instruction prompt directly into the Google Jules session.
+- Watchdog scripts: Replaced all `timeout` commands with robust `ping` command delays in `run.bat` to eliminate "Input redirection is not supported" errors when executing in background non-interactive console contexts.
+
 ## [3.6.13] - 2026-06-24
 
 ### Fixed
