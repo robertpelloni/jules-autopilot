@@ -178,13 +178,22 @@ func (d *Daemon) tick() time.Duration {
 
 	queuedSessions := 0
 	for _, session := range sessions {
-		// COMPLETED sessions are done — skip them entirely
-		if session.RawState == "COMPLETED" {
+		// Skip sessions that are already being checked
+		var jobCheck models.QueueJob
+		jobExists := db.DB.Where(
+			"type = ? AND status IN ? AND payload LIKE ?",
+			"check_session",
+			[]string{"pending", "processing"},
+			"%"+session.ID+"%",
+		).First(&jobCheck).Error == nil
+		if jobExists {
 			continue
 		}
+
 		// Only check sessions that need attention
 		needsCheck := session.RawState == "FAILED" ||
 			session.RawState == "PAUSED" ||
+			session.RawState == "COMPLETED" ||
 			session.RawState == "AWAITING_PLAN_APPROVAL"
 		if !needsCheck && session.RawState == "IN_PROGRESS" && session.LastActivityAt != nil {
 			threshold := time.Duration(settings.ActiveWorkThresholdMinutes) * time.Minute

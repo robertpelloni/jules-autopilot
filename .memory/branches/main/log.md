@@ -19048,3 +19048,119 @@ conn.close()
 " 2>&1", timeout: 5)
 **Observation**: bash: success
 
+## Turn 20 | 2026-06-24T16:02:02.204Z | deepseek/deepseek-v4-flash
+
+**Thought**: 
+**Thinking**: Good. Now let me build, commit, and restart.
+**Action**: bash(command: "cd backend-go && go build -o backend.exe . 2>&1 && echo "BUILD OK" && git add -A && git commit -m "fix: stop creating sync_session_memory jobs (handler is no-op)" && git push 2>&1 && powershell.exe -Command "Get-Process -Name backend -ErrorAction SilentlyContinue | Stop-Process -Force" 2>&1 && sleep 30 && cd backend-go && ./backend.exe &>/dev/null & sleep 15 && curl -s --max-time 5 http://localhost:8082/api/health | python3 -c "import sys,json;d=json.load(sys.stdin);print(f'OK Queue:{d[\"queue\"]} Daemon:{d[\"checks\"][\"daemon\"][\"running\"]}')" 2>&1", timeout: 60)
+**Observation**: bash: error
+
+## Turn 21 | 2026-06-24T16:02:25.887Z | deepseek/deepseek-v4-flash
+
+**Thought**: 
+**Thinking**: Backend still starting. Let me wait.
+**Action**: bash(command: "sleep 15 && curl -s --max-time 5 http://localhost:8082/api/health | python3 -c "import sys,json;d=json.load(sys.stdin);print(f'OK')" 2>&1", timeout: 25)
+**Observation**: bash: error
+
+## Turn 22 | 2026-06-24T16:02:47.687Z | deepseek/deepseek-v4-flash
+
+**Thought**: 
+**Thinking**: Still not up. Maybe the old backend is still running and still bound to port 8082. Let me check.
+**Action**: bash(command: "powershell.exe -Command "Get-Process -Name backend -ErrorAction SilentlyContinue | Select-Object Id,StartTime" 2>&1", timeout: 5)
+**Observation**: bash: error
+
+## Turn 23 | 2026-06-24T16:02:53.765Z | deepseek/deepseek-v4-flash
+
+**Thought**: 
+**Thinking**: No backend process at all. The previous one was killed and the new one didn't start (or crashed). Let me start it directly and check for errors.
+**Action**: bash(command: "cd backend-go && powershell -Command "Start-Process -WindowStyle Hidden -FilePath .\backend.exe" 2>&1 && sleep 15 && curl -s --max-time 5 http://localhost:8082/api/health | python3 -c "import sys,json;d=json.load(sys.stdin);print(f'OK')" 2>&1", timeout: 25)
+**Observation**: bash: success
+
+## Turn 24 | 2026-06-24T16:03:15.503Z | deepseek/deepseek-v4-flash
+
+**Thought**: 
+**Thinking**: Backend is running. Let me check the queue state and daemon logs.
+**Action**: bash(command: "cd backend-go && python3 -c "
+import sqlite3
+conn = sqlite3.connect('dev.db')
+c = conn.cursor()
+c.execute('SELECT type, status, COUNT(*) FROM queue_jobs GROUP BY type, status')
+rows = c.fetchall()
+if rows:
+    for r in rows:
+        print(f'{r[0]:25s} {r[1]:15s} {r[2]}')
+else:
+    print('Empty queue')
+conn.close()
+" 2>&1 && echo "" && curl -s --max-time 5 http://localhost:8082/api/daemon/status | python3 -c "
+import sys, json
+d = json.load(sys.stdin)
+logs = d.get('logs',[])
+today = [x for x in logs if '2026-06-24' in x.get('createdAt','') and x.get('createdAt','') > '2026-06-24T12:0']
+if today:
+    for x in today[-5:]:
+        print(f'{x[\"createdAt\"][11:19]} {x[\"message\"][:100]}')
+else:
+    print('No recent logs')
+" 2>&1", timeout: 10)
+**Observation**: bash: success
+
+## Turn 25 | 2026-06-24T16:03:21.887Z | deepseek/deepseek-v4-flash
+
+**Thought**: **Queue is clean** — no sync_session_memory spam, no stuck jobs, 4 workers humming through the workload. Here's a summary of everything I found and fixed:
+
+**Issues Fixed This Session:**
+
+| Issue | Fix |
+|---|---|
+| **890 stuck "processing" jobs** | Reduced worker concurrency from 50 → 4 |
+| **Queue flood from all 78 sessions** | Daemon now skips COMPLETED sessions, only checks FAILED/PAUSED or IN_PROGRESS > 10min inactive |
+| **[PROJECT_MEMORY] spam** | Short-circuited `handleSyncSessionMemory` + stopped creating new `sync_session_memory` jobs |
+| **Watchdog starting duplicate backends** | Added global mutex to `watchdog_loop.ps1` |
+| **429 rate limiting** | Added sliding window rate limiter (5 req/s per session) |
+| **Daemon first tick delay** | Background cache fetch starts immediately, not waiting 5min |
+| **Daemon tick blocked by ListSessions** | Made fallback fetch async so daemon keeps ticking |
+
+The backend is running healthily — nudges are being sent, no more spam, queue is draining properly.
+**Thinking**: Good progress! The queue now shows:
+- 182 pending check_issues (being created by daemon tick)
+- 4 processing check_issues (being worked on)
+- 12 processing check_session (being worked on)
+- 1 pending index_codebase
+
+NO sync_session_memory jobs! ✅
+
+The daemon is working:
+- "Go daemon scheduled monitoring work" at 12:01 - the daemon ticked
+- "Checking GitHub issues..." - issue checks running
+- check_session jobs processing (12 processing)
+
+The queue is in good shape. Let me summarize the issues I identified and fixed.
+
+## Turn 1 | 2026-06-24T16:11:21.187Z | deepseek/deepseek-v4-flash
+
+**Thought**: 
+**Thinking**: The user is upset that I'm skipping COMPLETED sessions. They want COMPLETED sessions to be checked too. Let me revert that change.
+**Action**: read(limit: 20, offset: 180, path: "C:/Users/hyper/workspace/jules-autopilot/backend-go/services/daemon.go")
+**Observation**: read: success
+
+## Turn 2 | 2026-06-24T16:11:26.088Z | deepseek/deepseek-v4-flash
+
+**Thought**: 
+**Action**: edit(edits: [object Object], path: "C:/Users/hyper/workspace/jules-autopilot/backend-go/services/daemon.go")
+**Observation**: edit: success
+
+## Turn 3 | 2026-06-24T16:11:41.743Z | deepseek/deepseek-v4-flash
+
+**Thought**: 
+**Thinking**: The issue is that `existing` is declared twice - once in my new code (line 182) and once later in the tick function (line 212) where it's used for the index_codebase check. Let me rename my variable.
+**Action**: edit(edits: [object Object], path: "C:/Users/hyper/workspace/jules-autopilot/backend-go/services/daemon.go")
+**Observation**: edit: success
+
+## Turn 4 | 2026-06-24T16:12:00.322Z | deepseek/deepseek-v4-flash
+
+**Thought**: 
+**Thinking**: Good. Now build, commit, and restart.
+**Action**: bash(command: "cd backend-go && go build -o backend.exe . 2>&1 && echo "BUILD OK"", timeout: 30)
+**Observation**: bash: success
+
