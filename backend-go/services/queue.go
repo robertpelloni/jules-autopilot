@@ -671,7 +671,9 @@ func (w *Worker) handleCheckSession(payload string) (string, error) {
 		}
 	}
 
-	if session.RawState == "COMPLETED" && settings.SmartPilotEnabled {
+	// Memory sync disabled — handleSyncSessionMemory is short-circuited
+	// Keep the check but skip enqueuing to prevent queue flood from useless jobs
+	if false && session.RawState == "COMPLETED" && settings.SmartPilotEnabled {
 		var existing models.MemoryChunk
 		if err := db.DB.First(&existing, "session_id = ?", session.ID).Error; err != nil {
 			if _, addErr := AddJob("sync_session_memory", map[string]string{"sessionId": session.ID}); addErr == nil {

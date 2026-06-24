@@ -18939,3 +18939,112 @@ Let me add a minimum threshold.
 **Action**: bash(command: "cd backend-go && go build -o backend.exe . 2>&1 && echo "BUILD OK"", timeout: 30)
 **Observation**: bash: success
 
+## Turn 13 | 2026-06-24T15:59:34.736Z | deepseek/deepseek-v4-flash
+
+**Thought**: 
+**Thinking**: Good. Let me commit, push, and restart.
+**Action**: bash(command: "cd backend-go && git add -A && git commit -m "fix: only create check_session jobs for stalled/inactive sessions
+
+- Skip COMPLETED sessions entirely (38 of 78)
+- Always check FAILED, PAUSED, AWAITING_PLAN_APPROVAL
+- Check IN_PROGRESS only if inactive > threshold (min 10min)
+- Prevents queue flood from checking all 78 sessions every tick" && git push 2>&1 && powershell.exe -Command "Get-Process -Name backend -ErrorAction SilentlyContinue | Stop-Process -Force" 2>&1 && sleep 30 && curl -s --max-time 5 http://localhost:8082/api/health | python3 -c "import sys,json;d=json.load(sys.stdin);print(f'OK')" 2>&1", timeout: 50)
+**Observation**: bash: error
+
+## Turn 14 | 2026-06-24T16:00:17.690Z | deepseek/deepseek-v4-flash
+
+**Thought**: 
+**Thinking**: Backend is still starting. Let me wait.
+**Action**: bash(command: "sleep 15 && curl -s --max-time 5 http://localhost:8082/api/health | python3 -c "import sys,json;d=json.load(sys.stdin);print(f'OK Daemon:{d[\"checks\"][\"daemon\"][\"running\"]}')" 2>&1", timeout: 25)
+**Observation**: bash: error
+
+## Turn 15 | 2026-06-24T16:00:40.215Z | deepseek/deepseek-v4-flash
+
+**Thought**: 
+**Thinking**: The backend hasn't started after 45 seconds. The watchdog might be dead. Let me check.
+**Action**: bash(command: "sleep 20 && curl -s --max-time 5 http://localhost:8082/api/health | python3 -c "import sys,json;d=json.load(sys.stdin);print(f'OK')" 2>&1", timeout: 30)
+**Observation**: bash: error
+
+## Turn 16 | 2026-06-24T16:01:07.925Z | deepseek/deepseek-v4-flash
+
+**Thought**: 
+**Thinking**: Backend still not up after 65 seconds. The watchdog is definitely dead. Let me start the backend directly.
+**Action**: bash(command: "cd backend-go && ./backend.exe &
+sleep 15
+curl -s --max-time 5 http://localhost:8082/api/health | python3 -c "import sys,json;d=json.load(sys.stdin);print(f'OK')" 2>&1", timeout: 25)
+**Observation**: bash: success
+
+## Turn 17 | 2026-06-24T16:01:28.710Z | deepseek/deepseek-v4-flash
+
+**Thought**: The queue is processing jobs — completing with "none" (no nudge needed). But I see sync_session_memory jobs are still being created. Let me check where and stop the creation.
+**Thinking**: The backend is running and check_session jobs are completing! I can see:
+```
+12:01:18 [Queue] Job e663828a (check_session) completed: none
+12:01:18 [Queue] Job 46187a2c (check_session) completed: none
+12:01:18 [Queue] Job dcfa5a43 (check_session) completed: none
+12:01:19 [Queue] Job f42bfa78 (check_session) completed: none
+12:01:23 [Queue] Job 775602e0 (check_session) completed: none
+...
+```
+
+The jobs are completing with "none" - meaning no nudge was needed. This is good - it means the session check is working correctly and only doing something when needed.
+
+But the user said:
+1. "it is still spamming some sessions with the memory sync message" - The `handleSyncSessionMemory` is short-circuited, so [PROJECT_MEMORY] shouldn't be happening. The user might have seen old messages from before the fix was deployed, or there's a different code path I'm missing.
+2. "i dont see any intelligent bump messages but there are probably some" - The jobs are completing as "none" which means no nudges are being sent. The daemon is checking sessions and finding they don't need nudging (because the [Supervisor] dedup is working, or the sessions are active).
+
+The user is happy enough ("but there are probably some") so the system is working. Let me give a summary of what I've done and observed.
+
+Actually, the user was saying both issues persist. Let me check:
+1. The memory sync message: this might be from `handleCheckSession` creating a `sync_session_memory` job. Line 677 in queue.go: `if _, addErr := AddJob("sync_session_memory", ...)` - this is inside handleCheckSession! When the daemon processes a check_session job and determines that the session needs memory sync, it creates a sync_session_memory job. But the handleSyncSessionMemory function returns "skipped" immediately, so the job completes without sending the [PROJECT_MEMORY] message.
+
+Wait - but the QUEUE still has sync_session_memory jobs (14 processing). These are jobs that were created BEFORE the fix was deployed. The new code (handleSyncSessionMemory returns "skipped") will process them instantly. So they should clear.
+
+But the user said "still spamming" - which could mean the OLD jobs (from before the fix) are still being processed and sending the message. Since `handleSyncSessionMemory` is already short-circuited, the old jobs in the queue should complete as "skipped" without sending anything. But there might be a different code path.
+
+Actually, looking at line 677:
+```go
+if _, addErr := AddJob("sync_session_memory", map[string]string{"sessionId": session.ID}); addErr == nil {
+```
+
+This creates sync_session_memory jobs from handleCheckSession. Even with the fix, new sync_session_memory jobs can be created. The handler returns "skipped" so they won't send [PROJECT_MEMORY] messages, but the queue will still fill up with these jobs.
+
+The issue is that the daemon creates sync_session_memory jobs for every check_session. With 14 processing, this cycle continues.
+
+Let me look at where sync_session_memory jobs are created and stop them.
+**Action**: read(limit: 15, offset: 673, path: "C:/Users/hyper/workspace/jules-autopilot/backend-go/services/queue.go")
+**Observation**: read: success
+
+## Turn 18 | 2026-06-24T16:01:40.415Z | deepseek/deepseek-v4-flash
+
+**Thought**: Found it — `handleCheckSession` creates `sync_session_memory` jobs for COMPLETED sessions. Since the handler is short-circuited, these jobs are useless. Let me stop creating them.
+**Thinking**: I see! Line 673-680: When a session is COMPLETED and SmartPilotEnabled, it creates a `sync_session_memory` job. This is the source of the spam.
+
+But wait, the `handleSyncSessionMemory` function returns "skipped" immediately. So the job is created but does nothing when processed. The queue fills up with these useless jobs.
+
+The fix: stop creating `sync_session_memory` jobs entirely since they do nothing.
+
+Let me also check if there are other places that create these jobs.
+**Action**: edit(edits: [object Object], path: "C:/Users/hyper/workspace/jules-autopilot/backend-go/services/queue.go")
+**Observation**: edit: success
+
+## Turn 19 | 2026-06-24T16:01:55.161Z | deepseek/deepseek-v4-flash
+
+**Thought**: 
+**Thinking**: Good. Now also clear the existing stuck processing jobs from the DB.
+**Action**: bash(command: "cd backend-go && python3 -c "
+import sqlite3
+conn = sqlite3.connect('dev.db')
+c = conn.cursor()
+c.execute('DELETE FROM queue_jobs WHERE type = \"sync_session_memory\"')
+print(f'Deleted {c.rowcount} sync_session_memory jobs')
+c.execute('DELETE FROM queue_jobs WHERE status = \"processing\" AND type = \"check_session\"')
+print(f'Deleted {c.rowcount} stuck check_session jobs')
+conn.commit()
+c.execute('SELECT type, status, COUNT(*) FROM queue_jobs GROUP BY type, status')
+for r in c.fetchall():
+    print(f'{r[0]:25s} {r[1]:15s} {r[2]}')
+conn.close()
+" 2>&1", timeout: 5)
+**Observation**: bash: success
+
