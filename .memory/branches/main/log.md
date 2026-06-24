@@ -19636,3 +19636,39 @@ conn.close()
 " 2>&1", timeout: 5)
 **Observation**: bash: success
 
+## Turn 18 | 2026-06-24T16:42:48.382Z | deepseek/deepseek-v4-flash
+
+**Thought**: 
+**Thinking**: So the actual values are:
+- checkIntervalSeconds: 60 (1 minute)
+- inactivityThresholdMinutes: 10
+- activeWorkThresholdMinutes: 5
+
+The user said "set them to what they are" - so I should set the input fields to these values. Let me update the settings dialog to show these as the defaults.
+
+Actually, the settings dialog uses `config.checkIntervalSeconds` and `config.inactivityThresholdMinutes` from the store. The store gets its values from the backend API. So if the backend has 60 and 10, the UI should show 60 and 10 when loaded. That should be correct - the input fields use the config values directly.
+
+Let me commit and push the frontend changes.
+**Action**: bash(command: "git add -A && git commit -m "ui: simplify settings to General+Data tabs, move monitoring controls to General
+
+- Renamed Integrations tab → General
+- Removed API keys (Jules, OpenRouter, Gemini, GitHub sections)
+- Removed Supervisor, Shadow Pilot, Submodules tabs
+- Added check interval and idle threshold to General tab
+- Toggles already in header (Auto-Pilot and Supervisor, both on by default)" && git push 2>&1", timeout: 15)
+**Observation**: bash: success
+
+## Turn 19 | 2026-06-24T16:42:57.583Z | deepseek/deepseek-v4-flash
+
+**Thought**: Done. Settings dialog now has just **General** (with check interval and idle threshold) and **Data** tabs. Auto-Pilot and Supervisor toggles are in the header (both on by default). All the API key sections, integrations, tabs, and other clutter are gone.
+**Thinking**: Done. Let me summarize the changes:
+
+1. Settings dialog now only has 2 tabs: **General** and **Data**
+2. General tab has: Check Interval (seconds) and Idle Threshold (minutes)
+3. Removed: Integrations tab (with API keys for Jules, OpenRouter, Gemini, GitHub)
+4. Removed: Supervisor tab, Shadow Pilot tab, Submodules tab
+5. The toggles for **Auto-Pilot** and **Smart Supervisor** are already in the header (both on by default)
+6. Settings dialog is much simpler and cleaner
+
+The navigation tabs the user mentioned (templates, kanban, debates, system logs, health, audit trail, fleet pulse, search) don't exist in the current React frontend - they were from an older version.
+
