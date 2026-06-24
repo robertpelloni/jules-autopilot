@@ -12586,3 +12586,315 @@ Actually, I'll keep it for now in case the user wants to add a custom icon later
 **Action**: bash(command: "cd backend-go && go build -o backend.exe -ldflags="-H=windowsgui" . 2>&1 && echo "BUILD OK"", timeout: 30)
 **Observation**: bash: success
 
+## Turn 12 | 2026-06-24T00:00:49.737Z | deepseek/deepseek-v4-flash
+
+**Thought**: 
+**Thinking**: Let me commit, push, and restart.
+**Action**: bash(command: "cd backend-go && git add -A && git commit -m "feat: add system tray icon for Windows
+
+- Integrated getlantern/systray library for Windows system tray
+- Shows dashboard URL, session count, daemon/queue status
+- Menu: Dashboard, Status, Restart Daemon, Restart Worker, Quit
+- Tooltip auto-refreshes every 30s with service status
+- Tray starts in background goroutine" && git push 2>&1", timeout: 15)
+**Observation**: bash: success
+
+## Turn 13 | 2026-06-24T00:00:56.784Z | deepseek/deepseek-v4-flash
+
+**Thought**: 
+**Thinking**: Now deploy: kill the backend, let watchdog restart it with the new binary.
+**Action**: bash(command: "powershell -Command "Stop-Process -Name 'backend' -Force -ErrorAction SilentlyContinue" && sleep 30 && curl -s --max-time 5 http://localhost:8082/api/health | python3 -c "import sys,json;d=json.load(sys.stdin);print(f'OK')" 2>&1", timeout: 40)
+**Observation**: bash: success
+
+## Turn 14 | 2026-06-24T00:01:32.649Z | deepseek/deepseek-v4-flash
+
+**Thought**: 
+**Thinking**: The backend is running and healthy. The system tray icon should now appear in the Windows system tray (notification area). Let me verify.
+
+Actually, after restarting, the tray icon should show up. The user should see a "Jules Autopilot" entry in the system tray with the tooltip showing the status.
+
+But there might be an issue: the `systray.Run()` function in the goroutine might not properly initialize because it needs to be called from the main thread on some platforms. On Windows, the message pump needs to be on a thread that owns a window. Running it in a goroutine might work since Go goroutines are OS threads with their own message queues.
+
+However, there could be an issue: Windows requires the message loop to be on a thread that has created a window. The systray library creates a hidden window for message processing. If the goroutine starts correctly, it should work.
+
+Let me also check that the `go.sum` file was committed (it has the new dependencies).
+
+Let me verify the tray is visible by checking the process list and see if it crashed.
+**Action**: bash(command: "powershell -Command "Get-Process -Name 'backend' -ErrorAction SilentlyContinue | Format-Table Id,ProcessName,StartTime -AutoSize" 2>&1", timeout: 5)
+**Observation**: bash: success
+
+## Turn 15 | 2026-06-24T00:01:41.641Z | deepseek/deepseek-v4-flash
+
+**Thought**: 
+**Thinking**: Backend running on PID 38184. The tray icon should be appearing in the notification area now. Let me check if there are any errors in the logs.
+**Action**: bash(command: "curl -s http://localhost:8082/api/daemon/status 2>&1 | python3 -c "
+import sys, json
+d = json.load(sys.stdin)
+logs = d.get('logs',[])
+since = '2026-06-23T20:01'
+recent = [x for x in logs if x.get('createdAt','') > since]
+print(f'Logs since restart: {len(recent)}')
+for x in recent[-5:]:
+    ts = x.get('createdAt','')[11:19]
+    msg = x.get('message','')[:120]
+    print(f'{ts} {msg}')
+" 2>&1", timeout: 10)
+**Observation**: bash: success
+
+## Turn 16 | 2026-06-24T00:01:46.122Z | deepseek/deepseek-v4-flash
+
+**Thought**: The system tray icon should be in your Windows notification area (system tray, near the clock). It shows:
+
+- **Title**: "Jules Autopilot"
+- **Tooltip**: Updates every 30s with daemon status, session count, queue count
+- **Menu**:
+  - Dashboard — opens `http://localhost:8082`
+  - Status — opens health endpoint
+  - Restart Daemon
+  - Restart Worker
+  - Quit — shuts down the backend
+
+Let me know if you see it or if it's still flashing!
+**Thinking**: The daemon started and is checking GitHub issues. The system tray should be visible now in the Windows notification area. Let me tell the user what to look for.
+
+## Turn 1 | 2026-06-24T00:02:10.940Z | deepseek/deepseek-v4-flash
+
+**Thought**: Still flashing! Let me dig deeper. The issue is likely that `HideWindow` hides the console AFTER it's created, still causing a brief flash. I need to use `CREATE_NO_WINDOW` instead — prevents window creation entirely.
+**Thinking**: The user is STILL seeing console windows flashing. I've fixed:
+1. All Go subprocesses (Cmd() wrapper with HideWindow=true)
+2. Built the backend as a Windows GUI app (-H=windowsgui)
+3. The watchdog uses CreateNoWindow=$true
+4. The scheduled task (install-service.bat) uses backend.exe directly
+
+What else could be causing a flashing console window?
+
+Let me think more carefully:
+
+1. The Go runtime itself - even with `-H=windowsgui`, when Go calls `os/exec.Cmd.Run()` or `os/exec.Cmd.Start()`, on Windows, the child process gets a console allocated by default. With `$psi.CreateNoWindow = $true` and `UseShellExecute = $false`, the child process shouldn't get a visible console. But I'm using the `Cmd()` wrapper which calls `exec.Command()` and then `hideWindow(cmd)` which sets `cmd.SysProcAttr = &syscall.SysProcAttr{HideWindow: true}`.
+
+Wait - there's a subtle issue. The `Cmd()` wrapper is in the `services` package. But `api/routes.go:147` uses `services.Cmd(...)`. Let me verify the replacement worked.
+
+Also, let me check if there are other exec.Command calls I might have missed. Let me search more broadly.
+
+Actually, let me also think about: the `systray` library itself - does it create any windows? The `getlantern/systray` library creates a hidden window for message processing. But it might also briefly show a console window during initialization.
+
+Wait - another possibility: the `systray` library might need cgo and might spawn a subprocess. Let me check.
+
+Actually, looking at the getlantern/systray source code on Windows:
+- It uses Win32 API calls (via CGo or syscall)
+- It creates a hidden window for message processing
+- It does NOT spawn subprocesses
+
+So the systray library shouldn't cause windows to flash.
+
+Let me think about what else could cause a flash:
+
+1. The Go compiler? No, we use backend.exe now.
+2. The watchdog? It uses CreateNoWindow=$true.
+3. The scheduled task? It uses -WindowStyle Hidden with backend.exe.
+
+Wait... let me check: is there possibly ANOTHER instance of the backend running? Maybe the old `go run .` from the scheduled task is still running?
+
+Also, let me check if maybe the `systray.Run()` in a goroutine is causing an issue. The `systray` library might try to create a console window on startup if it can't find one, because it might call `AllocConsole()`.
+
+Actually, I just realized something: on Windows, when you run a GUI app (built with -H=windowsgui), the Go runtime doesn't allocate a console. But when the systray library initializes, it might call `ShowWindow()` or `CreateWindow()` which could briefly flash.
+
+But the user said "half a second" flash repeatedly. That sounds like a process starting and immediately exiting.
+
+Let me check if maybe the issue is the `systray` library itself. Looking at its Windows implementation, it calls:
+```c
+HWND hwnd = CreateWindowEx(0, className, "", 0, 0, 0, 0, 0, NULL, NULL, GetModuleHandle(NULL), NULL);
+```
+
+This creates a hidden window, not visible. So it shouldn't flash.
+
+Hmm, let me try a completely different approach: let me check if there's something else on the system that's running periodically. Maybe some other process, not related to our Go backend.
+
+Let me use Process Monitor or tasklist to see what processes are starting and stopping every few seconds. But that might be too complex.
+
+Actually, let me look at this from a different angle. The user said "something is still popping up" - could it be the backend.exe itself? With `-H=windowsgui`, the backend should have NO console window. But what if the watchdog's `CreateNoWindow = $true` doesn't work with the GUI subsystem?
+
+Wait - I think I know what's happening. On Windows, when `UseShellExecute = $false` and `CreateNoWindow = $true`, the child process is created with `DETACHED_PROCESS` flag. This means the child process gets a new console, but it's hidden. However, the Go GUI app (with -H=windowsgui) should NOT get a console at all.
+
+But here's the thing: the `systray` library internally calls `GetConsoleWindow()` and might do something that creates a visible window. Or the `exec.Command` with `HideWindow=true` might still flash because `HideWindow=true` hides the window AFTER it's created, not prevents its creation. The window is created, then hidden - which could cause a brief flash.
+
+Actually, `HideWindow` in `SysProcAttr` is different from `CreateNoWindow`. Let me check:
+- `CreateNoWindow` (in ProcessStartInfo): The child process doesn't get a new console. It inherits the parent's console or has no console.
+- `HideWindow` (in SysProcAttr): The child process window is initially hidden.
+
+Wait, on Windows, `SysProcAttr.HideWindow` doesn't exist in the standard library's `syscall` package for all Go versions. Let me check what version of Go we have.
+
+Actually, looking at the Go source code, `SysProcAttr` for Windows has:
+```go
+type SysProcAttr struct {
+    HideWindow    bool
+    CmdLine       string
+    CreationFlags uint32
+    // ...
+}
+```
+
+`HideWindow` means the process is started with `STARTF_USESHOWWINDOW` and `SW_HIDE` flags. The process window is created but not shown. So no flash.
+
+But wait - for CONSOLE applications, the console window IS created by the OS before the process starts. Then the `HideWindow` flag hides it. But the creation might still be visible as a brief flash.
+
+If the subprocess is a CONSOLE application (like git, govulncheck, npm), then:
+1. OS creates a new console for the process
+2. `HideWindow` flag hides the console window
+3. The process runs without a visible window
+
+But step 1 might still cause a brief flash because the console is created before it's hidden. On fast systems, this might not be visible. But on slower systems or with certain display drivers, it could be.
+
+The fix for this: use `CreationFlags` with `CREATE_NO_WINDOW` (0x08000000) flag instead of `HideWindow`. The `CREATE_NO_WINDOW` flag tells Windows to create the process WITHOUT a console window entirely.
+
+But the standard `syscall.SysProcAttr` doesn't directly support this in an easy way. Let me check if there's a way to use `CreationFlags` in Go.
+
+Actually, looking at Go's `syscall.SysProcAttr` for Windows more carefully:
+
+```go
+type SysProcAttr struct {
+    HideWindow    bool
+    CmdLine       string // used if non-empty, else we build the command line
+    CreationFlags uint32
+    // ... other fields
+}
+```
+
+The `CreationFlags` field can be set to `syscall.CREATE_NO_WINDOW` (0x08000000) to prevent console window creation entirely. This is better than `HideWindow` because it doesn't create the window at all.
+
+Let me update `hideWindow` to use `CREATE_NO_WINDOW` instead of `HideWindow`:
+
+```go
+const CREATE_NO_WINDOW = 0x08000000
+
+func hideWindow(cmd *exec.Cmd) {
+    cmd.SysProcAttr = &syscall.SysProcAttr{
+        CreationFlags: CREATE_NO_WINDOW,
+    }
+}
+```
+
+This should completely eliminate any console window flashing for subprocesses.
+**Action**: read(path: "C:/Users/hyper/workspace/jules-autopilot/backend-go/services/hide_window_windows.go")
+**Observation**: read: success
+
+## Turn 2 | 2026-06-24T00:02:40.160Z | deepseek/deepseek-v4-flash
+
+**Thought**: You're right — the flash might be something else entirely. Let me first give the tray a proper icon, then we can track down the flashing.
+**Thinking**: The user is saying two things:
+1. The flashing could be from a different program entirely, not necessarily the Go backend
+2. The tray icon needs an actual icon (it's showing without one right now)
+
+For the icon issue, I need to generate a proper .ico or PNG file for the tray icon. The `getlantern/systray` library needs a valid icon to display. Let me create a proper icon.
+
+For the flashing - if it's a different program, I need to help the user identify what it is. But let me focus on giving the tray a proper icon first, since that's actionable.
+
+I can create a small PNG icon programmatically or create an .ico file. The simplest approach: generate a proper 16x16 PNG icon in code using Go's image/png package, or embed a base64-encoded PNG.
+
+Actually, the easiest approach is to create a small icon file and embed it. Let me create a minimal 16x16 PNG icon that says "J" or shows a simple dot/circle.
+
+I can use Go's `image` and `image/png` packages to generate one at compile time, or I can just embed a pre-made base64 string.
+
+Let me create a proper icon that's a simple colored circle with a "J" letter. I'll generate it using Go's standard library at init time.
+
+Actually, the simplest approach: let me write a small tool to generate the icon, or just hardcode a valid minimal PNG.
+
+A minimal valid 16x16 blue PNG:
+- 16x16 pixels
+- Blue background (#0078D4 - Windows blue)
+- Maybe a white "J" letter
+
+Let me generate this using Python or Go, then embed it.
+
+Actually, let me just create the icon file and embed it. I can write a small Go program that generates the PNG, then embed the bytes.
+
+Or even simpler: use `go:embed` to embed an icon file directly.
+
+Let me create a proper icon.
+**Action**: bash(command: "cd backend-go && python3 -c "
+import struct, zlib
+
+# Create a minimal 16x16 blue PNG with a white 'J'
+width, height = 16, 16
+
+def create_png():
+    # RGBA raw pixel data
+    raw = b''
+    for y in range(height):
+        raw += b'\\x00'  # filter byte
+        for x in range(width):
+            # Blue circle with white J
+            cx, cy = 7.5, 7.5
+            dx, dy = x - cx, y - cy
+            dist = (dx*dx + dy*dy) ** 0.5
+            if dist < 7:
+                # Inside circle - blue
+                if y > 3 and y < 11 and x > 5 and x < 11:
+                    # Approximate J shape
+                    r, g, b, a = 255, 255, 255, 255  # white
+                else:
+                    r, g, b, a = 0, 120, 212, 255  # blue
+            else:
+                r, g, b, a = 0, 0, 0, 0  # transparent
+            raw += struct.pack('BBBB', r, g, b, a)
+    
+    # PNG format
+    def chunk(ctype, data):
+        c = ctype + data
+        crc = struct.pack('>I', zlib.crc32(c) & 0xffffffff)
+        return struct.pack('>I', len(data)) + c + crc
+    
+    sig = b'\\x89PNG\\r\\n\\x1a\\n'
+    ihdr = struct.pack('>IIBBBBB', width, height, 8, 6, 0, 0, 0)  # 8-bit RGBA
+    compressed = zlib.compress(raw)
+    
+    return sig + chunk(b'IHDR', ihdr) + chunk(b'IDAT', compressed) + chunk(b'IEND', b'')
+
+png_data = create_png()
+with open('icon.png', 'wb') as f:
+    f.write(png_data)
+print(f'Created icon.png ({len(png_data)} bytes)')
+" 2>&1", timeout: 5)
+**Observation**: bash: success
+
+## Turn 3 | 2026-06-24T00:02:53.143Z | deepseek/deepseek-v4-flash
+
+**Thought**: 
+**Thinking**: Good, created a 116-byte PNG icon. Let me verify it's valid and then embed it into the Go code.
+
+Now let me embed it using Go's `//go:embed` directive in the tray.go file, and set it as the tray icon.
+
+Also, I should remove the old `generateTrayIcon` function and use the embedded file instead.
+**Action**: bash(command: "python3 -c "
+with open('backend-go/icon.png', 'rb') as f:
+    data = f.read()
+# Encode as Go byte slice
+print('var trayIconBytes = []byte{')
+for i in range(0, len(data), 12):
+    chunk = data[i:i+12]
+    print('    ' + ', '.join(f'0x{b:02X}' for b in chunk) + ',')
+print('}')
+" 2>&1", timeout: 5)
+**Observation**: bash: success
+
+## Turn 4 | 2026-06-24T00:02:59.057Z | deepseek/deepseek-v4-flash
+
+**Thought**: Now let me update the tray to use this icon.
+**Thinking**: Now let me update tray.go to embed this icon and use it.
+**Action**: edit(edits: [object Object], path: "C:/Users/hyper/workspace/jules-autopilot/backend-go/services/tray.go")
+**Observation**: edit: success
+
+## Turn 5 | 2026-06-24T00:03:11.351Z | deepseek/deepseek-v4-flash
+
+**Thought**: 
+**Thinking**: The build will fail because `trayIconBytes` is not defined. I need to add it to the tray.go file. Let me add it as a package-level variable.
+**Action**: edit(edits: [object Object], path: "C:/Users/hyper/workspace/jules-autopilot/backend-go/services/tray.go")
+**Observation**: edit: success
+
+## Turn 6 | 2026-06-24T00:03:28.505Z | deepseek/deepseek-v4-flash
+
+**Thought**: 
+**Thinking**: Now let me also clean up the unused `generateTrayIcon` function and remove the `net/http` import I may have left. Let me read the file to check.
+**Action**: bash(command: "cd backend-go && go build -o backend.exe -ldflags="-H=windowsgui" . 2>&1 && echo "BUILD OK"", timeout: 30)
+**Observation**: bash: success
+
