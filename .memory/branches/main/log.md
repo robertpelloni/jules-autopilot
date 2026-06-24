@@ -19989,3 +19989,102 @@ No commit messages. Let me fix the function.
 **Action**: edit(edits: [object Object], path: "C:/Users/hyper/workspace/jules-autopilot/backend-go/services/queue.go")
 **Observation**: edit: success
 
+## Turn 6 | 2026-06-24T16:53:15.819Z | deepseek/deepseek-v4-flash
+
+**Thought**: 
+**Thinking**: Good, it compiles. Let me build, commit, and deploy.
+**Action**: bash(command: "cd backend-go && go build -o backend.exe . 2>&1 && echo "BUILD OK" && git add -A && git commit -m "fix: nudge prompt uses instructions + docs + last 10 agent messages only" && git push 2>&1 && powershell -Command "Get-Process -Name backend -ErrorAction SilentlyContinue | Stop-Process -Force" 2>&1 && sleep 25 && powershell -Command "Start-Process -WindowStyle Hidden -FilePath .\backend.exe" 2>&1 && sleep 15 && curl -s --max-time 5 http://localhost:8082/api/health | python3 -c "import sys,json;d=json.load(sys.stdin);print('OK')" 2>&1", timeout: 60)
+**Observation**: bash: success
+
+## Turn 7 | 2026-06-24T16:54:18.044Z | deepseek/deepseek-v4-flash
+
+**Thought**: The implementation already works that way — the prompt (instructions + docs + last 10 messages) is sent only to LM Studio, and only LM Studio's response (prefixed with `[Supervisor]`) gets sent to the Jules session via `CreateActivity`. No prompt context leaks into the session.
+**Thinking**: The user is clarifying the flow. Currently my `generateNudgeMessage` function sends a prompt to LM Studio with instructions + docs + last 10 agent messages, and gets back a response. Then it sends `"[Supervisor] " + response` to the Jules session via `CreateActivity`.
+
+But the user is saying: the prompt (instructions + docs + last 10 agent messages) should ONLY go to LM Studio. LM Studio generates a response (the nudge/bump message), and THAT response is what gets sent to the Jules session.
+
+Let me check the current code to make sure this is what's happening.
+
+Looking at my code:
+```go
+result, err := generateLLMText("lmstudio", ..., "You are a coding supervisor...", []LLMMessage{{Role: "user", Content: prompt}})
+if err != nil || strings.TrimSpace(result.Content) == "" {
+    return fmt.Sprintf("[Supervisor] Continue autonomous development on %s.", projectName), nil
+}
+return "[Supervisor] " + result.Content, nil
+```
+
+This sends the `prompt` to LM Studio, gets back a `result.Content` response, and then sends `"[Supervisor] " + result.Content` to the Jules session. Only the response goes to Jules, not the prompt. So the code is already correct.
+
+But wait - maybe the user is saying they DON'T want the prompt (instructions + docs + messages) to be sent to the Jules session at all. Currently, only `result.Content` (LM Studio's response) is sent. The prompt is only sent to LM Studio. So this should be correct.
+
+Unless the issue is in a DIFFERENT place. Let me check the `BroadcastContinue` function to see what's actually being sent:
+
+```go
+msg, err := generateNudgeMessage(session, settings)
+if err != nil {
+    ...
+    msg = fmt.Sprintf("[Supervisor] Continue autonomous development on %s.", extractProjectName(session.SourceID))
+}
+if _, err := client.CreateActivity(session.ID, CreateActivityRequest{
+    Content: msg,
+    Type:    "message",
+    Role:    "user",
+}); err != nil {
+    ...
+}
+```
+
+This sends `msg` (the LM Studio response) to the Jules session. The prompt itself is only sent to LM Studio. So this is correct.
+
+But maybe the user is confused about the flow. Let me just explain that the current implementation already works this way - LM Studio generates the response, and only the response goes to Jules.
+
+Actually, looking at the code more carefully, I think the user might be saying that the `instructions` variable name is confusing. The "instructions" in the prompt are for LM Studio ("Craft a brief nudge..."), not for the Jules session. The Jules session gets `[Supervisor] Continue working on...` which is LM Studio's output.
+
+The implementation is already correct. Let me just confirm to the user.
+
+## Turn 1 | 2026-06-24T16:54:58.727Z | deepseek/deepseek-v4-flash
+
+**Thought**: 
+**Thinking**: The user is saying the GitHub commits were from the wrong repos. This is the issue with `getProjectRoot()` resolving the wrong directory path. Let me check what directory the workspace projects are actually in.
+
+The user has workspace directories like:
+- `C:/Users/hyper/workspace/f-zerox`
+- `C:/Users/hyper/workspace/bobium`
+- `C:/Users/hyper/workspace/jules-autopilot`
+
+So the workspace projects are at `C:/Users/hyper/workspace/<project-name>`.
+
+When the backend runs from `C:/Users/hyper/workspace/jules-autopilot/backend-go/`:
+- `getProjectRoot()` returns `..` (checks `../package.json` which is at `C:/Users/hyper/workspace/jules-autopilot/package.json`)
+- `workspaceRoot = filepath.Join("..", "..")` → `../..` → `C:/Users/hyper/workspace`
+- `projectDir = filepath.Join("../..", "f-zerox")` → `../../f-zerox` → `C:/Users/hyper/workspace/f-zerox`
+
+That looks correct for f-zerox. But wait - what about when the function is called from `BroadcastContinue`? The `getProjectRoot()` function checks `./package.json` and `../package.json`. But the current working directory might be different when the broadcast runs (it's in a goroutine).
+
+Actually, looking at the issue more carefully: `getProjectRoot()` checks the CURRENT working directory, which for the Go binary is wherever it was started from. The watchdog starts it from `$backendDir` which is `C:\Users\hyper\workspace\jules-autopilot\backend-go`. So the CWD is `backend-go/`.
+
+`getProjectRoot()` then checks:
+1. `./package.json` → `backend-go/package.json` → doesn't exist
+2. `../package.json` → `../package.json` (jules-autopilot root) → exists → returns `..`
+
+So `getProjectRoot()` returns `..` (which is `C:/Users/hyper/workspace/jules-autopilot` from `C:/Users/hyper/workspace/jules-autopilot/backend-go`).
+
+Then `workspaceRoot = filepath.Join("..", "..")` → `../..` = `C:/Users/hyper/workspace`
+
+For `projectName = "f-zerox"`:
+`projectDir = filepath.Join("../..", "f-zerox")` → `../../f-zerox` → `C:/Users/hyper/workspace/f-zerox`
+
+That should be correct. But maybe the issue is that `getProjectRoot()` sometimes returns `.` instead of `..`? If the CWD changes somehow...
+
+Actually, I think the issue might be that `getProjectRoot()` returns `..` which is a RELATIVE path, and then `filepath.Join("..", "..")` also produces a relative path. When the function is called, the CWD might be different from where the binary was started.
+
+But actually, Go's `os.Stat` and `filepath.Join` always use the CWD. Since
+
+## Turn 1 | 2026-06-24T16:55:45.455Z | deepseek/deepseek-v4-flash
+
+**Thought**: Right, that's fixed now — the git commits are no longer in the prompt at all. The LM Studio prompt now only uses instructions + project docs + last 10 agent messages, all scoped to the correct session.
+**Thinking**: The user is confirming that the issue was that the git commit messages included in the LM Studio prompt were from the wrong repository. This was because the `projectDir` path resolution was incorrect for some sessions - it was resolving to the wrong directory on disk, so it read commits from a different repo than the session's actual project.
+
+This has already been fixed by removing the commit context entirely. The prompt now only includes instructions + documentation + last 10 agent messages, no git commits.
+
