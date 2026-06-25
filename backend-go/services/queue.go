@@ -565,9 +565,21 @@ func (w *Worker) handleCheckSession(payload string) (string, error) {
 		log.Printf("[Queue] Failed to update session cache for %s: %v", session.ID, saveErr)
 	}
 
-	lastActivityTime := session.UpdatedAt
+	// WARNING: The Jules API always returns UpdatedAt = current time and LastActivityAt = nil
+	// for ALL sessions. We must use the cached session's UpdatedAt (from the daemon's
+	// previous fetch) as the activity time, OR better — the last activity's createTime.
+	lastActivityTime := data.Session.UpdatedAt // cached time, not the Jules-returned current time
 	if session.LastActivityAt != nil {
 		lastActivityTime = *session.LastActivityAt
+	}
+	// Fetch activities early so we can use their timestamps for accurate inactivity measurement.
+	// ListActivities returns at most ~100 activities (2 pages).
+	checkActivities, listErr := client.ListActivities(session.ID)
+	if listErr == nil && len(checkActivities) > 0 {
+		lastAct := checkActivities[len(checkActivities)-1]
+		if !lastAct.CreatedAt.IsZero() {
+			lastActivityTime = lastAct.CreatedAt
+		}
 	}
 
 	supervisorState, _ := getSupervisorState(session.ID)
@@ -582,8 +594,11 @@ func (w *Worker) handleCheckSession(payload string) (string, error) {
 	}
 
 	if session.RawState == "AWAITING_PLAN_APPROVAL" && settings.SmartPilotEnabled {
-		activities, err := client.ListActivities(session.ID)
-		if err == nil {
+		activities := checkActivities
+		if listErr != nil {
+			activities, _ = client.ListActivities(session.ID)
+		}
+		if listErr == nil {
 			for _, activity := range activities {
 				if activity.Type != "plan" {
 					continue
@@ -697,7 +712,7 @@ func (w *Worker) handleCheckSession(payload string) (string, error) {
 	}
 
 	if time.Since(lastActivityTime) > time.Duration(thresholdMinutes)*time.Minute && session.RawState != "AWAITING_PLAN_APPROVAL" {
-		lastActivities, _ := client.ListActivities(session.ID)
+		lastActivities := checkActivities
 
 		// If the last message is a supervisor nudge, avoid spamming nudges.
 		// If it is a normal user message, we DO want to nudge/wake up the agent.
