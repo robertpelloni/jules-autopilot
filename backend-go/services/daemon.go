@@ -195,12 +195,16 @@ func (d *Daemon) tick() time.Duration {
 			session.RawState == "PAUSED" ||
 			session.RawState == "COMPLETED" ||
 			session.RawState == "AWAITING_PLAN_APPROVAL"
-		if !needsCheck && session.RawState == "IN_PROGRESS" && session.LastActivityAt != nil {
+		if !needsCheck && session.RawState == "IN_PROGRESS" {
+			lastActTime := session.UpdatedAt
+			if session.LastActivityAt != nil {
+				lastActTime = *session.LastActivityAt
+			}
 			threshold := time.Duration(settings.ActiveWorkThresholdMinutes) * time.Minute
 			if threshold < 5*time.Minute {
 				threshold = 10 * time.Minute
 			}
-			if time.Since(*session.LastActivityAt) > threshold {
+			if time.Since(lastActTime) > threshold {
 				needsCheck = true
 			}
 		}

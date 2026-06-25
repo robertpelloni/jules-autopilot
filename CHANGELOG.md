@@ -2,6 +2,12 @@
 
 All notable changes to this project will be documented in this file.
 
+## [3.6.16] - 2026-06-25
+
+### Fixed
+- Go backend command execution: Introduced `CmdContext` which wraps `exec.CommandContext` to prevent background command execution from deadlocking/hanging indefinitely when running Git or other external system commands. Added a strict 5-second timeout on the `git log` command within the `check_session` queue worker.
+- Go backend daemon: Fixed a bug where `IN_PROGRESS` sessions were skipped entirely during check enqueuing when their `LastActivityAt` timestamp was `nil` (now correctly falls back to `UpdatedAt`).
+
 ## [3.6.15] - 2026-06-24
 
 ### Changed

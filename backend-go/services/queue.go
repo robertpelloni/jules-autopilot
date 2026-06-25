@@ -2,6 +2,7 @@ package services
 
 import (
 	"bytes"
+	"context"
 	"crypto/sha256"
 	"encoding/binary"
 	"encoding/json"
@@ -743,9 +744,11 @@ func (w *Worker) handleCheckSession(payload string) (string, error) {
 
 		// Git commits from the session's project
 		commitContext := ""
-		if output, err := Cmd("git", "-C", projectDir, "log", "--oneline", "-5").Output(); err == nil {
+		gitCtx, gitCancel := context.WithTimeout(context.Background(), 5*time.Second)
+		if output, err := CmdContext(gitCtx, "git", "-C", projectDir, "log", "--oneline", "-5").Output(); err == nil {
 			commitContext = fmt.Sprintf("\n=== Recent Commits ===\n%s", string(output))
 		}
+		gitCancel()
 
 		// Build the prompt: instructions + docs + last 5 agent msgs + commits + instructions again
 		prompt := fmt.Sprintf(

@@ -3,6 +3,7 @@
 package services
 
 import (
+	"context"
 	"os/exec"
 	"syscall"
 )
@@ -15,6 +16,13 @@ func hideWindow(cmd *exec.Cmd) {
 // Cmd wraps exec.Command and hides the console window on Windows.
 func Cmd(name string, args ...string) *exec.Cmd {
 	cmd := exec.Command(name, args...)
+	hideWindow(cmd)
+	return cmd
+}
+
+// CmdContext wraps exec.CommandContext and hides the console window on Windows.
+func CmdContext(ctx context.Context, name string, args ...string) *exec.Cmd {
+	cmd := exec.CommandContext(ctx, name, args...)
 	hideWindow(cmd)
 	return cmd
 }

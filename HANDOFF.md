@@ -1,46 +1,30 @@
-# Session Handoff — June 24, 2026
+# Session Handoff — June 25, 2026
 
 ## Summary
-Re-executed full repository synchronization protocol. Local `main` fast-forwarded through 23 new commits (v3.6.9 → v3.6.14). All remote feature branches re-verified at parity. Version files confirmed in sync. No local changes made — pure catch-up sync.
+Resolved the issue where the Go backend was not nudging/bumping sessions. We identified and fixed a command-execution deadlock in the queue worker and a critical timestamp fallback bug in the background monitoring daemon. Bumped version to `3.6.16`.
 
 ## What was done
 
-### Step 1: Upstream Tracking & Submodule Sanitization
-- `git fetch --all --tags` completed — remote had advanced by 23 commits
-- No upstream fork exists; `origin` (`robertpelloni/jules-autopilot`) is sole source of truth
-- No submodules found in the repository
-- Local `main` fast-forwarded from `2267d39` to `ae9fe7e` (v3.6.14)
-- Dropped stale stash from previous session
+### 1. Command Execution Deadlock Protection (`v3.6.16`)
+- **Root Cause**: The queue worker ran `Cmd("git", "-C", projectDir, "log", "--oneline", "-5").Output()` without any timeout or context. If the Git command blocked (e.g., waiting for lock/credentials/locks file), the queue worker goroutine hung indefinitely, starving the queue.
+- **Fix**: 
+  - Introduced `CmdContext(ctx context.Context, name string, args ...string) *exec.Cmd` in `backend-go/services/hide_window_windows.go` and `hide_window_other.go` (preserving Windows hidden console window attributes).
+  - Wrapped the Git log execution in `backend-go/services/queue.go` inside a `context.WithTimeout` of 5 seconds, ensuring Git commands can never block the queue worker indefinitely.
+  - Terminated 3 orphaned/hanging `git.exe` processes on the OS.
 
-### Step 2: Dual-Direction Intelligent Merge Engine
-- Three remote feature branches re-inspected:
-  - `feat-shadow-pilot-git-diff-ui-12323440949671972104` — still at parity, zero unique commits
-  - `jules-485-merge-test` — still at parity, zero unique commits
-  - `jules-4852916069977232082-be6d9c55` — still at parity, zero unique commits
-- **Forward Merge:** Nothing to merge — no branches have unique progress
-- **Reverse Merge:** Nothing to reverse — all branches at main parity
-- **Upstream Feature Branches:** All three branches are empty/stagnant; ignored per protocol
+### 2. Active Session Inactivity Checker Bug (`v3.6.16`)
+- **Root Cause**: The background monitoring daemon (`backend-go/services/daemon.go`) checked if `IN_PROGRESS` sessions had exceeded the inactivity threshold by evaluating `time.Since(*session.LastActivityAt)`. However, if `session.LastActivityAt` was `nil` (which was the case for many cached sessions), the daemon skipped the check entirely.
+- **Fix**: Refactored the `IN_PROGRESS` check to fall back to `session.UpdatedAt` when `session.LastActivityAt` is `nil` (matching `queue.go`'s fallback logic).
 
-### Step 3: Workspace Cleanup, Documentation & Build
-- **Script Validation:** `start.bat`, `install-service.bat` reviewed — pathing correct. `backend.exe` pre-built binary exists at `backend-go/backend.exe`. Watchdog scripts (`watchdog.cmd`, `watchdog.ps1`, `watchdog_loop.ps1`, `watchdog_simple.cmd`, `setup_watchdog_task.ps1`) all present and validated.
-- **Version Governance:** All version files already in sync at `3.6.14` (VERSION, VERSION.md, package.json, CHANGELOG.md). No bump needed — this was a pure catch-up sync.
-- **Documentation:** Updated `TODO.md` with sync completion entry. ROADMAP.md already reflects the latest features (system tray, rate limiter, LM Studio concurrency, daemon cache, nudge rewrite).
-- **New files identified from remote:** `backend-go/services/tray.go`, `backend-go/tray.cs`, `backend-go/tray.ps1`, `backend-go/services/hide_window_windows.go`, `backend-go/services/hide_window_other.go`, `backend-go/services/rate_limiter.go`
+### 3. Verification & Health Check
+- Compiled the Go backend (`go build`) and killed the running `backend` process.
+- The watchdog script (`run.bat`) successfully recompiled and restarted the backend (PID updated, healthy on port `8082`).
+- The startup task successfully cleared stale jobs from the DB.
+- The background daemon successfully enqueued `check_session` jobs for all eligible sessions (which now includes previously skipped `IN_PROGRESS` sessions).
+- Verified that all enqueued `check_session` jobs are executing and draining rapidly (completing in seconds, with zero failures).
 
 ## Version
-3.6.14 (no bump — pure catch-up sync)
-
-## Active Branches
-- `main` — at origin/main parity (v3.6.14)
-- `feat-shadow-pilot-git-diff-ui-12323440949671972104` — empty, safe to delete
-- `jules-485-merge-test` — empty, safe to delete
-- `jules-4852916069977232082-be6d9c55` — empty, safe to delete
-
-## Running Services (from previous session)
-- **Vite Dev Server:** `http://localhost:3006` — needs restart (dep re-optimization)
-- **Go Backend:** `http://localhost:8080` — may need restart to pick up new code
+`3.6.16` (bumped in `VERSION`, `VERSION.md`, and `package.json`, and documented in `CHANGELOG.md`).
 
 ## Open Items
-- Clean up stale remote branches (all three feature branches)
-- Restart Vite dev server and Go backend to pick up v3.6.10→v3.6.14 changes
-- The `start.bat` still uses `vite build` for dev workflow — consider a `dev.bat` variant
+- Commit and push changes to Git (active).
