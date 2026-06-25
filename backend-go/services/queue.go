@@ -700,7 +700,7 @@ func (w *Worker) handleCheckSession(payload string) (string, error) {
 
 		// If the last message is a supervisor nudge, avoid spamming nudges.
 		// If it is a normal user message, we DO want to nudge/wake up the agent.
-		if session.RawState != "FAILED" && session.RawState != "PAUSED" && len(lastActivities) > 0 {
+		if session.RawState != "FAILED" && session.RawState != "PAUSED" && session.RawState != "COMPLETED" && len(lastActivities) > 0 {
 			lastAct := lastActivities[len(lastActivities)-1]
 			if lastAct.Role == "user" && strings.HasPrefix(lastAct.Content, "[Supervisor]") {
 				return "none", nil

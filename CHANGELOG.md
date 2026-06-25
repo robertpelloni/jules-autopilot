@@ -2,6 +2,11 @@
 
 All notable changes to this project will be documented in this file.
 
+## [3.6.15] - 2026-06-24
+
+### Changed
+- Go backend: Exempted `COMPLETED` sessions from the supervisor nudge skip check in `services/queue.go` (joining `FAILED` and `PAUSED` sessions). This ensures completed, failed, and paused sessions are bumped/nudged regardless of whether the last activity was a supervisor nudge.
+
 ## [3.6.14] - 2026-06-24
 
 ### Fixed
