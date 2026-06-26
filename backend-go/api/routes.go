@@ -758,6 +758,9 @@ func SetupRoutes(app *fiber.App) {
 	api.Get("/scheduler/tasks", getScheduledTasks)
 	api.Post("/scheduler/tasks", createScheduledTask)
 	api.Delete("/scheduler/tasks/:name", deleteScheduledTask)
+
+	// Tray icon live summary (polled every 5s by Windows tray icon)
+	api.Get("/tray/summary", getTraySummary)
 }
 
 func triggerFleetSync(c *fiber.Ctx) error {
@@ -2798,4 +2801,13 @@ func getArchitectureGraphAPI(c *fiber.Ctx) error {
 		return c.Status(500).JSON(fiber.Map{"error": err.Error()})
 	}
 	return c.JSON(graph)
+}
+
+// getTraySummary returns a compact snapshot for the Windows tray icon.
+func getTraySummary(c *fiber.Ctx) error {
+	summary := services.GetTraySummary()
+	if summary == nil {
+		return c.Status(503).JSON(fiber.Map{"error": "tray summary not available on this platform"})
+	}
+	return c.JSON(summary)
 }
