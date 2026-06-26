@@ -321,7 +321,7 @@ var freellmHttpClient = &http.Client{
 	Timeout: 10 * time.Minute,
 }
 
-var freellmSem = make(chan struct{}, 1)
+var freellmSem = make(chan struct{}, 4)
 
 func generateOpenRouterText(apiKey, model, systemPrompt string, messages []LLMMessage) (LLMResult, error) {
 	start := time.Now()
@@ -359,11 +359,7 @@ func generateOpenRouterText(apiKey, model, systemPrompt string, messages []LLMMe
 		}
 		retryReq.Header.Set("Authorization", "Bearer "+apiKey)
 		retryReq.Header.Set("Content-Type", "application/json")
-		select {
-		case freellmSem <- struct{}{}:
-		case <-time.After(30 * time.Second):
-			return LLMResult{}, fmt.Errorf("FreeLLM semaphore busy for 30s — skipping")
-		}
+		freellmSem <- struct{}{}
 		defer func() { <-freellmSem }()
 		resp, err := freellmHttpClient.Do(retryReq)
 		if err != nil {
@@ -385,11 +381,7 @@ func generateOpenRouterText(apiKey, model, systemPrompt string, messages []LLMMe
 
 	// Local hardware: only one LM Studio inference at a time
 	if isLMStudio {
-		select {
-		case lmStudioSem <- struct{}{}:
-		case <-time.After(30 * time.Second):
-			return LLMResult{}, fmt.Errorf("LM Studio semaphore busy for 30s — skipping")
-		}
+		lmStudioSem <- struct{}{}
 		defer func() { <-lmStudioSem }()
 	}
 

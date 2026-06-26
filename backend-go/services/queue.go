@@ -580,7 +580,7 @@ func (w *Worker) handleCheckSession(payload string) (string, error) {
 	// If the cached data says this session was recently active,
 	// skip it without burning API calls.
 	if data.Session.RawState != "AWAITING_PLAN_APPROVAL" &&
-		time.Since(cachedLastActivity) <= time.Duration(cachedThreshold)*time.Minute {
+		time.Since(cachedLastActivity) < time.Duration(cachedThreshold)*time.Minute {
 		return "none", nil
 	}
 
