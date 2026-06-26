@@ -309,9 +309,9 @@ var llmHttpClient = &http.Client{
 	Timeout: 90 * time.Second,
 }
 
-// LM Studio can take many minutes on local hardware — wait as long as needed.
+// LM Studio local inference — 120s should be enough; longer stalls block all workers.
 var lmStudioHttpClient = &http.Client{
-	Timeout: 30 * time.Minute,
+	Timeout: 120 * time.Second,
 }
 
 // Local hardware — up to four LM Studio inferences at a time.
@@ -359,7 +359,11 @@ func generateOpenRouterText(apiKey, model, systemPrompt string, messages []LLMMe
 		}
 		retryReq.Header.Set("Authorization", "Bearer "+apiKey)
 		retryReq.Header.Set("Content-Type", "application/json")
-		freellmSem <- struct{}{}
+		select {
+		case freellmSem <- struct{}{}:
+		case <-time.After(30 * time.Second):
+			return LLMResult{}, fmt.Errorf("FreeLLM semaphore busy for 30s — skipping")
+		}
 		defer func() { <-freellmSem }()
 		resp, err := freellmHttpClient.Do(retryReq)
 		if err != nil {
@@ -381,7 +385,11 @@ func generateOpenRouterText(apiKey, model, systemPrompt string, messages []LLMMe
 
 	// Local hardware: only one LM Studio inference at a time
 	if isLMStudio {
-		lmStudioSem <- struct{}{}
+		select {
+		case lmStudioSem <- struct{}{}:
+		case <-time.After(30 * time.Second):
+			return LLMResult{}, fmt.Errorf("LM Studio semaphore busy for 30s — skipping")
+		}
 		defer func() { <-lmStudioSem }()
 	}
 

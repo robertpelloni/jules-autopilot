@@ -227,7 +227,10 @@ func (d *Daemon) tick() time.Duration {
 		payload := map[string]interface{}{
 			"session": session,
 		}
-		if _, err := AddJob("check_session", payload); err != nil {
+		// Stagger check_session jobs to avoid bursting the Jules API.
+		// Each job is delayed by 2s × queue position so they spread out.
+		staggerDelay := time.Duration(queuedSessions*2) * time.Second
+		if _, err := AddJob("check_session", payload, time.Now().Add(staggerDelay)); err != nil {
 			log.Printf("[Daemon] Failed to enqueue check_session for %s: %v", session.ID, err)
 			continue
 		}
@@ -261,7 +264,9 @@ func (d *Daemon) tick() time.Duration {
 					continue
 				}
 				payload := map[string]interface{}{"sourceId": source.ID}
-				if _, err := AddJob("check_issues", payload); err != nil {
+				// Stagger check_issues jobs to avoid bursting the Jules API
+				staggerDelay := time.Duration(queuedIssueChecks*5) * time.Second
+				if _, err := AddJob("check_issues", payload, time.Now().Add(staggerDelay)); err != nil {
 					log.Printf("[Daemon] Failed to enqueue check_issues for %s: %v", source.ID, err)
 					continue
 				}

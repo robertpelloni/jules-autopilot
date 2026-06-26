@@ -554,6 +554,39 @@ func (w *Worker) handleCheckSession(payload string) (string, error) {
 		return "none", err
 	}
 
+	// ───────────────────────────────────────────────────────────
+	// PHASE 1 — Quick cached check (zero API calls to Jules)
+	// If the cached session time shows it's not yet due for a
+	// nudge, bail out immediately. This avoids hammering the
+	// Jules API with GetSession + ListActivities on every tick.
+	// ───────────────────────────────────────────────────────────
+	cachedLastActivity := data.Session.UpdatedAt
+	if data.Session.LastActivityAt != nil {
+		cachedLastActivity = *data.Session.LastActivityAt
+	}
+
+	// Compute threshold from cached state
+	cachedThreshold := settings.InactivityThresholdMinutes
+	switch data.Session.RawState {
+	case "FAILED", "PAUSED":
+		cachedThreshold = 1
+	case "IN_PROGRESS":
+		cachedThreshold = settings.ActiveWorkThresholdMinutes
+		if time.Since(cachedLastActivity) < recentActivityWindow {
+			return "none", nil
+		}
+	}
+
+	// If the cached data says this session was recently active,
+	// skip it without burning API calls.
+	if data.Session.RawState != "AWAITING_PLAN_APPROVAL" &&
+		time.Since(cachedLastActivity) <= time.Duration(cachedThreshold)*time.Minute {
+		return "none", nil
+	}
+
+	// ───────────────────────────────────────────────────────────
+	// PHASE 2 — Fresh data needed (this session may need action)
+	// ───────────────────────────────────────────────────────────
 	client := NewJulesClient()
 	session, err := client.GetSession(data.Session.ID)
 	if err != nil {
@@ -565,15 +598,12 @@ func (w *Worker) handleCheckSession(payload string) (string, error) {
 		log.Printf("[Queue] Failed to update session cache for %s: %v", session.ID, saveErr)
 	}
 
-	// WARNING: The Jules API always returns UpdatedAt = current time and LastActivityAt = nil
-	// for ALL sessions. We must use the cached session's UpdatedAt (from the daemon's
-	// previous fetch) as the activity time, OR better — the last activity's createTime.
-	lastActivityTime := data.Session.UpdatedAt // cached time, not the Jules-returned current time
+	// Compute accurate lastActivityTime from fresh data
+	lastActivityTime := session.UpdatedAt
 	if session.LastActivityAt != nil {
 		lastActivityTime = *session.LastActivityAt
 	}
-	// Fetch activities early so we can use their timestamps for accurate inactivity measurement.
-	// ListActivities returns at most ~100 activities (2 pages).
+	// Override with the last activity's real timestamp if available
 	checkActivities, listErr := client.ListActivities(session.ID)
 	if listErr == nil && len(checkActivities) > 0 {
 		lastAct := checkActivities[len(checkActivities)-1]
