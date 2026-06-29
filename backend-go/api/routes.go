@@ -688,6 +688,7 @@ func SetupRoutes(app *fiber.App) {
 	// Broadcast route
 	api.Post("/broadcast", postBroadcast)
 	api.Post("/broadcast/halt", broadcastHaltAll)
+	api.Post("/broadcast/halt-short", broadcastHaltShort)
 
 	// Fleet sync route
 	api.Post("/fleet/sync", triggerFleetSync)
@@ -1879,6 +1880,12 @@ func postBroadcast(c *fiber.Ctx) error {
 
 func broadcastHaltAll(c *fiber.Ctx) error {
 	msg := "Immediately cease all prior work. Pull, update, sync, merge from main, intelligently without losing any features or progress either way, cherry picking individual features as necessary, then add all commit all push all. Then please proceed as you advise."
+	sent := services.BroadcastMessageToAll(msg)
+	return c.JSON(fiber.Map{"success": true, "sent": sent, "message": msg})
+}
+
+func broadcastHaltShort(c *fiber.Ctx) error {
+	msg := "Immediately cease all prior work. Update all documentation and commit and push, then halt."
 	sent := services.BroadcastMessageToAll(msg)
 	return c.JSON(fiber.Map{"success": true, "sent": sent, "message": msg})
 }
