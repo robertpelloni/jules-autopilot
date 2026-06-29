@@ -71,7 +71,8 @@ export async function fetchNotifications(opts?: {
   try {
     const response = await fetch(`/api/notifications?${params}`);
     if (!response.ok) return [];
-    return response.json();
+    const data = await response.json();
+    return data.notifications || [];
   } catch (_e) {
     console.warn('Backend notifications unavailable, returning empty list');
     return [];
