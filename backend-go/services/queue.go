@@ -1016,20 +1016,35 @@ func ArchiveAndRestartAllSessions() (map[string]interface{}, error) {
 		return nil, fmt.Errorf("Jules not configured")
 	}
 
-	sessions, err := GetCachedSessions()
-	if err != nil {
-		return nil, fmt.Errorf("failed to get cached sessions: %w", err)
+	// Only touch sessions that aren't already archived
+	var unarchived []models.JulesSession
+	db.DB.Where("archived = ?", false).Find(&unarchived)
+
+	// Group by sourceId — pick the newest session per repo
+	type repoGroup struct {
+		session models.JulesSession
+	}
+	repoMap := map[string]repoGroup{}
+	for _, s := range unarchived {
+		if s.SourceID == "" {
+			continue
+		}
+		existing, ok := repoMap[s.SourceID]
+		if !ok || s.UpdatedAt.After(existing.session.UpdatedAt) {
+			repoMap[s.SourceID] = repoGroup{session: s}
+		}
 	}
 
-	// Mark all cached sessions as archived
-	if err := db.DB.Model(&models.JulesSession{}).Where("1 = 1").Update("archived", true).Error; err != nil {
+	// Mark all unarchived sessions as archived
+	if err := db.DB.Model(&models.JulesSession{}).Where("archived = ?", false).Update("archived", true).Error; err != nil {
 		return nil, fmt.Errorf("failed to archive sessions: %w", err)
 	}
 
-	// Create new sessions — copy the first user message, no plan approval
+	// Create one new session per repo
 	created := 0
 	var errors []string
-	for _, s := range sessions {
+	for _, g := range repoMap {
+		s := g.session
 		prompt := getFirstUserMessage(client, s.ID)
 		if prompt == "" {
 			prompt = fmt.Sprintf("Continue autonomous work on %s. Previous session: %s", s.SourceID, s.Title)
@@ -1041,16 +1056,16 @@ func ArchiveAndRestartAllSessions() (map[string]interface{}, error) {
 		created++
 	}
 
-	addKeeperLog(fmt.Sprintf("Archive: archived %d sessions, created %d new", len(sessions), created), "action", "global", map[string]interface{}{
+	addKeeperLog(fmt.Sprintf("Archive: archived %d sessions, created %d new (one per repo)", len(unarchived), created), "action", "global", map[string]interface{}{
 		"event":   "sessions_archived",
-		"total":   len(sessions),
+		"total":   len(unarchived),
 		"created": created,
 	})
-	log.Printf("[Archive] Archived %d sessions, created %d new", len(sessions), created)
+	log.Printf("[Archive] Archived %d sessions, created %d new (one per repo)", len(unarchived), created)
 
 	return map[string]interface{}{
 		"success":  true,
-		"archived": len(sessions),
+		"archived": len(unarchived),
 		"created":  created,
 		"errors":   errors,
 	}, nil
