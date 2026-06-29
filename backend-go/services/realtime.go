@@ -6,6 +6,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/google/uuid"
 	"github.com/jules-autopilot/backend/db"
 	"github.com/jules-autopilot/backend/models"
 )
@@ -42,7 +43,7 @@ func addKeeperLog(message, logType, sessionID string, details interface{}) {
 	}
 
 	entry := models.KeeperLog{
-		ID:        fmt.Sprintf("log-%d", time.Now().UnixNano()),
+		ID:        fmt.Sprintf("log-%s", uuid.New().String()[:16]),
 		SessionID: sessionID,
 		Type:      logType,
 		Message:   message,
@@ -53,8 +54,12 @@ func addKeeperLog(message, logType, sessionID string, details interface{}) {
 	_ = db.DB.Create(&entry).Error
 	emitDaemonEvent("log_added", map[string]interface{}{"log": entry})
 
-	// Auto-create notifications for important keeper events
-	go AutoNotifyFromKeeperLog(entry)
+	// Cap keeper_logs at 100 — delete oldest when over
+	var count int64
+	db.DB.Model(&models.KeeperLog{}).Count(&count)
+	if count > 100 {
+		db.DB.Exec("DELETE FROM keeper_logs WHERE id NOT IN (SELECT id FROM keeper_logs ORDER BY created_at DESC LIMIT 100)")
+	}
 
 	// Record audit trail for action/error events
 	if details != nil {

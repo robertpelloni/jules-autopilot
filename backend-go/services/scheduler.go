@@ -185,8 +185,8 @@ func (s *Scheduler) executeTask(name string) {
 		db.DB.Exec("DELETE FROM audit_entries WHERE id NOT IN (SELECT id FROM audit_entries ORDER BY id DESC LIMIT 500)")
 		// Cap notifications to 50
 		db.DB.Exec("DELETE FROM notifications WHERE id NOT IN (SELECT id FROM notifications ORDER BY id DESC LIMIT 50)")
-		// Cap keeper_logs to 200
-		db.DB.Exec("DELETE FROM keeper_logs WHERE id NOT IN (SELECT id FROM keeper_logs ORDER BY id DESC LIMIT 200)")
+		// Cap keeper_logs to 100
+		db.DB.Exec("DELETE FROM keeper_logs WHERE id NOT IN (SELECT id FROM keeper_logs ORDER BY id DESC LIMIT 100)")
 		// Cleanup old dismissed notifications
 		if count, err := CleanupOldNotifications(90); err == nil && count > 0 {
 			log.Printf("[Scheduler] Cleaned up %d old notifications", count)
