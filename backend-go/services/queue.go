@@ -929,7 +929,12 @@ func GetCachedSessions() ([]models.JulesSession, error) {
 }
 
 // BroadcastMessageToAll sends a plain message to every cached session immediately.
+// Before sending, it clears the queue to prevent stale jobs from interfering.
 func BroadcastMessageToAll(msg string) int {
+	// Clear all pending and processing jobs so we start fresh
+	db.DB.Where("status IN ?", []string{"pending", "processing"}).Delete(&models.QueueJob{})
+	log.Printf("[BroadcastMsg] Cleared queue before broadcast")
+
 	client := NewJulesClient()
 	if !client.isConfigured() {
 		log.Println("[BroadcastMsg] Jules not configured")
@@ -962,6 +967,21 @@ func BroadcastMessageToAll(msg string) int {
 	return sent
 }
 
+// getFirstUserMessage fetches the oldest user message from a session's activities.
+func getFirstUserMessage(client *JulesClient, sessionID string) string {
+	activities, err := client.ListActivitiesWithLimit(sessionID, 1)
+	if err != nil || len(activities) == 0 {
+		return ""
+	}
+	// ListActivities returns newest first — walk backwards to find the first user message.
+	for i := len(activities) - 1; i >= 0; i-- {
+		if activities[i].Role == "user" && activities[i].Content != "" {
+			return activities[i].Content
+		}
+	}
+	return ""
+}
+
 // ArchiveAndRestartAllSessions archives every session in the local cache and creates
 // fresh sessions on Jules with the same source + title so work restarts clean.
 func ArchiveAndRestartAllSessions() (map[string]interface{}, error) {
@@ -980,12 +1000,15 @@ func ArchiveAndRestartAllSessions() (map[string]interface{}, error) {
 		return nil, fmt.Errorf("failed to archive sessions: %w", err)
 	}
 
-	// Create new sessions with the same source + title
+	// Create new sessions — copy the first user message, no plan approval
 	created := 0
 	var errors []string
 	for _, s := range sessions {
-		prompt := fmt.Sprintf("Continue autonomous work on %s. Previous session: %s", s.SourceID, s.Title)
-		if _, err := client.CreateSession(s.SourceID, prompt, s.Title); err != nil {
+		prompt := getFirstUserMessage(client, s.ID)
+		if prompt == "" {
+			prompt = fmt.Sprintf("Continue autonomous work on %s. Previous session: %s", s.SourceID, s.Title)
+		}
+		if _, err := client.CreateSession(s.SourceID, prompt, s.Title, false); err != nil {
 			errors = append(errors, fmt.Sprintf("%s: %v", s.ID[:8], err))
 			continue
 		}
@@ -1000,10 +1023,10 @@ func ArchiveAndRestartAllSessions() (map[string]interface{}, error) {
 	log.Printf("[Archive] Archived %d sessions, created %d new", len(sessions), created)
 
 	return map[string]interface{}{
-		"success":         true,
-		"archived":        len(sessions),
-		"created":         created,
-		"errors":          errors,
+		"success":  true,
+		"archived": len(sessions),
+		"created":  created,
+		"errors":   errors,
 	}, nil
 }
 

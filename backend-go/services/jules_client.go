@@ -594,7 +594,7 @@ func (c *JulesClient) UpdateSession(sessionID string, updates map[string]interfa
 	return transformSession(session), nil
 }
 
-func (c *JulesClient) CreateSession(sourceID, prompt, title string) (models.JulesSession, error) {
+func (c *JulesClient) CreateSession(sourceID, prompt, title string, requirePlanApproval ...bool) (models.JulesSession, error) {
 	if !c.isConfigured() {
 		return models.JulesSession{}, fmt.Errorf("Jules credentials not found")
 	}
@@ -608,7 +608,7 @@ func (c *JulesClient) CreateSession(sourceID, prompt, title string) (models.Jule
 			},
 		},
 		"title":               title,
-		"requirePlanApproval": true,
+		"requirePlanApproval": len(requirePlanApproval) > 0 && requirePlanApproval[0],
 	}
 
 	jsonPayload, _ := json.Marshal(requestBody)
