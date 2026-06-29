@@ -2,6 +2,14 @@
 
 All notable changes to this project will be documented in this file.
 
+## [3.6.17] - 2026-06-29
+
+### Meta
+- Executed full repository synchronization protocol: upstream tracking, branch reconciliation, version governance.
+- All version references synced to 3.6.17 (VERSION, VERSION.md, package.json, CLI, shared, lib/version.ts).
+- No submodules present; no feature branches with unique progress to merge.
+- Updated HANDOFF.md, TODO.md, ROADMAP.md with session summary.
+
 ## [3.6.16] - 2026-06-25
 
 ### Fixed
