@@ -594,6 +594,12 @@ func (w *Worker) handleCheckSession(payload string) (string, error) {
 	}
 
 	// Save refreshed session to DB cache so the UI and Daemon stay updated.
+	// Preserve the Archived field — Jules API doesn't have it, so fresh data
+	// would always reset it to false.
+	var existing models.JulesSession
+	if db.DB.First(&existing, "id = ?", session.ID).Error == nil {
+		session.Archived = existing.Archived
+	}
 	if saveErr := db.DB.Save(&session).Error; saveErr != nil {
 		log.Printf("[Queue] Failed to update session cache for %s: %v", session.ID, saveErr)
 	}
@@ -900,10 +906,26 @@ func BroadcastContinue() {
 }
 
 // CacheSessions replaces all locally stored sessions with fresh data from Jules.
-// This lets the dashboard load instantly without waiting for the Jules API.
+// Preserves the Archived field from existing records since Jules doesn't track it.
 func CacheSessions(sessions []models.JulesSession) {
+	// Snapshot current Archived states before wiping
+	var archivedStates []struct {
+		ID       string
+		Archived bool
+	}
+	db.DB.Model(&models.JulesSession{}).Where("archived = ?", true).Find(&archivedStates)
+	archivedMap := map[string]bool{}
+	for _, s := range archivedStates {
+		archivedMap[s.ID] = true
+	}
+
 	err := db.DB.Transaction(func(tx *gorm.DB) error {
 		tx.Unscoped().Where("1 = 1").Delete(&models.JulesSession{})
+		for i := range sessions {
+			if archivedMap[sessions[i].ID] {
+				sessions[i].Archived = true
+			}
+		}
 		if len(sessions) > 0 {
 			if err := tx.Create(&sessions).Error; err != nil {
 				return err
