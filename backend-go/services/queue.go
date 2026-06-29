@@ -967,16 +967,20 @@ func BroadcastMessageToAll(msg string) int {
 	return sent
 }
 
-// getFirstUserMessage fetches the oldest user message from a session's activities.
+// getFirstUserMessage fetches the first meaningful content from a session's activities.
+// The initial prompt may not have Role="user" — it's often the first activity with any
+// content, regardless of role. We fetch up to 5 pages (250 activities) to reach the start.
 func getFirstUserMessage(client *JulesClient, sessionID string) string {
-	activities, err := client.ListActivitiesWithLimit(sessionID, 1)
+	activities, err := client.ListActivitiesWithLimit(sessionID, 5)
 	if err != nil || len(activities) == 0 {
 		return ""
 	}
-	// ListActivities returns newest first — walk backwards to find the first user message.
+	// ListActivities returns newest first — walk backwards to find the first non-empty
+	// content, whether it's a user message, agent message, or other activity type.
 	for i := len(activities) - 1; i >= 0; i-- {
-		if activities[i].Role == "user" && activities[i].Content != "" {
-			return activities[i].Content
+		content := strings.TrimSpace(activities[i].Content)
+		if content != "" && !strings.HasPrefix(content, "[Supervisor]") {
+			return content
 		}
 	}
 	return ""
