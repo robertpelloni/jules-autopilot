@@ -1,4 +1,4 @@
-import { Participant } from "./orchestration/types";
+import type { Participant } from "./orchestration/types";
 
 export interface Source {
     id: string;
@@ -25,6 +25,7 @@ export interface Session {
     prompt?: string;
     status: 'active' | 'completed' | 'failed' | 'paused' | 'awaiting_approval';
     rawState?: string; // Original API state
+    archived?: boolean;
     createdAt: string;
     updatedAt: string;
     lastActivityAt?: string;

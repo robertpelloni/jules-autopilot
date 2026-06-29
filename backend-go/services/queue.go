@@ -928,6 +928,85 @@ func GetCachedSessions() ([]models.JulesSession, error) {
 	return sessions, nil
 }
 
+// BroadcastMessageToAll sends a plain message to every cached session immediately.
+func BroadcastMessageToAll(msg string) int {
+	client := NewJulesClient()
+	if !client.isConfigured() {
+		log.Println("[BroadcastMsg] Jules not configured")
+		return 0
+	}
+	sessions, err := GetCachedSessions()
+	if err != nil {
+		log.Printf("[BroadcastMsg] Failed to get cached sessions: %v", err)
+		return 0
+	}
+	sent := 0
+	for _, session := range sessions {
+		if _, err := client.CreateActivity(session.ID, CreateActivityRequest{
+			Content: "[Supervisor] " + msg,
+			Type:    "message",
+			Role:    "user",
+		}); err != nil {
+			log.Printf("[BroadcastMsg] Failed to send to %s: %v", session.ID[:8], err)
+			continue
+		}
+		sent++
+	}
+	addKeeperLog(fmt.Sprintf("Broadcast message sent to %d/%d sessions", sent, len(sessions)), "action", "global", map[string]interface{}{
+		"event": "broadcast_message",
+		"sent":  sent,
+		"total": len(sessions),
+		"msg":   msg,
+	})
+	log.Printf("[BroadcastMsg] Sent to %d/%d sessions", sent, len(sessions))
+	return sent
+}
+
+// ArchiveAndRestartAllSessions archives every session in the local cache and creates
+// fresh sessions on Jules with the same source + title so work restarts clean.
+func ArchiveAndRestartAllSessions() (map[string]interface{}, error) {
+	client := NewJulesClient()
+	if !client.isConfigured() {
+		return nil, fmt.Errorf("Jules not configured")
+	}
+
+	sessions, err := GetCachedSessions()
+	if err != nil {
+		return nil, fmt.Errorf("failed to get cached sessions: %w", err)
+	}
+
+	// Mark all cached sessions as archived
+	if err := db.DB.Model(&models.JulesSession{}).Where("1 = 1").Update("archived", true).Error; err != nil {
+		return nil, fmt.Errorf("failed to archive sessions: %w", err)
+	}
+
+	// Create new sessions with the same source + title
+	created := 0
+	var errors []string
+	for _, s := range sessions {
+		prompt := fmt.Sprintf("Continue autonomous work on %s. Previous session: %s", s.SourceID, s.Title)
+		if _, err := client.CreateSession(s.SourceID, prompt, s.Title); err != nil {
+			errors = append(errors, fmt.Sprintf("%s: %v", s.ID[:8], err))
+			continue
+		}
+		created++
+	}
+
+	addKeeperLog(fmt.Sprintf("Archive: archived %d sessions, created %d new", len(sessions), created), "action", "global", map[string]interface{}{
+		"event":   "sessions_archived",
+		"total":   len(sessions),
+		"created": created,
+	})
+	log.Printf("[Archive] Archived %d sessions, created %d new", len(sessions), created)
+
+	return map[string]interface{}{
+		"success":         true,
+		"archived":        len(sessions),
+		"created":         created,
+		"errors":          errors,
+	}, nil
+}
+
 // generateNudgeMessage uses LM Studio to craft an intelligent bump message for a session.
 func generateNudgeMessage(session models.JulesSession, settings models.KeeperSettings) (string, error) {
 	client := NewJulesClient()

@@ -123,7 +123,9 @@ export function SessionList({
 
   const visibleSessions = useMemo(() => {
     console.log(`[SessionList] Computing visibleSessions. Total sessions: ${sessions.length}`);
-    const filtered = sessions.filter((session) => {
+    // Filter out archived sessions by default
+    const unarchived = sessions.filter(s => !s.archived);
+    const filtered = unarchived.filter((session) => {
       if (!searchQuery) return true;
       const query = searchQuery.toLowerCase();
       const title = (session.title || "").toLowerCase();

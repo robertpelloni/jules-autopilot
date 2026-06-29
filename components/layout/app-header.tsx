@@ -4,6 +4,8 @@ import {
   Settings as SettingsIcon,
   Terminal,
   RefreshCw,
+  Square,
+  Archive,
 } from "lucide-react";
 import { useState, useEffect } from "react";
 import { SettingsDialog } from "@/components/settings-dialog";
@@ -140,6 +142,43 @@ export function AppHeader({ onNewSession }: AppHeaderProps) {
         >
           <Plus className="w-3.5 h-3.5" />
           <span className="text-[10px] font-bold uppercase tracking-wider">New Session</span>
+        </Button>
+
+        <Button
+          variant="ghost"
+          size="sm"
+          className="h-8 gap-2 px-3 text-red-400/60 hover:text-red-400 hover:bg-red-500/10 border border-red-500/20"
+          onClick={async () => {
+            if (!confirm('Send halt-and-sync to all sessions?')) return;
+            try {
+              const r = await fetch('/api/broadcast/halt', { method: 'POST' });
+              const d = await r.json();
+              toast.success(`Halt sent to ${d.sent} sessions`);
+            } catch { toast.error('Failed'); }
+          }}
+          title="Halt → Pull → Merge → Commit → Continue"
+        >
+          <Square className="w-3 h-3" />
+          <span className="text-[9px] font-bold uppercase tracking-wider hidden lg:inline">Halt & Sync</span>
+        </Button>
+
+        <Button
+          variant="ghost"
+          size="sm"
+          className="h-8 gap-2 px-3 text-amber-400/60 hover:text-amber-400 hover:bg-amber-500/10 border border-amber-500/20"
+          onClick={async () => {
+            if (!confirm('Archive ALL sessions and restart fresh ones?')) return;
+            try {
+              const r = await fetch('/api/sessions/archive-all', { method: 'POST' });
+              const d = await r.json();
+              toast.success(`Archived ${d.archived}, created ${d.created} new`);
+              window.location.reload();
+            } catch { toast.error('Archive failed'); }
+          }}
+          title="Archive all and restart"
+        >
+          <Archive className="w-3 h-3" />
+          <span className="text-[9px] font-bold uppercase tracking-wider hidden lg:inline">Archive All</span>
         </Button>
 
         <Button

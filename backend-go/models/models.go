@@ -220,6 +220,7 @@ type JulesSession struct {
 	Status         string               `json:"status"` // 'active', 'completed', 'failed', 'paused', 'awaiting_approval'
 	RawState       string               `json:"rawState"`
 	Branch         string               `json:"branch"`
+	Archived       bool                 `gorm:"default:false;index" json:"archived"`
 	Outputs        []JulesSessionOutput `json:"outputs,omitempty" gorm:"-"`
 	LastActivityAt *time.Time           `json:"lastActivityAt"`
 	CreatedAt      time.Time            `json:"createdAt"`

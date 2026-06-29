@@ -677,13 +677,17 @@ func SetupRoutes(app *fiber.App) {
 	api.Get("/sessions", getSessions)
 	api.Patch("/sessions/:id", patchSession)
 	api.Post("/sessions/:id/activities", createActivity)
-	api.Post("/sessions/:idAndAction", handleSessionAction)
 	api.Post("/sessions/:id/export-to-repo", exportSessionToRepo)
 	api.Post("/sessions/:id/save-memory", saveSessionMemory)
 	api.Post("/sessions/:id/nudge", nudgeSession)
 
+	// Archive all — MUST come before :idAndAction to avoid param collision
+	api.Post("/sessions/archive-all", archiveAllSessions)
+	api.Post("/sessions/:idAndAction", handleSessionAction)
+
 	// Broadcast route
 	api.Post("/broadcast", postBroadcast)
+	api.Post("/broadcast/halt", broadcastHaltAll)
 
 	// Fleet sync route
 	api.Post("/fleet/sync", triggerFleetSync)
@@ -1871,6 +1875,20 @@ func postBroadcast(c *fiber.Ctx) error {
 	}
 	Broadcast(msg)
 	return c.Status(200).JSON(fiber.Map{"success": true})
+}
+
+func broadcastHaltAll(c *fiber.Ctx) error {
+	msg := "Immediately cease all prior work. Pull, update, sync, merge from main, intelligently without losing any features or progress either way, cherry picking individual features as necessary, then add all commit all push all. Then please proceed as you advise."
+	sent := services.BroadcastMessageToAll(msg)
+	return c.JSON(fiber.Map{"success": true, "sent": sent, "message": msg})
+}
+
+func archiveAllSessions(c *fiber.Ctx) error {
+	result, err := services.ArchiveAndRestartAllSessions()
+	if err != nil {
+		return c.Status(500).JSON(fiber.Map{"error": err.Error()})
+	}
+	return c.JSON(result)
 }
 
 // Notification handlers

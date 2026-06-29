@@ -47,12 +47,15 @@ export function SessionBoard({ onSelectSession, onOpenNewSession }: SessionBoard
     }
   }, [refreshTrigger, loadSessions]);
 
+  // Filter out archived sessions
+  const visibleSessions = useMemo(() => sessions.filter(s => !s.archived), [sessions]);
+
   const stats = useMemo(() => {
-    const active = sessions.filter(s => s.status === 'active').length;
-    const completed = sessions.filter(s => s.status === 'completed').length;
-    const failed = sessions.filter(s => s.status === 'failed').length;
-    return { active, completed, failed, total: sessions.length };
-  }, [sessions]);
+    const active = visibleSessions.filter(s => s.status === 'active').length;
+    const completed = visibleSessions.filter(s => s.status === 'completed').length;
+    const failed = visibleSessions.filter(s => s.status === 'failed').length;
+    return { active, completed, failed, total: visibleSessions.length };
+  }, [visibleSessions]);
 
   if (loading && sessions.length === 0) {
     return (
@@ -101,7 +104,7 @@ export function SessionBoard({ onSelectSession, onOpenNewSession }: SessionBoard
           </div>
         )}
 
-        {sessions.length === 0 ? (
+        {visibleSessions.length === 0 ? (
           <div className="flex flex-col items-center justify-center h-64 border border-dashed border-white/10 rounded-xl bg-white/[0.02]">
             <MessageSquare className="h-8 w-8 text-white/10 mb-4" />
             <p className="text-sm text-white/40 font-mono uppercase tracking-widest mb-4">No sessions found</p>
@@ -111,7 +114,7 @@ export function SessionBoard({ onSelectSession, onOpenNewSession }: SessionBoard
           </div>
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-            {sessions.map((session) => (
+            {visibleSessions.map((session) => (
               <Card 
                 key={session.id} 
                 className="bg-zinc-900 border-white/10 hover:border-white/20 transition-all cursor-pointer group"
