@@ -505,6 +505,107 @@ func (c *JulesClient) ListActivitiesWithLimit(sessionId string, maxPages int) ([
 	return allActivities, nil
 }
 
+// ListActivitiesFirstAndLastPages fetches only the first (newest) and last (oldest) pages of activities.
+// This is much faster than fetching all pages while still capturing the session's boundaries.
+func (c *JulesClient) ListActivitiesFirstAndLastPages(sessionId string) ([]models.JulesActivity, error) {
+	if !c.isConfigured() {
+		return nil, fmt.Errorf("Jules credentials not found")
+	}
+
+	// Fetch first page (newest activities)
+	url := fmt.Sprintf("%s/sessions/%s/activities?pageSize=50", JulesApiBaseUrl, sessionId)
+	req, err := http.NewRequest("GET", url, nil)
+	if err != nil {
+		return nil, err
+	}
+	c.setAuthHeaders(req)
+	resp, err := httpClient.Do(req)
+	if err != nil {
+		return nil, err
+	}
+	if resp.StatusCode != http.StatusOK {
+		body, _ := io.ReadAll(resp.Body)
+		resp.Body.Close()
+		return nil, fmt.Errorf("Jules API activities request failed with status %d: %s", resp.StatusCode, string(body))
+	}
+	var firstData struct {
+		Activities    []map[string]interface{} `json:"activities"`
+		NextPageToken string                   `json:"nextPageToken"`
+	}
+	if err := json.NewDecoder(resp.Body).Decode(&firstData); err != nil {
+		resp.Body.Close()
+		return nil, err
+	}
+	resp.Body.Close()
+
+	// Collect all activities from the first page
+	var result []models.JulesActivity
+	for _, a := range firstData.Activities {
+		result = append(result, transformActivity(a, sessionId))
+	}
+	if len(firstData.Activities) > 0 {
+		first := firstData.Activities[0]["createTime"].(string)
+		last := firstData.Activities[len(firstData.Activities)-1]["createTime"].(string)
+		log.Printf("[Jules] Fetched %d activities (first page, range: %s to %s)", len(firstData.Activities), first, last)
+	}
+
+	// If there's only one page, we're done
+	if firstData.NextPageToken == "" {
+		return result, nil
+	}
+
+	// Follow page tokens to the LAST page (oldest activities)
+	// We just need the pageToken chain to reach the end
+	pageToken := firstData.NextPageToken
+	var lastPageActivities []map[string]interface{}
+	lastToken := ""
+	for {
+		url := fmt.Sprintf("%s/sessions/%s/activities?pageSize=50&pageToken=%s", JulesApiBaseUrl, sessionId, pageToken)
+		req, err := http.NewRequest("GET", url, nil)
+		if err != nil {
+			return result, nil // return what we have
+		}
+		c.setAuthHeaders(req)
+		resp, err := httpClient.Do(req)
+		if err != nil {
+			return result, nil
+		}
+		if resp.StatusCode != http.StatusOK {
+			resp.Body.Close()
+			return result, nil
+		}
+		var pageData struct {
+			Activities    []map[string]interface{} `json:"activities"`
+			NextPageToken string                   `json:"nextPageToken"`
+		}
+		if err := json.NewDecoder(resp.Body).Decode(&pageData); err != nil {
+			resp.Body.Close()
+			return result, nil
+		}
+		resp.Body.Close()
+
+		lastPageActivities = pageData.Activities
+		lastToken = pageData.NextPageToken
+
+		if lastToken == "" {
+			break // reached the last page
+		}
+		pageToken = lastToken
+	}
+
+	// Append the last page (oldest activities)
+	for _, a := range lastPageActivities {
+		result = append(result, transformActivity(a, sessionId))
+	}
+	if len(lastPageActivities) > 0 {
+		first := lastPageActivities[0]["createTime"].(string)
+		last := lastPageActivities[len(lastPageActivities)-1]["createTime"].(string)
+		log.Printf("[Jules] Fetched %d activities (last page, range: %s to %s)", len(lastPageActivities), first, last)
+	}
+
+	return result, nil
+}
+
 func normalizeSourceForCreate(sourceID string) string {
 	trimmed := strings.TrimSpace(sourceID)
 	if strings.HasPrefix(trimmed, "sources/") {

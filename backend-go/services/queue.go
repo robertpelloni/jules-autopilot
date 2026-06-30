@@ -1071,8 +1071,8 @@ func ArchiveAndRestartAllSessions() (map[string]interface{}, error) {
 	for _, g := range repoMap {
 		s := g.session
 
-		// Dump full activity history to ~/workspace/<repo>/.jules/ before destroying
-		if activities, actErr := client.ListActivitiesWithLimit(s.ID, 100); actErr == nil {
+		// Dump first (newest) and last (oldest) page of activities before destroying
+		if activities, actErr := client.ListActivitiesFirstAndLastPages(s.ID); actErr == nil {
 			projectName := extractProjectName(s.SourceID)
 			sessionDir := filepath.Join(getProjectRoot(), "..", projectName, ".jules")
 			if mkErr := os.MkdirAll(sessionDir, 0755); mkErr == nil {
