@@ -12,6 +12,7 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
+	"sort"
 	"sync"
 	"time"
 
@@ -1168,9 +1169,16 @@ func ArchiveAndRestartAllSessions() (map[string]interface{}, error) {
 		}
 	}
 
-	// Source sessions: prefer unarchived, fall back to archived
+	// Source sessions: prefer unarchived, fall back to archived (limited to 10 most recent)
 	sourceSessions := unarchived
 	if len(sourceSessions) == 0 {
+		// Sort archived by newest first, take top 10
+		sort.Slice(archived, func(i, j int) bool {
+			return archived[i].UpdatedAt.After(archived[j].UpdatedAt)
+		})
+		if len(archived) > 10 {
+			archived = archived[:10]
+		}
 		sourceSessions = archived
 	}
 
