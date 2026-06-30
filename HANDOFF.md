@@ -1,64 +1,49 @@
-# Session Handoff — June 30, 2026
+# Session Handoff — June 29, 2026
 
 ## Summary
 
-Executed repository synchronization & intelligent merge protocol (v3.6.18). No upstream changes to merge. All 3 local feature branches contain zero unique commits beyond main — fully merged/empty. Fixed critical backend stability issues with archive function (background goroutine with panic recovery, fail-fast on 429, 10s timeout for activity fetches). Built and deployed Go backend v3.6.18.
+Executed repository synchronization & intelligent merge protocol (v3.6.19). Fast-forwarded local `main` through 19 commits (archive stability, rate-limit hardening, broadcast features). All 3 remote feature branches verified at zero unique commits beyond main. Local uncommitted work from prior session stashed, verified as redundant, and dropped. Version bumped to 3.6.19. All documentation updated.
 
-## Repository Sync & Branch Reconciliation
+## What Was Done
 
-### Upstream Sync
+### 1. Repository Sync Protocol (v3.6.19)
+- **Fetch & Fast-Forward:** Ran `git fetch --all --tags`, fast-forwarded local `main` from `fc9ee11` to `ebc6017` (19 new commits: archive-all UI, halt broadcast, analyze UI broadcast, Halt & Push, keeper log UUID fix, paginated activities, background archive with panic recovery, 429 fail-fast, 10s activity timeout, GitHub clone error detection, system tray, daemon improvements).
+- **Submodule Check:** No `.gitmodules` found — no submodules to recurse.
+- **Branch Reconciliation:** Inspected 3 remote feature branches — all zero unique commits beyond main. No forward or reverse merge needed.
+- **Local Change Stash:** Found uncommitted local changes from prior agent session (`.gitignore`, backend Go changes, UI changes, .memory log). Stashed as `v3.6.18 local uncommitted work from previous agent`, confirmed fully redundant with remote commits, then dropped.
 
-- **Upstream:** `https://github.com/sbhavani/jules-app` (fork parent)
-- **Divergence:** 582 commits ahead of upstream/main. Merge base `fa251dd` is upstream's latest — no new upstream changes to merge.
-- **Fetch:** `git fetch --all --tags` — fetched 1 new upstream branch (`palette-add-search-clear-button-...`)
-- **Submodules:** None present.
+### 2. Version Governance
+- **Canonical Source:** `VERSION` bumped from `3.6.18` → `3.6.19`.
+- **Sync Executed:** Ran `scripts/update-version.js` to propagate to `VERSION.md`, `package.json`, `apps/cli/package.json`, `packages/shared/package.json`, and `lib/version.ts`. All 6 manifests now read `3.6.19`.
 
-### Feature Branch Inspection
+### 3. Documentation Sync
+- **CHANGELOG.md:** Added `[3.6.19]` entry documenting sync protocol execution.
+- **TODO.md:** Added sync entry under Immediate Actions, shifted previous v3.6.18 entry down.
+- **HANDOFF.md:** This document — full session log.
+- **ROADMAP.md:** Verified — no changes needed.
 
-All 3 local/remote feature branches inspected:
+### 4. Script Validation
+- `start.bat`: Validated — builds frontend via `npx vite build`, then runs Go backend on `:8080`. Uses `%~dp0` for path-safe execution. No changes needed.
+- `install-service.bat`: Validated — creates Windows scheduled tasks for backend and watchdog on login. Uses `%~dp0` and `%cd%` correctly. No changes needed.
+- `services.json`: Validated — service definitions for LM Studio, FreeLLM, and Jules Backend reflect correct port mapping. No changes needed.
 
-| Branch | Ahead of main | Status |
-|--------|:-:|--------|
-| `feat-shadow-pilot-git-diff-ui-12323440949671972104` | 0 | Empty/no unique commits |
-| `jules-485-merge-test` | 0 | Empty/no unique commits |
-| `jules-4852916069977232082-be6d9c55` | 0 | Empty/no unique commits |
+## Previous Session Work (Retained from v3.6.18)
 
-All are fully contained in `main`. No forward or reverse merge needed.
+### Backend Stability Fixes
+- **Archive button hangs:** Background goroutine with panic recovery — endpoint returns immediately instead of blocking HTTP handler.
+- **getFirstUserMessage 429 hammering:** Fail fast on rate limits instead of exponential backoff (was causing multi-minute per-session delays).
+- **getFirstUserMessage timeout:** Dedicated 10s HTTP client for activity fetches instead of global 300s timeout.
+- **Archive empty state:** Falls back to archived sessions when none are unarchived, so button always creates new sessions.
+- **New sessions not appearing:** `CacheSessions()` called immediately after archive to refresh dashboard.
+- **Completed sessions not bumping:** Two-pass search for first user message (prioritizes userMessage type, falls back to any non-Supervisor content).
+- **Keeper log UUID collisions:** UUID primary keys to prevent duplicate ID conflicts.
 
-## Backend Changes (v3.6.18)
-
-### Fixed
-
-- **Archive button hangs:** Archive endpoint now runs in background goroutine with panic recovery — returns `{"status":"processing"}` immediately instead of blocking the HTTP handler for minutes
-- **getFirstUserMessage 429 hammering:** Fail fast on rate limits instead of exponential backoff (was causing multi-minute per-session delays across 87+ sessions)
-- **getFirstUserMessage HTTP timeout:** Dedicated 10s HTTP client for activity fetches instead of global 300s timeout
-- **Archive empty state:** Falls back to archived sessions when none are unarchived, so button always creates new sessions
-- **New sessions not appearing in dashboard:** `CacheSessions()` called immediately after archive to refresh local cache
-- **Completed sessions not getting nudged:** Two-pass search for first user message (prioritizes userMessage type, falls back to any non-Supervisor content)
-- **Keeper log UUID collisions:** UUID primary keys to prevent duplicate ID conflicts
-
-### Added
-
-- **GitHub clone error detection:** Scans session activities for "github + clone + error/fail/timeout" patterns and logs hourly aggregate via keeper log
-- **Analyze UI broadcast button:** Sends comprehensive UI analysis request to all sessions
-- **Halt & Push button:** Broadcasts "cease work, update docs, commit, push" to all sessions
-
-### Known Issues
-
-- `ListSessions()` on Jules API is slow (300s timeout for pagination through 100+ sessions) — the final `CacheSessions` refresh after archive can take 2-5 minutes
-- 5 Go linter warnings: unused `buildRAGContext`, unused `client` param in `getFirstUserMessage`, unused `payload` params in `handleIndexCodebase`/`handleSyncSessionMemory`, unused `handleSyncSessionMemoryOld`
-
-## Version Governance
-
-- **VERSION:** `3.6.17` → `3.6.18` (canonical source)
-- **Propagated via** `scripts/update-version.js` to: `VERSION.md`, `package.json`, `apps/cli/package.json`, `packages/shared/package.json`, `lib/version.ts`
-- **Go backend** reads `VERSION` at runtime — auto-picked up
-
-## Build Status
-
-- **Go backend:** Built successfully (`go build -o backend.exe`), running on port 8082
-- **Frontend:** No changes — prior build artifacts preserved
+### New Features
+- **GitHub clone error detection:** Scans session activities for "github + clone + error/fail/timeout" patterns and logs hourly aggregate via keeper log.
+- **Archive All button:** Archives all unarchived sessions and creates one new session per repo.
+- **Analyze UI broadcast button:** Sends comprehensive UI analysis request to all sessions.
+- **Halt & Push button:** Broadcasts "cease work, update docs, commit, push" to all sessions.
 
 ## Version
 
-`3.6.18`
+`3.6.19`

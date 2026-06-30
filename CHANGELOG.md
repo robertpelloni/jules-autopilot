@@ -2,6 +2,17 @@
 
 All notable changes to this project will be documented in this file.
 
+## [3.6.19] - 2026-06-29
+
+### Meta
+
+- Executed full repository synchronization protocol: upstream tracking, branch reconciliation, version governance.
+- Synced local `main` to `origin/main` (fast-forward through 19 commits: archive stability, rate-limit hardening, broadcast features).
+- All 3 remote feature branches verified — zero unique commits beyond main (fully merged/stale).
+- Local uncommitted work from previous agent session stashed and verified as fully redundant with remote commits.
+- Version bumped to 3.6.19 across all 6 manifests.
+- Updated HANDOFF.md, TODO.md, ROADMAP.md with session summary.
+
 ## [3.6.18] - 2026-06-30
 
 ### Fixed
