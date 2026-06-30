@@ -1908,10 +1908,10 @@ func archiveAllSessions(c *fiber.Ctx) error {
 		if result, err := services.ArchiveAndRestartAllSessions(); err != nil {
 			log.Printf("[API] archiveAllSessions error: %v", err)
 		} else {
-			archived := result["archived"].(int)
+			deleted := result["deleted"].(int)
 			created := result["created"].(int)
 			errors, _ := result["errors"].([]string)
-			log.Printf("[API] archiveAllSessions done: archived=%d created=%d errors=%d", archived, created, len(errors))
+			log.Printf("[API] archiveAllSessions done: deleted=%d created=%d errors=%d", deleted, created, len(errors))
 			for _, e := range errors {
 				log.Printf("[API]   archive error: %s", e)
 			}
