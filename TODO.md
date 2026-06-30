@@ -3,6 +3,8 @@
 This document tracks granular bugs, missing features, and technical debt. For epic-level milestones, see `ROADMAP.md`.
 
 ## Immediate Actions
+
+- [x] **Repository Sync & Intelligent Merge (v3.6.18):** Full protocol execution — git fetch, no upstream changes (merge base at upstream/main fa251dd). All 3 local feature branches verified at zero unique commits. Bumped version to 3.6.18 across all 6 manifests. Updated CHANGELOG, HANDOFF, TODO. Fixed archive button hangs (background goroutine + recover), 429 fail-fast, 10s activity fetch timeout.
 - [x] **Repository Sync & Intelligent Merge (v3.6.17):** Full protocol execution — git fetch, fast-forward main through 11 commits (v3.6.14→v3.6.16-hotfix), verified 3 stale remote feature branches (feat-shadow-pilot, jules-485-merge-test, jules-485) have no unique progress beyond main. Reinforced local vite.config.ts port change (8082→8080). Bumped version to 3.6.17 across all 6 manifests. Updated CHANGELOG, HANDOFF, and TODO.
 - [x] **Repository Sync (v3.6.10→v3.6.14):** Fast-forwarded local main through 23 new commits (v3.6.9→v3.6.14) including system tray, watchdog fixes, rate limiter, LM Studio concurrency, nudge rewrite, and daemon cache improvements. All remote feature branches re-verified at parity — no merges needed.
 - [x] **Repository Sync & Merge (v3.6.9):** Executed full upstream fetch, fast-forwarded main to origin/main (v3.6.8), verified all remote feature branches are caught up, resolved vite.config.ts conflict (proxy port :8082→:8080 for local), synced version files (VERSION, VERSION.md, package.json), and updated CHANGELOG.md with missing v3.6.8 and new v3.6.9 entries.
@@ -59,12 +61,14 @@ This document tracks granular bugs, missing features, and technical debt. For ep
 - [x] **WebSocket Stability (v3.6.5):** Hardened the real-time event layer by increasing the WebSocket ping interval to 60s, resolving transient "Ping timeout" issues in high-latency network conditions.
 
 ## Technical Debt & Refactoring
+
 - [x] **Auth Protocol Enforcement:** Locked down Jules Portal `AQ.A` tokens to use `x-goog-api-key` and strictly delete `Authorization` headers to prevent gateway blocks.
 - [x] **Connection Pooling:** SQLite connection pool configured with WAL mode, busy timeout (5s), NORMAL synchronous, 64MB cache, foreign keys enabled. Single-writer constraint honored with MaxOpenConns(1).
 - [x] **Cross-Session Memory Storage:** Implemented the `MemoryChunk` model for persistent, semantic history tracking.
 - [x] **Vector Search Optimization:** Implemented two-phase approximate nearest neighbor search with dimensionality reduction (64-dim coarse filter + full cosine). Pre-computed norms, vector index service with rebuild/stats APIs, automatic index-then-fallback search path.
 
 ## Intelligence & Autonomy
+
 - [x] **Autonomous Self-Healing:** Autopilot now detects `FAILED` sessions and enqueues recovery plans.
 - [x] **Council Debate Engine:** High-risk plans now trigger background debates between persona models before approval.
 - [x] **Historical Retrieval:** RAG queries now pull from both the current codebase and successful past session outcomes.

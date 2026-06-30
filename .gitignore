@@ -63,12 +63,11 @@ yarn-error.log*
 /playwright/.cache/
 /playwright/.auth/
 
-# Database
+# Stale backup databases (do not track)
+/archive/dev.db
+/prisma/dev.db
+/prisma/dev.db-shm
 /lib/generated/prisma
-dev.db
-dev.db-journal
-dev.db-shm
-dev.db-wal
 autopilot-backend.exe~
 backend-go/backend.exe
 backend-go/*.exe
@@ -82,5 +81,3 @@ watchdog.bat
 # Built outputs
 packages/shared/dist/
 .suno_new_session/
-
-.memory/branches/*/log.md
