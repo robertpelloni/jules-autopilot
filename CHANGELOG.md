@@ -1481,3 +1481,17 @@ All notable changes to this project will be documented in this file.
 - **Build Errors:** Resolved TypeScript errors in `lib/orchestration/providers`, `session-board`, and `new-session-dialog`.
 - **Persistence:** Fixed Prisma client initialization issues (downgraded to 5.19.1 for stability).
 - **Database:** Successfully initialized SQLite database with `KeeperSettings` and `KeeperLog`.
+
+## [3.6.21] - 2026-06-30
+
+### Changed
+
+- Archive now fetches fresh sessions from Jules API, dumps activities (first+last pages) to workspace/.jules/, deletes old session on Jules, then recreates one per repo
+- ListSessions pageSize reduced to 50, per-page timeout set to 120s to handle slow Jules API responses
+- Removed local Archived field logic — now purely dump+delete+recreate
+- Feature branches re-verified: all 3 stale (0 unique commits)
+
+### Fixed
+
+- ListSessions timeout issue: 15s→60s→120s with pageSize=50
+- Archive background goroutine panic recovery and error logging

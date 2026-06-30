@@ -1044,11 +1044,13 @@ func ArchiveAndRestartAllSessions() (map[string]interface{}, error) {
 		return nil, fmt.Errorf("Jules not configured")
 	}
 
-	// Fetch all sessions fresh from Jules
-	allSessions, err := client.ListSessions()
-	if err != nil {
-		return nil, fmt.Errorf("failed to list sessions: %w", err)
+	// Use locally cached sessions instead of fetching fresh from Jules API
+	// (ListSessions is too slow/reliable from the Jules API)
+	var allSessions []models.JulesSession
+	if err := db.DB.Find(&allSessions).Error; err != nil {
+		return nil, fmt.Errorf("failed to read cached sessions: %w", err)
 	}
+	log.Printf("[Archive] Loaded %d cached sessions for archive processing", len(allSessions))
 
 	// Group by sourceId — pick the newest session per repo
 	type repoGroup struct {
