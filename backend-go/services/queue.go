@@ -1097,6 +1097,12 @@ func ArchiveAndRestartAllSessions() (map[string]interface{}, error) {
 			continue
 		}
 		created++
+		// Archive the old session on Jules too (only if it wasn't already archived)
+		if !s.Archived {
+			if err := client.ArchiveSession(s.ID); err != nil {
+				errors = append(errors, fmt.Sprintf("%s: archive error: %v", s.ID[:8], err))
+			}
+		}
 	}
 
 	// Refresh the local cache from Jules so the new sessions appear immediately

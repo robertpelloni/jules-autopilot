@@ -636,6 +636,17 @@ func (c *JulesClient) CreateSession(sourceID, prompt, title string, requirePlanA
 	return transformSession(session), nil
 }
 
+func (c *JulesClient) ArchiveSession(sessionID string) error {
+	if !c.isConfigured() {
+		return fmt.Errorf("Jules credentials not found")
+	}
+
+	_, err := c.UpdateSession(sessionID, map[string]interface{}{
+		"state": "ARCHIVED",
+	}, "state")
+	return err
+}
+
 func (c *JulesClient) ApprovePlan(sessionId string) error {
 	if !c.isConfigured() {
 		return fmt.Errorf("Jules credentials not found")
