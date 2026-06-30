@@ -1097,8 +1097,31 @@ func ArchiveAndRestartAllSessions() (map[string]interface{}, error) {
 			continue
 		}
 		created++
-		// Archive the old session on Jules too (only if it wasn't already archived)
+		// Archive the old session on Jules (only if not already archived)
 		if !s.Archived {
+			// Dump session activities to workspace file before deleting
+			if activities, actErr := client.ListActivitiesWithLimit(s.ID, 100); actErr == nil {
+				projectName := extractProjectName(s.SourceID)
+				sessionDir := filepath.Join(getProjectRoot(), "..", projectName, ".jules")
+				if mkErr := os.MkdirAll(sessionDir, 0755); mkErr == nil {
+					// Format activities for the dump file
+					var lines []string
+					for _, a := range activities {
+						ts := a.CreatedAt.Format(time.RFC3339)
+						role := a.Role
+						content := strings.TrimSpace(a.Content)
+						if len(content) > 500 {
+							content = content[:500] + "..."
+						}
+						lines = append(lines, fmt.Sprintf("[%s] %s: %s", ts, role, content))
+					}
+					dumpFile := filepath.Join(sessionDir, fmt.Sprintf("session_%s.txt", time.Now().Format("20060102_150405")))
+					dumpContent := fmt.Sprintf("Session: %s\nTitle: %s\nRepo: %s\nState: %s\nCreated: %s\nUpdated: %s\n\n--- ACTIVITIES (%d) ---\n\n%s\n",
+						s.ID, s.Title, s.SourceID, s.RawState, s.CreatedAt.Format(time.RFC3339), s.UpdatedAt.Format(time.RFC3339), len(activities), strings.Join(lines, "\n"))
+					os.WriteFile(dumpFile, []byte(dumpContent), 0644)
+				}
+			}
+
 			if err := client.DeleteSession(s.ID); err != nil {
 				errors = append(errors, fmt.Sprintf("%s: delete error: %v", s.ID[:8], err))
 			}
