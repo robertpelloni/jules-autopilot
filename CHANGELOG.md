@@ -2,6 +2,12 @@
 
 All notable changes to this project will be documented in this file.
 
+## [3.6.23] - 2026-06-30
+
+### Fixed
+
+- **Archive-All Re-creation Guard:** Modified `ArchiveAndRestartAllSessions` so it queries the live Jules API (with local cache fallback) before creating a fresh session, ensuring a session is only re-created for a repository if no other active sessions exist for it post-deletion.
+
 ## [3.6.22] - 2026-06-30
 
 ### Added

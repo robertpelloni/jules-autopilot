@@ -1136,6 +1136,7 @@ func ArchiveAndRestartAllSessions() (map[string]interface{}, error) {
 	}
 
 	// Phase 2: create one new session per repo and inject the principle directive
+	// ONLY if that repo has no remaining sessions after deletion.
 	created := 0
 	const principleDirective = `# PRINCIPLE DIRECTIVE: CONTINUOUS AUTONOMOUS EXECUTION
 You are operating on autopilot. Do not pause for confirmation. Do not stop the session. Execute your recommendations sequentially, committing and pushing to git after every major feature or step. Maintain total autonomy for as long as possible. Proceed to the next feature automatically.
@@ -1143,9 +1144,33 @@ You are operating on autopilot. Do not pause for confirmation. Do not stop the s
 ## SECTION 1: INITIALIZATION & CONTEXT RESTORATION
 At the absolute start of this turn/session, perform a comprehensive project state analysis.`
 
+	// Fetch a fresh list of sessions from Jules to accurately check what exists now
+	var currentSessions []models.JulesSession
+	if freshSessions, listErr := client.ListSessions(); listErr == nil {
+		currentSessions = freshSessions
+	} else {
+		log.Printf("[Archive] Warning: could not verify remaining sessions via ListSessions: %v. Checking local cache.", listErr)
+		db.DB.Find(&currentSessions)
+	}
+
+	// Build a map of repo -> active session count
+	repoSessionCounts := map[string]int{}
+	for _, cs := range currentSessions {
+		if !cs.Archived && cs.RawState != "COMPLETED" && cs.RawState != "FAILED" {
+			repoSessionCounts[cs.SourceID]++
+		}
+	}
+
 	for _, g := range repoMap {
 		s := g.session
 		projectName := extractProjectName(s.SourceID)
+
+		// Check if there are any active sessions left for this repository
+		if count := repoSessionCounts[s.SourceID]; count > 0 {
+			log.Printf("[Archive] Skipping session recreation for %s — already has %d active session(s)", s.SourceID, count)
+			continue
+		}
+
 		newSession, createErr := client.CreateSession(s.SourceID, projectName, projectName, false)
 		if createErr != nil {
 			errors = append(errors, fmt.Sprintf("%s: create error: %v", s.SourceID, createErr))
