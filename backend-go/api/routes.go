@@ -689,6 +689,7 @@ func SetupRoutes(app *fiber.App) {
 	api.Post("/broadcast", postBroadcast)
 	api.Post("/broadcast/halt", broadcastHaltAll)
 	api.Post("/broadcast/halt-short", broadcastHaltShort)
+	api.Post("/broadcast/analyze-ui", broadcastAnalyzeUI)
 
 	// Fleet sync route
 	api.Post("/fleet/sync", triggerFleetSync)
@@ -1886,6 +1887,12 @@ func broadcastHaltAll(c *fiber.Ctx) error {
 
 func broadcastHaltShort(c *fiber.Ctx) error {
 	msg := "Immediately cease all prior work. Update all documentation and commit and push, then halt."
+	sent := services.BroadcastMessageToAll(msg)
+	return c.JSON(fiber.Map{"success": true, "sent": sent, "message": msg})
+}
+
+func broadcastAnalyzeUI(c *fiber.Ctx) error {
+	msg := "Please continue to FULLY analyze the entire source code and make sure ALL functionality and ALL features are FULLY and COMPREHENSIVELY well represented in the dashboard UI with descriptive labels and intuitive workflows. Use tooltip indicators for any elements that may need extra details or explanation or guidance."
 	sent := services.BroadcastMessageToAll(msg)
 	return c.JSON(fiber.Map{"success": true, "sent": sent, "message": msg})
 }

@@ -6,6 +6,7 @@ import {
 	RefreshCw,
 	Square,
 	Archive,
+	Activity,
 } from "lucide-react";
 import { useState, useEffect } from "react";
 import { SettingsDialog } from "@/components/settings-dialog";
@@ -239,6 +240,28 @@ export function AppHeader({ onNewSession }: AppHeaderProps) {
 					<Archive className="w-3 h-3" />
 					<span className="text-[9px] font-bold uppercase tracking-wider hidden lg:inline">
 						Archive All
+					</span>
+				</Button>
+
+				<Button
+					variant="ghost"
+					size="sm"
+					className="h-8 gap-2 px-3 text-sky-400/60 hover:text-sky-400 hover:bg-sky-500/10 border border-sky-500/20"
+					onClick={async () => {
+						if (!confirm("Send UI analysis request to all sessions?")) return;
+						try {
+							const r = await fetch("/api/broadcast/analyze-ui", { method: "POST" });
+							const d = await r.json();
+							toast.success(`Analysis request sent to ${d.sent} sessions`);
+						} catch {
+							toast.error("Failed");
+						}
+					}}
+					title="Analyze source code and improve dashboard UI"
+				>
+					<Activity className="w-3 h-3" />
+					<span className="text-[9px] font-bold uppercase tracking-wider hidden lg:inline">
+						Analyze UI
 					</span>
 				</Button>
 
