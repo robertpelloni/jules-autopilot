@@ -618,6 +618,9 @@ func (w *Worker) handleCheckSession(payload string) (string, error) {
 		}
 	}
 
+	// Detect repeated GitHub cloning errors — log once so user can report it
+	detectRepeatedErrors(session, checkActivities)
+
 	supervisorState, _ := getSupervisorState(session.ID)
 	if supervisorState.LastProcessedActivityTimestamp != nil {
 		if t, err := time.Parse(time.RFC3339, *supervisorState.LastProcessedActivityTimestamp); err == nil {
@@ -987,6 +990,50 @@ func BroadcastMessageToAll(msg string) int {
 	})
 	log.Printf("[BroadcastMsg] Sent to %d/%d sessions", sent, len(sessions))
 	return sent
+}
+
+// detectRepeatedErrors checks session activities for repeated GitHub cloning errors
+// and logs them once to the keeper log so the user can report them for fixing.
+func detectRepeatedErrors(session models.JulesSession, activities []models.JulesActivity) {
+	if len(activities) < 3 {
+		return
+	}
+	cloneErrorCount := 0
+	var lastErrorMsg string
+	for _, a := range activities {
+		content := strings.ToLower(a.Content)
+		if strings.Contains(content, "github") && (strings.Contains(content, "clone") || strings.Contains(content, "cloning")) &&
+			(strings.Contains(content, "error") || strings.Contains(content, "fail") || strings.Contains(content, "timeout")) {
+			cloneErrorCount++
+			if cloneErrorCount >= 3 && lastErrorMsg == "" {
+				lastErrorMsg = a.Content
+				if len(lastErrorMsg) > 200 {
+					lastErrorMsg = lastErrorMsg[:200]
+				}
+			}
+		}
+	}
+	if cloneErrorCount >= 3 {
+		// Check if we already logged this recently to avoid spam
+		cutoff := time.Now().Add(-1 * time.Hour)
+		var recentLogs int64
+		db.DB.Model(&models.KeeperLog{}).Where(
+			"session_id = ? AND type = ? AND message LIKE ? AND created_at > ?",
+			session.ID, "error", "%repeated GitHub cloning error%", cutoff,
+		).Count(&recentLogs)
+		if recentLogs == 0 {
+			msg := fmt.Sprintf("Session %s: %d repeated GitHub cloning errors detected. Last: %s",
+				session.ID[:8], cloneErrorCount, lastErrorMsg)
+			addKeeperLog(msg, "error", session.ID, map[string]interface{}{
+				"event":         "detected_repeated_error",
+				"errorCount":    cloneErrorCount,
+				"errorType":     "github_cloning",
+				"sessionId":     session.ID,
+				"sessionTitle":  session.Title,
+			})
+			log.Printf("[Detect] %s", msg)
+		}
+	}
 }
 
 // getFirstUserMessage fetches the first meaningful content from a session's activities.
