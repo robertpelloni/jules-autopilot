@@ -990,32 +990,100 @@ func BroadcastMessageToAll(msg string) int {
 }
 
 // getFirstUserMessage fetches the first meaningful content from a session's activities.
-// Fetches pages lazily (1 at a time, newest→oldest) and stops as soon as it finds
-// non-empty, non-Supervisor content. This avoids hammering the Jules API.
+// Walks from oldest to newest across all pages until it finds non-empty content.
+// Uses exponential backoff on 429 responses; the backoff resets on success.
 func getFirstUserMessage(client *JulesClient, sessionID string) string {
-	for page := 1; page <= 5; page++ {
-		activities, err := client.ListActivitiesWithLimit(sessionID, page)
-		if err != nil || len(activities) == 0 {
+	backoff := 1 * time.Second
+	maxBackoff := 30 * time.Second
+	pageToken := ""
+	maxPages := 20
+
+	for page := 0; page < maxPages; page++ {
+		url := fmt.Sprintf("%s/sessions/%s/activities?pageSize=50", JulesApiBaseUrl, sessionID)
+		if pageToken != "" {
+			url += "&pageToken=" + pageToken
+		}
+
+		req, err := http.NewRequest("GET", url, nil)
+		if err != nil {
 			return ""
 		}
-		// Walk backwards from the oldest activity on this page toward the newest,
-		// but stop if we've already covered ground from a previous page.
-		start := 0
-		if page > 1 {
-			// We already searched the first (newest) page — skip to new entries.
-			// With 50 per page, entries 0-49 on page 2 are newer than 50-99 on page 1.
-			// Since pages return newest-first, page1=0-49(newest), page2=50-99,
-			// we only want to search the newly-fetched range.
-			start = (page - 1) * 50
-			if start >= len(activities) {
-				start = 0
-			}
+		client.setAuthHeaders(req)
+
+		resp, err := httpClient.Do(req)
+		if err != nil {
+			return ""
 		}
-		for i := len(activities) - 1; i >= start; i-- {
-			content := strings.TrimSpace(activities[i].Content)
+
+		// Handle 429 with exponential backoff
+		if resp.StatusCode == http.StatusTooManyRequests {
+			resp.Body.Close()
+			time.Sleep(backoff)
+			backoff *= 2
+			if backoff > maxBackoff {
+				backoff = maxBackoff
+			}
+			continue // retry same page
+		}
+
+		// Reset backoff on success
+		backoff = 1 * time.Second
+
+		if resp.StatusCode != http.StatusOK {
+			resp.Body.Close()
+			return ""
+		}
+
+		var data struct {
+			Activities    []map[string]interface{} `json:"activities"`
+			NextPageToken string                   `json:"nextPageToken"`
+		}
+		if err := json.NewDecoder(resp.Body).Decode(&data); err != nil {
+			resp.Body.Close()
+			return ""
+		}
+		resp.Body.Close()
+
+		// Search oldest-first for first real message (skip Supervisor nudges)
+		for i := len(data.Activities) - 1; i >= 0; i-- {
+			a := data.Activities[i]
+			content := ""
+			if um, ok := a["userMessage"].(map[string]interface{}); ok {
+				content, _ = um["message"].(string)
+				if content == "" {
+					content, _ = um["content"].(string)
+				}
+			} else if am, ok := a["agentMessaged"].(map[string]interface{}); ok {
+				content, _ = am["message"].(string)
+				if content == "" {
+					content, _ = am["agentMessage"].(string)
+				}
+			} else if pg, ok := a["planGenerated"].(map[string]interface{}); ok {
+				content, _ = pg["summary"].(string)
+				if content == "" {
+					content, _ = pg["description"].(string)
+				}
+			} else if pu, ok := a["progressUpdated"].(map[string]interface{}); ok {
+				content, _ = pu["progressDescription"].(string)
+				if content == "" {
+					content, _ = pu["message"].(string)
+				}
+			} else {
+				content, _ = a["content"].(string)
+				if content == "" {
+					content, _ = a["text"].(string)
+				}
+			}
+
+			content = strings.TrimSpace(content)
 			if content != "" && !strings.HasPrefix(content, "[Supervisor]") {
 				return content
 			}
+		}
+
+		pageToken = data.NextPageToken
+		if pageToken == "" {
+			break
 		}
 	}
 	return ""
