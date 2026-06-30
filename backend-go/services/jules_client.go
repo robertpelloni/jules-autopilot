@@ -636,15 +636,33 @@ func (c *JulesClient) CreateSession(sourceID, prompt, title string, requirePlanA
 	return transformSession(session), nil
 }
 
-func (c *JulesClient) ArchiveSession(sessionID string) error {
+// DeleteSession deletes (archives) a session on the Jules side.
+// Jules uses DELETE as its internal archive mechanism.
+func (c *JulesClient) DeleteSession(sessionID string) error {
 	if !c.isConfigured() {
 		return fmt.Errorf("Jules credentials not found")
 	}
 
-	_, err := c.UpdateSession(sessionID, map[string]interface{}{
-		"state": "ARCHIVED",
-	}, "state")
-	return err
+	url := fmt.Sprintf("%s/sessions/%s", JulesApiBaseUrl, sessionID)
+	req, err := http.NewRequest(http.MethodDelete, url, nil)
+	if err != nil {
+		return err
+	}
+
+	c.setAuthHeaders(req)
+
+	resp, err := httpClient.Do(req)
+	if err != nil {
+		return err
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode >= 400 {
+		body, _ := io.ReadAll(resp.Body)
+		return fmt.Errorf("Jules API deleteSession error (%d): %s", resp.StatusCode, string(body))
+	}
+
+	return nil
 }
 
 func (c *JulesClient) ApprovePlan(sessionId string) error {
