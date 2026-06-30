@@ -12,7 +12,6 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
-	"sort"
 	"sync"
 	"time"
 
@@ -1037,114 +1036,6 @@ func detectRepeatedErrors(session models.JulesSession, activities []models.Jules
 	}
 }
 
-// getFirstUserMessage fetches the first meaningful content from a session's activities.
-// Walks from oldest to newest across all pages until it finds non-empty content.
-// Uses exponential backoff on 429 responses; the backoff resets on success.
-func getFirstUserMessage(client *JulesClient, sessionID string) string {
-	pageToken := ""
-	maxPages := 20
-
-	for page := 0; page < maxPages; page++ {
-		url := fmt.Sprintf("%s/sessions/%s/activities?pageSize=50", JulesApiBaseUrl, sessionID)
-		if pageToken != "" {
-			url += "&pageToken=" + pageToken
-		}
-
-		req, err := http.NewRequest("GET", url, nil)
-		if err != nil {
-			return ""
-		}
-		client.setAuthHeaders(req)
-
-		// Short timeout for archive — fail fast if the API is slow
-		archiveClient := &http.Client{Timeout: 10 * time.Second}
-		resp, err := archiveClient.Do(req)
-		if err != nil {
-			return ""
-		}
-
-		// Handle 429 — fail fast and use fallback prompt instead of hammering the API
-		if resp.StatusCode == http.StatusTooManyRequests {
-			resp.Body.Close()
-			log.Printf("[Archive] 429 fetching activities for %s — using fallback prompt", sessionID[:8])
-			return ""
-		}
-
-		if resp.StatusCode != http.StatusOK {
-			resp.Body.Close()
-			return ""
-		}
-
-		var data struct {
-			Activities    []map[string]interface{} `json:"activities"`
-			NextPageToken string                   `json:"nextPageToken"`
-		}
-		if err := json.NewDecoder(resp.Body).Decode(&data); err != nil {
-			resp.Body.Close()
-			return ""
-		}
-		resp.Body.Close()
-
-		// Two-pass search:
-		// 1. Find the oldest userMessage (this is the session's starting prompt)
-		// 2. Fall back to the oldest non-empty, non-Supervisor content
-		firstUserContent := ""
-		firstOtherContent := ""
-		for i := len(data.Activities) - 1; i >= 0; i-- {
-			a := data.Activities[i]
-			content := ""
-			isUser := false
-			if um, ok := a["userMessage"].(map[string]interface{}); ok {
-				isUser = true
-				content, _ = um["message"].(string)
-				if content == "" {
-					content, _ = um["content"].(string)
-				}
-			} else if am, ok := a["agentMessaged"].(map[string]interface{}); ok {
-				content, _ = am["message"].(string)
-				if content == "" {
-					content, _ = am["agentMessage"].(string)
-				}
-			} else if pg, ok := a["planGenerated"].(map[string]interface{}); ok {
-				content, _ = pg["summary"].(string)
-				if content == "" {
-					content, _ = pg["description"].(string)
-				}
-			} else if pu, ok := a["progressUpdated"].(map[string]interface{}); ok {
-				content, _ = pu["progressDescription"].(string)
-				if content == "" {
-					content, _ = pu["message"].(string)
-				}
-			} else {
-				content, _ = a["content"].(string)
-				if content == "" {
-					content, _ = a["text"].(string)
-				}
-			}
-
-			content = strings.TrimSpace(content)
-			if content == "" || strings.HasPrefix(content, "[Supervisor]") {
-				continue
-			}
-			if isUser && firstUserContent == "" {
-				firstUserContent = content
-			}
-			if firstOtherContent == "" {
-				firstOtherContent = content
-			}
-		}
-		if firstUserContent != "" {
-			return firstUserContent
-		}
-
-		pageToken = data.NextPageToken
-		if pageToken == "" {
-			break
-		}
-	}
-	return ""
-}
-
 // ArchiveAndRestartAllSessions archives every session in the local cache and creates
 // fresh sessions on Jules with the same source + title so work restarts clean.
 func ArchiveAndRestartAllSessions() (map[string]interface{}, error) {
@@ -1169,16 +1060,9 @@ func ArchiveAndRestartAllSessions() (map[string]interface{}, error) {
 		}
 	}
 
-	// Source sessions: prefer unarchived, fall back to archived (limited to 10 most recent)
+	// Source sessions: prefer unarchived, fall back to archived
 	sourceSessions := unarchived
 	if len(sourceSessions) == 0 {
-		// Sort archived by newest first, take top 10
-		sort.Slice(archived, func(i, j int) bool {
-			return archived[i].UpdatedAt.After(archived[j].UpdatedAt)
-		})
-		if len(archived) > 10 {
-			archived = archived[:10]
-		}
 		sourceSessions = archived
 	}
 
@@ -1202,15 +1086,12 @@ func ArchiveAndRestartAllSessions() (map[string]interface{}, error) {
 		return nil, fmt.Errorf("failed to archive sessions: %w", err)
 	}
 
-	// Create one new session per repo
+	// Create one new session per repo (repo name as prompt, no API calls needed)
 	created := 0
 	var errors []string
 	for _, g := range repoMap {
 		s := g.session
-		prompt := getFirstUserMessage(client, s.ID)
-		if prompt == "" {
-			prompt = fmt.Sprintf("Continue autonomous work on %s. Previous session: %s", s.SourceID, s.Title)
-		}
+		prompt := fmt.Sprintf("Continue autonomous work on %s. Previous session: %s", s.SourceID, s.Title)
 		if _, err := client.CreateSession(s.SourceID, prompt, s.Title, false); err != nil {
 			errors = append(errors, fmt.Sprintf("%s: %v", s.ID[:8], err))
 			continue
