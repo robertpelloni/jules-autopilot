@@ -990,19 +990,32 @@ func BroadcastMessageToAll(msg string) int {
 }
 
 // getFirstUserMessage fetches the first meaningful content from a session's activities.
-// The initial prompt may not have Role="user" — it's often the first activity with any
-// content, regardless of role. We fetch up to 5 pages (250 activities) to reach the start.
+// Fetches pages lazily (1 at a time, newest→oldest) and stops as soon as it finds
+// non-empty, non-Supervisor content. This avoids hammering the Jules API.
 func getFirstUserMessage(client *JulesClient, sessionID string) string {
-	activities, err := client.ListActivitiesWithLimit(sessionID, 5)
-	if err != nil || len(activities) == 0 {
-		return ""
-	}
-	// ListActivities returns newest first — walk backwards to find the first non-empty
-	// content, whether it's a user message, agent message, or other activity type.
-	for i := len(activities) - 1; i >= 0; i-- {
-		content := strings.TrimSpace(activities[i].Content)
-		if content != "" && !strings.HasPrefix(content, "[Supervisor]") {
-			return content
+	for page := 1; page <= 5; page++ {
+		activities, err := client.ListActivitiesWithLimit(sessionID, page)
+		if err != nil || len(activities) == 0 {
+			return ""
+		}
+		// Walk backwards from the oldest activity on this page toward the newest,
+		// but stop if we've already covered ground from a previous page.
+		start := 0
+		if page > 1 {
+			// We already searched the first (newest) page — skip to new entries.
+			// With 50 per page, entries 0-49 on page 2 are newer than 50-99 on page 1.
+			// Since pages return newest-first, page1=0-49(newest), page2=50-99,
+			// we only want to search the newly-fetched range.
+			start = (page - 1) * 50
+			if start >= len(activities) {
+				start = 0
+			}
+		}
+		for i := len(activities) - 1; i >= start; i-- {
+			content := strings.TrimSpace(activities[i].Content)
+			if content != "" && !strings.HasPrefix(content, "[Supervisor]") {
+				return content
+			}
 		}
 	}
 	return ""
