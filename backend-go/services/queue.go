@@ -1081,30 +1081,72 @@ func ArchiveAndRestartAllSessions() (map[string]interface{}, error) {
 		}
 	}
 
-	// Mark all unarchived sessions as archived
+	// Mark all unarchived sessions as archived in local DB
 	if err := db.DB.Model(&models.JulesSession{}).Where("archived = ?", false).Update("archived", true).Error; err != nil {
 		return nil, fmt.Errorf("failed to archive sessions: %w", err)
 	}
 
-	// Create one new session per repo (repo name as prompt, no API calls needed)
+	// The PRINCIPLE DIRECTIVE injected as the second message on every fresh session.
+	// This restores full autonomous context to the Jules agent upon session restart.
+	const principleDirective = `# PRINCIPLE DIRECTIVE: CONTINUOUS AUTONOMOUS EXECUTION
+You are operating on autopilot. Do not pause for confirmation. Do not stop the session. Execute your recommendations sequentially, committing and pushing to git after every major feature or step. Maintain total autonomy for as long as possible. Proceed to the next feature automatically.
+
+## SECTION 1: INITIALIZATION & CONTEXT RESTORATION
+At the absolute start of this turn/session, perform a comprehensive project state analysis:
+1. Use your memory tools to read all local rules, repository structures, and documentation files. Do not gitignore memory or session or other important non-sensitive documentation.
+2. Read the entire conversation history, project files, and git activity in deep detail.
+3. Intelligently infer the architecture, design choices, and reasons for library/submodule selection. Ask questions only if a critical goal is entirely ambiguous.
+
+## SECTION 2: THE REPO & GIT SANITIZATION PROTOCOL
+Before writing new feature code, execute this precise repository sync layout:
+1. **Upstream Sync:** Sync the local repo with the server. Fetch and pull. Sync to the upstream parent fork, merge in any upstream changes (including forked submodules), and intelligently resolve conflicts without losing features or causing regressions.
+2. **Branch Merging:** Identify any local feature branches under ` + "`github.com/robertpelloni`" + ` (especially those auto-created by AI tools). Intelligently merge them into ` + "`main`" + `. Stash if necessary to not lose progress, and attempt to merge changes back.
+3. **Catch-Up Sync:** If any personal feature branches are behind ` + "`main`" + `, merge ` + "`main`" + ` back into them so they remain updated for future merging.
+4. **Submodule Cleanup:** Update all submodules inside all submodules recursively. Ensure the entire repo is clean, functional, and updated to the latest commits.
+
+## SECTION 3: RE-ANALYSIS & ROADMAP EXTRACTION
+Analyze the entire codebase to detect gaps between the core vision and current implementation:
+1. Identify all unfinished code, partially completed logic, backend features missing UI components, unpolished elements, or areas requiring robust refactoring.
+2. Test, double-check, and triple-check functions to catch hidden bugs or fragile logic.
+3. Organize these findings cleanly into two files:
+   * ` + "`ROADMAP.md`" + `: Major, long-term structural milestones and structural plans.
+   * ` + "`TODO.md`" + `: Granular short-term features, immediate bug fixes, and explicit tasks.
+
+## SECTION 4: CORE DOCUMENTATION & VERSIONING STANDARDS
+You are responsible for strict documentation governance. Maintain a universal standard across files, ensuring they can reference one global instruction master file with model-specific overrides appended where necessary. Maintain and update:
+* ` + "`VISION.md`" + `: Comprehensive, extreme-detail outline of the project's ultimate goal, core foundational concepts, and user-satisfaction design.
+* ` + "`MEMORY.md`" + `: Ongoing internal architectural observations, codebase traits, and design preferences.
+* ` + "`DEPLOY.md`" + `: The latest, highly detailed deployment and environment setup instructions.
+* ` + "`IDEAS.md`" + `: For each repo, think creatively to generate aggressive ideas for pivots, refactoring, re-architecting, language porting, or feature expansions. Go nuts.
+* ` + "`CHANGELOG.md`" + `: Document every adjustment. Track a single, global version string/date/build number sourced from a single text file (like ` + "`VERSION.md`" + `) rather than hardcoding it into application logic.
+* **Git Automation:** Every single build/version bump requires a clean ` + "`git commit`" + ` and ` + "`git push`" + `, with the exact version number explicitly referenced in the commit message.
+
+## SECTION 5: IMPLEMENTATION & UI QUALITY
+* **UI Representation:** Every single planned or backend feature must be comprehensively wired to the frontend. Ensure robust coverage in the UI via explicit interactive forms, clear labels, distinct descriptions, and detailed tooltips.
+* **Code Commenting:** Comment code in-depth regarding the *why*, structural side effects, discovered optimizations, and alternate methods attempted. Do not comment self-explanatory lines. Combine redundant code paths aggressively.
+* **Manuals:** Mirror all changes in the high-quality user manual and help files.
+
+## SECTION 6: SESSION HANDOFF & TERMINATION GUARDRAILS
+When concluding a session, preparing for a model handoff, or hitting context limits:
+1. Summarize everything learned during the session that was not obvious at the start.
+2. Document the entire session history, findings, structural shifts, and system memories inside ` + "`HANDOFF.md`" + ` so that successor models (Gemini, Claude, GPT) can instantly resume without friction.
+3. Sync with the server, run a final ` + "`git push`" + ` (including all submodules), and do not clean built binaries during final builds.
+4. Do not terminate processes unless it is specific and accurate to this project. Do not terminate your own process.
+
+OUTSTANDING! INSANELY GREAT! KEEP ON GOING! DON'T EVER STOP THE PARTY! RESUME WORK NOW!`
+
+	// Process each unique repo: dump history → delete old session → create fresh session → inject directive
 	created := 0
 	var errors []string
 	for _, g := range repoMap {
 		s := g.session
-		prompt := fmt.Sprintf("Continue autonomous work on %s. Previous session: %s", s.SourceID, s.Title)
-		if _, err := client.CreateSession(s.SourceID, prompt, s.Title, false); err != nil {
-			errors = append(errors, fmt.Sprintf("%s: %v", s.ID[:8], err))
-			continue
-		}
-		created++
-		// Archive the old session on Jules (only if not already archived)
+
+		// Step 1: Dump full activity history to ~/workspace/<repo>/.jules/ before destroying the session
 		if !s.Archived {
-			// Dump session activities to workspace file before deleting
 			if activities, actErr := client.ListActivitiesWithLimit(s.ID, 100); actErr == nil {
 				projectName := extractProjectName(s.SourceID)
 				sessionDir := filepath.Join(getProjectRoot(), "..", projectName, ".jules")
 				if mkErr := os.MkdirAll(sessionDir, 0755); mkErr == nil {
-					// Format activities for the dump file
 					var lines []string
 					for _, a := range activities {
 						ts := a.CreatedAt.Format(time.RFC3339)
@@ -1119,12 +1161,45 @@ func ArchiveAndRestartAllSessions() (map[string]interface{}, error) {
 					dumpContent := fmt.Sprintf("Session: %s\nTitle: %s\nRepo: %s\nState: %s\nCreated: %s\nUpdated: %s\n\n--- ACTIVITIES (%d) ---\n\n%s\n",
 						s.ID, s.Title, s.SourceID, s.RawState, s.CreatedAt.Format(time.RFC3339), s.UpdatedAt.Format(time.RFC3339), len(activities), strings.Join(lines, "\n"))
 					os.WriteFile(dumpFile, []byte(dumpContent), 0644)
+					log.Printf("[Archive] Dumped %d activities for %s to %s", len(activities), s.SourceID, dumpFile)
 				}
+			} else {
+				log.Printf("[Archive] Could not fetch activities for %s: %v", s.ID, actErr)
 			}
 
+			// Step 2: Delete (archive) the old session on Jules
 			if err := client.DeleteSession(s.ID); err != nil {
 				errors = append(errors, fmt.Sprintf("%s: delete error: %v", s.ID[:8], err))
+				// Continue anyway — we still want to create the new session
 			}
+		}
+
+		// Step 3: Create a fresh session using only the repo name as the first prompt.
+		// Jules uses the first message as the session title in its web client, so keeping
+		// it to just the repo name gives a clean, identifiable title.
+		projectName := extractProjectName(s.SourceID)
+		newSession, err := client.CreateSession(s.SourceID, projectName, projectName, false)
+		if err != nil {
+			errors = append(errors, fmt.Sprintf("%s: create error: %v", s.SourceID, err))
+			continue
+		}
+		created++
+		log.Printf("[Archive] Created new session %s for repo %s", newSession.ID[:8], s.SourceID)
+
+		// Step 4: Send the PRINCIPLE DIRECTIVE as the second message.
+		// We wait briefly to give Jules time to initialize the new session before injecting
+		// the directive — hitting the API immediately can result in a race condition where
+		// the session isn't yet ready to accept activity messages.
+		time.Sleep(2 * time.Second)
+		if _, actErr := client.CreateActivity(newSession.ID, CreateActivityRequest{
+			Content: principleDirective,
+			Type:    "message",
+			Role:    "user",
+		}); actErr != nil {
+			log.Printf("[Archive] Warning: could not inject PRINCIPLE DIRECTIVE into %s: %v", newSession.ID[:8], actErr)
+			errors = append(errors, fmt.Sprintf("%s: directive inject error: %v", newSession.ID[:8], actErr))
+		} else {
+			log.Printf("[Archive] Injected PRINCIPLE DIRECTIVE into new session %s (%s)", newSession.ID[:8], s.SourceID)
 		}
 	}
 

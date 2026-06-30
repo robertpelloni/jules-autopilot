@@ -10,3 +10,6 @@ sessions:
   - file: "C:\Users\hyper\.pi\agent\sessions\--C--Users-hyper-workspace-jules-autopilot--\2026-06-22T14-43-05-158Z_019eefc8-f546-78a8-b7f5-85ab0bd114d9.jsonl"
     branch: main
     started: "2026-06-22T14:43:13.252Z"
+  - file: "C:\Users\hyper\.pi\agent\sessions\--C--Users-hyper-workspace-jules-autopilot--\2026-06-25T12-53-16-920Z_019efed7-81f8-7dd7-ac87-ba7955da4b24.jsonl"
+    branch: main
+    started: "2026-06-30T15:53:50.486Z"

@@ -65,7 +65,9 @@ yarn-error.log*
 
 # Stale backup databases (do not track)
 /archive/dev.db
+/archive/**/*.db
 /prisma/dev.db
+/prisma/**/*.db
 /prisma/dev.db-shm
 /lib/generated/prisma
 autopilot-backend.exe~

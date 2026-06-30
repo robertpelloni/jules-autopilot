@@ -2,6 +2,16 @@
 
 All notable changes to this project will be documented in this file.
 
+## [3.6.20] - 2026-06-30
+
+### Fixed
+
+- **Archive-All first message:** New sessions now created with only the repo name as the first prompt, so Jules web client shows the repo name as the session title (previously sent a verbose "Continue autonomous work on..." string).
+- **Archive-All PRINCIPLE DIRECTIVE:** After creating each fresh session, the full `PRINCIPLE DIRECTIVE: CONTINUOUS AUTONOMOUS EXECUTION` block is now injected as a second message, restoring autonomous context to every restarted Jules agent.
+- **Archive-All ordering:** Activity dump and session deletion now happen *before* new session creation to ensure clean teardown order (dump → delete → create → inject directive).
+- **Archive-All directive race condition:** Added 2-second delay between session creation and directive injection to prevent Jules API race where the session isn't yet ready to receive messages.
+- **Unarchive tool build error:** Removed unused `gorm.io/gorm` import from `tools/unarchive/main.go`.
+
 ## [3.6.19] - 2026-06-29
 
 ### Meta
