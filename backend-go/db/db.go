@@ -124,7 +124,7 @@ func seedDefaultSettings() {
 		log.Println("Seeding default keeper settings...")
 		settings = models.KeeperSettings{
 			ID:                         "default",
-			IsEnabled:                  false,
+			IsEnabled:                  true,
 			AutoSwitch:                 true,
 			CheckIntervalSeconds:       300,
 			InactivityThresholdMinutes: 1,
