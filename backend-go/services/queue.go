@@ -1044,11 +1044,17 @@ func getFirstUserMessage(client *JulesClient, sessionID string) string {
 		}
 		resp.Body.Close()
 
-		// Search oldest-first for first real message (skip Supervisor nudges)
+		// Two-pass search:
+		// 1. Find the oldest userMessage (this is the session's starting prompt)
+		// 2. Fall back to the oldest non-empty, non-Supervisor content
+		firstUserContent := ""
+		firstOtherContent := ""
 		for i := len(data.Activities) - 1; i >= 0; i-- {
 			a := data.Activities[i]
 			content := ""
+			isUser := false
 			if um, ok := a["userMessage"].(map[string]interface{}); ok {
+				isUser = true
 				content, _ = um["message"].(string)
 				if content == "" {
 					content, _ = um["content"].(string)
@@ -1076,9 +1082,18 @@ func getFirstUserMessage(client *JulesClient, sessionID string) string {
 			}
 
 			content = strings.TrimSpace(content)
-			if content != "" && !strings.HasPrefix(content, "[Supervisor]") {
-				return content
+			if content == "" || strings.HasPrefix(content, "[Supervisor]") {
+				continue
 			}
+			if isUser && firstUserContent == "" {
+				firstUserContent = content
+			}
+			if firstOtherContent == "" {
+				firstOtherContent = content
+			}
+		}
+		if firstUserContent != "" {
+			return firstUserContent
 		}
 
 		pageToken = data.NextPageToken
