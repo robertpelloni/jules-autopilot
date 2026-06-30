@@ -2,6 +2,18 @@
 
 All notable changes to this project will be documented in this file.
 
+## [3.6.22] - 2026-06-30
+
+### Added
+
+- **Broadcast Retry & Exponential Backoff:** Implemented robust retry loops (up to 3 attempts starting at 1s with binary exponential backoff) for websocket broadcast-continue and manual broadcast message handlers in `backend-go/services/queue.go` to handle transient network fluctuations or temporary API rate limiting cleanly without missing sessions.
+
+## [3.6.21] - 2026-06-30
+
+### Fixed
+
+- **GitHub Repository Default Branch Alignment:** Standardized all local workspace repositories to default and run checkout on the `main` branch. Aligned upstream repositories to use `main` default branches (resolving submodule clone failures).
+
 ## [3.6.20] - 2026-06-30
 
 ### Fixed

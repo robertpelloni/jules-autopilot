@@ -890,12 +890,27 @@ func BroadcastContinue() {
 			// Fallback: send a simple bump
 			msg = fmt.Sprintf("[Supervisor] Continue autonomous development on %s.", extractProjectName(session.SourceID))
 		}
-		if _, err := client.CreateActivity(session.ID, CreateActivityRequest{
-			Content: msg,
-			Type:    "message",
-			Role:    "user",
-		}); err != nil {
-			log.Printf("[Broadcast] Failed to bump %s: %v", session.ID[:8], err)
+
+		// Send with exponential backoff & retry
+		maxRetries := 3
+		retryDelay := 1 * time.Second
+		var actErr error
+		for attempt := 1; attempt <= maxRetries; attempt++ {
+			_, actErr = client.CreateActivity(session.ID, CreateActivityRequest{
+				Content: msg,
+				Type:    "message",
+				Role:    "user",
+			})
+			if actErr == nil {
+				break
+			}
+			log.Printf("[Broadcast] Attempt %d failed to bump %s: %v. Retrying in %v...", attempt, session.ID[:8], actErr, retryDelay)
+			time.Sleep(retryDelay)
+			retryDelay *= 2
+		}
+
+		if actErr != nil {
+			log.Printf("[Broadcast] Failed to bump %s after %d attempts: %v", session.ID[:8], maxRetries, actErr)
 			continue
 		}
 		sent++
@@ -972,12 +987,25 @@ func BroadcastMessageToAll(msg string) int {
 	}
 	sent := 0
 	for _, session := range sessions {
-		if _, err := client.CreateActivity(session.ID, CreateActivityRequest{
-			Content: "[Supervisor] " + msg,
-			Type:    "message",
-			Role:    "user",
-		}); err != nil {
-			log.Printf("[BroadcastMsg] Failed to send to %s: %v", session.ID[:8], err)
+		maxRetries := 3
+		retryDelay := 1 * time.Second
+		var actErr error
+		for attempt := 1; attempt <= maxRetries; attempt++ {
+			_, actErr = client.CreateActivity(session.ID, CreateActivityRequest{
+				Content: "[Supervisor] " + msg,
+				Type:    "message",
+				Role:    "user",
+			})
+			if actErr == nil {
+				break
+			}
+			log.Printf("[BroadcastMsg] Attempt %d failed to send to %s: %v. Retrying in %v...", attempt, session.ID[:8], actErr, retryDelay)
+			time.Sleep(retryDelay)
+			retryDelay *= 2
+		}
+
+		if actErr != nil {
+			log.Printf("[BroadcastMsg] Failed to send to %s after %d attempts: %v", session.ID[:8], maxRetries, actErr)
 			continue
 		}
 		sent++
