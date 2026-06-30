@@ -1898,11 +1898,20 @@ func broadcastAnalyzeUI(c *fiber.Ctx) error {
 }
 
 func archiveAllSessions(c *fiber.Ctx) error {
-	result, err := services.ArchiveAndRestartAllSessions()
-	if err != nil {
-		return c.Status(500).JSON(fiber.Map{"error": err.Error()})
-	}
-	return c.JSON(result)
+	log.Printf("[API] archiveAllSessions called — running in background")
+	go func() {
+		defer func() {
+			if r := recover(); r != nil {
+				log.Printf("[API] archiveAllSessions PANICKED: %v", r)
+			}
+		}()
+		if result, err := services.ArchiveAndRestartAllSessions(); err != nil {
+			log.Printf("[API] archiveAllSessions error: %v", err)
+		} else {
+			log.Printf("[API] archiveAllSessions done: archived=%d created=%d", result["archived"].(int), result["created"].(int))
+		}
+	}()
+	return c.JSON(fiber.Map{"success": true, "status": "processing", "message": "Archive and restart started in background"})
 }
 
 // Notification handlers

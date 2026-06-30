@@ -1040,8 +1040,6 @@ func detectRepeatedErrors(session models.JulesSession, activities []models.Jules
 // Walks from oldest to newest across all pages until it finds non-empty content.
 // Uses exponential backoff on 429 responses; the backoff resets on success.
 func getFirstUserMessage(client *JulesClient, sessionID string) string {
-	backoff := 1 * time.Second
-	maxBackoff := 30 * time.Second
 	pageToken := ""
 	maxPages := 20
 
@@ -1057,24 +1055,19 @@ func getFirstUserMessage(client *JulesClient, sessionID string) string {
 		}
 		client.setAuthHeaders(req)
 
-		resp, err := httpClient.Do(req)
+		// Short timeout for archive — fail fast if the API is slow
+		archiveClient := &http.Client{Timeout: 10 * time.Second}
+		resp, err := archiveClient.Do(req)
 		if err != nil {
 			return ""
 		}
 
-		// Handle 429 with exponential backoff
+		// Handle 429 — fail fast and use fallback prompt instead of hammering the API
 		if resp.StatusCode == http.StatusTooManyRequests {
 			resp.Body.Close()
-			time.Sleep(backoff)
-			backoff *= 2
-			if backoff > maxBackoff {
-				backoff = maxBackoff
-			}
-			continue // retry same page
+			log.Printf("[Archive] 429 fetching activities for %s — using fallback prompt", sessionID[:8])
+			return ""
 		}
-
-		// Reset backoff on success
-		backoff = 1 * time.Second
 
 		if resp.StatusCode != http.StatusOK {
 			resp.Body.Close()
