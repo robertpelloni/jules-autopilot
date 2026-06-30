@@ -1025,11 +1025,11 @@ func detectRepeatedErrors(session models.JulesSession, activities []models.Jules
 			msg := fmt.Sprintf("Session %s: %d repeated GitHub cloning errors detected. Last: %s",
 				session.ID[:8], cloneErrorCount, lastErrorMsg)
 			addKeeperLog(msg, "error", session.ID, map[string]interface{}{
-				"event":         "detected_repeated_error",
-				"errorCount":    cloneErrorCount,
-				"errorType":     "github_cloning",
-				"sessionId":     session.ID,
-				"sessionTitle":  session.Title,
+				"event":        "detected_repeated_error",
+				"errorCount":   cloneErrorCount,
+				"errorType":    "github_cloning",
+				"sessionId":    session.ID,
+				"sessionTitle": session.Title,
 			})
 			log.Printf("[Detect] %s", msg)
 		}
@@ -1159,16 +1159,34 @@ func ArchiveAndRestartAllSessions() (map[string]interface{}, error) {
 		return nil, fmt.Errorf("Jules not configured")
 	}
 
-	// Only touch sessions that aren't already archived
+	// Gather all sessions — prefer unarchived but fall back to archived so the
+	// button always does something useful, even when everything is already archived.
+	var allSessions []models.JulesSession
+	db.DB.Find(&allSessions)
+
+	// Separate unarchived from archived
 	var unarchived []models.JulesSession
-	db.DB.Where("archived = ?", false).Find(&unarchived)
+	var archived []models.JulesSession
+	for _, s := range allSessions {
+		if s.Archived {
+			archived = append(archived, s)
+		} else {
+			unarchived = append(unarchived, s)
+		}
+	}
+
+	// Source sessions: prefer unarchived, fall back to archived
+	sourceSessions := unarchived
+	if len(sourceSessions) == 0 {
+		sourceSessions = archived
+	}
 
 	// Group by sourceId — pick the newest session per repo
 	type repoGroup struct {
 		session models.JulesSession
 	}
 	repoMap := map[string]repoGroup{}
-	for _, s := range unarchived {
+	for _, s := range sourceSessions {
 		if s.SourceID == "" {
 			continue
 		}
