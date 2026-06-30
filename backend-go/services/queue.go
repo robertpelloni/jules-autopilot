@@ -1152,6 +1152,14 @@ func ArchiveAndRestartAllSessions() (map[string]interface{}, error) {
 		created++
 	}
 
+	// Refresh the local cache from Jules so the new sessions appear immediately
+	if sessions, listErr := client.ListSessions(); listErr == nil {
+		CacheSessions(sessions)
+		log.Printf("[Archive] Refreshed cache with %d sessions from Jules", len(sessions))
+	} else {
+		log.Printf("[Archive] Failed to refresh cache: %v", listErr)
+	}
+
 	addKeeperLog(fmt.Sprintf("Archive: archived %d sessions, created %d new (one per repo)", len(unarchived), created), "action", "global", map[string]interface{}{
 		"event":   "sessions_archived",
 		"total":   len(unarchived),
