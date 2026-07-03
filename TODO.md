@@ -4,6 +4,7 @@ This document tracks granular bugs, missing features, and technical debt. For ep
 
 ## Immediate Actions
 
+- [x] **Repository Sync & Intelligent Merge (v3.6.27):** Configured supervisor nudge prompt to consume instructions, documentation, last 10 commits from correct repo, last 5 user messages, last 5 agent messages. Set a strict 2-hour rate limit throttle on autonomous supervisor nudges. Bumped version to v3.6.27 across all manifests.
 - [x] **Repository Sync & Intelligent Merge (v3.6.26):** Full protocol execution — fetched all remotes, merged upstream changes into main branch, updated submodules, and verified local branches are fully caught up and synchronized. Bumped version to v3.6.26 across all manifests.
 - [x] **Repository Sync & Intelligent Merge (v3.6.25):** Full protocol execution — fetched all remotes, synced main, and verified branch states. Added hourly rate limiting for autonomous supervisor nudges. Bumped version to v3.6.25 across all manifests.
 - [x] **Repository Sync & Intelligent Merge (v3.6.20):** Full protocol execution — git fetch, fast-forward local main through 19 commits (v3.6.18 archive/broadcast/stability). All 3 remote feature branches verified at zero unique commits beyond main. Stashed & verified redundant local work. Bumped version to 3.6.19 across all 6 manifests. Updated CHANGELOG, HANDOFF, TODO.

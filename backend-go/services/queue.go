@@ -751,6 +751,15 @@ func (w *Worker) handleCheckSession(payload string) (string, error) {
 	}
 
 	if time.Since(lastActivityTime) > time.Duration(thresholdMinutes)*time.Minute && session.RawState != "AWAITING_PLAN_APPROVAL" {
+		// Only bump at most once every 2 hours to prevent spamming/looping autonomous prompts
+		if supervisorState.LastPleaseContinueAt != nil {
+			if lastBumpTime, parseErr := time.Parse(time.RFC3339, *supervisorState.LastPleaseContinueAt); parseErr == nil {
+				if time.Since(lastBumpTime) < 2*time.Hour {
+					return "none", nil
+				}
+			}
+		}
+
 		lastActivities := checkActivities
 
 		// If the last message is a supervisor nudge, avoid spamming nudges.
@@ -770,7 +779,13 @@ func (w *Worker) handleCheckSession(payload string) (string, error) {
 		workspaceRoot := filepath.Join(getProjectRoot(), "..")
 		projectDir := filepath.Join(workspaceRoot, projectName)
 
-		// Documentation context from the session's project in ../workspace/<project-name>/
+		// Fetch the correct local path from RepoPath mapping if available
+		var repoPath models.RepoPath
+		if err := db.DB.First(&repoPath, "source_id = ?", session.SourceID).Error; err == nil && repoPath.LocalPath != "" {
+			projectDir = repoPath.LocalPath
+		}
+
+		// Documentation context from the session's project in the resolved local repo
 		docContext := ""
 		for _, docFile := range []string{"README.md", "ARCHITECTURE.md", "DEPLOY.md", "VISION.md", "ROADMAP.md", "MEMORY.md"} {
 			path := filepath.Join(projectDir, docFile)
@@ -780,6 +795,19 @@ func (w *Worker) handleCheckSession(payload string) (string, error) {
 					content = content[:maxLen]
 				}
 				docContext += fmt.Sprintf("\n=== %s ===\n%s\n", docFile, string(content))
+			}
+		}
+
+		// Last 5 user messages
+		var lastUserMessages strings.Builder
+		userCount := 0
+		for i := len(lastActivities) - 1; i >= 0 && userCount < 5; i-- {
+			if lastActivities[i].Role == "user" {
+				if userCount > 0 {
+					lastUserMessages.WriteString("\n---\n")
+				}
+				lastUserMessages.WriteString(lastActivities[i].Content)
+				userCount++
 			}
 		}
 
@@ -796,18 +824,18 @@ func (w *Worker) handleCheckSession(payload string) (string, error) {
 			}
 		}
 
-		// Git commits from the session's project
+		// Git commits from the resolved local repo (last 10 commits)
 		commitContext := ""
 		gitCtx, gitCancel := context.WithTimeout(context.Background(), 5*time.Second)
-		if output, err := CmdContext(gitCtx, "git", "-C", projectDir, "log", "--oneline", "-5").Output(); err == nil {
+		if output, err := CmdContext(gitCtx, "git", "-C", projectDir, "log", "--oneline", "-10").Output(); err == nil {
 			commitContext = fmt.Sprintf("\n=== Recent Commits ===\n%s", string(output))
 		}
 		gitCancel()
 
-		// Build the prompt: instructions + docs + last 5 agent msgs + commits + instructions again
+		// Build the prompt: instructions + docs + last 10 commits + last 5 user msgs + last 5 agent msgs + instructions again
 		prompt := fmt.Sprintf(
-			"INSTRUCTIONS:\n%s\n\nDOCUMENTATION:\n%s\n\nJULES AGENT LAST 5 MESSAGES:\n%s\n%s\n\nINSTRUCTIONS AGAIN:\n%s",
-			instructions, docContext, lastAgentMessages.String(), commitContext, instructions)
+			"INSTRUCTIONS:\n%s\n\nDOCUMENTATION:\n%s\n\n%s\n\nUSER LAST 5 MESSAGES:\n%s\n\nJULES AGENT LAST 5 MESSAGES:\n%s\n\nINSTRUCTIONS AGAIN:\n%s",
+			instructions, docContext, commitContext, lastUserMessages.String(), lastAgentMessages.String(), instructions)
 
 		// ALWAYS send prompt to LM Studio — the RESPONSE is what goes to Jules, never raw context
 		result, err := generateLLMText("lmstudio", "placeholder", settings.SupervisorModel, "You are a coding supervisor. Follow the INSTRUCTIONS.", []LLMMessage{{

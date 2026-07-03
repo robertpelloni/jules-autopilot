@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file.
 
+## [3.6.27] - 2026-07-02
+
+### Added
+
+- **Expanded Supervisor Nudge Prompt:** Reconfigured the autonomous nudge prompt construction to fetch the last 10 git commit messages for the correct resolved repository, last 5 user messages, last 5 Jules agent messages, inline repository documentation, and the supervisor instructions.
+- **Two-Hour Nudge Throttling**: Restructured the check session loop in `backend-go/services/queue.go` to enforce a rate limit of at most one autonomous nudge every 2 hours per session.
+
 ## [3.6.26] - 2026-07-02
 
 ### Added

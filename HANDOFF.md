@@ -2,12 +2,14 @@
 
 ## Summary
 
-Executed comprehensive repository synchronization and intelligent merge protocol (v3.6.26). Upstream was synced and merged. Local feature branches verified as caught up. Version bumped to 3.6.26 across all manifests.
+Implemented v3.6.27 updates focusing on the supervisor inactivity nudge prompt telemetry expansion and throttling controls:
 
-## Work Completed
-
-1. **Upstream Sync**: Verified that upstream/main has zero unmerged commits.
-2. **Submodules**: Fetched all remote branches and verified default branch consistency.
-3. **Hourly Nudge Rate Limit**: Checked that autonomous daemon supervisor nudges are rate-limited to at most once per hour per session.
-4. **Re-creation Guard**: Verified that the `ArchiveAll` workflow safely checks active session counts before creating fresh sessions.
-5. **Version Governance**: Bumped version to `3.6.26` across all manifests and documentation files.
+1. **Inactivity Nudge Rate Limiting**: The autonomous bump interval is now capped to at most once every **2 hours** per session (using the `supervisorState.LastPleaseContinueAt` column values).
+2. **Nudge Prompt Construction**: Enlarged LLM nudge context:
+   - Instructions
+   - Repository documentation (`README.md`, `ARCHITECTURE.md`, `DEPLOY.md`, `VISION.md`, `ROADMAP.md`, `MEMORY.md`)
+   - Last **10 commits** dynamically parsed from the active mapped repository workspace (resolving relative mirrors or explicit `models.RepoPath` entries)
+   - Last **5 user messages** from the session history
+   - Last **5 agent messages** from the session history
+   - Repeat instructions footer.
+3. **Execution Script & Version Sync**: Global build version updated to `3.6.27` across all package manifests and version files. Compiled and verified successfully.
