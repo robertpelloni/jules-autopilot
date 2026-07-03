@@ -4,6 +4,7 @@ This document tracks granular bugs, missing features, and technical debt. For ep
 
 ## Immediate Actions
 
+- [x] **Repository Sync & Intelligent Merge (v3.6.28):** Taught the supervisor nudge loop to write the correct `LastPleaseContinueAt` timestamp back to `SupervisorState` on successful bumps, ensuring the 2-hour rate limiting behaves correctly across daemon checks. Added prompt hints to instruct LM Studio to generate unique context-aware nudge text. Bumped version to v3.6.28 across all manifests.
 - [x] **Repository Sync & Intelligent Merge (v3.6.27):** Configured supervisor nudge prompt to consume instructions, documentation, last 10 commits from correct repo, last 5 user messages, last 5 agent messages. Set a strict 2-hour rate limit throttle on autonomous supervisor nudges. Bumped version to v3.6.27 across all manifests.
 - [x] **Repository Sync & Intelligent Merge (v3.6.26):** Full protocol execution — fetched all remotes, merged upstream changes into main branch, updated submodules, and verified local branches are fully caught up and synchronized. Bumped version to v3.6.26 across all manifests.
 - [x] **Repository Sync & Intelligent Merge (v3.6.25):** Full protocol execution — fetched all remotes, synced main, and verified branch states. Added hourly rate limiting for autonomous supervisor nudges. Bumped version to v3.6.25 across all manifests.

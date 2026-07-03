@@ -771,7 +771,7 @@ func (w *Worker) handleCheckSession(payload string) (string, error) {
 			}
 		}
 
-		instructions := "Craft a brief nudge to instruct the Google Jules agent to continue autonomously. Infer the next step based on the progress history and conversation."
+		instructions := "Craft a brief, context-aware nudge to instruct the Google Jules agent to continue autonomously. Infer the next step based on the progress history, git commits, and conversation. Do NOT repeat or replicate past messages, and make the text unique to the current state."
 
 		// Resolve project name from the session's sourceID for workspace mirrored docs
 		// Workspace root is ../.. from backend-go/ (where all project mirrors live)
@@ -834,7 +834,7 @@ func (w *Worker) handleCheckSession(payload string) (string, error) {
 
 		// Build the prompt: instructions + docs + last 10 commits + last 5 user msgs + last 5 agent msgs + instructions again
 		prompt := fmt.Sprintf(
-			"INSTRUCTIONS:\n%s\n\nDOCUMENTATION:\n%s\n\n%s\n\nUSER LAST 5 MESSAGES:\n%s\n\nJULES AGENT LAST 5 MESSAGES:\n%s\n\nINSTRUCTIONS AGAIN:\n%s",
+			"INSTRUCTIONS:\n%s\n\nDOCUMENTATION:\n%s\n\n%s\n\nUSER LAST 5 MESSAGES:\n%s\n\nJULES AGENT LAST 5 MESSAGES:\n%s\n\nINSTRUCTIONS AGAIN:\n%s\n\nEnsure this message is highly unique and does not repeat previously sent messages.",
 			instructions, docContext, commitContext, lastUserMessages.String(), lastAgentMessages.String(), instructions)
 
 		// ALWAYS send prompt to LM Studio — the RESPONSE is what goes to Jules, never raw context
@@ -876,6 +876,8 @@ func (w *Worker) handleCheckSession(payload string) (string, error) {
 
 		timestamp := lastActivityTime.Format(time.RFC3339)
 		supervisorState.LastProcessedActivityTimestamp = &timestamp
+		nowTime := time.Now().Format(time.RFC3339)
+		supervisorState.LastPleaseContinueAt = &nowTime
 		_ = saveSupervisorState(supervisorState)
 		return "nudged", nil
 	}

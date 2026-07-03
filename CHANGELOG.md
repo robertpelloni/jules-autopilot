@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file.
 
+## [3.6.28] - 2026-07-03
+
+### Fixed
+
+- **Supervisor Nudge Rate Limit Persistency**: Taught the nudge loop to write the correct `LastPleaseContinueAt` timestamp back to `SupervisorState` on successful bumps, ensuring the 2-hour rate limiting behaves correctly across daemon checks.
+- **Unique Nudge Prompts**: Added prompt hints to instruct LM Studio to generate unique context-aware nudge text to avoid repeating previous bump logs.
+
 ## [3.6.27] - 2026-07-02
 
 ### Added
