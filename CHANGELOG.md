@@ -2,7 +2,19 @@
 
 All notable changes to this project will be documented in this file.
 
-## [3.6.23] - 2026-06-30
+## [3.6.26] - 2026-07-02
+
+### Added
+
+- **Repository Sync & Merge Protocol:** Conducted a comprehensive workspace and upstream repository refresh. Synced and updated submodules to their latest stable commits and verified the cleanliness of active feature branch structures.
+
+## [3.6.25] - 2026-07-02
+
+### Added
+
+- **Hourly Nudge Rate Limit:** Implemented checks against `supervisorState.LastPleaseContinueAt` to enforce a limit of at most one nudge per hour per session.
+
+## [3.6.24] - 2026-06-30
 
 ### Fixed
 
