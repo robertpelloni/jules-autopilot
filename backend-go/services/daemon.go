@@ -185,7 +185,7 @@ func (d *Daemon) tick() time.Duration {
 			"check_session",
 			[]string{"pending", "processing"},
 			"%"+session.ID+"%",
-		).First(&jobCheck).Error == nil
+		).Limit(1).Find(&jobCheck).RowsAffected > 0
 		if jobExists {
 			continue
 		}
@@ -219,7 +219,7 @@ func (d *Daemon) tick() time.Duration {
 			"check_session",
 			[]string{"pending", "processing"},
 			"%"+session.ID+"%",
-		).First(&existing).Error == nil
+		).Limit(1).Find(&existing).RowsAffected > 0
 		if found {
 			continue
 		}
@@ -259,7 +259,7 @@ func (d *Daemon) tick() time.Duration {
 					[]string{"pending", "processing"},
 					"completed", thirtyMinAgo,
 					"%"+source.ID+"%",
-				).First(&existing).Error == nil
+				).Limit(1).Find(&existing).RowsAffected > 0
 				if found {
 					continue
 				}
@@ -276,7 +276,7 @@ func (d *Daemon) tick() time.Duration {
 	}
 
 	var existingIndexJob models.QueueJob
-	indexJobPending := db.DB.Where("type = ? AND status IN ?", "index_codebase", []string{"pending", "processing"}).First(&existingIndexJob).Error == nil
+	indexJobPending := db.DB.Where("type = ? AND status IN ?", "index_codebase", []string{"pending", "processing"}).Limit(1).Find(&existingIndexJob).RowsAffected > 0
 	queuedIndexing := false
 	if !indexJobPending {
 		if _, err := AddJob("index_codebase", map[string]string{}); err != nil {

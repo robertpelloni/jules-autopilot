@@ -56,6 +56,7 @@ func InitDB() {
 	log.Println("Database initialized and migrated successfully")
 
 	seedDefaultSettings()
+	seedShadowPilotSettings()
 }
 
 // InitTestDB creates an in-memory SQLite database for testing
@@ -138,6 +139,23 @@ func seedDefaultSettings() {
 		}
 		if err := DB.Create(&settings).Error; err != nil {
 			log.Printf("failed to seed default settings: %v", err)
+		}
+	}
+}
+
+func seedShadowPilotSettings() {
+	var settings models.ShadowPilotSettings
+	if err := DB.First(&settings, "id = ?", "default").Error; err != nil {
+		log.Println("Seeding default shadow pilot settings...")
+		settings = models.ShadowPilotSettings{
+			ID:               "default",
+			IsEnabled:         true,
+			ScanIntervalHours: 6,
+			AutoFix:           false,
+			MinSeverity:       "medium",
+		}
+		if err := DB.Create(&settings).Error; err != nil {
+			log.Printf("failed to seed shadow pilot settings: %v", err)
 		}
 	}
 }

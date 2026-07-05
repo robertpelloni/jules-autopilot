@@ -781,7 +781,7 @@ func (w *Worker) handleCheckSession(payload string) (string, error) {
 
 		// Fetch the correct local path from RepoPath mapping if available
 		var repoPath models.RepoPath
-		if err := db.DB.First(&repoPath, "source_id = ?", session.SourceID).Error; err == nil && repoPath.LocalPath != "" {
+		if err := db.DB.Where("source_id = ?", session.SourceID).Limit(1).Find(&repoPath).Error; err == nil && repoPath.LocalPath != "" {
 			projectDir = repoPath.LocalPath
 		}
 
@@ -1479,7 +1479,7 @@ func IndexCodebase() (string, error) {
 			chunkID := fmt.Sprintf("chunk-%s-%d", relativePath, startLine)
 
 			var existing models.CodeChunk
-			if err := db.DB.First(&existing, "id = ?", chunkID).Error; err == nil && existing.Checksum == checksum {
+			if err := db.DB.Where("id = ?", chunkID).Limit(1).Find(&existing).Error; err == nil && existing.Checksum == checksum {
 				continue
 			}
 
