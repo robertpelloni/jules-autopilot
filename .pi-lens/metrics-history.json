@@ -210,7 +210,57 @@
         }
       ],
       "trend": "stable"
+    },
+    "backend-go\\services\\tray_windows.go": {
+      "latest": {
+        "commit": "96cce2a",
+        "timestamp": "2026-07-13T01:32:56.357Z",
+        "mi": 61.3,
+        "cognitive": 23,
+        "nesting": 3,
+        "lines": 101,
+        "maxCyclomatic": 4,
+        "entropy": 5.84
+      },
+      "history": [
+        {
+          "commit": "96cce2a",
+          "timestamp": "2026-07-13T01:32:56.357Z",
+          "mi": 61.3,
+          "cognitive": 23,
+          "nesting": 3,
+          "lines": 101,
+          "maxCyclomatic": 4,
+          "entropy": 5.84
+        }
+      ],
+      "trend": "stable"
+    },
+    "backend-go\\services\\hide_window_windows.go": {
+      "latest": {
+        "commit": "96cce2a",
+        "timestamp": "2026-07-13T01:33:36.233Z",
+        "mi": 82,
+        "cognitive": 0,
+        "nesting": 1,
+        "lines": 19,
+        "maxCyclomatic": 1,
+        "entropy": 4.31
+      },
+      "history": [
+        {
+          "commit": "96cce2a",
+          "timestamp": "2026-07-13T01:33:36.233Z",
+          "mi": 82,
+          "cognitive": 0,
+          "nesting": 1,
+          "lines": 19,
+          "maxCyclomatic": 1,
+          "entropy": 4.31
+        }
+      ],
+      "trend": "stable"
     }
   },
-  "capturedAt": "2026-06-24T16:40:41.296Z"
+  "capturedAt": "2026-07-13T01:33:41.235Z"
 }
