@@ -88,8 +88,6 @@ func defaultModelForProvider(provider string) string {
 	switch normalizeProvider(provider) {
 	case "lmstudio":
 		return "gemma-4-26b-a4b-it-qat-heretic"
-	case "localproxy":
-		return "free-llm"
 	case "openrouter":
 		return "nvidia/nemotron-3-nano-omni-30b-a3b-reasoning:free"
 	case "anthropic":
@@ -128,8 +126,6 @@ func getSupervisorAPIKey(provider string, explicit *string) string {
 	switch strings.ToLower(strings.TrimSpace(provider)) {
 	case "lmstudio":
 		return "placeholder"
-	case "localproxy":
-		return "placeholder"
 	case "openrouter":
 		if key := strings.TrimSpace(os.Getenv("OPENROUTER_API_KEY")); key != "" {
 			return key
@@ -167,9 +163,9 @@ func generateLLMText(primaryProvider, primaryApiKey, primaryModel, systemPrompt 
 	primaryProvider = normalizeProvider(primaryProvider)
 	primaryModel = resolveModel(primaryProvider, primaryModel)
 
-	// Fallback chain: Primary -> localproxy -> lmstudio
+	// Fallback chain: Primary -> lmstudio
 	providers := []string{primaryProvider}
-	fallbacks := []string{"localproxy", "lmstudio"}
+	fallbacks := []string{"lmstudio"}
 	for _, p := range fallbacks {
 		exists := false
 		for _, existing := range providers {
@@ -196,7 +192,7 @@ func generateLLMText(primaryProvider, primaryApiKey, primaryModel, systemPrompt 
 		if i > 0 {
 			// This is a fallback attempt
 			apiKey = getSupervisorAPIKey(provider, nil)
-			if provider != "lmstudio" && provider != "localproxy" && (apiKey == "" || apiKey == "placeholder") {
+			if provider != "lmstudio" && (apiKey == "" || apiKey == "placeholder") {
 				continue // Cannot fallback without an API key (local providers don't need one)
 			}
 			model = resolveModel(provider, "")
@@ -317,14 +313,7 @@ var lmStudioHttpClient = &http.Client{
 // Local hardware — up to four LM Studio inferences at a time.
 var lmStudioSem = make(chan struct{}, 4)
 
-var freellmHttpClient = &http.Client{
-	Timeout: 10 * time.Minute,
-}
-
-var freellmSem = make(chan struct{}, 4)
-
 func generateOpenRouterText(apiKey, model, systemPrompt string, messages []LLMMessage) (LLMResult, error) {
-	start := time.Now()
 
 	requestMessages := make([]map[string]string, 0, len(messages)+1)
 	if strings.TrimSpace(systemPrompt) != "" {
@@ -346,31 +335,6 @@ func generateOpenRouterText(apiKey, model, systemPrompt string, messages []LLMMe
 	if strings.Contains(model, "lmstudio") || strings.HasPrefix(model, "gemma-4") {
 		apiURL = "http://localhost:1234/v1/chat/completions"
 		isLMStudio = true
-	} else if strings.Contains(model, "free-llm") || strings.HasPrefix(model, "nvidia/nemotron-3-ultra") || strings.HasPrefix(model, "mistral-medium") || strings.HasPrefix(model, "devstral") || strings.HasPrefix(model, "codestral") || strings.HasPrefix(model, "magistral") {
-		apiURL = "http://localhost:4000/v1/chat/completions"
-	}
-
-	// FreeLLM: serialized (1 at a time), 10min timeout, no retries
-	isFreeLLM := strings.Contains(apiURL, "localhost:4000")
-	if isFreeLLM {
-		retryReq, err := http.NewRequest(http.MethodPost, apiURL, bytes.NewReader(requestBody))
-		if err != nil {
-			return LLMResult{}, err
-		}
-		retryReq.Header.Set("Authorization", "Bearer "+apiKey)
-		retryReq.Header.Set("Content-Type", "application/json")
-		freellmSem <- struct{}{}
-		defer func() { <-freellmSem }()
-		resp, err := freellmHttpClient.Do(retryReq)
-		if err != nil {
-			return LLMResult{}, fmt.Errorf("FreeLLM request failed: %w", err)
-		}
-		defer resp.Body.Close()
-		if resp.StatusCode >= 400 {
-			body, _ := io.ReadAll(resp.Body)
-			return LLMResult{}, fmt.Errorf("FreeLLM request failed (%d): %s", resp.StatusCode, string(body))
-		}
-		return decodeOpenRouterResponse(resp, start)
 	}
 
 	// Retry logic: LM Studio may need model reload time
@@ -637,46 +601,4 @@ func generateGeminiText(apiKey, model, systemPrompt string, messages []LLMMessag
 	}, nil
 }
 
-func decodeOpenRouterResponse(resp *http.Response, start time.Time) (LLMResult, error) {
-	var data struct {
-		Choices []struct {
-			Message struct {
-				Content          string `json:"content"`
-				ReasoningContent string `json:"reasoning_content"`
-				Reasoning        string `json:"reasoning"`
-			} `json:"message"`
-		} `json:"choices"`
-		Usage struct {
-			PromptTokens     int `json:"prompt_tokens"`
-			CompletionTokens int `json:"completion_tokens"`
-			TotalTokens      int `json:"total_tokens"`
-		} `json:"usage"`
-	}
-	if err := json.NewDecoder(resp.Body).Decode(&data); err != nil {
-		resp.Body.Close()
-		return LLMResult{}, err
-	}
-	resp.Body.Close()
-	if len(data.Choices) == 0 {
-		return LLMResult{}, fmt.Errorf("LLM response contained no choices")
-	}
-	resultContent := strings.TrimSpace(data.Choices[0].Message.Content)
-	if resultContent == "" {
-		resultContent = strings.TrimSpace(data.Choices[0].Message.ReasoningContent)
-	}
-	if resultContent == "" {
-		resultContent = strings.TrimSpace(data.Choices[0].Message.Reasoning)
-	}
-	if resultContent == "" {
-		return LLMResult{}, fmt.Errorf("LLM returned empty content")
-	}
-	return LLMResult{
-		Content:   resultContent,
-		LatencyMs: float64(time.Since(start).Milliseconds()),
-		Usage: &LLMUsage{
-			PromptTokens:     data.Usage.PromptTokens,
-			CompletionTokens: data.Usage.CompletionTokens,
-			TotalTokens:      data.Usage.TotalTokens,
-		},
-	}, nil
-}
+
