@@ -260,7 +260,57 @@
         }
       ],
       "trend": "stable"
+    },
+    "backend-go\\services\\llm.go": {
+      "latest": {
+        "commit": "4802a1b",
+        "timestamp": "2026-07-17T22:55:14.038Z",
+        "mi": 40.1,
+        "cognitive": 281,
+        "nesting": 4,
+        "lines": 592,
+        "maxCyclomatic": 33,
+        "entropy": 6.76
+      },
+      "history": [
+        {
+          "commit": "4802a1b",
+          "timestamp": "2026-07-17T22:55:14.038Z",
+          "mi": 40.1,
+          "cognitive": 281,
+          "nesting": 4,
+          "lines": 592,
+          "maxCyclomatic": 33,
+          "entropy": 6.76
+        }
+      ],
+      "trend": "stable"
+    },
+    "backend-go\\services\\cost_optimizer.go": {
+      "latest": {
+        "commit": "4802a1b",
+        "timestamp": "2026-07-17T22:57:35.646Z",
+        "mi": 50.2,
+        "cognitive": 71,
+        "nesting": 4,
+        "lines": 300,
+        "maxCyclomatic": 10,
+        "entropy": 6.8
+      },
+      "history": [
+        {
+          "commit": "4802a1b",
+          "timestamp": "2026-07-17T22:57:35.646Z",
+          "mi": 50.2,
+          "cognitive": 71,
+          "nesting": 4,
+          "lines": 300,
+          "maxCyclomatic": 10,
+          "entropy": 6.8
+        }
+      ],
+      "trend": "stable"
     }
   },
-  "capturedAt": "2026-07-13T01:33:41.235Z"
+  "capturedAt": "2026-07-17T22:57:40.684Z"
 }

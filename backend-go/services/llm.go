@@ -600,5 +600,3 @@ func generateGeminiText(apiKey, model, systemPrompt string, messages []LLMMessag
 		},
 	}, nil
 }
-
-
