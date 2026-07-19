@@ -301,13 +301,24 @@ func generateRiskScore(provider, apiKey, model, topic, summary string, fallback 
 	return extractRiskScoreFromText(result.Content)
 }
 
+// ForceAttemptHTTP2=false prevents HTTP/2 goroutine/thread exhaustion.
 var llmHttpClient = &http.Client{
 	Timeout: 90 * time.Second,
+	Transport: &http.Transport{
+		ForceAttemptHTTP2: false,
+		MaxIdleConns:      10,
+		IdleConnTimeout:   30 * time.Second,
+	},
 }
 
 // LM Studio local inference — 120s should be enough; longer stalls block all workers.
 var lmStudioHttpClient = &http.Client{
 	Timeout: 120 * time.Second,
+	Transport: &http.Transport{
+		ForceAttemptHTTP2: false,
+		MaxIdleConns:      4,
+		IdleConnTimeout:   30 * time.Second,
+	},
 }
 
 // Local hardware — up to four LM Studio inferences at a time.

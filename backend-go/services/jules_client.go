@@ -24,9 +24,15 @@ type GitHubIssue struct {
 	CreatedAt string `json:"created_at"`
 }
 
-// httpClient with timeout to prevent goroutine leaks from hanging API calls
+// httpClient with timeout to prevent goroutine leaks from hanging API calls.
+// ForceAttemptHTTP2=false avoids HTTP/2 goroutine/thread exhaustion issues with Google APIs.
 var httpClient = &http.Client{
 	Timeout: 300 * time.Second,
+	Transport: &http.Transport{
+		ForceAttemptHTTP2: false,
+		MaxIdleConns:      10,
+		IdleConnTimeout:   30 * time.Second,
+	},
 }
 
 type JulesClient struct {

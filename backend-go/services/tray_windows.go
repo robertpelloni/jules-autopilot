@@ -6,6 +6,7 @@ import (
 	"encoding/json"
 	"log"
 	"os"
+	"os/exec"
 	"path/filepath"
 	"sync"
 	"time"
@@ -79,9 +80,9 @@ func StartTray() {
 			return
 		}
 
-		// Kill any stale one first
-		kill := Cmd("taskkill", "/f", "/im", "trayicon.exe")
-		_ = kill.Run()
+		// Kill any stale trayicon.exe via PowerShell to avoid console flash
+		_ = exec.Command("powershell", "-NoProfile", "-WindowStyle", "Hidden",
+			"-Command", "Stop-Process -Name trayicon -Force -ErrorAction SilentlyContinue").Run()
 
 		// Write a temp JSON config so the tray knows where the API is
 		configDir := filepath.Join(os.TempDir(), "jules-autopilot-tray")
@@ -94,11 +95,13 @@ func StartTray() {
 			_ = os.WriteFile(configPath, data, 0644)
 		}
 
-		cmd := Cmd(trayExe)
+		// Use PowerShell to start trayicon.exe silently (console apps still flash with HideWindow)
+		cmd := exec.Command("powershell", "-NoProfile", "-WindowStyle", "Hidden",
+			"-Command", "Start-Process", "-FilePath", trayExe, "-WindowStyle", "Hidden")
 		if err := cmd.Start(); err != nil {
 			log.Printf("[Tray] Failed: %v", err)
 		} else {
-			log.Printf("[Tray] Started PID %d", cmd.Process.Pid)
+			log.Printf("[Tray] Started trayicon via PowerShell")
 		}
 	})
 }

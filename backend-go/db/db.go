@@ -12,7 +12,7 @@ var DB *gorm.DB
 
 func InitDB() {
 	var err error
-	DB, err = gorm.Open(sqlite.Open("dev.db"), &gorm.Config{})
+	DB, err = gorm.Open(sqlite.Open("dev.db?_pragma=journal_mode(WAL)&_pragma=busy_timeout(5000)&_pragma=temp_store(MEMORY)&_pragma=synchronous(NORMAL)&_pragma=cache_size(-8000)&_pragma=mmap_size(268435456)"), &gorm.Config{})
 	if err != nil {
 		log.Fatalf("failed to connect database: %v", err)
 	}

@@ -2,6 +2,17 @@
 
 All notable changes to this project will be documented in this file.
 
+## [3.7.0] - 2026-07-17
+
+### Fixed
+
+- **HTTP/2 Goroutine Exhaustion**: Forced HTTP/1.1 on all HTTP clients (Jules API, OpenRouter, LM Studio) to prevent thread exhaustion / lock contention that caused periodic backend freezes.
+- **SQLite Write Contention**: Enabled WAL journal mode, increased busy timeout to 5s, and tuned cache/mmap pragmas for concurrent write performance. Eliminated 200ms-1.2s slow SQL warnings.
+- **Tray Icon Console Flash**: Replaced `taskkill` + `exec.Command` with PowerShell `Stop-Process` / `Start-Process -WindowStyle Hidden` to eliminate brief console window popups on startup.
+- **FreeLLM Removed**: Stripped all FreeLLM/localproxy provider references. Fallback chain is now only primary → lmstudio.
+- **GORM Record-Not-Found Noise**: Changed `.First()` to `.Find()` in daemon and queue to eliminate hundreds of false-positive "record not found" log lines.
+- **ShadowPilot Settings**: Added missing default ShadowPilot settings seed on database init.
+
 ## [3.6.28] - 2026-07-03
 
 ### Fixed
