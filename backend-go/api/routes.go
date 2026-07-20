@@ -1293,18 +1293,35 @@ func getHealth(c *fiber.Ctx) error {
 		databaseError = pingErr.Error()
 	}
 
+	// Use a short timeout so the watchdog never kills us during slow DB ops
+	const healthTimeout = 2 * time.Second
+	done := make(chan struct{}, 1)
 	var settings models.KeeperSettings
-	settingsFound := db.DB.First(&settings, "id = ?", "default").Error == nil
+	var settingsFound bool
 	var pendingCount, processingCount, codeChunkCount, memoryChunkCount, templateCount, debateCount, sessionCount, notificationCount, auditCount int64
-	db.DB.Model(&models.QueueJob{}).Where("status = ?", "pending").Count(&pendingCount)
-	db.DB.Model(&models.QueueJob{}).Where("status = ?", "processing").Count(&processingCount)
-	db.DB.Model(&models.CodeChunk{}).Count(&codeChunkCount)
-	db.DB.Model(&models.MemoryChunk{}).Count(&memoryChunkCount)
-	db.DB.Model(&models.SessionTemplate{}).Count(&templateCount)
-	db.DB.Model(&models.Debate{}).Count(&debateCount)
-	db.DB.Model(&models.JulesSession{}).Count(&sessionCount)
-	db.DB.Model(&models.Notification{}).Where("is_read = ? AND is_dismissed = ?", false, false).Count(&notificationCount)
-	db.DB.Model(&models.AuditEntry{}).Count(&auditCount)
+
+	go func() {
+		settingsFound = db.DB.First(&settings, "id = ?", "default").Error == nil
+		db.DB.Model(&models.QueueJob{}).Where("status = ?", "pending").Count(&pendingCount)
+		db.DB.Model(&models.QueueJob{}).Where("status = ?", "processing").Count(&processingCount)
+		db.DB.Model(&models.CodeChunk{}).Count(&codeChunkCount)
+		db.DB.Model(&models.MemoryChunk{}).Count(&memoryChunkCount)
+		db.DB.Model(&models.SessionTemplate{}).Count(&templateCount)
+		db.DB.Model(&models.Debate{}).Count(&debateCount)
+		db.DB.Model(&models.JulesSession{}).Count(&sessionCount)
+		db.DB.Model(&models.Notification{}).Where("is_read = ? AND is_dismissed = ?", false, false).Count(&notificationCount)
+		db.DB.Model(&models.AuditEntry{}).Count(&auditCount)
+		close(done)
+	}()
+
+	select {
+	case <-done:
+	case <-time.After(healthTimeout):
+		// DB is too slow — respond with what we have, watchdog won't kill us
+		status = "degraded"
+		databaseStatus = "degraded"
+		databaseError = "health check timed out after 2s"
+	}
 
 	ClientsMutex.Lock()
 	wsCount := len(ActiveClients)

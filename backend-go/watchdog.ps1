@@ -6,20 +6,20 @@ $port = 8082
 $backendDir = Split-Path -Parent $MyInvocation.MyCommand.Path
 $logFile = Join-Path $backendDir "watchdog.log"
 $serverLog = Join-Path $backendDir "server.log"
-$checkInterval = 30
+$checkInterval = 60
 
 Add-Content $logFile "[$(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')] Watchdog started for backend on port $port"
 
 while ($true) {
     try {
-        $response = Invoke-WebRequest -Uri "http://127.0.0.1:$port/api/health" -TimeoutSec 5 -ErrorAction Stop
+        $response = Invoke-WebRequest -Uri "http://127.0.0.1:$port/api/health" -TimeoutSec 10 -ErrorAction Stop
         if ($response.StatusCode -eq 200) {
             # Backend is healthy - sleep and loop
             Start-Sleep -Seconds $checkInterval
             continue
         }
     } catch {
-        # Backend not responding
+        # Backend not responding or timed out
     }
 
     Add-Content $logFile "[$(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')] Backend not responding. Restarting..."
