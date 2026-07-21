@@ -310,7 +310,57 @@
         }
       ],
       "trend": "stable"
+    },
+    "backend-go\\api\\routes.go": {
+      "latest": {
+        "commit": "59ab8da",
+        "timestamp": "2026-07-20T22:33:48.973Z",
+        "mi": 27.4,
+        "cognitive": 662,
+        "nesting": 5,
+        "lines": 2468,
+        "maxCyclomatic": 18,
+        "entropy": 6.93
+      },
+      "history": [
+        {
+          "commit": "59ab8da",
+          "timestamp": "2026-07-20T22:33:48.973Z",
+          "mi": 27.4,
+          "cognitive": 662,
+          "nesting": 5,
+          "lines": 2468,
+          "maxCyclomatic": 18,
+          "entropy": 6.93
+        }
+      ],
+      "trend": "stable"
+    },
+    "backend-go\\db\\db.go": {
+      "latest": {
+        "commit": "3bc4cf6",
+        "timestamp": "2026-07-21T04:49:23.736Z",
+        "mi": 53.6,
+        "cognitive": 18,
+        "nesting": 3,
+        "lines": 145,
+        "maxCyclomatic": 2,
+        "entropy": 5.59
+      },
+      "history": [
+        {
+          "commit": "3bc4cf6",
+          "timestamp": "2026-07-21T04:49:23.736Z",
+          "mi": 53.6,
+          "cognitive": 18,
+          "nesting": 3,
+          "lines": 145,
+          "maxCyclomatic": 2,
+          "entropy": 5.59
+        }
+      ],
+      "trend": "stable"
     }
   },
-  "capturedAt": "2026-07-17T22:57:40.684Z"
+  "capturedAt": "2026-07-21T04:49:28.738Z"
 }

@@ -1,3 +1,7 @@
+<!-- [TORMENTNEXUS_AUTO_INJECTED] -->
+> [!IMPORTANT]
+> You are running within the TormentNexus environment. You MUST use your available tools frequently and proactively for researching, editing, executing, and validating your work. Always prioritize tool execution.
+
 # Claude 3.5 Sonnet / Opus Instructions
 
 > **MANDATORY:** Always read `LLM_INSTRUCTIONS.md` first. This file contains only Claude-specific overrides and strategies.

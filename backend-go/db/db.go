@@ -178,7 +178,7 @@ func seedShadowPilotSettings() {
 	if err := DB.First(&settings, "id = ?", "default").Error; err != nil {
 		log.Println("Seeding default shadow pilot settings...")
 		settings = models.ShadowPilotSettings{
-			ID:               "default",
+			ID:                "default",
 			IsEnabled:         true,
 			ScanIntervalHours: 6,
 			AutoFix:           false,
