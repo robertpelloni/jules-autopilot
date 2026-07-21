@@ -2,6 +2,7 @@ package db
 
 import (
 	"log"
+	"time"
 
 	"github.com/glebarez/sqlite"
 	"github.com/jules-autopilot/backend/models"
@@ -11,11 +12,33 @@ import (
 var DB *gorm.DB
 
 func InitDB() {
+	// SQLite pragma order matters: WAL + busy_timeout first, then performance tuning.
+	// _busy_timeout is a modernc.org/sqlite DSN parameter (not a pragma) that sets
+	// the busy handler; it must be in the DSN before any connections are opened.
+	dsn := "dev.db" +
+		"?_pragma=journal_mode(WAL)" +
+		"&_pragma=busy_timeout(30000)" +
+		"&_pragma=temp_store(MEMORY)" +
+		"&_pragma=synchronous(NORMAL)" +
+		"&_pragma=cache_size(-8000)" +
+		"&_pragma=mmap_size(268435456)"
+
 	var err error
-	DB, err = gorm.Open(sqlite.Open("dev.db?_pragma=journal_mode(WAL)&_pragma=busy_timeout(5000)&_pragma=temp_store(MEMORY)&_pragma=synchronous(NORMAL)&_pragma=cache_size(-8000)&_pragma=mmap_size(268435456)"), &gorm.Config{})
+	DB, err = gorm.Open(sqlite.Open(dsn), &gorm.Config{})
 	if err != nil {
 		log.Fatalf("failed to connect database: %v", err)
 	}
+
+	// SQLite with WAL mode needs exactly ONE connection to avoid SQLITE_BUSY.
+	// WAL allows concurrent reads through the same connection; writes are serialized.
+	// MaxLifetime prevents connection bloat after bursts.
+	sqlDB, err := DB.DB()
+	if err != nil {
+		log.Fatalf("failed to get underlying sql.DB: %v", err)
+	}
+	sqlDB.SetMaxOpenConns(1)
+	sqlDB.SetMaxIdleConns(1)
+	sqlDB.SetConnMaxLifetime(5 * time.Minute)
 
 	// AutoMigrate models
 	err = DB.AutoMigrate(
@@ -66,6 +89,13 @@ func InitTestDB() (*gorm.DB, error) {
 	if err != nil {
 		return nil, err
 	}
+
+	sqlDB, err := DB.DB()
+	if err != nil {
+		return nil, err
+	}
+	sqlDB.SetMaxOpenConns(1)
+	sqlDB.SetMaxIdleConns(1)
 
 	err = DB.AutoMigrate(
 		&models.Account{},
