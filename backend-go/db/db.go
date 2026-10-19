@@ -141,7 +141,7 @@ func InitTestDB() (*gorm.DB, error) {
 		ActiveWorkThresholdMinutes: 5,
 		Messages:                   "[]",
 		CustomMessages:             "[]",
-		SupervisorProvider:         "openrouter",
+		SupervisorProvider:         "ollama",
 		SupervisorModel:            "nvidia/nemotron-3-nano-omni-30b-a3b-reasoning:free",
 	}
 	DB.Create(&settings)
@@ -163,7 +163,7 @@ func seedDefaultSettings() {
 			Messages:                   "Great! Please keep going as you advise!\nYes! Please continue to proceed as you recommend!\nThis looks correct. Please proceed.\nExcellent plan. Go ahead.\nLooks good to me. Continue.",
 			CustomMessages:             "[]",
 			SmartPilotEnabled:          false,
-			SupervisorProvider:         "openrouter",
+			SupervisorProvider:         "ollama",
 			SupervisorModel:            "nvidia/nemotron-3-nano-omni-30b-a3b-reasoning:free",
 			ContextMessageCount:        20,
 		}

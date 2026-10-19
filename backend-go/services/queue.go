@@ -368,7 +368,7 @@ func chooseNudgeMessage(settings models.KeeperSettings) string {
 }
 
 func buildRAGContext(query string, settings models.KeeperSettings, topK int) string {
-	apiKey := getSupervisorAPIKey("openai", settings.SupervisorApiKey)
+	apiKey := getSupervisorAPIKey("ollama", settings.SupervisorApiKey)
 	if strings.TrimSpace(apiKey) == "" || apiKey == "placeholder" {
 		return ""
 	}
@@ -837,13 +837,13 @@ func (w *Worker) handleCheckSession(payload string) (string, error) {
 			"INSTRUCTIONS:\n%s\n\nDOCUMENTATION:\n%s\n\n%s\n\nUSER LAST 5 MESSAGES:\n%s\n\nJULES AGENT LAST 5 MESSAGES:\n%s\n\nINSTRUCTIONS AGAIN:\n%s\n\nEnsure this message is highly unique and does not repeat previously sent messages.",
 			instructions, docContext, commitContext, lastUserMessages.String(), lastAgentMessages.String(), instructions)
 
-		// ALWAYS send prompt to LM Studio — the RESPONSE is what goes to Jules, never raw context
-		result, err := generateLLMText("lmstudio", "placeholder", settings.SupervisorModel, "You are a coding supervisor. Follow the INSTRUCTIONS.", []LLMMessage{{
+		// Send prompt to local Ollama — the RESPONSE is what goes to Jules, never raw context
+		result, err := generateLLMText("ollama", "", settings.SupervisorModel, "You are a coding supervisor. Follow the INSTRUCTIONS.", []LLMMessage{{
 			Role:    "user",
 			Content: prompt,
 		}})
 		if err != nil || strings.TrimSpace(result.Content) == "" {
-			return "fail", fmt.Errorf("lmstudio nudge failed: %w", err)
+			return "fail", fmt.Errorf("ollama nudge failed: %w", err)
 		}
 
 		nudgeContent := "[Supervisor] " + result.Content
@@ -1290,7 +1290,7 @@ func generateNudgeMessage(session models.JulesSession, settings models.KeeperSet
 		"INSTRUCTIONS:\n%s\n\nDOCUMENTATION:\n%s\n\nJULES AGENT LAST MESSAGES:\n%s\n\nINSTRUCTIONS AGAIN:\n%s",
 		instructions, docContext, lastMsgs, instructions)
 
-	result, err := generateLLMText("lmstudio", "placeholder", settings.SupervisorModel,
+	result, err := generateLLMText("ollama", "", settings.SupervisorModel,
 		"You are a coding supervisor. Follow the INSTRUCTIONS.",
 		[]LLMMessage{{
 			Role:    "user",

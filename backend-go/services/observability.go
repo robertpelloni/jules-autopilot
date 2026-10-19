@@ -48,48 +48,8 @@ func RecordTokenUsage(sessionID *string, provider, model string, promptTokens, c
 
 // estimateCostCents provides rough cost estimates in cents (USD)
 func estimateCostCents(provider, model string, promptTokens, completionTokens int) float64 {
-	// Cost per 1M tokens (simplified, in cents)
-	var promptCostPer1M, completionCostPer1M float64
-
-	switch provider {
-	case "openai":
-		switch model {
-		case "gpt-4o":
-			promptCostPer1M = 250       // $2.50/1M
-			completionCostPer1M = 1000   // $10.00/1M
-		case "gpt-4o-mini":
-			promptCostPer1M = 15        // $0.15/1M
-			completionCostPer1M = 60    // $0.60/1M
-		case "o1", "o1-preview":
-			promptCostPer1M = 1500      // $15.00/1M
-			completionCostPer1M = 6000  // $60.00/1M
-		default:
-			promptCostPer1M = 250
-			completionCostPer1M = 1000
-		}
-	case "anthropic":
-		switch model {
-		case "claude-3.5-sonnet", "claude-3-5-sonnet-20241022":
-			promptCostPer1M = 300       // $3.00/1M
-			completionCostPer1M = 1500  // $15.00/1M
-		case "claude-3-opus", "claude-3-opus-20240229":
-			promptCostPer1M = 1500      // $15.00/1M
-			completionCostPer1M = 7500  // $75.00/1M
-		default:
-			promptCostPer1M = 300
-			completionCostPer1M = 1500
-		}
-	case "gemini":
-		promptCostPer1M = 125          // $1.25/1M
-		completionCostPer1M = 500      // $5.00/1M
-	default:
-		promptCostPer1M = 250
-		completionCostPer1M = 1000
-	}
-
-	promptCost := float64(promptTokens) / 1_000_000 * promptCostPer1M
-	completionCost := float64(completionTokens) / 1_000_000 * completionCostPer1M
-	return promptCost + completionCost
+	// Ollama is local — zero cost
+	return 0
 }
 
 // CaptureHealthSnapshot captures current system state as a HealthSnapshot

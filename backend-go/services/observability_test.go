@@ -57,39 +57,29 @@ func TestRecordTokenUsage(t *testing.T) {
 	if !usage.Success {
 		t.Error("Expected success to be true")
 	}
-	if usage.CostCents <= 0 {
-		t.Error("Expected positive cost estimate")
+	if usage.CostCents < 0 {
+		t.Error("Expected non-negative cost estimate")
 	}
 }
 
 func TestEstimateCostCents(t *testing.T) {
+	// Ollama is local — all costs are zero
 	tests := []struct {
 		provider         string
 		model            string
 		promptTokens     int
 		completionTokens int
-		expectPositive   bool
+		expectZero       bool
 	}{
-		{"openai", "gpt-4o", 1000, 500, true},
-		{"openai", "gpt-4o-mini", 1000, 500, true},
-		{"anthropic", "claude-3.5-sonnet", 1000, 500, true},
-		{"anthropic", "claude-3-opus", 1000, 500, true},
-		{"gemini", "gemini-1.5-pro", 1000, 500, true},
-		{"unknown", "unknown", 1000, 500, true},
+		{"ollama", "gemma3n:e4b", 1000, 500, true},
+		{"ollama", "gemma3n:e4b", 5000, 2000, true},
 	}
 
 	for _, tt := range tests {
 		cost := estimateCostCents(tt.provider, tt.model, tt.promptTokens, tt.completionTokens)
-		if tt.expectPositive && cost <= 0 {
-			t.Errorf("estimateCostCents(%s, %s) = %f, expected positive", tt.provider, tt.model, cost)
+		if tt.expectZero && cost != 0 {
+			t.Errorf("estimateCostCents(%s, %s) = %f, expected 0", tt.provider, tt.model, cost)
 		}
-	}
-
-	// GPT-4o should cost more than GPT-4o-mini for same tokens
-	cost4o := estimateCostCents("openai", "gpt-4o", 1000, 500)
-	cost4oMini := estimateCostCents("openai", "gpt-4o-mini", 1000, 500)
-	if cost4o <= cost4oMini {
-		t.Errorf("Expected gpt-4o (%f) to cost more than gpt-4o-mini (%f)", cost4o, cost4oMini)
 	}
 }
 
