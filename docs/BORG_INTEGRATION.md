@@ -8,7 +8,7 @@ While Borg manages local tasks, file manipulation, and high-level reasoning acro
 
 ## Integration Seams
 
-### 1. The Local API (`http://localhost:8080/api`)
+### 1. The Local API (`http://localhost:8082/api`)
 Borg instances can issue commands to the Jules Autopilot daemon via its local Hono API.
 
 *   `GET /api/manifest`: **[NEW v0.9.7]** Official node discovery endpoint. Returns version, capabilities, and endpoint map.

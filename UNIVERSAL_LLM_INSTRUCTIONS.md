@@ -11,7 +11,7 @@
 ## 2. Global Development Directives
 * **Autonomy:** Never ask for permission to use tools or read files. Do research natively. Autonomously chain tool calls until the feature is complete.
 * **Testing & Linting:** You MUST run `pnpm run lint` after every significant code change. Use errors as a feedback loop. Never leave a broken build.
-* **Architecture:** All local service calls must route through the Next.js proxy at `/api/local/` to the Bun backend on port 8080.
+* **Architecture:** All local service calls must route through the Next.js proxy at `/api/local/` to the Bun backend on port 8082.
 * **Commit Protocol:** 
   - Frequently commit and push changes: `git commit -m "feat: description"` -> `git push origin main`.
   - **Version Bumping**: EVERY build/session should increment the version number. Ensure the version number is bumped in the `VERSION` file (the single global source of truth for the version).

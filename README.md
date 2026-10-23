@@ -76,7 +76,7 @@ You can run the entire stack via the Go backend (which serves the built frontend
    cd backend-go
    go run main.go
    ```
-   *The dashboard will be available at `http://localhost:8080`.*
+   *The dashboard will be available at `http://localhost:8082`.*
 
 2. **Frontend Dev Mode (Optional):**
    ```bash
@@ -89,7 +89,7 @@ You can run the entire stack via the Go backend (which serves the built frontend
 ┌──────────────────────────────────────────┐
 │          Browser (Vite SPA)              │
 │  http://localhost:3006 (Dev)             │
-│  http://localhost:8080 (Prod)            │
+│  http://localhost:8082 (Prod)            │
 └───────────────┬──────────────────────────┘
                 │ API / WebSocket
                 ▼

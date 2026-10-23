@@ -38,7 +38,7 @@
             "properties": {
                 "jules.daemonUrl": {
                     "type": "string",
-                    "default": "ws://localhost:8080/ws",
+                    "default": "ws://localhost:8082/ws",
                     "description": "WebSocket URL for the Jules Autopilot daemon."
                 }
             }

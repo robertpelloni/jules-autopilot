@@ -11,7 +11,7 @@ import type {
 } from '@jules/shared';
 import { WS_DEFAULTS } from '@jules/shared';
 
-const WS_URL = process.env.JULES_WS_URL || 'ws://localhost:8080/ws';
+const WS_URL = process.env.JULES_WS_URL || 'ws://localhost:8082/ws';
 
 export function useWebSocket() {
   const wsRef = useRef<WebSocket | null>(null);

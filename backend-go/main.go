@@ -188,7 +188,7 @@ func main() {
 	// Match the TypeScript daemon default port for smoother drop-in parity.
 	port := os.Getenv("PORT")
 	if port == "" {
-		port = "8080"
+		port = "8082"
 	}
 	log.Fatal(app.Listen(":" + port))
 }

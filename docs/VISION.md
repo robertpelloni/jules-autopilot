@@ -40,7 +40,7 @@ The official interfaces for AI coding agents are often slow and unresponsive. Th
 │                          │ HTTP/WebSocket                        │
 │                          ▼                                       │
 │  ┌─────────────────────────────────────────────────────────────┐│
-│  │              Hono API Server (port 8080)                    ││
+│  │              Hono API Server (port 8082)                    ││
 │  │  • Centralized Jules Proxy (/sessions, /activities)         ││
 │  │  • Daemon Management (/api/daemon/status)                   ││
 │  │  • Supervisor & Debate APIs (/api/debate, /api/review)      ││

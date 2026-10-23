@@ -73,11 +73,11 @@ export default defineConfig({
 		port: 3006,
 		proxy: {
 			"/ws": {
-				target: "ws://localhost:8080",
+				target: "ws://localhost:8082",
 				ws: true,
 			},
 			"/api": {
-				target: "http://localhost:8080",
+				target: "http://localhost:8082",
 				changeOrigin: true,
 			},
 		},

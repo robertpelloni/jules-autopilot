@@ -5,7 +5,7 @@
 
 PROJECT_ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 BACKEND_DIR="$PROJECT_ROOT/backend-go"
-PORT=8081
+PORT=8082
 CHECK_INTERVAL=15
 LOG_FILE="$BACKEND_DIR/server.log"
 WATCHDOG_LOG="$BACKEND_DIR/watchdog.log"

@@ -39,7 +39,7 @@ interface AppState {
   setError: (error: string | null) => void;
 }
 
-const API_BASE = process.env.JULES_API_URL || 'http://localhost:8080';
+const API_BASE = process.env.JULES_API_URL || 'http://localhost:8082';
 
 export const useAppStore = create<AppState>((set, get) => ({
   isConnected: false,

@@ -1,8 +1,7 @@
 $watchPorts = @{
     1234 = "LM Studio"
     4000 = "FreeLLM"
-    8080 = "Old backend"
-    8081 = "Jules Backend"
+    8082 = "Jules Backend"
     3000 = "Frontend dev server"
     3006 = "Vite dev server"
 }

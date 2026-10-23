@@ -176,7 +176,7 @@ A powerful, self-hosted web application for managing Jules AI agent sessions wit
 <summary><strong>Infrastructure (v0.8.0)</strong></summary>
 
 - **INFRA-002**: Bun/Hono Backend Daemon
-  - ✅ Standalone server on port 8080
+  - ✅ Standalone server on port 8082
   - ✅ Background session monitoring loop
   - ✅ SQLite persistence via Prisma
 

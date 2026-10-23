@@ -10,7 +10,7 @@ Get-CimInstance -ClassName Win32_Service | Where-Object { $_.Name -like "*Jules*
 }
 
 Write-Host "=== Services on our ports ==="
-$ports = @{1234="LM Studio"; 4000="FreeLLM"; 8080="FreeLLM Web"; 8081="Jules Backend"}
+$ports = @{1234="LM Studio"; 4000="FreeLLM"; 8082="Jules Backend"}
 foreach ($p in $ports.Keys) {
     $conn = Get-NetTCPConnection -LocalPort $p -ErrorAction SilentlyContinue | Select-Object -First 1
     if ($conn) {
