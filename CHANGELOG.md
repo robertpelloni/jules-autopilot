@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file.
 
+## [3.7.1] - 2026-11-04
+
+### Fixed
+
+- **Startup Broadcast Parallelized**: `BroadcastContinue` in `backend-go/services/queue.go` now bumps sessions with an 8-worker pool instead of a serial loop, so a full bump of ~80 sessions finishes in minutes rather than being cut off by the next restart. Workers stagger 250ms to avoid Jules rate-limit bursts, and 429/`RESOURCE_EXHAUSTED` responses get a 30s backoff per attempt (matching queue-job convention). Per-session logic is unchanged (Ollama nudge with generic fallback, 3 retries).
+
+
 ## [3.7.0] - 2026-07-17
 
 ### Fixed

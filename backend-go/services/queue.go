@@ -13,6 +13,7 @@ import (
 	"path/filepath"
 	"strings"
 	"sync"
+	"sync/atomic"
 	"time"
 
 	"github.com/google/uuid"
@@ -911,46 +912,81 @@ func BroadcastContinue() {
 	// Cache sessions so the dashboard loads instantly
 	CacheSessions(sessions)
 
-	sent := 0
-	for _, session := range sessions {
-		// Use LM Studio to generate an intelligent bump message
-		msg, err := generateNudgeMessage(session, settings)
-		if err != nil {
-			log.Printf("[Broadcast] Failed to generate nudge for %s: %v", session.ID[:8], err)
-			// Fallback: send a simple bump
-			msg = fmt.Sprintf("[Supervisor] Continue autonomous development on %s.", extractProjectName(session.SourceID))
-		}
-
-		// Send with exponential backoff & retry
-		maxRetries := 3
-		retryDelay := 1 * time.Second
-		var actErr error
-		for attempt := 1; attempt <= maxRetries; attempt++ {
-			_, actErr = client.CreateActivity(session.ID, CreateActivityRequest{
-				Content: msg,
-				Type:    "message",
-				Role:    "user",
-			})
-			if actErr == nil {
-				break
+	jobs := make(chan models.JulesSession)
+	var sent atomic.Int64
+	var wg sync.WaitGroup
+	for i := 0; i < broadcastWorkerCount; i++ {
+		wg.Add(1)
+		go func(worker int) {
+			defer wg.Done()
+			// Stagger workers so the first burst does not trip Jules rate limits.
+			time.Sleep(time.Duration(worker*250) * time.Millisecond)
+			for session := range jobs {
+				if bumpSession(client, session, settings) {
+					sent.Add(1)
+				}
 			}
-			log.Printf("[Broadcast] Attempt %d failed to bump %s: %v. Retrying in %v...", attempt, session.ID[:8], actErr, retryDelay)
-			time.Sleep(retryDelay)
-			retryDelay *= 2
-		}
-
-		if actErr != nil {
-			log.Printf("[Broadcast] Failed to bump %s after %d attempts: %v", session.ID[:8], maxRetries, actErr)
-			continue
-		}
-		sent++
+		}(i)
 	}
-	log.Printf("[Broadcast] Sent intelligent bump to %d/%d sessions", sent, len(sessions))
-	addKeeperLog(fmt.Sprintf("Startup broadcast: bumped %d sessions intelligently", sent), "info", "global", map[string]interface{}{
+	for _, session := range sessions {
+		jobs <- session
+	}
+	close(jobs)
+	wg.Wait()
+
+	sentCount := int(sent.Load())
+	log.Printf("[Broadcast] Sent intelligent bump to %d/%d sessions", sentCount, len(sessions))
+	addKeeperLog(fmt.Sprintf("Startup broadcast: bumped %d sessions intelligently", sentCount), "info", "global", map[string]interface{}{
 		"event": "startup_broadcast",
-		"sent":  sent,
+		"sent":  sentCount,
 		"total": len(sessions),
 	})
+}
+
+// broadcastWorkerCount caps concurrent startup bumps so a large session list
+// finishes in minutes instead of being cut off by the next restart. Jules
+// 429s are absorbed per session with a 30s backoff (same as queue jobs).
+// Ollama nudge generation is separately capped at 2 concurrent (ollamaSem).
+const broadcastWorkerCount = 8
+
+// bumpSession sends one "continue" bump to a session. Returns true on success.
+func bumpSession(client *JulesClient, session models.JulesSession, settings models.KeeperSettings) bool {
+	shortID := session.ID
+	if len(shortID) > 8 {
+		shortID = shortID[:8]
+	}
+	// Use Ollama to generate an intelligent bump message
+	msg, err := generateNudgeMessage(session, settings)
+	if err != nil {
+		log.Printf("[Broadcast] Failed to generate nudge for %s: %v", shortID, err)
+		// Fallback: send a simple bump
+		msg = fmt.Sprintf("[Supervisor] Continue autonomous development on %s.", extractProjectName(session.SourceID))
+	}
+
+	// Send with exponential backoff & retry
+	maxRetries := 3
+	retryDelay := 1 * time.Second
+	var actErr error
+	for attempt := 1; attempt <= maxRetries; attempt++ {
+		_, actErr = client.CreateActivity(session.ID, CreateActivityRequest{
+			Content: msg,
+			Type:    "message",
+			Role:    "user",
+		})
+		if actErr == nil {
+			return true
+		}
+		// Jules rate-limit: back off hard before retrying, same as queue jobs.
+		if strings.Contains(actErr.Error(), "429") || strings.Contains(actErr.Error(), "RESOURCE_EXHAUSTED") {
+			retryDelay = 30 * time.Second
+		}
+		log.Printf("[Broadcast] Attempt %d failed to bump %s: %v. Retrying in %v...", attempt, shortID, actErr, retryDelay)
+		time.Sleep(retryDelay)
+		retryDelay *= 2
+	}
+
+	log.Printf("[Broadcast] Failed to bump %s after %d attempts: %v", shortID, maxRetries, actErr)
+	return false
 }
 
 // CacheSessions replaces all locally stored sessions with fresh data from Jules.
