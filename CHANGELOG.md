@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file.
 
+## [3.7.2] - 2026-11-04
+
+### Fixed
+
+- **Startup Broadcast Uses Fast Template Bump**: `bumpSession` in `backend-go/services/queue.go` now sends a fixed Supervisor continue message instead of a per-session Ollama-generated nudge. With ~80 sessions behind a 2-slot Ollama queue, LLM generation stretched the broadcast past the process restart interval so tail sessions were never bumped. The mass bump now completes in ~1-2 minutes; per-session intelligent nudges continue via the steady-state daemon `check_session` jobs.
+
+
 ## [3.7.1] - 2026-11-04
 
 ### Fixed

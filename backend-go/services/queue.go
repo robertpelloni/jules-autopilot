@@ -903,12 +903,6 @@ func BroadcastContinue() {
 		return
 	}
 
-	// Load settings for LM Studio configuration
-	var settings models.KeeperSettings
-	if err := db.DB.First(&settings, "id = ?", "default").Error; err != nil {
-		log.Println("[Broadcast] No keeper settings found, using defaults")
-	}
-
 	// Cache sessions so the dashboard loads instantly
 	CacheSessions(sessions)
 
@@ -922,7 +916,7 @@ func BroadcastContinue() {
 			// Stagger workers so the first burst does not trip Jules rate limits.
 			time.Sleep(time.Duration(worker*250) * time.Millisecond)
 			for session := range jobs {
-				if bumpSession(client, session, settings) {
+				if bumpSession(client, session) {
 					sent.Add(1)
 				}
 			}
@@ -950,18 +944,17 @@ func BroadcastContinue() {
 const broadcastWorkerCount = 8
 
 // bumpSession sends one "continue" bump to a session. Returns true on success.
-func bumpSession(client *JulesClient, session models.JulesSession, settings models.KeeperSettings) bool {
+// The startup broadcast intentionally uses a fixed template message instead of
+// per-session LLM nudges: with ~80 sessions behind a 2-slot Ollama queue, LLM
+// generation stretches the broadcast past the process restart interval and the
+// tail sessions never get bumped. Per-session intelligent nudges continue via
+// the steady-state daemon check_session jobs.
+func bumpSession(client *JulesClient, session models.JulesSession) bool {
 	shortID := session.ID
 	if len(shortID) > 8 {
 		shortID = shortID[:8]
 	}
-	// Use Ollama to generate an intelligent bump message
-	msg, err := generateNudgeMessage(session, settings)
-	if err != nil {
-		log.Printf("[Broadcast] Failed to generate nudge for %s: %v", shortID, err)
-		// Fallback: send a simple bump
-		msg = fmt.Sprintf("[Supervisor] Continue autonomous development on %s.", extractProjectName(session.SourceID))
-	}
+	msg := fmt.Sprintf("[Supervisor] Continue autonomous development on %s.", extractProjectName(session.SourceID))
 
 	// Send with exponential backoff & retry
 	maxRetries := 3
