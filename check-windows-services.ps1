@@ -1,4 +1,4 @@
-$ports = @(1234, 4000, 8080, 8081)
+$ports = @(1234, 4000, 8082)
 Write-Host "=== Checking if any project ports are used by Windows services ==="
 Write-Host ""
 

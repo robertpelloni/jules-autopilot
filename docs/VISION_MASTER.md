@@ -58,14 +58,14 @@ The official AI coding agent interfaces are slow, laggy, and don't scale. Jules 
                                 │ HTTP + WebSocket
                                 ▼
 ┌─────────────────────────────────────────────────────────────────────────┐
-│                        BACKEND (Bun/Hono :8080)                          │
+│                        BACKEND (Bun/Hono :8082)                          │
 │  ┌─────────────────────────────────────────────────────────────────────┐│
 │  │ server/index.ts - REST + WebSocket API                              ││
 │  │  • /api/daemon/* (start, stop, status)                              ││
 │  │  • /api/sessions/* (list, get, nudge, approve, interrupt)           ││
 │  │  • /api/supervisor/* (debate, conference, handoff, review)          ││
 │  │  • /api/broadcast                                                   ││
-│  │  • ws://localhost:8080/ws (real-time events)                        ││
+│  │  • ws://localhost:8082/ws (real-time events)                        ││
 │  └─────────────────────────────────────────────────────────────────────┘│
 │  ┌─────────────────────────────────────────────────────────────────────┐│
 │  │ server/daemon.ts - Background Monitoring Loop                       ││
@@ -97,7 +97,7 @@ The official AI coding agent interfaces are slow, laggy, and don't scale. Jules 
 
 | Layer | Technology | Purpose |
 |-------|------------|---------|
-| **1. Hono API Server** | Bun + Hono (port 8080) | Stateless REST + WebSocket API, shared by Web UI and TUI |
+| **1. Hono API Server** | Bun + Hono (port 8082) | Stateless REST + WebSocket API, shared by Web UI and TUI |
 | **2. Background Daemon** | Inside Hono server | Long-running monitoring loop, autonomous actions, SQLite persistence |
 | **3. Web Dashboard** | Next.js 16 (port 3000) | Full-featured browser UI, aggregates multiple service dashboards |
 | **4. TUI Client** | Bun + Ink | `jules` CLI command, terminal-native keyboard-driven experience |
@@ -304,7 +304,7 @@ Jules Autopilot is designed to integrate into the larger Borg (AI Operating Syst
 ```bash
 # Development
 npm run dev                      # Start Next.js (port 3000)
-bun run server/index.ts          # Start Daemon (port 8080)
+bun run server/index.ts          # Start Daemon (port 8082)
 node terminal-server/server.js   # Start Terminal WebSocket (port 8081)
 
 # Docker

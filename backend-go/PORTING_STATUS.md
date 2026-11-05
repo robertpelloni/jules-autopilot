@@ -21,7 +21,7 @@ Move backend responsibilities from the TypeScript/Bun daemon into the Go backend
 - `GET /api/sessions/:id/replay`
 - `POST /api/webhooks/borg`
 - `POST /api/webhooks/hypercode`
-- Main Go backend now listens on `:8080` for easier drop-in parity with the TypeScript daemon
+- Main Go backend now listens on `:8082` for easier drop-in parity with the TypeScript daemon
 - Queue worker compile issues fixed (`os` / `strings` imports, QueueJob struct tag fix)
 - Go realtime event/log bridge (`backend-go/services/realtime.go`) for Keeper-style websocket emission from automation paths
 - Go `handleCheckSession` automation path with:

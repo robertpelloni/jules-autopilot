@@ -10,7 +10,7 @@ if errorlevel 1 (
     exit /b 1
 )
 
-echo [start] Starting Go backend on :8080...
+echo [start] Starting Go backend on :8082...
 cd backend-go
 go run main.go
 pause

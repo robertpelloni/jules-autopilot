@@ -6,58 +6,19 @@ import (
 	"fmt"
 	"io"
 	"net/http"
-	"os"
 	"strings"
-	"sync"
 	"time"
 
 	"github.com/jules-autopilot/backend/db"
 	"github.com/jules-autopilot/backend/models"
 )
 
-type circuitBreaker struct {
-	mu           sync.RWMutex
-	failures     map[string]int
-	openUntil    map[string]time.Time
-	failureLimit int
-	openDuration time.Duration
-}
+// ── Ollama-only LLM layer ────────────────────────────────────────────────────
+// All LLM calls go through local Ollama (http://localhost:11434) with the
+// gemma3n:e4b model. No cloud providers, no API keys, no fallback chains.
 
-var cb = &circuitBreaker{
-	failures:     make(map[string]int),
-	openUntil:    make(map[string]time.Time),
-	failureLimit: 3,
-	openDuration: 5 * time.Minute,
-}
-
-func (c *circuitBreaker) isOpen(provider string) bool {
-	c.mu.RLock()
-	defer c.mu.RUnlock()
-	if t, exists := c.openUntil[provider]; exists && time.Now().Before(t) {
-		return true
-	}
-	return false
-}
-
-func (c *circuitBreaker) recordSuccess(provider string) {
-	c.mu.Lock()
-	defer c.mu.Unlock()
-	delete(c.failures, provider)
-	delete(c.openUntil, provider)
-}
-
-func (c *circuitBreaker) recordFailure(provider string) {
-	c.mu.Lock()
-	defer c.mu.Unlock()
-	c.failures[provider]++
-	if c.failures[provider] >= c.failureLimit {
-		c.openUntil[provider] = time.Now().Add(c.openDuration)
-		addKeeperLog(fmt.Sprintf("Circuit breaker tripped for %s provider. Traffic will be routed to fallbacks for %v.", provider, c.openDuration), "error", "global", map[string]interface{}{
-			"event":    "circuit_breaker_tripped",
-			"provider": provider,
-		})
-	}
-}
+const ollamaBaseURL = "http://localhost:11434"
+const ollamaModel = "gemma3n:e4b"
 
 type LLMMessage struct {
 	Role    string `json:"role"`
@@ -76,175 +37,127 @@ type LLMResult struct {
 	LatencyMs float64
 }
 
+// normalizeProvider always returns "ollama" — the only provider.
 func normalizeProvider(provider string) string {
-	value := strings.ToLower(strings.TrimSpace(provider))
-	if value == "" {
-		return "openrouter"
-	}
-	return value
+	return "ollama"
 }
 
+// defaultModelForProvider always returns the single configured model.
 func defaultModelForProvider(provider string) string {
-	switch normalizeProvider(provider) {
-	case "lmstudio":
-		return "gemma-4-26b-a4b-it-qat-heretic"
-	case "openrouter":
-		return "nvidia/nemotron-3-nano-omni-30b-a3b-reasoning:free"
-	case "anthropic":
-		return "claude-3-5-sonnet-latest"
-	case "gemini":
-		return "gemini-1.5-flash"
-	default:
-		return "gpt-4o-mini"
-	}
+	return ollamaModel
 }
 
 func resolveModel(provider, model string) string {
-	value := strings.TrimSpace(model)
-	if value != "" {
-		return value
-	}
-	return defaultModelForProvider(provider)
+	// Always use the single configured model — all others removed
+	return ollamaModel
 }
 
 func getSupervisorProvider() string {
-	var settings models.KeeperSettings
-	if err := db.DB.First(&settings, "id = ?", "default").Error; err != nil {
-		return normalizeProvider("")
-	}
-	return normalizeProvider(settings.SupervisorProvider)
+	return "ollama"
 }
 
+// getSupervisorAPIKey returns a placeholder — Ollama needs no API key,
+// but many call sites check for empty strings.
 func getSupervisorAPIKey(provider string, explicit *string) string {
-	if explicit != nil {
-		value := strings.TrimSpace(*explicit)
-		if value != "" && value != "placeholder" && value != "undefined" && value != "null" {
-			return value
-		}
-	}
-
-	switch strings.ToLower(strings.TrimSpace(provider)) {
-	case "lmstudio":
-		return "placeholder"
-	case "openrouter":
-		if key := strings.TrimSpace(os.Getenv("OPENROUTER_API_KEY")); key != "" {
-			return key
-		}
-		if key := strings.TrimSpace(os.Getenv("OPENAI_API_KEY")); key != "" {
-			return key
-		}
-	case "anthropic":
-		if key := strings.TrimSpace(os.Getenv("ANTHROPIC_API_KEY")); key != "" {
-			return key
-		}
-	case "gemini":
-		if key := strings.TrimSpace(os.Getenv("GOOGLE_API_KEY")); key != "" {
-			return key
-		}
-		if key := strings.TrimSpace(os.Getenv("GEMINI_API_KEY")); key != "" {
-			return key
-		}
-	default:
-		if key := strings.TrimSpace(os.Getenv("OPENAI_API_KEY")); key != "" {
-			return key
-		}
-	}
-
-	fallbacks := []string{"OPENROUTER_API_KEY", "OPENAI_API_KEY", "GOOGLE_API_KEY", "GEMINI_API_KEY", "ANTHROPIC_API_KEY"}
-	for _, envKey := range fallbacks {
-		if value := strings.TrimSpace(os.Getenv(envKey)); value != "" {
-			return value
-		}
-	}
-	return ""
+	return "ollama-local"
 }
 
+// ForceAttemptHTTP2=false prevents HTTP/2 goroutine/thread exhaustion.
+// Timeout must accommodate the gemma3n:e4b cold-load (~200s on first call).
+var llmHttpClient = &http.Client{
+	Timeout: 300 * time.Second,
+	Transport: &http.Transport{
+		ForceAttemptHTTP2: false,
+		MaxIdleConns:      4,
+		IdleConnTimeout:   30 * time.Second,
+	},
+}
+
+// Ollama local inference — limit to 2 concurrent calls.
+var ollamaSem = make(chan struct{}, 2)
+
+// generateLLMText is the single entry point. Always uses Ollama.
 func generateLLMText(primaryProvider, primaryApiKey, primaryModel, systemPrompt string, messages []LLMMessage) (LLMResult, error) {
-	primaryProvider = normalizeProvider(primaryProvider)
-	primaryModel = resolveModel(primaryProvider, primaryModel)
+	model := resolveModel(primaryProvider, primaryModel)
+	return generateOllamaText(model, systemPrompt, messages)
+}
 
-	// Fallback chain: Primary -> lmstudio
-	providers := []string{primaryProvider}
-	fallbacks := []string{"lmstudio"}
-	for _, p := range fallbacks {
-		exists := false
-		for _, existing := range providers {
-			if existing == p {
-				exists = true
-				break
-			}
+func generateOllamaText(model, systemPrompt string, messages []LLMMessage) (LLMResult, error) {
+	// Build Ollama chat messages
+	ollamaMessages := make([]map[string]string, 0, len(messages)+1)
+	if strings.TrimSpace(systemPrompt) != "" {
+		ollamaMessages = append(ollamaMessages, map[string]string{"role": "system", "content": systemPrompt})
+	}
+	for _, m := range messages {
+		role := m.Role
+		if role == "system" {
+			role = "user"
 		}
-		if !exists {
-			providers = append(providers, p)
-		}
+		ollamaMessages = append(ollamaMessages, map[string]string{"role": role, "content": m.Content})
 	}
 
-	var lastErr error
-	for i, provider := range providers {
-		if cb.isOpen(provider) {
-			lastErr = fmt.Errorf("provider %s is currently unavailable (circuit breaker open)", provider)
-			continue
-		}
+	requestBody, _ := json.Marshal(map[string]interface{}{
+		"model":    model,
+		"messages": ollamaMessages,
+		"stream":   false,
+		"options": map[string]interface{}{
+			"temperature": 0.2,
+		},
+	})
 
-		apiKey := primaryApiKey
-		model := primaryModel
+	ollamaSem <- struct{}{}
+	defer func() { <-ollamaSem }()
 
-		if i > 0 {
-			// This is a fallback attempt
-			apiKey = getSupervisorAPIKey(provider, nil)
-			if provider != "lmstudio" && (apiKey == "" || apiKey == "placeholder") {
-				continue // Cannot fallback without an API key (local providers don't need one)
-			}
-			model = resolveModel(provider, "")
-		}
+	start := time.Now()
+	req, err := http.NewRequest(http.MethodPost, ollamaBaseURL+"/api/chat", bytes.NewReader(requestBody))
+	if err != nil {
+		return LLMResult{}, err
+	}
+	req.Header.Set("Content-Type", "application/json")
 
-		var result LLMResult
-		var err error
+	resp, err := llmHttpClient.Do(req)
+	if err != nil {
+		return LLMResult{}, fmt.Errorf("ollama request failed: %w", err)
+	}
+	defer resp.Body.Close()
 
-		switch provider {
-		case "anthropic":
-			result, err = generateAnthropicText(apiKey, model, systemPrompt, messages)
-		case "gemini":
-			result, err = generateGeminiText(apiKey, model, systemPrompt, messages)
-		default:
-			result, err = generateOpenRouterText(apiKey, model, systemPrompt, messages)
-		}
-
-		if err != nil {
-			lastErr = err
-			errStr := err.Error()
-			// Track failure if it's a rate limit or server error
-			if strings.Contains(errStr, "(429)") || strings.Contains(errStr, "(50") || strings.Contains(errStr, "(52") || strings.Contains(errStr, "(53") || strings.Contains(errStr, "timeout") || strings.Contains(errStr, "connection refused") {
-				cb.recordFailure(provider)
-			}
-			continue // Try the next fallback provider
-		}
-
-		// Success
-		cb.recordSuccess(provider)
-
-		// Record token usage for budget tracking
-		if result.Usage != nil {
-			go func() {
-				_ = RecordTokenUsage(nil, provider, model,
-					result.Usage.PromptTokens, result.Usage.CompletionTokens,
-					"other", 0, true)
-			}()
-		}
-
-		// If we used a fallback, log that we successfully recovered
-		if i > 0 {
-			addKeeperLog(fmt.Sprintf("Self-healing successful: rerouted LLM request from %s to %s.", primaryProvider, provider), "action", "global", map[string]interface{}{
-				"event":            "llm_fallback_success",
-				"originalProvider": primaryProvider,
-				"fallbackProvider": provider,
-			})
-		}
-
-		return result, nil
+	if resp.StatusCode >= 400 {
+		body, _ := io.ReadAll(resp.Body)
+		return LLMResult{}, fmt.Errorf("ollama request failed (%d): %s", resp.StatusCode, string(body))
 	}
 
-	return LLMResult{}, fmt.Errorf("all LLM providers failed. last error: %v", lastErr)
+	var data struct {
+		Message struct {
+			Content string `json:"content"`
+		} `json:"message"`
+		Done               bool `json:"done"`
+		PromptEvalCount    int  `json:"prompt_eval_count"`
+		EvalCount          int  `json:"eval_count"`
+		TotalDuration      int64 `json:"total_duration"`
+		LoadDuration       int64 `json:"load_duration"`
+		PromptEvalDuration int64 `json:"prompt_eval_duration"`
+		EvalDuration       int64 `json:"eval_duration"`
+	}
+	if err := json.NewDecoder(resp.Body).Decode(&data); err != nil {
+		return LLMResult{}, fmt.Errorf("failed to decode ollama response: %w", err)
+	}
+
+	content := strings.TrimSpace(data.Message.Content)
+	if content == "" {
+		return LLMResult{}, fmt.Errorf("ollama returned empty content")
+	}
+
+	latency := float64(time.Since(start).Milliseconds())
+
+	return LLMResult{
+		Content:   content,
+		LatencyMs: latency,
+		Usage: &LLMUsage{
+			PromptTokens:     data.PromptEvalCount,
+			CompletionTokens: data.EvalCount,
+			TotalTokens:      data.PromptEvalCount + data.EvalCount,
+		},
+	}, nil
 }
 
 func extractJSONBlock(input string) string {
@@ -301,313 +214,6 @@ func generateRiskScore(provider, apiKey, model, topic, summary string, fallback 
 	return extractRiskScoreFromText(result.Content)
 }
 
-// ForceAttemptHTTP2=false prevents HTTP/2 goroutine/thread exhaustion.
-var llmHttpClient = &http.Client{
-	Timeout: 90 * time.Second,
-	Transport: &http.Transport{
-		ForceAttemptHTTP2: false,
-		MaxIdleConns:      10,
-		IdleConnTimeout:   30 * time.Second,
-	},
-}
-
-// LM Studio local inference — 120s should be enough; longer stalls block all workers.
-var lmStudioHttpClient = &http.Client{
-	Timeout: 120 * time.Second,
-	Transport: &http.Transport{
-		ForceAttemptHTTP2: false,
-		MaxIdleConns:      4,
-		IdleConnTimeout:   30 * time.Second,
-	},
-}
-
-// Local hardware — up to four LM Studio inferences at a time.
-var lmStudioSem = make(chan struct{}, 4)
-
-func generateOpenRouterText(apiKey, model, systemPrompt string, messages []LLMMessage) (LLMResult, error) {
-
-	requestMessages := make([]map[string]string, 0, len(messages)+1)
-	if strings.TrimSpace(systemPrompt) != "" {
-		requestMessages = append(requestMessages, map[string]string{"role": "system", "content": systemPrompt})
-	}
-	for _, message := range messages {
-		requestMessages = append(requestMessages, map[string]string{"role": message.Role, "content": message.Content})
-	}
-
-	requestBody, _ := json.Marshal(map[string]interface{}{
-		"model":       model,
-		"messages":    requestMessages,
-		"temperature": 0.2,
-	})
-
-	// Auto-detect API URL based on model name
-	apiURL := "https://openrouter.ai/api/v1/chat/completions"
-	isLMStudio := false
-	if strings.Contains(model, "lmstudio") || strings.HasPrefix(model, "gemma-4") {
-		apiURL = "http://localhost:1234/v1/chat/completions"
-		isLMStudio = true
-	}
-
-	// Retry logic: LM Studio may need model reload time
-	maxRetries := 0
-	if isLMStudio {
-		maxRetries = 3
-	}
-
-	// Local hardware: only one LM Studio inference at a time
-	if isLMStudio {
-		lmStudioSem <- struct{}{}
-		defer func() { <-lmStudioSem }()
-	}
-
-	var lastErr error
-	for attempt := 0; attempt <= maxRetries; attempt++ {
-		if attempt > 0 {
-			time.Sleep(time.Duration(attempt) * 3 * time.Second)
-		}
-
-		retryReq, err := http.NewRequest(http.MethodPost, apiURL, bytes.NewReader(requestBody))
-		if err != nil {
-			return LLMResult{}, err
-		}
-		retryReq.Header.Set("Authorization", "Bearer "+apiKey)
-		retryReq.Header.Set("Content-Type", "application/json")
-		if strings.Contains(apiURL, "openrouter.ai") {
-			retryReq.Header.Set("HTTP-Referer", "https://jules-autopilot.render.com")
-			retryReq.Header.Set("X-Title", "Jules Autopilot")
-		}
-
-		client := llmHttpClient
-		if isLMStudio {
-			client = lmStudioHttpClient
-		}
-		resp, err := client.Do(retryReq)
-		if err != nil {
-			lastErr = err
-			continue
-		}
-
-		if resp.StatusCode >= 400 {
-			body, _ := io.ReadAll(resp.Body)
-			resp.Body.Close()
-			errBody := string(body)
-
-			// LM Studio "Model unloaded" - retry after reload delay
-			if isLMStudio && attempt < maxRetries && (strings.Contains(errBody, "Model unloaded") || strings.Contains(errBody, "model not found") || strings.Contains(errBody, "not loaded")) {
-				lastErr = fmt.Errorf("LLM request to %s failed (%d): %s", apiURL, resp.StatusCode, errBody)
-				continue
-			}
-
-			return LLMResult{}, fmt.Errorf("LLM request to %s failed (%d): %s", apiURL, resp.StatusCode, errBody)
-		}
-
-		var data struct {
-			Choices []struct {
-				Message struct {
-					Content          string `json:"content"`
-					ReasoningContent string `json:"reasoning_content"`
-					Reasoning        string `json:"reasoning"`
-				} `json:"message"`
-			} `json:"choices"`
-			Usage struct {
-				PromptTokens     int `json:"prompt_tokens"`
-				CompletionTokens int `json:"completion_tokens"`
-				TotalTokens      int `json:"total_tokens"`
-			} `json:"usage"`
-		}
-		if err := json.NewDecoder(resp.Body).Decode(&data); err != nil {
-			resp.Body.Close()
-			return LLMResult{}, err
-		}
-		resp.Body.Close()
-		if len(data.Choices) == 0 {
-			return LLMResult{}, fmt.Errorf("LLM response contained no choices")
-		}
-
-		// Prefer content, then reasoning_content, then reasoning (for reasoning models)
-		resultContent := strings.TrimSpace(data.Choices[0].Message.Content)
-		if resultContent == "" {
-			resultContent = strings.TrimSpace(data.Choices[0].Message.ReasoningContent)
-		}
-		if resultContent == "" {
-			resultContent = strings.TrimSpace(data.Choices[0].Message.Reasoning)
-		}
-		if resultContent == "" {
-			return LLMResult{}, fmt.Errorf("LLM returned empty content")
-		}
-
-		return LLMResult{
-			Content: resultContent,
-			Usage: &LLMUsage{
-				PromptTokens:     data.Usage.PromptTokens,
-				CompletionTokens: data.Usage.CompletionTokens,
-				TotalTokens:      data.Usage.TotalTokens,
-			},
-		}, nil
-	}
-
-	return LLMResult{}, fmt.Errorf("LLM request to %s failed after %d attempts: %w", apiURL, maxRetries+1, lastErr)
-}
-
-func generateAnthropicText(apiKey, model, systemPrompt string, messages []LLMMessage) (LLMResult, error) {
-
-	anthropicMessages := make([]map[string]string, 0, len(messages))
-	for _, message := range messages {
-		role := message.Role
-		if role == "system" {
-			role = "user"
-		}
-		anthropicMessages = append(anthropicMessages, map[string]string{
-			"role":    role,
-			"content": message.Content,
-		})
-	}
-
-	requestBody, _ := json.Marshal(map[string]interface{}{
-		"model":      model,
-		"system":     systemPrompt,
-		"max_tokens": 1200,
-		"messages":   anthropicMessages,
-	})
-
-	req, err := http.NewRequest(http.MethodPost, "https://api.anthropic.com/v1/messages", bytes.NewReader(requestBody))
-	if err != nil {
-		return LLMResult{}, err
-	}
-	req.Header.Set("x-api-key", apiKey)
-	req.Header.Set("anthropic-version", "2023-06-01")
-	req.Header.Set("content-type", "application/json")
-
-	resp, err := http.DefaultClient.Do(req)
-	if err != nil {
-		return LLMResult{}, err
-	}
-	defer resp.Body.Close()
-
-	if resp.StatusCode >= 400 {
-		body, _ := io.ReadAll(resp.Body)
-		return LLMResult{}, fmt.Errorf("anthropic request failed (%d): %s", resp.StatusCode, string(body))
-	}
-
-	var data struct {
-		Content []struct {
-			Type string `json:"type"`
-			Text string `json:"text"`
-		} `json:"content"`
-		Usage struct {
-			InputTokens  int `json:"input_tokens"`
-			OutputTokens int `json:"output_tokens"`
-		} `json:"usage"`
-	}
-	if err := json.NewDecoder(resp.Body).Decode(&data); err != nil {
-		return LLMResult{}, err
-	}
-	if len(data.Content) == 0 {
-		return LLMResult{}, fmt.Errorf("anthropic response contained no content")
-	}
-
-	contentParts := make([]string, 0, len(data.Content))
-	for _, part := range data.Content {
-		if strings.TrimSpace(part.Text) != "" {
-			contentParts = append(contentParts, part.Text)
-		}
-	}
-
-	return LLMResult{
-		Content: strings.TrimSpace(strings.Join(contentParts, "\n")),
-		Usage: &LLMUsage{
-			PromptTokens:     data.Usage.InputTokens,
-			CompletionTokens: data.Usage.OutputTokens,
-			TotalTokens:      data.Usage.InputTokens + data.Usage.OutputTokens,
-		},
-	}, nil
-}
-
-func generateGeminiText(apiKey, model, systemPrompt string, messages []LLMMessage) (LLMResult, error) {
-
-	type part struct {
-		Text string `json:"text"`
-	}
-	type content struct {
-		Role  string `json:"role,omitempty"`
-		Parts []part `json:"parts"`
-	}
-
-	contents := make([]content, 0, len(messages))
-	for _, message := range messages {
-		role := "user"
-		if message.Role == "assistant" {
-			role = "model"
-		}
-		contents = append(contents, content{
-			Role:  role,
-			Parts: []part{{Text: message.Content}},
-		})
-	}
-
-	request := map[string]interface{}{
-		"contents": contents,
-	}
-	if strings.TrimSpace(systemPrompt) != "" {
-		request["systemInstruction"] = map[string]interface{}{
-			"parts": []map[string]string{{"text": systemPrompt}},
-		}
-	}
-
-	requestBody, _ := json.Marshal(request)
-	url := fmt.Sprintf("https://generativelanguage.googleapis.com/v1beta/models/%s:generateContent?key=%s", model, apiKey)
-	req, err := http.NewRequest(http.MethodPost, url, bytes.NewReader(requestBody))
-	if err != nil {
-		return LLMResult{}, err
-	}
-	req.Header.Set("Content-Type", "application/json")
-
-	resp, err := http.DefaultClient.Do(req)
-	if err != nil {
-		return LLMResult{}, err
-	}
-	defer resp.Body.Close()
-
-	if resp.StatusCode >= 400 {
-		body, _ := io.ReadAll(resp.Body)
-		return LLMResult{}, fmt.Errorf("gemini request failed (%d): %s", resp.StatusCode, string(body))
-	}
-
-	var data struct {
-		Candidates []struct {
-			Content struct {
-				Parts []struct {
-					Text string `json:"text"`
-				} `json:"parts"`
-			} `json:"content"`
-		} `json:"candidates"`
-		UsageMetadata struct {
-			PromptTokenCount     int `json:"promptTokenCount"`
-			CandidatesTokenCount int `json:"candidatesTokenCount"`
-			TotalTokenCount      int `json:"totalTokenCount"`
-		} `json:"usageMetadata"`
-	}
-	if err := json.NewDecoder(resp.Body).Decode(&data); err != nil {
-		return LLMResult{}, err
-	}
-	if len(data.Candidates) == 0 {
-		return LLMResult{}, fmt.Errorf("gemini response contained no candidates")
-	}
-
-	parts := data.Candidates[0].Content.Parts
-	contentParts := make([]string, 0, len(parts))
-	for _, part := range parts {
-		if strings.TrimSpace(part.Text) != "" {
-			contentParts = append(contentParts, part.Text)
-		}
-	}
-
-	return LLMResult{
-		Content: strings.TrimSpace(strings.Join(contentParts, "\n")),
-		Usage: &LLMUsage{
-			PromptTokens:     data.UsageMetadata.PromptTokenCount,
-			CompletionTokens: data.UsageMetadata.CandidatesTokenCount,
-			TotalTokens:      data.UsageMetadata.TotalTokenCount,
-		},
-	}, nil
-}
+// ensure model is referenced (avoids unused-import lint)
+var _ = models.KeeperSettings{}
+var _ = db.DB

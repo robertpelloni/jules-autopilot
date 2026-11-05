@@ -1589,7 +1589,7 @@ func getKeeperSettings(c *fiber.Ctx) error {
 			IsEnabled:                  true,
 			AutoSwitch:                 true,
 			SmartPilotEnabled:          true,
-			SupervisorProvider:         "openrouter",
+			SupervisorProvider:         "ollama",
 			SupervisorModel:            "free",
 			CheckIntervalSeconds:       900,
 			InactivityThresholdMinutes: 1,

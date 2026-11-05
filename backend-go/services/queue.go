@@ -13,6 +13,7 @@ import (
 	"path/filepath"
 	"strings"
 	"sync"
+	"sync/atomic"
 	"time"
 
 	"github.com/google/uuid"
@@ -368,7 +369,7 @@ func chooseNudgeMessage(settings models.KeeperSettings) string {
 }
 
 func buildRAGContext(query string, settings models.KeeperSettings, topK int) string {
-	apiKey := getSupervisorAPIKey("openai", settings.SupervisorApiKey)
+	apiKey := getSupervisorAPIKey("ollama", settings.SupervisorApiKey)
 	if strings.TrimSpace(apiKey) == "" || apiKey == "placeholder" {
 		return ""
 	}
@@ -837,13 +838,13 @@ func (w *Worker) handleCheckSession(payload string) (string, error) {
 			"INSTRUCTIONS:\n%s\n\nDOCUMENTATION:\n%s\n\n%s\n\nUSER LAST 5 MESSAGES:\n%s\n\nJULES AGENT LAST 5 MESSAGES:\n%s\n\nINSTRUCTIONS AGAIN:\n%s\n\nEnsure this message is highly unique and does not repeat previously sent messages.",
 			instructions, docContext, commitContext, lastUserMessages.String(), lastAgentMessages.String(), instructions)
 
-		// ALWAYS send prompt to LM Studio — the RESPONSE is what goes to Jules, never raw context
-		result, err := generateLLMText("lmstudio", "placeholder", settings.SupervisorModel, "You are a coding supervisor. Follow the INSTRUCTIONS.", []LLMMessage{{
+		// Send prompt to local Ollama — the RESPONSE is what goes to Jules, never raw context
+		result, err := generateLLMText("ollama", "", settings.SupervisorModel, "You are a coding supervisor. Follow the INSTRUCTIONS.", []LLMMessage{{
 			Role:    "user",
 			Content: prompt,
 		}})
 		if err != nil || strings.TrimSpace(result.Content) == "" {
-			return "fail", fmt.Errorf("lmstudio nudge failed: %w", err)
+			return "fail", fmt.Errorf("ollama nudge failed: %w", err)
 		}
 
 		nudgeContent := "[Supervisor] " + result.Content
@@ -902,55 +903,83 @@ func BroadcastContinue() {
 		return
 	}
 
-	// Load settings for LM Studio configuration
-	var settings models.KeeperSettings
-	if err := db.DB.First(&settings, "id = ?", "default").Error; err != nil {
-		log.Println("[Broadcast] No keeper settings found, using defaults")
-	}
-
 	// Cache sessions so the dashboard loads instantly
 	CacheSessions(sessions)
 
-	sent := 0
-	for _, session := range sessions {
-		// Use LM Studio to generate an intelligent bump message
-		msg, err := generateNudgeMessage(session, settings)
-		if err != nil {
-			log.Printf("[Broadcast] Failed to generate nudge for %s: %v", session.ID[:8], err)
-			// Fallback: send a simple bump
-			msg = fmt.Sprintf("[Supervisor] Continue autonomous development on %s.", extractProjectName(session.SourceID))
-		}
-
-		// Send with exponential backoff & retry
-		maxRetries := 3
-		retryDelay := 1 * time.Second
-		var actErr error
-		for attempt := 1; attempt <= maxRetries; attempt++ {
-			_, actErr = client.CreateActivity(session.ID, CreateActivityRequest{
-				Content: msg,
-				Type:    "message",
-				Role:    "user",
-			})
-			if actErr == nil {
-				break
+	jobs := make(chan models.JulesSession)
+	var sent atomic.Int64
+	var wg sync.WaitGroup
+	for i := 0; i < broadcastWorkerCount; i++ {
+		wg.Add(1)
+		go func(worker int) {
+			defer wg.Done()
+			// Stagger workers so the first burst does not trip Jules rate limits.
+			time.Sleep(time.Duration(worker*250) * time.Millisecond)
+			for session := range jobs {
+				if bumpSession(client, session) {
+					sent.Add(1)
+				}
 			}
-			log.Printf("[Broadcast] Attempt %d failed to bump %s: %v. Retrying in %v...", attempt, session.ID[:8], actErr, retryDelay)
-			time.Sleep(retryDelay)
-			retryDelay *= 2
-		}
-
-		if actErr != nil {
-			log.Printf("[Broadcast] Failed to bump %s after %d attempts: %v", session.ID[:8], maxRetries, actErr)
-			continue
-		}
-		sent++
+		}(i)
 	}
-	log.Printf("[Broadcast] Sent intelligent bump to %d/%d sessions", sent, len(sessions))
-	addKeeperLog(fmt.Sprintf("Startup broadcast: bumped %d sessions intelligently", sent), "info", "global", map[string]interface{}{
+	for _, session := range sessions {
+		jobs <- session
+	}
+	close(jobs)
+	wg.Wait()
+
+	sentCount := int(sent.Load())
+	log.Printf("[Broadcast] Sent intelligent bump to %d/%d sessions", sentCount, len(sessions))
+	addKeeperLog(fmt.Sprintf("Startup broadcast: bumped %d sessions intelligently", sentCount), "info", "global", map[string]interface{}{
 		"event": "startup_broadcast",
-		"sent":  sent,
+		"sent":  sentCount,
 		"total": len(sessions),
 	})
+}
+
+// broadcastWorkerCount caps concurrent startup bumps so a large session list
+// finishes in minutes instead of being cut off by the next restart. Jules
+// 429s are absorbed per session with a 30s backoff (same as queue jobs).
+// Ollama nudge generation is separately capped at 2 concurrent (ollamaSem).
+const broadcastWorkerCount = 8
+
+// bumpSession sends one "continue" bump to a session. Returns true on success.
+// The startup broadcast intentionally uses a fixed template message instead of
+// per-session LLM nudges: with ~80 sessions behind a 2-slot Ollama queue, LLM
+// generation stretches the broadcast past the process restart interval and the
+// tail sessions never get bumped. Per-session intelligent nudges continue via
+// the steady-state daemon check_session jobs.
+func bumpSession(client *JulesClient, session models.JulesSession) bool {
+	shortID := session.ID
+	if len(shortID) > 8 {
+		shortID = shortID[:8]
+	}
+	msg := fmt.Sprintf("[Supervisor] Continue autonomous development on %s.", extractProjectName(session.SourceID))
+
+	// Send with exponential backoff & retry
+	maxRetries := 3
+	retryDelay := 1 * time.Second
+	var actErr error
+	for attempt := 1; attempt <= maxRetries; attempt++ {
+		_, actErr = client.CreateActivity(session.ID, CreateActivityRequest{
+			Content: msg,
+			Type:    "message",
+			Role:    "user",
+		})
+		if actErr == nil {
+			return true
+		}
+		// Jules rate-limit: back off hard before retrying, same as queue jobs.
+		if strings.Contains(actErr.Error(), "429") || strings.Contains(actErr.Error(), "RESOURCE_EXHAUSTED") {
+			retryDelay = 30 * time.Second
+		}
+		log.Printf("[Broadcast] Attempt %d failed to bump %s: %v. Retrying in %v...", attempt, shortID, actErr, retryDelay)
+		time.Sleep(retryDelay)
+		retryDelay *= 2
+	}
+
+	log.Printf("[Broadcast] Failed to bump %s after %d attempts: %v", shortID, maxRetries, actErr)
+	return false
 }
 
 // CacheSessions replaces all locally stored sessions with fresh data from Jules.
@@ -1290,7 +1319,7 @@ func generateNudgeMessage(session models.JulesSession, settings models.KeeperSet
 		"INSTRUCTIONS:\n%s\n\nDOCUMENTATION:\n%s\n\nJULES AGENT LAST MESSAGES:\n%s\n\nINSTRUCTIONS AGAIN:\n%s",
 		instructions, docContext, lastMsgs, instructions)
 
-	result, err := generateLLMText("lmstudio", "placeholder", settings.SupervisorModel,
+	result, err := generateLLMText("ollama", "", settings.SupervisorModel,
 		"You are a coding supervisor. Follow the INSTRUCTIONS.",
 		[]LLMMessage{{
 			Role:    "user",

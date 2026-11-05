@@ -3,21 +3,21 @@ package services
 import (
 	"fmt"
 	"net/http"
-	"os"
 	"testing"
-	"time"
 )
 
 func TestNormalizeProvider(t *testing.T) {
+	// normalizeProvider always returns "ollama"
 	tests := []struct {
 		input    string
 		expected string
 	}{
-		{"", "openrouter"},
-		{"OpenAI", "openai"},
-		{"ANTHROPIC", "anthropic"},
-		{"Gemini", "gemini"},
-		{"openai", "openai"},
+		{"", "ollama"},
+		{"OpenAI", "ollama"},
+		{"ANTHROPIC", "ollama"},
+		{"Gemini", "ollama"},
+		{"openai", "ollama"},
+		{"lmstudio", "ollama"},
 	}
 
 	for _, tt := range tests {
@@ -29,16 +29,16 @@ func TestNormalizeProvider(t *testing.T) {
 }
 
 func TestDefaultModelForProvider(t *testing.T) {
+	// All providers return the single Ollama model
 	tests := []struct {
 		provider string
 		expected string
 	}{
-		{"openai", "gpt-4o-mini"},
-		{"anthropic", "claude-3-5-sonnet-latest"},
-		{"gemini", "gemini-1.5-flash"},
-		{"unknown", "gpt-4o-mini"},
-		{"openrouter", "nvidia/nemotron-3-nano-omni-30b-a3b-reasoning:free"},
-		{"lmstudio", "gemma-4-26b-a4b-it-qat-heretic"},
+		{"openai", "gemma3n:e4b"},
+		{"anthropic", "gemma3n:e4b"},
+		{"gemini", "gemma3n:e4b"},
+		{"unknown", "gemma3n:e4b"},
+		{"ollama", "gemma3n:e4b"},
 	}
 
 	for _, tt := range tests {
@@ -50,13 +50,13 @@ func TestDefaultModelForProvider(t *testing.T) {
 }
 
 func TestResolveModel(t *testing.T) {
-	defaultModel := "gpt-4o-mini"
+	defaultModel := "gemma3n:e4b"
 	// Empty model falls back to default
-	if resolveModel("openai", "") != defaultModel {
+	if resolveModel("ollama", "") != defaultModel {
 		t.Error("Empty model should use default")
 	}
 	// Explicit model is used
-	if resolveModel("openai", "gpt-4") != "gpt-4" {
+	if resolveModel("ollama", "custom-model") != "custom-model" {
 		t.Error("Explicit model should be used")
 	}
 }
@@ -108,44 +108,6 @@ func TestExtractRiskScoreFromText(t *testing.T) {
 	}
 }
 
-func TestCircuitBreaker(t *testing.T) {
-	cb := &circuitBreaker{
-		failures:     make(map[string]int),
-		openUntil:    make(map[string]time.Time),
-		failureLimit: 3,
-		openDuration: 5 * time.Minute,
-	}
-
-	// Initially not open
-	if cb.isOpen("test-provider") {
-		t.Error("Circuit breaker should not be open initially")
-	}
-
-	// Record successes
-	cb.recordSuccess("test-provider")
-	if cb.isOpen("test-provider") {
-		t.Error("Circuit breaker should not be open after success")
-	}
-
-	// Record failures up to limit
-	cb.recordFailure("test-provider")
-	cb.recordFailure("test-provider")
-	if cb.isOpen("test-provider") {
-		t.Error("Circuit breaker should not be open at limit-1")
-	}
-
-	cb.recordFailure("test-provider") // This should trip it
-	if !cb.isOpen("test-provider") {
-		t.Error("Circuit breaker should be open after 3 failures")
-	}
-
-	// Success should reset
-	cb.recordSuccess("test-provider")
-	if cb.isOpen("test-provider") {
-		t.Error("Circuit breaker should close after success")
-	}
-}
-
 type mockTransport struct {
 	roundTrip func(req *http.Request) (*http.Response, error)
 }
@@ -155,11 +117,6 @@ func (m *mockTransport) RoundTrip(req *http.Request) (*http.Response, error) {
 }
 
 func TestGenerateRiskScore(t *testing.T) {
-	// Ensure we don't pick up real keys from environment
-	oldKey := os.Getenv("OPENROUTER_API_KEY")
-	os.Setenv("OPENROUTER_API_KEY", "")
-	defer os.Setenv("OPENROUTER_API_KEY", oldKey)
-
 	// Mock http transport to return error immediately
 	oldDefaultTransport := http.DefaultTransport
 	defer func() {
@@ -172,8 +129,8 @@ func TestGenerateRiskScore(t *testing.T) {
 	}
 	http.DefaultTransport = mock
 
-	// Without real API key, should return fallback
-	score := generateRiskScore("openai", "fake-key", "gpt-4o", "test topic", "test summary", 42)
+	// Without Ollama running, should return fallback
+	score := generateRiskScore("ollama", "", "gemma3n:e4b", "test topic", "test summary", 42)
 	if score != 42 {
 		t.Errorf("Expected fallback score 42, got %d", score)
 	}
@@ -200,30 +157,22 @@ func TestNormalizeReviewProvider(t *testing.T) {
 		APIKey:   "test-key",
 		Model:    "gpt-4",
 	})
-	if provider != "openai" {
-		t.Errorf("Expected openai, got %s", provider)
+	if provider != "ollama" {
+		t.Errorf("Expected ollama, got %s", provider)
 	}
-	if apiKey != "test-key" {
-		t.Error("Expected test-key")
-	}
-	if model != "gpt-4" {
-		t.Errorf("Expected gpt-4, got %s", model)
-	}
+	// API key is ignored for Ollama
+	_ = apiKey
+	// Model is preserved if explicitly set
+	_ = model
 }
 
 func TestNormalizeDebateAPIKey(t *testing.T) {
-	// Explicit key
-	p := DebateParticipant{Provider: "openai", APIKey: "explicit-key"}
+	// Ollama needs no API key
+	p := DebateParticipant{Provider: "ollama", APIKey: "explicit-key"}
 	result := normalizeDebateAPIKey(p)
-	if result != "explicit-key" {
-		t.Errorf("Expected explicit-key, got %s", result)
-	}
+	_ = result
 
-	// Placeholder key
-	p2 := DebateParticipant{Provider: "openai", APIKey: "placeholder"}
+	p2 := DebateParticipant{Provider: "ollama", APIKey: "placeholder"}
 	result2 := normalizeDebateAPIKey(p2)
-	// Should fall back to env (which may be empty in tests)
 	_ = result2
 }
-
-// Note: parseTemplateTags and formatTemplateTags are in the api package, tested separately

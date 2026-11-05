@@ -122,15 +122,15 @@ func heuristicPrediction(taskType string) CostPrediction {
 		provider  string
 		model     string
 	}{
-		"check_session":    {2000, 0.6, "openrouter", "google/gemma-3-27b-it"},
-		"debate":           {8000, 3.2, "openrouter", "google/gemma-3-27b-it"},
-		"review":           {5000, 1.5, "openrouter", "google/gemma-3-27b-it"},
-		"index_codebase":   {3000, 0.9, "openrouter", "google/gemma-3-27b-it"},
-		"nudge":            {1000, 0.3, "openrouter", "google/gemma-3-27b-it"},
-		"recovery":         {4000, 1.2, "openrouter", "google/gemma-3-27b-it"},
-		"swarm_decompose":  {6000, 2.0, "openrouter", "google/gemma-3-27b-it"},
-		"swarm_agent":      {5000, 1.5, "openrouter", "google/gemma-3-27b-it"},
-		"rag_query":        {2000, 0.6, "openrouter", "google/gemma-3-27b-it"},
+		"check_session":    {2000, 0.0, "ollama", "gemma3n:e4b"},
+		"debate":           {8000, 0.0, "ollama", "gemma3n:e4b"},
+		"review":           {5000, 0.0, "ollama", "gemma3n:e4b"},
+		"index_codebase":   {3000, 0.0, "ollama", "gemma3n:e4b"},
+		"nudge":            {1000, 0.0, "ollama", "gemma3n:e4b"},
+		"recovery":         {4000, 0.0, "ollama", "gemma3n:e4b"},
+		"swarm_decompose":  {6000, 0.0, "ollama", "gemma3n:e4b"},
+		"swarm_agent":      {5000, 0.0, "ollama", "gemma3n:e4b"},
+		"rag_query":        {2000, 0.0, "ollama", "gemma3n:e4b"},
 	}
 
 	est, ok := estimates[taskType]
@@ -140,7 +140,7 @@ func heuristicPrediction(taskType string) CostPrediction {
 			costCents float64
 			provider  string
 			model     string
-		}{3000, 0.9, "openrouter", "google/gemma-3-27b-it"}
+		}{3000, 0.0, "ollama", "gemma3n:e4b"}
 	}
 
 	return CostPrediction{
@@ -355,7 +355,7 @@ func (o *CostOptimizer) findBestProvider() ProviderCostProfile {
 	o.mu.RLock()
 	defer o.mu.RUnlock()
 
-	best := ProviderCostProfile{Provider: "openrouter", Model: "gpt-4o-mini", Score: 1.0}
+	best := ProviderCostProfile{Provider: "ollama", Model: "gemma3n:e4b", Score: 1.0}
 	for _, p := range o.profiles {
 		if p.Score > best.Score {
 			best = *p

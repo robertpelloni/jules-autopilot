@@ -1,0 +1,17 @@
+{"id":"cap-req-go-coder-1792047583192","timestamp":1792047583192,"sender":"BROKER","recipient":"go-coder","type":"STATE_UPDATE","payload":{"action":"REPORT_CAPABILITIES"}}
+{"id":"cap-req-go-coder-1792090740719","timestamp":1792090740719,"sender":"BROKER","recipient":"go-coder","type":"STATE_UPDATE","payload":{"action":"REPORT_CAPABILITIES"}}
+{"id":"cap-req-go-coder-1792094361422","timestamp":1792094361422,"sender":"BROKER","recipient":"go-coder","type":"STATE_UPDATE","payload":{"action":"REPORT_CAPABILITIES"}}
+{"id":"cap-req-go-coder-1792097998137","timestamp":1792097998137,"sender":"BROKER","recipient":"go-coder","type":"STATE_UPDATE","payload":{"action":"REPORT_CAPABILITIES"}}
+{"id":"hb-go-coder-1792098013264","timestamp":1792098013265,"sender":"go-coder","type":"HEARTBEAT","payload":{}}
+{"id":"hb-go-coder-1792098028287","timestamp":1792098028287,"sender":"go-coder","type":"HEARTBEAT","payload":{}}
+{"id":"hb-go-coder-1792098045448","timestamp":1792098048649,"sender":"go-coder","type":"HEARTBEAT","payload":{}}
+{"id":"hb-go-coder-1792098058296","timestamp":1792098058296,"sender":"go-coder","type":"HEARTBEAT","payload":{}}
+{"id":"hb-go-coder-1792098073253","timestamp":1792098073253,"sender":"go-coder","type":"HEARTBEAT","payload":{}}
+{"id":"hb-go-coder-1792098088379","timestamp":1792098088379,"sender":"go-coder","type":"HEARTBEAT","payload":{}}
+{"id":"hb-go-coder-1792098103305","timestamp":1792098103305,"sender":"go-coder","type":"HEARTBEAT","payload":{}}
+{"id":"hb-go-coder-1792098118260","timestamp":1792098118260,"sender":"go-coder","type":"HEARTBEAT","payload":{}}
+{"id":"hb-go-coder-1792098133235","timestamp":1792098133235,"sender":"go-coder","type":"HEARTBEAT","payload":{}}
+{"id":"hb-go-coder-1792098148237","timestamp":1792098148237,"sender":"go-coder","type":"HEARTBEAT","payload":{}}
+{"id":"hb-go-coder-1792098163253","timestamp":1792098163253,"sender":"go-coder","type":"HEARTBEAT","payload":{}}
+{"id":"hb-go-coder-1792098178241","timestamp":1792098178241,"sender":"go-coder","type":"HEARTBEAT","payload":{}}
+{"id":"hb-go-coder-1792098193271","timestamp":1792098193271,"sender":"go-coder","type":"HEARTBEAT","payload":{}}

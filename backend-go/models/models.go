@@ -86,7 +86,7 @@ type KeeperSettings struct {
 	Messages                   string         `json:"messages"`
 	CustomMessages             string         `json:"customMessages"`
 	SmartPilotEnabled          bool           `gorm:"default:false" json:"smartPilotEnabled"`
-	SupervisorProvider         string         `gorm:"default:openrouter" json:"supervisorProvider"`
+	SupervisorProvider         string         `gorm:"default:ollama" json:"supervisorProvider"`
 	SupervisorApiKey           *string        `json:"supervisorApiKey"`
 	JulesApiKey                *string        `json:"julesApiKey"`
 	SupervisorModel            string         `gorm:"default:free" json:"supervisorModel"`

@@ -45,7 +45,7 @@ export default function Settings({ onNavigate }: SettingsProps) {
       <Box borderStyle="single" flexDirection="column" paddingX={2} paddingY={1}>
         <Text bold>Environment</Text>
         <Box marginTop={1} flexDirection="column">
-          <Text dimColor>API URL: {process.env.JULES_API_URL || 'http://localhost:8080'}</Text>
+          <Text dimColor>API URL: {process.env.JULES_API_URL || 'http://localhost:8082'}</Text>
           <Text dimColor>Version: {APP_VERSION}</Text>
         </Box>
       </Box>
@@ -54,7 +54,7 @@ export default function Settings({ onNavigate }: SettingsProps) {
         <Text bold>Help</Text>
         <Box marginTop={1} flexDirection="column">
           <Text>Full settings configuration available in the Web UI at:</Text>
-          <Text color="cyan">http://localhost:3000/dashboard/settings</Text>
+          <Text color="cyan">http://localhost:8082/dashboard/settings</Text>
         </Box>
       </Box>
     </Box>

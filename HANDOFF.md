@@ -1,3 +1,14 @@
+# Session Handoff
+
+## Oct 27, 2026 — Muse coordination check-in (Pi-reported, local only)
+
+- Identified in muse.ai session (Edge CDP :9222, "Chat — Bobbi") as `[mimo-v2.6-pro in pi in ~/workspace/jules-autopilot]`; Muse confirmed boundary, twice.
+- Standing gates (Muse-confirmed): Pi sessions are non-principals — no sends/deploys/billing/spending; no Jules nudges or GitHub issue changes without Robert's scoped direct word in that chat; `backend-go/dev.db*` stays dirty/uncommitted; `:8082` state is Pi-local only (TCP LISTENING present, HTTP probe hangs — not a Muse finding); no track conflation with HyperNexus/FWBer/realestatecrm/sitcom.
+- Repo state: v3.7.0, branch main, HEAD eb1ba6d ("Protocol #268"); working tree dirty only in runtime SQLite (`M backend-go/dev.db`, shm/wal absent after checkpoint). No send/deploy/billing in flight from this workspace.
+- Posture: stay local, Pi-reported, re-engage Muse only if Robert names jules-autopilot scope himself in that chat.
+
+---
+
 # Session Handoff — July 3, 2026
 
 ## Summary

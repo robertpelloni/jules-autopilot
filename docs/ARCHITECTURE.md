@@ -15,7 +15,7 @@
 │  ┌─────────────────────────────┐  ┌─────────────────────────────────┐   │
 │  │   Web UI (Browser)          │  │   CLI Tools                     │   │
 │  │   Vite + React 19           │  │   Go Native Binaries            │   │
-│  │   http://localhost:8080     │  │   indexer.exe / create-key.exe  │   │
+│  │   http://localhost:8082     │  │   indexer.exe / create-key.exe  │   │
 │  │   shadcn/ui + Tailwind      │  │                                 │   │
 │  └──────────────┬──────────────┘  └───────────────┬─────────────────┘   │
 │                 │                                 │                      │
@@ -29,7 +29,7 @@
                                 │ HTTP + WebSocket
                                 ▼
 ┌─────────────────────────────────────────────────────────────────────────┐
-│                        BACKEND (Go :8080)                                │
+│                        BACKEND (Go :8082)                                │
 │  ┌─────────────────────────────────────────────────────────────────────┐│
 │  │ backend-go/main.go                                                  ││
 │  │  REST API:                                                          ││
@@ -38,7 +38,7 @@
 │  │  • POST /api/sessions/:idAndAction                                  ││
 │  │  • GET/POST /api/keys                                               ││
 │  │  WebSocket:                                                         ││
-│  │  • ws://localhost:8080/ws (real-time session updates)               ││
+│  │  • ws://localhost:8082/ws (real-time session updates)               ││
 │  │  Static Serving:                                                    ││
 │  │  • GET /* (serves dist/ built by Vite)                              ││
 │  └─────────────────────────────────────────────────────────────────────┘│
@@ -103,7 +103,7 @@ Both Web UI and TUI consume the same Hono backend through a shared API client:
 import { hc } from 'hono/client';
 import type { AppType } from '@jules/server';
 
-export function createApiClient(baseUrl = 'http://localhost:8080') {
+export function createApiClient(baseUrl = 'http://localhost:8082') {
   return hc<AppType>(baseUrl);
 }
 
@@ -122,7 +122,7 @@ Replace polling (5s/10s/30s intervals) with WebSocket for instant updates:
 
 ```typescript
 // packages/api-client/src/websocket.ts
-export function createWebSocketClient(url = 'ws://localhost:8080/ws') {
+export function createWebSocketClient(url = 'ws://localhost:8082/ws') {
   const ws = new WebSocket(url);
   
   return {

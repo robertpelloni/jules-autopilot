@@ -29,7 +29,7 @@ export function activate(context: vscode.ExtensionContext): void {
 
     // Initialize WebSocket client
     const config = vscode.workspace.getConfiguration('jules');
-    const daemonUrl = config.get<string>('daemonUrl', 'ws://localhost:8080/ws');
+    const daemonUrl = config.get<string>('daemonUrl', 'ws://localhost:8082/ws');
     client = new DaemonClient(daemonUrl);
 
     // Wire event handlers

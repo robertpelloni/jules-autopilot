@@ -27,8 +27,8 @@ func TestPredictCostNoData(t *testing.T) {
 	if prediction.EstimatedTokens <= 0 {
 		t.Error("Expected positive estimated tokens")
 	}
-	if prediction.CostCents <= 0 {
-		t.Error("Expected positive estimated cost")
+	if prediction.CostCents < 0 {
+		t.Error("Expected non-negative estimated cost")
 	}
 	if prediction.Basis != "heuristic" {
 		t.Errorf("Basis = %q, want 'heuristic'", prediction.Basis)
@@ -83,8 +83,8 @@ func TestHeuristicPredictionKnownTasks(t *testing.T) {
 		if pred.EstimatedTokens <= 0 {
 			t.Errorf("Task %q: expected positive tokens", task)
 		}
-		if pred.CostCents <= 0 {
-			t.Errorf("Task %q: expected positive cost", task)
+		if pred.CostCents < 0 {
+			t.Errorf("Task %q: expected non-negative cost", task)
 		}
 		if pred.Confidence != 0.3 {
 			t.Errorf("Task %q: confidence = %.1f, want 0.3", task, pred.Confidence)
