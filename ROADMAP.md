@@ -3,6 +3,12 @@
 This roadmap outlines the major structural plans and strategic milestones for the Jules Autopilot Orchestrator. 
 For granular tasks and immediate bug fixes, see `TODO.md`.
 
+## Milestone: v3.7.3 (2026-11-07) — Repository Synchronization
+* [x] **Fork/Upstream Reconciliation**: All 3 fork feature branches verified merged (0 unique commits); upstream fully contained; no submodules (workspace packages only).
+* [x] **Upstream A11y Merge**: Session status tooltip (accessible, `role="img"`) intelligently merged from upstream palette branch; duplicate upstream search-clear/spinner work confirmed already superseded on main.
+* [ ] **Ollama Models-Dir Guard**: Desktop Ollama app can reclaim :11434 with `OLLAMA_MODELS` pointed at `.lmstudio/models` (serves zero models, daemon nudges 404). Add a backend health warning when the pinned model is missing from `/api/tags`.
+* [ ] **Jules 429 Backoff at Fleet Scale**: Startup broadcast bursts trip per-session 429s; prefer paced daemon nudges and targeted `/api/sessions/:id/nudge` retries over repeated full broadcasts.
+
 ## Milestone: v1.0.0 (Current) — "Deep Autonomous Node"
 * [x] **Cross-Session Historical Intelligence**: The Autopilot now monitors for COMPLETED sessions, vectorizes the final result, and saves it into the `MemoryChunk` table for dual-layer RAG.
 * [x] **Borg Discovery Handshake**: Added `GET /api/manifest` endpoint, broadcasting node capabilities and version for Borg assimilation.

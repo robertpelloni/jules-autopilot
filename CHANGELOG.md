@@ -2,6 +2,20 @@
 
 All notable changes to this project will be documented in this file.
 
+## [3.7.3] - 2026-11-07
+
+### Added
+
+- **Session Status Tooltip (upstream intelligent merge)**: Session status dot in `components/session-list.tsx` is now wrapped in an accessible Tooltip (`role="img"`, `aria-label="Status: ..."`, capitalized status on hover), adapted from upstream `palette-session-status-tooltip` to the current design system. Reviewed upstream `palette-add-loading-spinners` and confirmed main already ships a superior spinner implementation — no change needed.
+
+### Fixed
+
+- **`run.bat` Broken Watchdog Step**: Removed launch of missing `watchdog.vbs` (file does not exist); script now reports the healthy backend URL and exits cleanly.
+
+### Operations
+
+- **Repository Synchronization (Protocol)**: `git fetch --all --tags` verified `main` == `origin/main`, upstream (`sbhavani/jules-app`) fully contained (0 commits behind), and all 3 fork feature branches (`feat-shadow-pilot-git-diff-ui-*`, `jules-485-merge-test`, `jules-4852916069977232082-*`) at zero unique commits beyond main — no forward merges required. Remaining unmerged upstream palette branches are duplicate search-clear-button variants (feature already on main) or unrelated-history (`ui-mobile-responsive-layout`, no merge base) and were intentionally left untouched. This repository has no git submodules; `SUBMODULE_INVENTORY.md` regenerated accordingly.
+
 ## [3.7.2] - 2026-11-04
 
 ### Fixed

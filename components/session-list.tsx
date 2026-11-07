@@ -242,7 +242,14 @@ export function SessionList({
                   <div className="flex items-start justify-between gap-2">
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center gap-2 mb-0.5">
-                        <div className={cn("w-1.5 h-1.5 rounded-full shrink-0", getStatusColor(session.status))} />
+                        <Tooltip>
+                          <TooltipTrigger asChild>
+                            <div role="img" aria-label={`Status: ${session.status}`} className={cn("w-1.5 h-1.5 rounded-full shrink-0", getStatusColor(session.status))} />
+                          </TooltipTrigger>
+                          <TooltipContent side="right" className="bg-zinc-900 border-white/10 text-white text-[10px]">
+                            <p className="capitalize">{session.status}</p>
+                          </TooltipContent>
+                        </Tooltip>
                         <Tooltip>
                           <TooltipTrigger asChild>
                             <span className="text-[10px] font-bold leading-tight text-white uppercase tracking-wide truncate block">
