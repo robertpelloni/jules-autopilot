@@ -2,6 +2,16 @@
 
 All notable changes to this project will be documented in this file.
 
+## [3.7.3] - 2026-11-08
+
+### Fixed
+
+- **Watchdog Restart Storm**: watchdog_check.cjs now restarts the backend only after 3 consecutive failed health probes (about 6 minutes down) instead of a single 8s-timeout miss, ending the kill loop where startup-broadcast load made one slow /api/health response trigger taskkill.
+
+- **BelowNormal Priority Rule**: every backend process spawned by the watchdog is set to BelowNormal CPU priority, so heavyweight background work no longer starves the interactive system.
+
+- **Runtime Files Untracked**: live SQLite dev.db files, exe backups, and other backend runtime state are now git-ignored and removed from tracking.
+
 ## [3.7.2] - 2026-11-04
 
 ### Fixed

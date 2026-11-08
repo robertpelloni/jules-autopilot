@@ -1,4 +1,12 @@
 # Session Handoff
+## Nov 8, 2026 - Afternoon session (v3.7.3)
+
+- Shipped v3.7.3: watchdog consecutive-failure policy (3 straight failed probes before restart) + run lock + BelowNormal priority on spawned processes; untracked runtime DB/exe files via .gitignore.
+- Set live jules-autopilot and ollama processes to BelowNormal as a standing rule.
+- Branch note: work done on backup/wip-leader-sync-20261107; main force-pointed at the cleanup commit (code identical to previous main). No checkout, live dev.db untouched.
+- Muse coordination: Edge CDP :9222 is alive but exposes no open tabs, so no live Muse sync was possible; coordinating via shared repo artifacts instead.
+- Still open: reap stale processing queue jobs; close broadcast 429 miss gap; dashboard UI audit program.
+
 
 ## Oct 27, 2026 — Muse coordination check-in (Pi-reported, local only)
 
