@@ -1,121 +1,73 @@
-🛠️ ALPHA SOFTWARE UNDER CONSTRUCTION — Use at your own risk. Backwards compatibility not guaranteed.
+# Jules Autopilot
 
-```text
-╔══════════════════════════════════════════════════════════════════════════════╗
-║                                                                              ║
-║                     ██╗   ██╗███╗   ██╗██████╗ ███████╗██████╗              ║
-║                     ██║   ██║████╗  ██║██╔══██╗██╔════╝██╔══██╗             ║
-║                     ██║   ██║██╔██╗ ██║██║  ██║█████╗  ██████╔╝             ║
-║                     ██║   ██║██║╚██╗██║██║  ██║██╔══╝  ██╔══██╗             ║
-║                     ╚██████╔╝██║ ╚████║██████╔╝███████╗██║  ██║             ║
-║                      ╚═════╝ ╚═╝  ╚═══╝╚═════╝ ╚══════╝╚═╝  ╚═╝             ║
-║                                                                              ║
-║                     ██████╗ ██████╗ ███╗   ██╗███████╗████████╗██████╗      ║
-║                    ██╔════╝██╔═══██╗████╗  ██║██╔════╝╚══██╔══╝██╔══██╗     ║
-║                    ██║     ██║   ██║██╔██╗ ██║███████╗   ██║   ██████╔╝     ║
-║                    ██║     ██║   ██║██║╚██╗██║╚════██║   ██║   ██╔══██╗     ║
-║                    ╚██████╗╚██████╔╝██║ ╚████║███████║   ██║   ██║  ██║     ║
-║                     ╚═════╝ ╚═════╝ ╚═╝  ╚═══╝╚══════╝   ╚═╝   ╚═╝  ╚═╝     ║
-║                                                                              ║
-║                     █████╗ ██╗     ██████╗ ██╗  ██╗ █████╗                  ║
-║                    ██╔══██╗██║     ██╔══██╗██║  ██║██╔══██╗                 ║
-║                    ███████║██║     ██████╔╝███████║███████║                 ║
-║                    ██╔══██║██║     ██╔═══╝ ██╔══██║██╔══██║                 ║
-║                    ██║  ██║███████╗██║     ██║  ██║██║  ██║                 ║
-║                    ╚═╝  ╚═╝╚══════╝╚═╝     ╚═╝  ╚═╝╚═╝  ╚═╝                 ║
-║                                                                              ║
-║                    ╔══════════════════════════════════════╗                  ║
-║                    ║     ⚠️  ALPHA SOFTWARE  ⚠️           ║                  ║
-║                    ║  EXPECT BREAKING CHANGES & BUGS     ║                  ║
-║                    ║  NOT READY FOR PRODUCTION USE       ║                  ║
-║                    ╚══════════════════════════════════════╝                  ║
-║                                                                              ║
-╚══════════════════════════════════════════════════════════════════════════════╝
-```
+An orchestration dashboard for the Google Jules AI agent: a unified,
+real-time command center that replaces Jules' official interfaces, with a
+Go backend runtime (API, WebSocket server, scheduler, static SPA host) and
+a React frontend.
 
-# Jules Autopilot (Go Primary Runtime)
+> **Alpha software under construction.** Backwards compatibility is not
+> guaranteed; expect breaking changes and bugs.
 
-> **The ultra-fast, autonomous command center for Google Jules.**
+## Status
 
-Jules Autopilot is a high-performance, minimalist orchestration platform for the Google Jules AI agent. It replaces slow official interfaces with a unified, real-time dashboard, powered by a robust Go backend runtime.
+**Active development — v3.7.3** (2026-11-07/08). Last commit:
+**2026-11-12** (Protocol #281 merges and watchdog fixes).
 
-## 🚀 The Stack
+**Important context:** Google Jules winds down **December 31, 2026**, and
+went read-only on 2026-11-11. This tool orchestrates Jules sessions, so its
+useful life is tied to Jules itself. The repo's Go/queue/scheduler/alpha
+details have not been independently verified — treat the architecture claims
+in the docs as the author's, not as proven.
 
-This project has been pivoted to a Go-first architecture to ensure maximum performance, operational reliability, and zero friction:
+## Stack
 
-- **Backend/Runtime:** [Go](https://go.dev) (High-performance API, WebSocket server, Scheduler, and Static SPA host)
-- **Frontend:** [Vite](https://vitejs.dev) + [React 19](https://react.dev) (Pure SPA, no SSR overhead)
-- **Database:** [GORM](https://gorm.io) + SQLite (Zero-config local persistence)
-- **Queue & Automation:** Native Go task queue and RAG indexer
-- **Styling:** [TailwindCSS v4](https://tailwindcss.com)
+- **Backend/runtime:** Go (API, WebSocket server, scheduler, static SPA host)
+- **Frontend:** Vite + React 19 (pure SPA)
+- **Database:** GORM + SQLite (local persistence)
+- **Queue & automation:** Native Go task queue and RAG indexer
+- **Styling:** Tailwind CSS v4
 
-## 🛠️ Getting Started
+## Getting started
 
-### Prerequisites
-- [Go 1.21+](https://go.dev) installed.
-- [Node.js](https://nodejs.org) and [pnpm](https://pnpm.io) for frontend development.
+Prerequisites: Go 1.21+, Node.js and pnpm (for frontend development).
 
-### Installation
 ```bash
-# Clone the repository
-git clone https://github.com/your-repo/jules-autopilot.git
+git clone https://github.com/robertpelloni/jules-autopilot.git
 cd jules-autopilot
 
-# Install frontend dependencies
 pnpm install
-
-# Build the frontend and shared packages
 pnpm run build
+
+# Run the Go runtime (serves the built frontend)
+cd backend-go
+go run .
 ```
 
-### Running the Command Center
-You can run the entire stack via the Go backend (which serves the built frontend):
+See `DEPLOY.md` for deployment details and `RAG_ARCHITECTURE.md` for the
+indexer design.
 
-1. **Start the Go Runtime:**
-   ```bash
-   cd backend-go
-   go run main.go
-   ```
-   *The dashboard will be available at `http://localhost:8082`.*
+## What's not / known gaps
 
-2. **Frontend Dev Mode (Optional):**
-   ```bash
-   pnpm run dev
-   ```
+- Jules itself is winding down (see Status above) — this is a tool with a
+  known end date.
+- The repo carries working clutter: session markers, runtime databases
+  (`.db` files tracked in the tree), per-assistant instruction files, and
+  Playwright/test-result artifacts.
+- No released build or public deployment is documented here.
 
-## 🏗️ Architecture
+## Last significant activity
 
-```
-┌──────────────────────────────────────────┐
-│          Browser (Vite SPA)              │
-│  http://localhost:3006 (Dev)             │
-│  http://localhost:8082 (Prod)            │
-└───────────────┬──────────────────────────┘
-                │ API / WebSocket
-                ▼
-┌──────────────────────────────────────────┐
-│          Go Runtime (Fiber)              │
-│  • Centralized Jules API Proxy           │
-│  • SQLite Task Queue & Scheduler         │
-│  • Local Filesystem Access               │
-│  • Multi-Agent Debate Engine             │
-│  • Static Asset Delivery (SPA fallback)  │
-└───────────────┬──────────────────────────┘
-                │
-                ▼
-┌──────────────────────────────────────────┐
-│          SQLite Database                 │
-│  • Session State & Activity Logs         │
-│  • Task Queue Persistence                │
-│  • User Settings & Templates             │
-└──────────────────────────────────────────┘
-```
+- **2026-11-12** — Protocol #281 merges; watchdog consecutive-failure
+  policy and runtime-state untracking.
+- **2026-11-08** — watchdog fix (v3.7.3).
+- **2026-11-07** — repository sync & intelligent merge, session status
+  tooltip (v3.7.3).
 
-## 🧪 Operational Commands
-- `pnpm run build`: Build the shared package and Vite SPA.
-- `pnpm run daemon`: Start the Go backend API and background monitoring (`cd backend-go && go run main.go`).
-- `pnpm run lint`: Run ESLint across the frontend source tree.
-- `pnpm run index`: Run the standalone Go CLI indexer (`cd backend-go && go run cmd/index-repo/main.go`).
+## License
 
-## 📜 License
-MIT
+See `LICENSE` in the repo root.
+
+## Links
+
+- Author: https://robertpelloni.com
+- Related: TormentNexus (https://github.com/MDMAtk/TormentNexus)
