@@ -84,3 +84,15 @@ watchdog.bat
 packages/shared/dist/
 .suno_new_session/
 backend-go/dev.db
+
+# Live runtime state (never track - backend holds these open)
+dev.db
+*.db-shm
+*.db-wal
+*.db-journal
+*.db.new
+*.db.old
+*.exe~
+backend-go/patch_fastbump.py
+backend-go/watchdog_failures.txt
+backend-go/watchdog.lock
